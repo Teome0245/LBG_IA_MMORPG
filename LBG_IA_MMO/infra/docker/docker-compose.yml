@@ -1,0 +1,29 @@
+services:
+  orchestrator:
+    build:
+      context: ../../
+      dockerfile: LBG_IA_MMO/infra/docker/orchestrator.Dockerfile
+    ports:
+      - "8010:8010"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  backend:
+    build:
+      context: ../../
+      dockerfile: LBG_IA_MMO/infra/docker/backend.Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LBG_ORCHESTRATOR_URL=http://orchestrator:8010
+    depends_on:
+      - orchestrator
+
+  mmo_server:
+    build:
+      context: ../../
+      dockerfile: LBG_IA_MMO/infra/docker/mmo_server.Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1
+

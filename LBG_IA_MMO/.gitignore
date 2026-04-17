@@ -1,0 +1,8 @@
+# Secrets (ne pas versionner les clés) — canon : infra/secrets/lbg.env
+infra/secrets/lbg.env
+.env
+
+# Python
+**/__pycache__/
+*.pyc
+.venv/

@@ -1,0 +1,402 @@
+"""Point d'entrée WebSocket — Phase 1."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import signal
+import time
+import uuid
+from pathlib import Path
+from typing import Any
+
+import httpx
+from websockets.asyncio.server import ServerConnection, serve
+
+from mmmorpg_server import config
+from mmmorpg_server.game_state import GameState
+from mmmorpg_server.internal_http import start_internal_http
+from mmmorpg_server.persistence import load_state, save_state
+from mmmorpg_server.protocol import (
+    msg_error,
+    msg_welcome,
+    msg_world_tick,
+)
+
+LOG = logging.getLogger("mmmorpg")
+
+
+def _queue_ia_bridge(
+    *,
+    ws: ServerConnection,
+    pending_replies: dict[ServerConnection, tuple[str, str] | None],
+    actor_id: str,
+    text0: str,
+    world_npc_id: str,
+    npc_name: str | None,
+    source: str,
+) -> None:
+    """Déclenche le pont jeu → IA (async) + placeholder optionnel."""
+    if not config.IA_BACKEND_URL:
+        return
+    if not (isinstance(text0, str) and text0.strip() and isinstance(world_npc_id, str) and world_npc_id.strip()):
+        return
+
+    if config.IA_PLACEHOLDER_ENABLED and config.IA_PLACEHOLDER_REPLY:
+        pending_replies[ws] = (config.IA_PLACEHOLDER_REPLY, "")
+
+    ctx: dict[str, Any] = {"world_npc_id": world_npc_id.strip(), "history": []}
+    if isinstance(npc_name, str) and npc_name.strip():
+        ctx["npc_name"] = npc_name.strip()
+    payload = {"actor_id": actor_id, "text": text0.strip(), "context": ctx}
+
+    async def _fetch_and_queue() -> None:
+        t0 = time.perf_counter()
+        try:
+            timeout = httpx.Timeout(
+                timeout=config.IA_TIMEOUT_S,
+                connect=3.0,
+                read=config.IA_TIMEOUT_S,
+                write=10.0,
+                pool=config.IA_TIMEOUT_S,
+            )
+            headers: dict[str, str] = {}
+            if config.IA_BACKEND_TOKEN:
+                headers["X-LBG-Service-Token"] = config.IA_BACKEND_TOKEN
+            # Corrélation : trace_id côté backend/orchestrator/logs.
+            trace_id = uuid.uuid4().hex
+            headers["X-LBG-Trace-Id"] = trace_id
+            LOG.info(
+                "Pont IA: appel backend (source=%s actor_id=%s npc_id=%s trace_id=%s)",
+                source,
+                actor_id,
+                world_npc_id.strip(),
+                trace_id,
+            )
+            async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+                r = await client.post(
+                    f"{config.IA_BACKEND_URL}{config.IA_BACKEND_PATH}",
+                    json=payload,
+                    headers=headers,
+                )
+            if r.status_code != 200:
+                LOG.warning(
+                    "Pont IA: backend HTTP %s sur %s%s (trace_id=%s source=%s)",
+                    r.status_code,
+                    config.IA_BACKEND_URL,
+                    config.IA_BACKEND_PATH,
+                    trace_id,
+                    source,
+                )
+                return
+            j = r.json()
+            if not isinstance(j, dict):
+                LOG.warning(
+                    "Pont IA: réponse JSON invalide (type=%s trace_id=%s source=%s)",
+                    type(j).__name__,
+                    trace_id,
+                    source,
+                )
+                return
+            trace_id = j.get("trace_id") or trace_id
+            res = j.get("result")
+            out = res.get("output") if isinstance(res, dict) else None
+            remote = out.get("remote") if isinstance(out, dict) else None
+            rep = remote.get("reply") if isinstance(remote, dict) else None
+            if isinstance(rep, str) and rep.strip() and isinstance(trace_id, str) and trace_id.strip():
+                pending_replies[ws] = (rep.strip(), trace_id.strip())
+                elapsed_ms = int((time.perf_counter() - t0) * 1000)
+                LOG.info(
+                    "Pont IA: reply en file (trace_id=%s elapsed_ms=%s source=%s)",
+                    trace_id.strip(),
+                    elapsed_ms,
+                    source,
+                )
+            else:
+                LOG.warning(
+                    "Pont IA: pas de reply/trace_id (reply=%s, trace_id=%s)",
+                    isinstance(rep, str) and bool(rep.strip()),
+                    isinstance(trace_id, str) and bool(trace_id.strip()),
+                )
+        except Exception:
+            LOG.exception("Pont IA: exception pendant l'appel backend (source=%s)", source)
+            return
+
+    asyncio.create_task(_fetch_and_queue())
+
+
+async def game_loop_broadcast(
+    game: GameState,
+    clients: set[ServerConnection],
+    pending_replies: dict[ServerConnection, tuple[str, str] | None],
+) -> None:
+    dt = 1.0 / config.TICK_RATE_HZ
+    try:
+        while True:
+            await asyncio.sleep(dt)
+            game.tick(dt)
+            stale: list[ServerConnection] = []
+            # Copie défensive : `clients` peut être modifié pendant l'itération (déconnexions / handlers).
+            for ws in list(clients):
+                try:
+                    extra = pending_replies.get(ws)
+                    npc_reply = extra[0] if extra else None
+                    trace_id = extra[1] if extra else None
+                    payload = json.dumps(
+                        msg_world_tick(
+                            world_time_s=game.time.world_time_s,
+                            day_fraction=game.time.day_fraction,
+                            entities=game.entity_snapshots(),
+                            npc_reply=npc_reply,
+                            trace_id=trace_id,
+                        )
+                    )
+                    await ws.send(payload)
+                    # Ne consommer la réplique qu'une fois effectivement envoyée.
+                    if extra is not None:
+                        pending_replies.pop(ws, None)
+                except Exception:
+                    stale.append(ws)
+            for ws in stale:
+                clients.discard(ws)
+                pending_replies.pop(ws, None)
+    except asyncio.CancelledError:
+        raise
+
+
+def _inbound_to_utf8(raw: str | bytes) -> tuple[str | None, str | None]:
+    """Retourne (texte, erreur) ; erreur non vide si frame refusée."""
+    if isinstance(raw, str):
+        data = raw.encode("utf-8")
+        if len(data) > config.MAX_WS_INBOUND_BYTES:
+            return None, "message trop volumineux"
+        return raw, None
+    if isinstance(raw, (bytes, bytearray)):
+        if len(raw) > config.MAX_WS_INBOUND_BYTES:
+            return None, "message trop volumineux"
+        try:
+            return raw.decode("utf-8"), None
+        except UnicodeDecodeError:
+            return None, "UTF-8 invalide"
+    return None, "type de message non supporté"
+
+
+async def client_handler(
+    ws: ServerConnection,
+    game: GameState,
+    clients: set[ServerConnection],
+    pending_replies: dict[ServerConnection, tuple[str, str] | None],
+) -> None:
+    player_id: str | None = None
+    last_move_at: float = 0.0
+    try:
+        async for raw in ws:
+            text, err = _inbound_to_utf8(raw)
+            if err:
+                await ws.send(json.dumps(msg_error(err)))
+                continue
+            assert text is not None
+            try:
+                data: dict[str, Any] = json.loads(text)
+            except json.JSONDecodeError:
+                await ws.send(json.dumps(msg_error("JSON invalide")))
+                continue
+            msg_type = data.get("type")
+            if msg_type == "hello":
+                if player_id:
+                    await ws.send(json.dumps(msg_error("hello déjà enregistré")))
+                    continue
+                name = str(data.get("player_name") or "Voyageur").strip() or "Voyageur"
+                ent = game.add_player(name)
+                player_id = ent.id
+
+                await ws.send(
+                    json.dumps(
+                        msg_welcome(
+                            player_id=ent.id,
+                            planet_id=game.planet.id,
+                            world_time_s=game.time.world_time_s,
+                            day_fraction=game.time.day_fraction,
+                            entities=game.entity_snapshots(),
+                        )
+                    )
+                )
+                # Ajouter au broadcast *après* `welcome` pour éviter qu'un `world_tick` arrive
+                # avant le message de bienvenue (race condition à 20 Hz).
+                clients.add(ws)
+
+                # Pont "jeu → IA" (optionnel) : réutiliser `hello` pour demander une réplique PNJ
+                # en ajoutant des champs optionnels. Pour éviter de bloquer `welcome`, la réplique est
+                # renvoyée sur le *prochain* `world_tick` (champs optionnels `npc_reply`, `trace_id`).
+                if config.IA_BACKEND_URL:
+                    text0 = data.get("text")
+                    world_npc_id = data.get("world_npc_id")
+                    npc_name = data.get("npc_name")
+                    _queue_ia_bridge(
+                        ws=ws,
+                        pending_replies=pending_replies,
+                        actor_id=f"player:{ent.id}",
+                        text0=text0 if isinstance(text0, str) else "",
+                        world_npc_id=world_npc_id if isinstance(world_npc_id, str) else "",
+                        npc_name=npc_name if isinstance(npc_name, str) else None,
+                        source="hello",
+                    )
+            elif msg_type == "move" and player_id:
+                text_ia = data.get("text")
+                world_npc_id = data.get("world_npc_id")
+                npc_name = data.get("npc_name")
+                if isinstance(text_ia, str) and text_ia.strip() and isinstance(world_npc_id, str) and world_npc_id.strip():
+                    # Pont IA via `move` (sans nouveau type) : ne pas être bloqué par l'anti-spam `move`.
+                    _queue_ia_bridge(
+                        ws=ws,
+                        pending_replies=pending_replies,
+                        actor_id=f"player:{player_id}",
+                        text0=text_ia,
+                        world_npc_id=world_npc_id,
+                        npc_name=npc_name if isinstance(npc_name, str) else None,
+                        source="move",
+                    )
+
+                now = time.monotonic()
+                if now - last_move_at < config.MOVE_MIN_INTERVAL_S:
+                    continue
+                last_move_at = now
+                game.apply_player_move(
+                    player_id,
+                    float(data.get("x", 0.0)),
+                    float(data.get("y", 0.0)),
+                    float(data.get("z", 0.0)),
+                )
+            elif msg_type == "move" and not player_id:
+                await ws.send(json.dumps(msg_error("hello requis avant move")))
+            else:
+                await ws.send(json.dumps(msg_error(f"type inconnu: {msg_type!r}")))
+    finally:
+        if player_id:
+            game.remove_player(player_id)
+        clients.discard(ws)
+
+
+async def run_server(
+    *,
+    stop_event: asyncio.Event,
+    register_signals: bool = False,
+    host: str | None = None,
+    port: int | None = None,
+    ready_event: asyncio.Event | None = None,
+    configure_logging: bool = False,
+) -> None:
+    """
+    Lance le serveur jusqu'à ``stop_event``.
+    ``register_signals`` : SIGINT / SIGTERM déclenchent ``stop_event`` (hors tests).
+    ``ready_event`` : signalé une fois le socket en écoute (tests / orchestration).
+    """
+    if configure_logging:
+        logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+
+    bind_host = host if host is not None else config.HOST
+    bind_port = config.PORT if port is None else port
+
+    loop = asyncio.get_running_loop()
+    installed: list[int] = []
+    if register_signals:
+        def _shutdown() -> None:
+            if not stop_event.is_set():
+                LOG.info("Signal reçu — arrêt du serveur…")
+            stop_event.set()
+
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            try:
+                loop.add_signal_handler(sig, _shutdown)
+                installed.append(int(sig))
+            except (NotImplementedError, RuntimeError):
+                LOG.warning("Impossible d'enregistrer le signal %s (plateforme)", sig)
+                break
+
+    game = GameState()
+    # Reprise persistance (phase 2) : commits/flags.
+    if not config.PERSIST_DISABLE:
+        raw_path = config.STATE_PATH or ""
+        if raw_path:
+            st = load_state(Path(raw_path))
+            if st is not None:
+                seen, flags, rep = st
+                game.import_commit_state(seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep)
+                LOG.info("état mmmorpg chargé depuis %s (commits=%s, npcs=%s)", raw_path, len(seen), len(flags))
+    clients: set[ServerConnection] = set()
+    pending_replies: dict[ServerConnection, tuple[str, str] | None] = {}
+    tick_task = asyncio.create_task(game_loop_broadcast(game, clients, pending_replies))
+    internal_http = None
+    if config.INTERNAL_HTTP_PORT and config.INTERNAL_HTTP_PORT > 0:
+        internal_http = start_internal_http(
+            host=config.INTERNAL_HTTP_HOST,
+            port=config.INTERNAL_HTTP_PORT,
+            game=game,
+            token=config.INTERNAL_HTTP_TOKEN,
+        )
+        LOG.info(
+            "HTTP interne actif — http://%s:%s (healthz, internal/v1/npc/.../lyra-snapshot)",
+            internal_http.host,
+            internal_http.port,
+        )
+
+    async def _handler(ws: ServerConnection) -> None:
+        await client_handler(ws, game, clients, pending_replies)
+
+    try:
+        LOG.info(
+            "MMMORPG serveur Phase 1 — ws://%s:%s (tick %.1f Hz)",
+            bind_host,
+            bind_port,
+            config.TICK_RATE_HZ,
+        )
+        async with serve(
+            _handler,
+            bind_host,
+            bind_port,
+            ping_interval=30,
+            ping_timeout=60,
+        ):
+            if ready_event is not None:
+                ready_event.set()
+            await stop_event.wait()
+        LOG.info("Serveur arrêté proprement.")
+    finally:
+        for sig_int in installed:
+            try:
+                loop.remove_signal_handler(sig_int)
+            except Exception:
+                pass
+        tick_task.cancel()
+        try:
+            await tick_task
+        except asyncio.CancelledError:
+            pass
+        if internal_http is not None:
+            try:
+                internal_http.stop()
+            except Exception:
+                pass
+        # Sauvegarde persistance (phase 2) au shutdown.
+        if not config.PERSIST_DISABLE:
+            raw_path = config.STATE_PATH or ""
+            if raw_path:
+                try:
+                    seen, flags, rep = game.export_commit_state()
+                    save_state(Path(raw_path), seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep)
+                    LOG.info("état mmmorpg sauvegardé vers %s (commits=%s, npcs=%s)", raw_path, len(seen), len(flags))
+                except Exception as e:
+                    LOG.warning("impossible de sauvegarder l’état mmmorpg vers %s : %s", raw_path, e)
+
+
+def main() -> None:
+    async def _amain() -> None:
+        stop = asyncio.Event()
+        await run_server(
+            stop_event=stop,
+            register_signals=True,
+            configure_logging=True,
+        )
+
+    asyncio.run(_amain())

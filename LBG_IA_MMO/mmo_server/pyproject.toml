@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lbg-ia-mmo-server"
+version = "0.1.0"
+description = "Headless MMORPG simulation server for LBG_IA_MMO"
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2.6",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.setuptools]
+py-modules = ["main", "http_app"]
+
+[tool.setuptools.packages.find]
+include = ["world*", "entities*", "lyra_engine*", "simulation*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+world = ["seed_data/world_initial.json", "seed_data/README.md"]
+

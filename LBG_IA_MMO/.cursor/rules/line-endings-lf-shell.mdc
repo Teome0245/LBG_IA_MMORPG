@@ -1,0 +1,21 @@
+---
+description: Éviter CRLF dans les scripts shell (toujours LF)
+globs: **/*.sh
+alwaysApply: false
+---
+
+# Scripts shell : fins de ligne LF uniquement
+
+- Tout fichier `*.sh` doit être en **LF** (pas CRLF). Sous Linux, le CRLF peut casser `bash` (`set: -\r: invalid option`, `pipefail\r`, etc.).
+- Après toute création/modification d’un script shell, **vérifier** (ou corriger) les fins de ligne.
+
+## Correction rapide (workspace)
+
+```bash
+sed -i 's/\r$//' "chemin/vers/script.sh"
+```
+
+## Règle repo (déjà en place)
+
+- Le repo force `LF` via `.gitattributes` (`*.sh text eol=lf`).
+

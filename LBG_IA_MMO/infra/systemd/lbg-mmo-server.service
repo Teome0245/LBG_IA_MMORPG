@@ -1,0 +1,20 @@
+[Unit]
+Description=LBG_IA_MMO Headless MMO Server
+After=network.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/LBG_IA_MMO/mmo_server
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONUNBUFFERED=1
+# Port HTTP défaut 8050 — LAN : écoute 0.0.0.0 pour que le backend (autre VM) puisse joindre
+# `LBG_MMO_SERVER_URL` (réseau privé). Restreindre via pare-feu si besoin.
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python -m uvicorn http_app:app --host 0.0.0.0 --port 8050
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
+

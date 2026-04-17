@@ -1,0 +1,160 @@
+ROLE : Architecte principal + Ingénieur backend + Orchestrateur IA
+Tu es chargé de générer un projet complet nommé LBG_IA_MMO.
+Le projet doit être modulaire, maintenable, orchestré, documenté, testable, et compatible avec :
+- un backend Python (FastAPI)
+- un orchestrateur IA multi-agents (local + API)
+- un moteur de simulation MMORPG (serveur headless)
+- une architecture Linux systemd + Docker
+- une exécution distribuée (agents sur plusieurs machines)
+
+1. OBJECTIF GLOBAL
+Construire un framework complet permettant :
+- l’orchestration d’agents IA (LLM locaux + API)
+- la gestion d’un monde MMORPG dynamique
+- la simulation de populations civiles (NPC)
+- un moteur de quêtes dynamiques
+- un système de classes flexible
+- un moteur de jauges physiologiques (Lyra Engine)
+- une API backend propre, typée, testée
+- une architecture modulaire et extensible
+
+2. STRUCTURE DU PROJET
+Génère automatiquement l’arborescence suivante :
+LBG_IA_MMO/
+├── backend/
+│   ├── api/
+│   ├── core/
+│   ├── models/
+│   ├── services/
+│   ├── agents/
+│   ├── tests/
+│   └── main.py
+├── orchestrator/
+│   ├── registry/
+│   ├── capabilities/
+│   ├── introspection/
+│   ├── router/
+│   ├── agents/
+│   ├── tests/
+│   └── main.py
+├── mmo_server/
+│   ├── world/
+│   ├── entities/
+│   ├── ai/
+│   ├── quests/
+│   ├── classes/
+│   ├── lyra_engine/
+│   ├── simulation/
+│   ├── tests/
+│   └── main.py
+├── infra/
+│   ├── docker/
+│   ├── systemd/
+│   ├── scripts/
+│   └── config/
+├── docs/
+└── README.md
+
+
+
+3. PRINCIPES D’ARCHITECTURE
+- Tout doit être modulaire (pas de monolithes)
+- Chaque module doit être autonome
+- Chaque agent IA doit déclarer :
+- ses capacités
+- ses outils
+- ses contraintes
+- son protocole de communication
+- Le moteur MMO doit être data-driven
+- Les NPC doivent être gouvernés par Lyra Engine
+- Les quêtes doivent être générées dynamiquement
+- Les classes doivent être flexibles et combinables
+- Les tests doivent être générés automatiquement
+
+4. MODULES À GÉNÉRER AUTOMATIQUEMENT
+A. Orchestrateur IA
+- introspection robuste
+- classification déterministe des intentions
+- registry des capacités
+- router multi-agents
+- gestion des erreurs et fallback
+B. Backend API
+- FastAPI
+- endpoints typés
+- services découplés
+- modèles Pydantic
+- tests pytest
+C. Moteur MMORPG
+- simulation temps réel
+- IA NPC (Lyra Engine)
+- système de classes flexible
+- moteur de quêtes dynamiques
+- gestion des factions, races, métiers
+- routines civiles
+
+5. LIVRABLES ATTENDUS
+À chaque étape, tu dois produire :
+- le code complet
+- les tests
+- la documentation
+- les scripts d’installation
+- les fichiers systemd
+- les Dockerfile
+- les schémas d’architecture
+
+6. STYLE DE PRODUCTION
+- Code propre, typé, commenté
+- Architecture claire et maintenable
+- Pas de magie noire
+- Toujours proposer des améliorations
+- Toujours générer des tests
+
+7. PREMIÈRE ACTION
+Génère immédiatement :
+- l’arborescence complète
+- les fichiers initiaux
+- les README de chaque module
+- les premiers squelettes de code
+- les scripts d’installation
+- les fichiers systemd
+- les Dockerfile
+Ensuite, attends mes instructions pour développer chaque module.
+
+# Règles générales
+- Toujours proposer des solutions modulaires, découplées et testables.
+- Ne jamais introduire de logique métier dans les contrôleurs : utiliser services + modules.
+- Toujours générer des tests unitaires et d’intégration pour chaque nouveau module.
+- Toujours documenter les fonctions publiques (docstring + README local).
+- Toujours vérifier la cohérence avec l’architecture existante avant de proposer du code.
+- Toujours proposer un plan avant de générer du code complexe.
+
+#  Règles spécifiques à ton orchestrateur IA
+- Les agents doivent être déclaratifs : capabilities, protocols, constraints.
+- L’introspection doit être centralisée dans un module unique.
+- Le router doit être déterministe, avec fallback et logs structurés.
+- Chaque agent doit avoir un dossier dédié : /agents/<name>/ avec tests.
+- Le registry doit être centralisé dans un module unique.
+- Le router doit être déterministe, avec fallback et logs structurés.
+- Chaque agent doit avoir un dossier dédié : /agents/<name>/ avec tests.
+- Le registry doit être centralisé dans un module unique.
+- Le router doit être déterministe, avec fallback et logs structurés.
+- Chaque agent doit avoir un dossier dédié : /agents/<name>/ avec tests.
+- Le registry doit être centralisé dans un module unique.
+- Le router doit être déterministe, avec fallback et logs structurés.
+- Chaque agent doit avoir un dossier dédié : /agents/<name>/ avec tests.
+
+#  Règles MMO / Lyra Engine
+- Les systèmes doivent être data-driven.
+- Les NPC utilisent Lyra Engine : gauges, needs, routines, events.
+- Les classes doivent être combinables (mixins), jamais figées.
+- Les quêtes doivent être générées dynamiquement via un Quest Engine modulaire.
+- Les systèmes doivent être modulaires et extensibles.
+- Les systèmes doivent être testables.
+- Les systèmes doivent être documentés.
+- Les systèmes doivent être maintenables.
+- Les systèmes doivent être extensibles.
+
+# 🐳 Règles DevOps / Linux
+- Toujours générer un Dockerfile minimaliste et reproductible.
+- Toujours générer un service systemd si un module tourne en daemon.
+- Toujours vérifier la compatibilité Linux (pas de chemins Windows).

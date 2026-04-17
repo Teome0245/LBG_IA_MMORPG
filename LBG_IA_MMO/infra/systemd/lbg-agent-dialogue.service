@@ -1,0 +1,21 @@
+[Unit]
+Description=LBG_IA_MMO Dialogue HTTP agent
+After=network.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/LBG_IA_MMO
+# Clés API et LBG_* : poussées avec infra/scripts/push_secrets_vm.sh → /etc/lbg-ia-mmo.env
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONUNBUFFERED=1
+# Optionnel — LLM API OpenAI-compatible (Ollama local :11434, ou ex. http://192.168.0.110:11434/v1) :
+# Environment=LBG_DIALOGUE_LLM_BASE_URL=http://127.0.0.1:11434/v1
+# Environment=LBG_DIALOGUE_LLM_MODEL=llama3.2:latest
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/uvicorn lbg_agents.dialogue_http_app:app --host 0.0.0.0 --port 8020
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

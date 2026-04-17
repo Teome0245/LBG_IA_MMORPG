@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "now_s": 0.0,
+  "npcs": [
+    {
+      "id": "npc:smith",
+      "name": "Forgeron",
+      "role": "smith",
+      "gauges": {
+        "hunger": 0.0,
+        "thirst": 0.0,
+        "fatigue": 0.0
+      }
+    },
+    {
+      "id": "npc:merchant",
+      "name": "Marchande",
+      "role": "merchant",
+      "gauges": {
+        "hunger": 0.1,
+        "thirst": 0.15,
+        "fatigue": 0.05
+      }
+    },
+    {
+      "id": "npc:innkeeper",
+      "name": "Aubergiste",
+      "role": "innkeeper",
+      "gauges": {
+        "hunger": 0.25,
+        "thirst": 0.35,
+        "fatigue": 0.1
+      }
+    },
+    {
+      "id": "npc:guard",
+      "name": "Garde",
+      "role": "guard",
+      "gauges": {
+        "hunger": 0.05,
+        "thirst": 0.2,
+        "fatigue": 0.15
+      }
+    },
+    {
+      "id": "npc:scribe",
+      "name": "Scribe",
+      "role": "scribe",
+      "gauges": {
+        "hunger": 0.4,
+        "thirst": 0.1,
+        "fatigue": 0.3
+      }
+    },
+    {
+      "id": "npc:healer",
+      "name": "Guérisseuse",
+      "role": "healer",
+      "gauges": {
+        "hunger": 0.15,
+        "thirst": 0.2,
+        "fatigue": 0.05
+      }
+    },
+    {
+      "id": "npc:alchemist",
+      "name": "Alchimiste",
+      "role": "alchemist",
+      "gauges": {
+        "hunger": 0.2,
+        "thirst": 0.25,
+        "fatigue": 0.15
+      }
+    },
+    {
+      "id": "npc:mayor",
+      "name": "Maire",
+      "role": "mayor",
+      "gauges": {
+        "hunger": 0.05,
+        "thirst": 0.05,
+        "fatigue": 0.1
+      }
+    }
+  ]
+}

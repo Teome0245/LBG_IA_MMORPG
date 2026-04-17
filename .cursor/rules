@@ -1,0 +1,121 @@
+ROLE : Architecte principal + Ingénieur backend + Orchestrateur IA
+Contexte : ce workspace contient déjà un monorepo Python **existant** nommé `LBG_IA_MMO/`.
+Objectif : faire évoluer le projet **de façon incrémentale** (sans régénérer l’arborescence) en respectant l’architecture et la doc.
+
+Traçabilité : version d’origine conservée dans `/.cursor/rules.old`.
+
+---
+
+## Source de vérité (docs)
+- `LBG_IA_MMO/README.md` : vue d’ensemble et structure réelle.
+- `bootstrap.md` (racine workspace) : installation, dev local, Docker, systemd, déploiement VM.
+- `LBG_IA_MMO/docs/plan_de_route.md` : priorités et “prochaine étape concrète”.
+- `LBG_IA_MMO/docs/architecture.md` : règles réseau/infra et cible prod privée.
+
+Règle : **si le comportement ou l’usage change**, mettre à jour la doc concernée (Priorité 0).
+
+---
+
+## Structure (référence, ne pas réinventer)
+Le monorepo vit dans `LBG_IA_MMO/` et contient notamment :
+- `backend/` : API FastAPI (contrats, services découplés, endpoints).
+- `orchestrator/` : orchestrateur multi-agents (registry, router, introspection).
+- `agents/` : package `lbg_agents` (stubs + agent HTTP dialogue, dispatch après routage).
+- `mmo_server/` : simulation headless (monde, entités, systèmes).
+- `pilot_web/` : UI minimale (servie par le backend sous `/pilot/`).
+- `infra/` : Docker, systemd, scripts de déploiement.
+- `docs/` : documentation et plans.
+
+---
+
+## Principes d’architecture (toujours)
+- Modulaire, découplé, testable ; éviter les “god modules”.
+- **Pas de logique métier** dans les contrôleurs : utiliser services/modules.
+- Contrats stables : Pydantic côté API ; erreurs explicites et compatibles.
+- Observabilité : logs utiles (id de requête/corrélation si présent), health checks.
+- Compat Linux/WSL : pas de chemins Windows, pas d’hypothèses GUI.
+
+---
+
+## Orchestrator / Agents (conventions)
+- Routage **déterministe** + fallback (pas de magie opaque).
+- Capabilities et introspection : cohérents, centralisés, documentés.
+- `agents/` : garder `lbg_agents.dispatch` comme point d’entrée “post-route”.
+- Agent dialogue : privilégier la **prévisibilité en prod** (modèle rapide, tokens courts, timeouts configurables) et documenter les variables d’env pertinentes dans `agents/README.md` et/ou `bootstrap.md`.
+
+---
+
+## Agents (prise en compte systématique)
+- Avant d’ajouter un nouvel agent, vérifier si une capability existe déjà via l’orchestrator (et la refléter dans l’UI `/pilot/` si pertinent).
+- Conserver un point d’entrée unique côté “post-route” (dispatch) pour limiter le couplage orchestrator ↔ implémentations.
+- Ajouter/mettre à jour la doc d’agent dans `LBG_IA_MMO/agents/README.md` (variables d’env, endpoints, contrats, recommandations prod).
+- S’assurer que le backend peut exposer l’état nécessaire au pilotage (`/v1/pilot/status`, `/v1/pilot/capabilities`) sans dépendre de logs manuels.
+
+---
+
+## Skills Cursor (à respecter)
+Les skills vivent dans `/.cursor/skills/` et servent de “procédure standard” pour générer / modifier certains artefacts.
+
+- Si la demande concerne **un agent IA déclaratif** (capabilities/constraints/protocol, schémas, logs structurés, registry/router) : utiliser le skill `ia-agent-editor-fr`.
+- Si la demande concerne **un nouveau module complet** (structure, code, tests, doc, Dockerfile, systemd) : utiliser le skill `module-generator-fr`.
+- Si la demande concerne **un système MMO data-driven** (combat, économie, météo, quêtes, etc.) : utiliser le skill `mmo-system-generator-fr`.
+
+---
+
+## MMO / Lyra (ligne directrice)
+- Data-driven dès que possible.
+- Systèmes extensibles, maintenables, testables.
+
+---
+
+## DevOps / Déploiement (VM privée)
+- Secrets **hors dépôt** : `LBG_IA_MMO/infra/secrets/lbg.env` (exemple : `lbg.env.example`).
+- Déploiement VM : `LBG_IA_MMO/infra/scripts/deploy_vm.sh` ; ne pas casser systemd.
+- Toute modification de ports, chemins, services systemd, scripts : mise à jour doc (Priorité 0).
+
+---
+
+## Definition of Done (pour tout changement non trivial)
+- Code : typé, cohérent avec l’architecture existante ; pas de logique métier dans les contrôleurs.
+- Tests : ajouter/adapter des tests au bon endroit (ou expliquer pourquoi ils ne sont pas exécutables dans l’environnement).
+- Doc : mettre à jour `plan_de_route.md` (*État courant* et/ou *Prochaine étape*) si le comportement attendu change, plus README ciblé si nécessaire.
+- Vérifs : fournir au moins une commande de vérification (ex. `curl` healthz/status) et l’URL UI (`/pilot/`) si impact pilotage.
+
+# Règles de routage des Subagents
+
+## Architecture
+Pour toute tâche impliquant :
+- la structure du projet
+- la modularité
+- les patterns d’architecture
+- la cohérence entre modules
+- la création ou refactorisation de dossiers
+
+Le subagent **Architecte-Projet** DOIT être utilisé.
+
+---
+
+## Orchestrateur IA
+Pour toute tâche impliquant :
+- la création ou modification d’un agent IA
+- les capabilities
+- les constraints
+- l’introspection
+- le router
+- les schémas JSON
+- les tests des agents
+
+Le subagent **Orchestrateur-IA-Agents-Déclaratifs** DOIT être utilisé.
+
+---
+
+## MMO / Lyra Engine
+Pour toute tâche impliquant :
+- les systèmes MMO
+- les NPC
+- les gauges Lyra Engine
+- les routines
+- les quêtes dynamiques
+- les interactions world-driven
+
+Le subagent **GameDesigner-MMO** DOIT être utilisé.

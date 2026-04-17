@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LBG_IA_MMO — Pilotage</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; line-height: 1.5; }
+    body { max-width: 92rem; margin: 1.25rem auto; padding: 0 1rem; }
+    header { margin-bottom: 1.5rem; }
+    section { margin: 1.25rem 0; padding: 1rem; border: 1px solid #ccc; border-radius: 6px; }
+    label { display: block; font-weight: 600; margin-top: 0.75rem; }
+    input[type="text"], textarea { width: 100%; box-sizing: border-box; margin-top: 0.25rem; }
+    textarea { min-height: 4rem; font-family: inherit; }
+    button { margin-top: 0.75rem; padding: 0.4rem 0.9rem; cursor: pointer; }
+    pre { background: #f4f4f4; padding: 0.75rem; overflow: auto; font-size: 0.85rem; }
+    .ok { color: #0a5; }
+    .err { color: #a30; }
+    .muted { color: #555; font-size: 0.9rem; }
+
+    /* Dashboard layout */
+    .dashboard {
+      display: grid;
+      grid-template-columns: minmax(16rem, 1fr) minmax(22rem, 2fr) minmax(18rem, 1.15fr);
+      gap: 1rem;
+      align-items: start;
+    }
+    .col section { margin: 0 0 1rem 0; }
+    .col section:last-child { margin-bottom: 0; }
+
+    .panel-title { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin: 0 0 0.5rem 0; }
+    .panel-title h2 { margin: 0; font-size: 1.1rem; }
+    .panel-title .muted { margin: 0; }
+
+    .layout-controls {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fafafa;
+      margin-bottom: 1rem;
+    }
+    .layout-controls label { margin: 0; font-weight: 600; display: inline-flex; align-items: center; gap: 0.35rem; }
+    .layout-controls input[type="checkbox"] { width: auto; }
+
+    @media (max-width: 980px) {
+      .dashboard { grid-template-columns: 1fr; }
+      body { max-width: 52rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pilotage & monitoring (minimal)</h1>
+    <p class="muted">
+      Peut être servi depuis le backend (<code>/pilot/</code>) <em>ou</em> en statique (ex. Nginx sur la VM front).
+      Par défaut, l’API de base est le même origine que cette page.
+    </p>
+  </header>
+
+  <div class="layout-controls">
+    <label><input type="checkbox" id="toggle-left" checked> colonne gauche</label>
+    <label><input type="checkbox" id="toggle-right" checked> colonne droite</label>
+    <label class="muted">token service (optionnel): <input type="text" id="service-token" placeholder="X-LBG-Service-Token" style="width:14rem"/></label>
+    <span class="muted">Astuce: sur petit écran, tout repasse en une colonne.</span>
+  </div>
+
+  <div class="dashboard" id="dashboard">
+    <div class="col" id="col-left">
+      <section>
+        <div class="panel-title">
+          <h2>Gauche</h2>
+          <p class="muted">réservé</p>
+        </div>
+        <p class="muted">Presets (scénarios rapides) — applique texte + context.</p>
+        <p>
+          <button type="button" class="preset" data-preset="forge">Forgeron</button>
+          <button type="button" class="preset" data-preset="healer">Guérisseuse</button>
+          <button type="button" class="preset" data-preset="alchemist">Alchimiste</button>
+          <button type="button" class="preset" data-preset="mayor">Maire</button>
+          <button type="button" class="preset" data-preset="auberge">Aubergiste</button>
+          <button type="button" class="preset" data-preset="garde">Garde</button>
+          <button type="button" class="preset" data-preset="scribe">Scribe</button>
+          <button type="button" class="preset" data-preset="quete">Quête</button>
+          <button type="button" class="preset" data-preset="quete_npc">Quête (PNJ)</button>
+          <button type="button" class="preset" data-preset="quete_avancement">Avancement quête</button>
+          <button type="button" class="preset" data-preset="quete_commit">Quête (commit)</button>
+          <button type="button" class="preset" data-preset="quete_commit_mayor">Quête (commit — Maire)</button>
+          <button type="button" class="preset" data-preset="quete_commit_healer">Quête (commit — Guérisseuse)</button>
+          <button type="button" class="preset" data-preset="quete_commit_alchemist">Quête (commit — Alchimiste)</button>
+          <button type="button" class="preset" data-preset="combat">Combat</button>
+          <button type="button" class="preset" data-preset="combat_avancement">Avancement combat</button>
+          <button type="button" class="preset" data-preset="devops_sonde">DevOps (sonde)</button>
+          <button type="button" class="preset" data-preset="lyra_test">Lyra (test)</button>
+          <button type="button" class="preset" data-preset="lyra_mmo">Lyra + monde (MMO)</button>
+        </p>
+        <p class="muted" style="margin-top:0.5rem">
+          NPC v1 (ids stables) :
+          <button type="button" class="npc-chip" data-npc-id="npc:merchant">npc:merchant</button>
+          <button type="button" class="npc-chip" data-npc-id="npc:smith">npc:smith</button>
+          <button type="button" class="npc-chip" data-npc-id="npc:innkeeper">npc:innkeeper</button>
+          <button type="button" class="npc-chip" data-npc-id="npc:guard">npc:guard</button>
+          <button type="button" class="npc-chip" data-npc-id="npc:scribe">npc:scribe</button>
+          <button type="button" class="npc-chip" data-npc-id="npc:healer">npc:healer</button>
+          <button type="button" class="npc-chip" data-npc-id="npc:alchemist">npc:alchemist</button>
+          <button type="button" class="npc-chip" data-npc-id="npc:mayor">npc:mayor</button>
+        </p>
+        <p class="muted" style="margin-top:0.5rem">
+          Réputation (sans LLM) :
+          <button type="button" id="btn-rep-plus">Rep +11</button>
+          <button type="button" id="btn-rep-minus">Rep -5</button>
+          <button type="button" id="btn-rep-reset">Reset (→0)</button>
+          <span class="muted">agit sur <code>context.world_npc_id</code> (ou <code>npc:merchant</code> par défaut)</span>
+        </p>
+        <p class="muted">Astuce : tes champs, l’historique PNJ, l’état quête et l’état combat sont sauvegardés localement à chaque envoi. Le bloc <b>Lyra (output)</b> après envoi n’apparaît que si l’agent renvoie <code>output.lyra</code> — utilise le preset <b>Lyra (test)</b> (routage <code>agent.fallback</code>). Avec <b>Lyra + monde (MMO)</b>, le backend injecte <code>context.lyra</code> depuis le serveur monde si <code>LBG_MMO_SERVER_URL</code> est défini (voir <code>docs/lyra.md</code>).</p>
+      </section>
+    </div>
+
+    <div class="col" id="col-center">
+      <section>
+        <div class="panel-title">
+          <h2>Chat (intention)</h2>
+          <p class="muted">backend → orchestrator → agent</p>
+        </div>
+        <label for="api-base">URL du backend (défaut : origine actuelle)</label>
+        <input type="text" id="api-base" placeholder="http://127.0.0.1:8000" />
+        <p class="muted" style="margin:0.35rem 0 0 0">
+          Astuce : si ce pilot est servi sur la VM front avec un proxy Nginx (<code>/v1/*</code> → backend),
+          laisse ce champ vide. Sinon, renseigne par exemple <code>http://192.168.0.140:8000</code>.
+        </p>
+
+        <label for="actor">actor_id</label>
+        <input type="text" id="actor" value="test:1" />
+
+        <label for="text">texte</label>
+        <textarea id="text">Je veux parler au forgeron</textarea>
+
+        <label for="context-json">context (JSON) — dialogue (<code>npc_name</code>), quête, combat, DevOps, <code>lyra</code>, etc.</label>
+        <textarea id="context-json" rows="6" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
+  "npc_name": "Hagen le forgeron",
+  "history": []
+}</textarea>
+        <div id="lyra-context-preview" style="display:none;margin-top:0.35rem;padding:0.5rem;border:1px solid #cfe8d8;border-radius:6px;background:#f6fcf8;"></div>
+        <p class="muted" style="margin-top:0.35rem">Sans <code>npc_name</code>, l’agent utilise « PNJ ». Option <code>world_npc_id</code> (ex. <code>"npc:smith"</code>) : si <code>LBG_MMO_SERVER_URL</code> pointe vers le serveur MMO HTTP, le backend fusionne l’état Lyra du monde avant routage. Pour enchaîner les tours, <code>history</code> doit être un <strong>tableau JSON valide</strong> (pas de <code>|</code> dans les chaînes) — ex. <code>[{"role":"user","content":"Salut"},{"role":"assistant","content":"Bonjour."}]</code>. Répliques générées : configurer le LLM sur le service dialogue (<code>LBG_DIALOGUE_LLM_*</code>, voir <code>agents/README.md</code>).</p>
+
+        <p class="muted" style="margin:0.65rem 0 0 0; display:flex; gap:0.9rem; flex-wrap:wrap; align-items:center;">
+          <label style="margin:0; font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
+            <input type="checkbox" id="toggle-auto-history" checked>
+            auto-append history
+          </label>
+          <label style="margin:0; font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
+            <input type="checkbox" id="toggle-no-cache">
+            No cache (<code>context._no_cache</code>)
+          </label>
+          <label style="margin:0; font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
+            <input type="checkbox" id="toggle-devops-dry-run">
+            DevOps dry-run (<code>context.devops_dry_run</code>)
+          </label>
+          <span class="muted" style="font-size:0.88rem">Exécution réelle : si <code>LBG_DEVOPS_APPROVAL_TOKEN</code> est défini sur l’orchestrator, ajouter <code>devops_approval</code> dans le JSON context (ne pas committer le secret).</span>
+          <button type="button" id="btn-reset-history">Reset history</button>
+          <span class="muted">Clé : <code>npc_name</code> (sinon “global”).</span>
+        </p>
+
+        <button type="button" id="btn-send">Envoyer POST /v1/pilot/route (timé)</button>
+        <p style="margin:0.6rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" id="btn-copy-json">Copier JSON</button>
+          <span class="muted" id="copy-hint">—</span>
+        </p>
+        <div id="intent-pretty" style="margin-top:0.75rem"></div>
+        <div id="history-pretty" style="margin-top:0.75rem"></div>
+        <pre id="intent-out">—</pre>
+      </section>
+
+      <section>
+        <div class="panel-title">
+          <h2>Benchmark (latence)</h2>
+          <p class="muted">p50 / p95 (VM)</p>
+        </div>
+        <p class="muted">Envoie N requêtes séquentielles sur <code>/v1/pilot/route</code> et calcule p50/p95 à partir de <code>elapsed_ms</code>.</p>
+
+        <label for="bench-n">N (requêtes)</label>
+        <input type="text" id="bench-n" value="10" />
+
+        <label for="bench-sleep-ms">Pause entre requêtes (ms)</label>
+        <input type="text" id="bench-sleep-ms" value="100" />
+
+        <button type="button" id="btn-bench">Lancer benchmark</button>
+        <pre id="bench-out">—</pre>
+      </section>
+
+      <section>
+        <div class="panel-title">
+          <h2>Cache (latence)</h2>
+          <p class="muted">p50 / p95 (hit vs miss)</p>
+        </div>
+        <p class="muted">Statistiques locales (derniers envois) selon <code>remote.meta.cache_hit</code>.</p>
+        <p><button type="button" id="btn-cache-lat-reset">Reset stats cache</button></p>
+        <pre id="cache-lat-out">—</pre>
+      </section>
+    </div>
+
+    <div class="col" id="col-right">
+      <section>
+        <div class="panel-title">
+          <h2>Monitoring</h2>
+          <p class="muted">santé agrégée</p>
+        </div>
+        <p id="health-summary" class="muted">—</p>
+        <div id="services-links" class="muted" style="margin:0.25rem 0 0.5rem 0;">—</div>
+        <p><button type="button" id="btn-refresh">Rafraîchir</button></p>
+        <pre id="health-out">Chargement…</pre>
+      </section>
+
+      <section>
+        <div class="panel-title">
+          <h2>Capabilities</h2>
+          <p class="muted">via backend</p>
+        </div>
+        <p class="muted"><code>GET /v1/pilot/capabilities</code> → proxy orchestrator <code>/v1/capabilities</code></p>
+        <p><button type="button" id="btn-cap-refresh">Charger la liste</button></p>
+        <div id="cap-table-wrap"></div>
+        <pre id="cap-raw" class="muted" style="margin-top:0.75rem;font-size:0.8rem;">—</pre>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "lbg_pilot_api_base";
+    const STORAGE_CHAT_KEY = "lbg_pilot_chat_state_v1";
+    const STORAGE_HISTORY_PREFIX = "lbg_pilot_history_v1:";
+    const STORAGE_QUEST_PREFIX = "lbg_pilot_quest_state_v1:";
+    const STORAGE_COMBAT_PREFIX = "lbg_pilot_encounter_state_v1:";
+    const STORAGE_NO_CACHE_KEY = "lbg_pilot_no_cache_v1";
+    const STORAGE_CACHE_LAT_KEY = "lbg_pilot_cache_lat_v1";
+    const STORAGE_SERVICE_TOKEN_KEY = "lbg_pilot_service_token_v1";
+
+    function getBase() {
+      const el = document.getElementById("api-base");
+      const fromInput = el.value.trim();
+      if (fromInput) return fromInput.replace(/\/$/, "");
+      return window.location.origin;
+    }
+
+    function loadStoredBase() {
+      try {
+        const v = localStorage.getItem(STORAGE_KEY);
+        if (v) document.getElementById("api-base").value = v;
+      } catch (_) {}
+    }
+
+    function loadStoredServiceToken() {
+      try {
+        const v = localStorage.getItem(STORAGE_SERVICE_TOKEN_KEY);
+        if (v) document.getElementById("service-token").value = v;
+      } catch (_) {}
+    }
+
+    function loadStoredChatState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_CHAT_KEY);
+        if (!raw) return;
+        const j = JSON.parse(raw);
+        if (j && typeof j === "object") {
+          if (typeof j.actor_id === "string") document.getElementById("actor").value = j.actor_id;
+          if (typeof j.text === "string") document.getElementById("text").value = j.text;
+          if (typeof j.context_json === "string") document.getElementById("context-json").value = j.context_json;
+        }
+      } catch (_) {}
+      try { refreshLyraContextPreview(); } catch (_) {}
+    }
+
+    function getServiceToken() {
+      const el = document.getElementById("service-token");
+      const v = (el && el.value) ? el.value.trim() : "";
+      if (!v) return "";
+      try { localStorage.setItem(STORAGE_SERVICE_TOKEN_KEY, v); } catch (_) {}
+      return v;
+    }
+
+    function loadNoCacheToggle() {
+      try {
+        const v = localStorage.getItem(STORAGE_NO_CACHE_KEY);
+        if (v === "1") document.getElementById("toggle-no-cache").checked = true;
+      } catch (_) {}
+    }
+
+    function saveNoCacheToggle() {
+      try {
+        const el = document.getElementById("toggle-no-cache");
+        localStorage.setItem(STORAGE_NO_CACHE_KEY, el && el.checked ? "1" : "0");
+      } catch (_) {}
+    }
+
+    function saveBase() {
+      try {
+        const b = document.getElementById("api-base").value.trim();
+        if (b) localStorage.setItem(STORAGE_KEY, b);
+      } catch (_) {}
+    }
+
+    function saveChatState() {
+      try {
+        const st = {
+          actor_id: document.getElementById("actor").value,
+          text: document.getElementById("text").value,
+          context_json: document.getElementById("context-json").value,
+        };
+        localStorage.setItem(STORAGE_CHAT_KEY, JSON.stringify(st));
+      } catch (_) {}
+      try { refreshLyraContextPreview(); } catch (_) {}
+    }
+
+    function healthStateClass(state) {
+      if (state === "ok") return "ok";
+      if (state === "skipped") return "muted";
+      return "err";
+    }
+
+    async function refreshHealth() {
+      const out = document.getElementById("health-out");
+      const sum = document.getElementById("health-summary");
+      const links = document.getElementById("services-links");
+      out.textContent = "…";
+      sum.textContent = "…";
+      links.textContent = "…";
+      try {
+        const base = getBase();
+        const r = await fetch(base + "/v1/pilot/status");
+        const j = await r.json();
+        out.textContent = JSON.stringify(j, null, 2);
+        const orch = j.orchestrator ?? "—";
+        const dlg = j.agent_dialogue ?? "—";
+        const qst = j.agent_quests ?? "—";
+        const cbt = j.agent_combat ?? "—";
+        const dlgInfo = j.agent_dialogue_info;
+        const qstInfo = j.agent_quests_info;
+        const cbtInfo = j.agent_combat_info;
+        let dlgSuffix = "";
+        if (dlgInfo && typeof dlgInfo === "object") {
+          const parts = [];
+          if (dlgInfo.service) parts.push(String(dlgInfo.service));
+          if (dlgInfo.version != null) parts.push("v" + String(dlgInfo.version));
+          if (dlgInfo.llm_model) parts.push("model " + String(dlgInfo.llm_model));
+          const cache = dlgInfo.cache;
+          if (cache && typeof cache === "object") {
+            const enabled = cache.enabled === true ? "cache on" : "cache off";
+            const size = cache.size != null ? ("size " + String(cache.size)) : "";
+            const hits = cache.hits != null ? ("hits " + String(cache.hits)) : "";
+            const misses = cache.misses != null ? ("miss " + String(cache.misses)) : "";
+            parts.push([enabled, size, hits, misses].filter(Boolean).join(" · "));
+          }
+          if (parts.length) dlgSuffix = " <span class=\"muted\">(" + parts.map(escapeHtml).join(" · ") + ")</span>";
+        }
+        let qstSuffix = "";
+        if (qstInfo && typeof qstInfo === "object") {
+          const parts = [];
+          if (qstInfo.service) parts.push(String(qstInfo.service));
+          if (qstInfo.version != null) parts.push("v" + String(qstInfo.version));
+          if (parts.length) qstSuffix = " <span class=\"muted\">(" + parts.map(escapeHtml).join(" · ") + ")</span>";
+        }
+        let cbtSuffix = "";
+        if (cbtInfo && typeof cbtInfo === "object") {
+          const parts = [];
+          if (cbtInfo.service) parts.push(String(cbtInfo.service));
+          if (cbtInfo.version != null) parts.push("v" + String(cbtInfo.version));
+          if (parts.length) cbtSuffix = " <span class=\"muted\">(" + parts.map(escapeHtml).join(" · ") + ")</span>";
+        }
+        sum.innerHTML =
+          "Backend: <span class=\"" + healthStateClass(j.backend) + "\">" + j.backend + "</span> · " +
+          "Orchestrator: <span class=\"" + healthStateClass(orch) + "\">" + orch + "</span> · " +
+          "Agent dialogue: <span class=\"" + healthStateClass(dlg) + "\">" + dlg + "</span>" + dlgSuffix + " · " +
+          "Agent quests: <span class=\"" + healthStateClass(qst) + "\">" + qst + "</span>" + qstSuffix + " · " +
+          "Agent combat: <span class=\"" + healthStateClass(cbt) + "\">" + cbt + "</span>" + cbtSuffix;
+
+        const b = base;
+        const items = [];
+        if (j.agent_dialogue && j.agent_dialogue !== "skipped") {
+          const href = b + "/v1/pilot/agent-dialogue/healthz";
+          items.push("<a href=\"" + escapeHtml(href) + "\" target=\"_blank\" rel=\"noreferrer\">healthz dialogue (proxy)</a>");
+        }
+        if (j.agent_quests && j.agent_quests !== "skipped") {
+          const href = b + "/v1/pilot/agent-quests/healthz";
+          items.push("<a href=\"" + escapeHtml(href) + "\" target=\"_blank\" rel=\"noreferrer\">healthz quests (proxy)</a>");
+        }
+        if (j.agent_combat && j.agent_combat !== "skipped") {
+          const href = b + "/v1/pilot/agent-combat/healthz";
+          items.push("<a href=\"" + escapeHtml(href) + "\" target=\"_blank\" rel=\"noreferrer\">healthz combat (proxy)</a>");
+        }
+        if (items.length) {
+          links.innerHTML =
+            "Services : " + items.join(" · ") +
+            "<br><span class=\"muted\" style=\"font-size:0.85rem\">Même origine que le backend : pas besoin d’ouvrir 8020/8030/8040 sur le pare-feu du poste client.</span>";
+        } else {
+          links.textContent = "Services : —";
+        }
+      } catch (e) {
+        out.textContent = "Erreur: " + e;
+        sum.textContent = "Erreur: " + e;
+        links.textContent = "Erreur: " + e;
+      }
+    }
+
+    async function refreshCapabilities() {
+      const wrap = document.getElementById("cap-table-wrap");
+      const raw = document.getElementById("cap-raw");
+      wrap.innerHTML = "<p>Chargement…</p>";
+      raw.textContent = "—";
+      try {
+        const base = getBase();
+        const r = await fetch(base + "/v1/pilot/capabilities");
+        const j = await r.json();
+        raw.textContent = JSON.stringify(j, null, 2);
+        if (!j.ok) {
+          wrap.innerHTML = "<p class=\"err\">Erreur proxy : " + (j.error || JSON.stringify(j)) + "</p>";
+          return;
+        }
+        const caps = j.capabilities || [];
+        if (caps.length === 0) {
+          wrap.innerHTML = "<p>Aucune capability.</p>";
+          return;
+        }
+        let html = "<table style=\"width:100%;border-collapse:collapse\"><thead><tr><th style=\"text-align:left;border:1px solid #ccc;padding:0.35rem\">name</th><th style=\"text-align:left;border:1px solid #ccc;padding:0.35rem\">routed_to</th><th style=\"text-align:left;border:1px solid #ccc;padding:0.35rem\">description</th></tr></thead><tbody>";
+        for (const c of caps) {
+          html += "<tr><td style=\"border:1px solid #ccc;padding:0.35rem\">" + escapeHtml(c.name) + "</td><td style=\"border:1px solid #ccc;padding:0.35rem\"><code>" + escapeHtml(c.routed_to) + "</code></td><td style=\"border:1px solid #ccc;padding:0.35rem\">" + escapeHtml(c.description || "") + "</td></tr>";
+        }
+        html += "</tbody></table>";
+        wrap.innerHTML = html;
+      } catch (e) {
+        wrap.innerHTML = "<p class=\"err\">Erreur: " + escapeHtml(String(e)) + "</p>";
+      }
+    }
+
+    function escapeHtml(s) {
+      const d = document.createElement("div");
+      d.textContent = s;
+      return d.innerHTML;
+    }
+
+    function refreshLyraContextPreview() {
+      const box = document.getElementById("lyra-context-preview");
+      if (!box) return;
+      let ctx = {};
+      try {
+        const raw = document.getElementById("context-json").value.trim();
+        if (raw) ctx = JSON.parse(raw);
+      } catch (_) {
+        box.style.display = "none";
+        box.innerHTML = "";
+        return;
+      }
+      const lyra = ctx.lyra;
+      if (lyra && typeof lyra === "object" && !Array.isArray(lyra)) {
+        box.style.display = "";
+        box.innerHTML =
+          "<div class=\"muted\" style=\"margin-bottom:0.25rem;\">Lyra (contexte — aperçu)</div>" +
+          "<pre style=\"margin:0;white-space:pre-wrap;font-size:0.82rem;\">" +
+          escapeHtml(JSON.stringify(lyra, null, 2)) +
+          "</pre>";
+      } else {
+        box.style.display = "none";
+        box.innerHTML = "";
+      }
+    }
+
+    async function sendIntent() {
+      saveBase();
+      saveChatState();
+      const out = document.getElementById("intent-out");
+      const pretty = document.getElementById("intent-pretty");
+      const histPretty = document.getElementById("history-pretty");
+      const hint = document.getElementById("copy-hint");
+      out.textContent = "…";
+      pretty.innerHTML = "";
+      histPretty.innerHTML = "";
+      hint.textContent = "—";
+      try {
+        const request = buildPilotRouteRequest();
+        const r = await fetch(getBase() + "/v1/pilot/route", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(request),
+        });
+        const rawText = await r.text();
+        let parsed = null;
+        try { parsed = JSON.parse(rawText); } catch (_) {}
+        if (parsed && typeof parsed === "object") {
+          const ms = parsed.elapsed_ms;
+          const head = "HTTP " + r.status + " " + r.statusText + (ms != null ? (" · elapsed_ms=" + ms) : "");
+          out.textContent = head + "\n" + JSON.stringify(parsed, null, 2);
+          window.__last_intent_json = parsed;
+          try { pretty.innerHTML = renderPretty(parsed); } catch (_) {}
+          try {
+            try { recordCacheLatencySample(parsed); } catch (_) {}
+            maybeAppendHistory(request, parsed);
+            maybePersistQuestState(request, parsed);
+            maybePersistEncounterState(request, parsed);
+            histPretty.innerHTML = renderHistoryPretty();
+          } catch (_) {}
+        } else {
+          out.textContent = "HTTP " + r.status + " " + r.statusText + "\n" + rawText;
+          window.__last_intent_json = null;
+        }
+      } catch (e) {
+        out.textContent = "Erreur: " + e;
+        window.__last_intent_json = null;
+      }
+    }
+
+    function maybePersistQuestState(request, response) {
+      const res = response && response.result;
+      const out = res && res.output;
+      const questState = out && out.quest_state;
+      if (!questState || typeof questState !== "object" || Array.isArray(questState)) return;
+      if (typeof questState.quest_id !== "string" || !questState.quest_id.trim()) return;
+
+      const ctx = request.context || {};
+      const npcKey = getNpcKeyFromContext(ctx);
+      saveQuestState(npcKey, questState);
+
+      // refléter dans la textarea context
+      const nextContext = { ...ctx, quest_state: questState };
+      document.getElementById("context-json").value = JSON.stringify(nextContext, null, 2);
+      saveChatState();
+    }
+
+    function maybePersistEncounterState(request, response) {
+      const res = response && response.result;
+      if (!res || res.routed_to !== "agent.combat") return;
+      const out = res && res.output;
+      const encounter = out && out.encounter;
+      if (!encounter || typeof encounter !== "object" || Array.isArray(encounter)) return;
+      const eid = encounter.encounter_id;
+      if (typeof eid !== "string" || !eid.trim()) return;
+
+      const ctx = request.context || {};
+      const combatKey = getCombatKeyFromContext(ctx);
+      const st = encounter.status;
+      const terminal =
+        st === "victory" || st === "defeat" || st === "fled";
+
+      if (terminal) {
+        saveEncounterState(combatKey, null);
+        const nextContext = { ...ctx };
+        delete nextContext.encounter_state;
+        document.getElementById("context-json").value = JSON.stringify(nextContext, null, 2);
+        saveChatState();
+        return;
+      }
+
+      const compact = {
+        encounter_id: eid.trim(),
+        round: encounter.round,
+        opponent: encounter.opponent,
+        hp: encounter.hp && typeof encounter.hp === "object" ? encounter.hp : {},
+      };
+      if (st) compact.status = st;
+      saveEncounterState(combatKey, compact);
+      const nextContext = { ...ctx, encounter_state: compact };
+      document.getElementById("context-json").value = JSON.stringify(nextContext, null, 2);
+      saveChatState();
+    }
+
+    function getNpcKeyFromContext(context) {
+      const npc = context && typeof context === "object" ? context.npc_name : null;
+      if (typeof npc === "string" && npc.trim()) return npc.trim();
+      return "global";
+    }
+
+    function getCombatKeyFromContext(context) {
+      const c = context && typeof context === "object" ? context : {};
+      for (const k of ["enemy_name", "target_name", "opponent"]) {
+        const v = c[k];
+        if (typeof v === "string" && v.trim()) return v.trim();
+      }
+      return "global";
+    }
+
+    function historyStorageKey(npcKey) {
+      return STORAGE_HISTORY_PREFIX + npcKey;
+    }
+
+    function questStorageKey(npcKey) {
+      return STORAGE_QUEST_PREFIX + npcKey;
+    }
+
+    function combatStorageKey(combatKey) {
+      return STORAGE_COMBAT_PREFIX + combatKey;
+    }
+
+    function loadEncounterState(combatKey) {
+      try {
+        const raw = localStorage.getItem(combatStorageKey(combatKey));
+        if (!raw) return null;
+        const j = JSON.parse(raw);
+        return j && typeof j === "object" && !Array.isArray(j) ? j : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function saveEncounterState(combatKey, encounterState) {
+      try {
+        if (!encounterState) {
+          localStorage.removeItem(combatStorageKey(combatKey));
+          return;
+        }
+        localStorage.setItem(combatStorageKey(combatKey), JSON.stringify(encounterState));
+      } catch (_) {}
+    }
+
+    function loadHistory(npcKey) {
+      try {
+        const raw = localStorage.getItem(historyStorageKey(npcKey));
+        if (!raw) return [];
+        const j = JSON.parse(raw);
+        return Array.isArray(j) ? j : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveHistory(npcKey, history) {
+      try {
+        localStorage.setItem(historyStorageKey(npcKey), JSON.stringify(history));
+      } catch (_) {}
+    }
+
+    function loadQuestState(npcKey) {
+      try {
+        const raw = localStorage.getItem(questStorageKey(npcKey));
+        if (!raw) return null;
+        const j = JSON.parse(raw);
+        return j && typeof j === "object" && !Array.isArray(j) ? j : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function saveQuestState(npcKey, questState) {
+      try {
+        if (!questState) {
+          localStorage.removeItem(questStorageKey(npcKey));
+          return;
+        }
+        localStorage.setItem(questStorageKey(npcKey), JSON.stringify(questState));
+      } catch (_) {}
+    }
+
+    function normalizeHistory(history) {
+      if (!Array.isArray(history)) return [];
+      const out = [];
+      for (const m of history) {
+        if (!m || typeof m !== "object") continue;
+        const role = m.role;
+        const content = m.content;
+        if ((role !== "user" && role !== "assistant") || typeof content !== "string") continue;
+        const c = content.trim();
+        if (!c) continue;
+        out.push({ role, content: c });
+      }
+      // cap léger côté UI
+      if (out.length > 24) return out.slice(out.length - 24);
+      return out;
+    }
+
+    function buildPilotRouteRequest() {
+      const ctxRaw = document.getElementById("context-json").value.trim();
+      let context = {};
+      if (ctxRaw) {
+        let parsed;
+        try {
+          parsed = JSON.parse(ctxRaw);
+        } catch (e) {
+          const detail = e instanceof Error ? e.message : String(e);
+          throw new Error(
+            "context JSON invalide : " + detail +
+            ". Vérifie les virgules, guillemets droits \", et n’utilise pas le symbole | comme séparateur (JSON interdit). Exemple valide : {\"npc_name\":\"Hagen\",\"history\":[{\"role\":\"user\",\"content\":\"…\"}]}"
+          );
+        }
+        if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new Error("context doit être un objet JSON (pas un tableau ni une valeur seule).");
+        }
+        context = parsed;
+      }
+
+      // Injecter l'history persistée si absente ou non-array
+      const npcKey = getNpcKeyFromContext(context);
+      const storedHistory = loadHistory(npcKey);
+      if (!Array.isArray(context.history)) {
+        context.history = storedHistory;
+      } else {
+        // si l'utilisateur l'a modifié à la main, on le normalise et on resynchronise
+        context.history = normalizeHistory(context.history);
+        saveHistory(npcKey, context.history);
+      }
+
+      // Injecter le quest_state persisté si absent ou invalide
+      const storedQuestState = loadQuestState(npcKey);
+      if (context.quest_state == null) {
+        if (storedQuestState) context.quest_state = storedQuestState;
+      } else if (typeof context.quest_state === "object" && !Array.isArray(context.quest_state)) {
+        saveQuestState(npcKey, context.quest_state);
+      } else {
+        delete context.quest_state;
+        saveQuestState(npcKey, null);
+      }
+
+      const combatKey = getCombatKeyFromContext(context);
+      const storedEncounter = loadEncounterState(combatKey);
+      if (context.encounter_state == null) {
+        if (storedEncounter) context.encounter_state = storedEncounter;
+      } else if (typeof context.encounter_state === "object" && !Array.isArray(context.encounter_state)) {
+        saveEncounterState(combatKey, context.encounter_state);
+      } else {
+        delete context.encounter_state;
+        saveEncounterState(combatKey, null);
+      }
+
+      const dryDev = document.getElementById("toggle-devops-dry-run");
+      if (dryDev && dryDev.checked) {
+        context.devops_dry_run = true;
+      }
+
+      const noCache = document.getElementById("toggle-no-cache");
+      if (noCache && noCache.checked) {
+        context._no_cache = true;
+      } else if (context && typeof context === "object") {
+        delete context._no_cache;
+      }
+
+      return {
+        actor_id: document.getElementById("actor").value.trim() || "test:1",
+        text: document.getElementById("text").value.trim(),
+        context,
+      };
+    }
+
+    function maybeAppendHistory(request, response) {
+      const auto = document.getElementById("toggle-auto-history").checked;
+      if (!auto) return;
+      const res = response && response.result;
+      const out = res && res.output;
+      const remote = out && out.remote;
+      const assistantReply =
+        remote && typeof remote === "object" && typeof remote.reply === "string" ? remote.reply.trim() : "";
+      if (!assistantReply) return; // pas un tour dialogue (ou pas de reply)
+
+      const ctx = request.context || {};
+      const npcKey = getNpcKeyFromContext(ctx);
+      const history = normalizeHistory(loadHistory(npcKey));
+      history.push({ role: "user", content: String(request.text || "").trim() || "(…)" });
+      history.push({ role: "assistant", content: assistantReply });
+      const capped = normalizeHistory(history);
+      saveHistory(npcKey, capped);
+
+      // refléter dans la textarea context
+      const nextContext = { ...ctx, history: capped };
+      document.getElementById("context-json").value = JSON.stringify(nextContext, null, 2);
+      saveChatState();
+    }
+
+    function renderHistoryPretty() {
+      let context = {};
+      try {
+        const raw = document.getElementById("context-json").value.trim();
+        if (raw) context = JSON.parse(raw);
+      } catch (_) {}
+      const npcKey = getNpcKeyFromContext(context);
+      const history = normalizeHistory(loadHistory(npcKey));
+      if (!history.length) return "";
+      let html = "<div style=\"padding:0.75rem;border:1px solid #ddd;border-radius:6px;background:#fcfcfc;\">" +
+        "<div class=\"muted\" style=\"margin-bottom:0.35rem;\">Historique (" + escapeHtml(npcKey) + ")</div>";
+      for (const m of history) {
+        const roleLabel = m.role === "user" ? "Joueur" : "PNJ";
+        html += "<div style=\"margin-top:0.35rem\"><b>" + roleLabel + ":</b> " + escapeHtml(m.content) + "</div>";
+      }
+      html += "</div>";
+      return html;
+    }
+
+    function renderPretty(root) {
+      const res = root && root.result;
+      const out = res && res.output;
+      const rows = [];
+
+      function addKV(k, v) {
+        rows.push("<tr><td style=\"border:1px solid #ddd;padding:0.35rem;white-space:nowrap;\"><b>" + escapeHtml(k) + "</b></td><td style=\"border:1px solid #ddd;padding:0.35rem;\">" + escapeHtml(String(v)) + "</td></tr>");
+      }
+
+      if (root && root.trace_id) addKV("trace_id", root.trace_id);
+      if (root && typeof root.elapsed_ms === "number") addKV("elapsed_ms", root.elapsed_ms);
+      if (res && res.intent) addKV("intent", res.intent);
+      if (res && res.routed_to) addKV("routed_to", res.routed_to);
+      if (res && typeof res.confidence === "number") addKV("confidence", res.confidence);
+      if (out && out.agent) addKV("agent", out.agent);
+      if (root && root.commit_result && typeof root.commit_result === "object") {
+        const cr = root.commit_result;
+        const attempted = cr.attempted === true ? "yes" : "no";
+        const ok = cr.ok === true ? "yes" : "no";
+        const accepted = cr.accepted === true ? "yes" : (cr.accepted === false ? "no" : "—");
+        addKV("commit_attempted", attempted);
+        addKV("commit_ok", ok);
+        addKV("commit_accepted", accepted);
+        if (cr.reason) addKV("commit_reason", cr.reason);
+      }
+
+      // Lyra meta injectée côté backend (monde / snapshot interne) : ex. réputation locale.
+      if (root && root.lyra_meta && typeof root.lyra_meta === "object") {
+        const lm = root.lyra_meta;
+        if (lm.source) addKV("lyra_source", lm.source);
+        const rep = lm.reputation;
+        if (rep && typeof rep === "object" && rep.value != null) {
+          addKV("reputation_value", rep.value);
+        }
+      }
+
+      let html = "";
+      if (rows.length) {
+        html += "<table style=\"width:100%;border-collapse:collapse;margin-top:0.25rem;\"><tbody>" + rows.join("") + "</tbody></table>";
+      }
+
+      const remote = out && out.remote;
+      const quest =
+        (out && out.quest) ||
+        (remote && typeof remote === "object" && remote.quest) ||
+        null;
+      const questState =
+        (out && out.quest_state) ||
+        (remote && typeof remote === "object" && remote.quest_state) ||
+        null;
+      const proposedCommit =
+        (out && out.commit) ||
+        (remote && typeof remote === "object" && remote.commit) ||
+        null;
+      const encounter =
+        (out && out.encounter) ||
+        (remote && typeof remote === "object" && remote.encounter) ||
+        null;
+
+      if (remote && typeof remote === "object") {
+        if (remote.reply) {
+          html += "<div style=\"margin-top:0.75rem;padding:0.75rem;border:1px solid #ddd;border-radius:6px;background:#fcfcfc;\">" +
+            "<div class=\"muted\" style=\"margin-bottom:0.25rem;\">Réplique</div>" +
+            "<div style=\"font-size:1.05rem;\">" + escapeHtml(String(remote.reply)) + "</div>" +
+          "</div>";
+        }
+        const rmeta = remote.meta;
+        if (rmeta && typeof rmeta === "object" && rmeta.cache_hit != null) {
+          html += "<div class=\"muted\" style=\"margin-top:0.35rem\">cache_hit: <code>" + escapeHtml(String(rmeta.cache_hit)) + "</code></div>";
+        }
+        if (Array.isArray(remote.lines) && remote.lines.length) {
+          html += "<div style=\"margin-top:0.5rem\" class=\"muted\">lines: " + escapeHtml(remote.lines.join(" | ")) + "</div>";
+        }
+      }
+
+      if (quest && typeof quest === "object") {
+        const title = quest.title || "Quête";
+        const giver = quest.giver || "—";
+        const objectives = Array.isArray(quest.objectives) ? quest.objectives : [];
+        const rewards = quest.rewards && typeof quest.rewards === "object" ? quest.rewards : {};
+        html += "<div style=\"margin-top:0.75rem;padding:0.75rem;border:1px solid #ddd;border-radius:6px;background:#fcfcfc;\">" +
+          "<div class=\"muted\" style=\"margin-bottom:0.25rem;\">Quête</div>" +
+          "<div style=\"font-size:1.05rem;\"><b>" + escapeHtml(String(title)) + "</b></div>" +
+          "<div class=\"muted\" style=\"margin-top:0.15rem;\">Donneur : " + escapeHtml(String(giver)) + "</div>";
+        if (objectives.length) {
+          html += "<div style=\"margin-top:0.5rem\"><b>Objectifs</b><ul style=\"margin:0.25rem 0 0 1.25rem\">";
+          for (const o of objectives) {
+            const txt = o && o.text ? String(o.text) : JSON.stringify(o);
+            html += "<li>" + escapeHtml(txt) + "</li>";
+          }
+          html += "</ul></div>";
+        }
+        const rewardParts = [];
+        if (typeof rewards.gold === "number") rewardParts.push(rewards.gold + "g");
+        if (typeof rewards.xp === "number") rewardParts.push(rewards.xp + "xp");
+        if (Array.isArray(rewards.items) && rewards.items.length) rewardParts.push(rewards.items.join(", "));
+        if (rewardParts.length) {
+          html += "<div style=\"margin-top:0.5rem\"><b>Récompenses</b> : " + escapeHtml(rewardParts.join(" · ")) + "</div>";
+        }
+        html += "</div>";
+      }
+
+      if (questState && typeof questState === "object") {
+        const qid = questState.quest_id || "—";
+        const st = questState.status || "—";
+        const step = questState.step != null ? String(questState.step) : "—";
+        html += "<div class=\"muted\" style=\"margin-top:0.5rem\">quest_state: <code>" +
+          escapeHtml(String(qid)) + "</code> · status=" + escapeHtml(String(st)) + " · step=" + escapeHtml(step) +
+          "</div>";
+      }
+
+      if (proposedCommit && typeof proposedCommit === "object") {
+        html += "<div style=\"margin-top:0.75rem;padding:0.75rem;border:1px solid #ddd;border-radius:6px;background:#fff8f0;\">" +
+          "<div class=\"muted\" style=\"margin-bottom:0.25rem;\">Commit proposé (agent → monde)</div>" +
+          "<pre style=\"margin:0;white-space:pre-wrap;font-size:0.85rem;\">" +
+          escapeHtml(JSON.stringify(proposedCommit, null, 2)) +
+          "</pre></div>";
+      }
+
+      const lyraOut =
+        (out && out.lyra) ||
+        (remote && typeof remote === "object" && remote.lyra) ||
+        null;
+      if (lyraOut && typeof lyraOut === "object" && !Array.isArray(lyraOut)) {
+        html += "<div style=\"margin-top:0.75rem;padding:0.75rem;border:1px solid #ddd;border-radius:6px;background:#f6fcf8;\">" +
+          "<div class=\"muted\" style=\"margin-bottom:0.25rem;\">Lyra (output)</div>" +
+          "<pre style=\"margin:0;white-space:pre-wrap;font-size:0.85rem;\">" +
+          escapeHtml(JSON.stringify(lyraOut, null, 2)) +
+          "</pre></div>";
+      }
+
+      const dres = out && out.result;
+      if (
+        dres &&
+        typeof dres === "object" &&
+        (dres.kind === "http_get" || dres.kind === "read_log_tail")
+      ) {
+        const ok = dres.ok === true ? "ok" : "erreur";
+        const lines = [];
+        lines.push("kind=" + String(dres.kind));
+        if (dres.url) lines.push("url=" + String(dres.url));
+        if (dres.path) lines.push("path=" + String(dres.path));
+        if (dres.status_code != null) lines.push("HTTP " + String(dres.status_code));
+        if (dres.dry_run === true) lines.push("dry-run");
+        if (dres.approval_required === true) lines.push("approbation requise (voir LBG_DEVOPS_APPROVAL_TOKEN)");
+        if (dres.note) lines.push(String(dres.note));
+        if (dres.error) lines.push(String(dres.error));
+        if (dres.body_preview) lines.push("corps: " + String(dres.body_preview).slice(0, 500));
+        if (dres.tail_preview) lines.push("fin fichier: " + String(dres.tail_preview).slice(0, 500));
+        const m = out && out.meta;
+        if (m && m.dry_run === true && m.dry_run_source) {
+          lines.push("source dry-run: " + String(m.dry_run_source));
+        }
+        html +=
+          "<div style=\"margin-top:0.75rem;padding:0.75rem;border:1px solid #ddd;border-radius:6px;background:#f8f6ff;\">" +
+          "<div class=\"muted\" style=\"margin-bottom:0.25rem;\">DevOps (liste blanche)</div>" +
+          "<div><b>" + escapeHtml(ok) + "</b> · " + escapeHtml(lines.join(" · ")) + "</div></div>";
+      }
+
+      if (encounter && typeof encounter === "object") {
+        const opp = encounter.opponent || "—";
+        const rnd = encounter.round != null ? String(encounter.round) : "—";
+        const hp = encounter.hp && typeof encounter.hp === "object" ? encounter.hp : {};
+        const php = hp.player != null ? String(hp.player) : "—";
+        const ohp = hp.opponent != null ? String(hp.opponent) : "—";
+        const stEnc = encounter.status != null ? String(encounter.status) : "";
+        const narr = encounter.narrative ? String(encounter.narrative) : "";
+        const actions = Array.isArray(encounter.suggested_actions) ? encounter.suggested_actions : [];
+        html += "<div style=\"margin-top:0.75rem;padding:0.75rem;border:1px solid #ddd;border-radius:6px;background:#fcfcfc;\">" +
+          "<div class=\"muted\" style=\"margin-bottom:0.25rem;\">Combat</div>" +
+          "<div style=\"font-size:1.05rem;\"><b>" + escapeHtml(opp) + "</b> · tour " + escapeHtml(rnd) +
+          (stEnc ? " · <span class=\"muted\">" + escapeHtml(stEnc) + "</span>" : "") + "</div>" +
+          "<div class=\"muted\" style=\"margin-top:0.35rem;\">PV joueur : " + escapeHtml(php) + " · PV adversaire : " + escapeHtml(ohp) + "</div>";
+        if (narr) {
+          html += "<div style=\"margin-top:0.5rem\">" + escapeHtml(narr) + "</div>";
+        }
+        if (actions.length) {
+          html += "<div style=\"margin-top:0.5rem\"><b>Actions suggérées</b> : " + escapeHtml(actions.join(", ")) + "</div>";
+        }
+        html += "</div>";
+      }
+
+      if (!html) return "";
+      return html;
+    }
+
+    function sleep(ms) { return new Promise((res) => setTimeout(res, ms)); }
+
+    function percentile(sortedNums, p) {
+      if (!sortedNums.length) return null;
+      const idx = Math.min(sortedNums.length - 1, Math.max(0, Math.ceil(p * sortedNums.length) - 1));
+      return sortedNums[idx];
+    }
+
+    function loadCacheLatencyStats() {
+      try {
+        const raw = localStorage.getItem(STORAGE_CACHE_LAT_KEY);
+        if (!raw) return { hit: [], miss: [] };
+        const j = JSON.parse(raw);
+        const hit = Array.isArray(j.hit) ? j.hit.filter((x) => typeof x === "number") : [];
+        const miss = Array.isArray(j.miss) ? j.miss.filter((x) => typeof x === "number") : [];
+        return { hit, miss };
+      } catch (_) {
+        return { hit: [], miss: [] };
+      }
+    }
+
+    function saveCacheLatencyStats(st) {
+      try {
+        localStorage.setItem(STORAGE_CACHE_LAT_KEY, JSON.stringify(st));
+      } catch (_) {}
+    }
+
+    function recordCacheLatencySample(resp) {
+      if (!resp || typeof resp !== "object") return;
+      if (typeof resp.elapsed_ms !== "number") return;
+      const res = resp.result;
+      const out = res && res.output;
+      const remote = out && out.remote;
+      const meta = remote && typeof remote === "object" ? remote.meta : null;
+      const cacheHit = meta && typeof meta === "object" ? (meta.cache_hit === true) : false;
+      const st = loadCacheLatencyStats();
+      const bucket = cacheHit ? st.hit : st.miss;
+      bucket.push(resp.elapsed_ms);
+      // conserver les 200 derniers samples par bucket
+      if (bucket.length > 200) bucket.splice(0, bucket.length - 200);
+      saveCacheLatencyStats(st);
+      renderCacheLatencyPanel();
+    }
+
+    function renderCacheLatencyPanel() {
+      const el = document.getElementById("cache-lat-out");
+      if (!el) return;
+      const st = loadCacheLatencyStats();
+      const hit = [...st.hit].sort((a, b) => a - b);
+      const miss = [...st.miss].sort((a, b) => a - b);
+      const summary = {
+        hit: {
+          n: hit.length,
+          p50_ms: percentile(hit, 0.50),
+          p95_ms: percentile(hit, 0.95),
+          min_ms: hit.length ? hit[0] : null,
+          max_ms: hit.length ? hit[hit.length - 1] : null,
+        },
+        miss: {
+          n: miss.length,
+          p50_ms: percentile(miss, 0.50),
+          p95_ms: percentile(miss, 0.95),
+          min_ms: miss.length ? miss[0] : null,
+          max_ms: miss.length ? miss[miss.length - 1] : null,
+        },
+      };
+      el.textContent = JSON.stringify(summary, null, 2);
+    }
+
+    function resetCacheLatencyPanel() {
+      saveCacheLatencyStats({ hit: [], miss: [] });
+      renderCacheLatencyPanel();
+    }
+
+    async function runBenchmark() {
+      saveBase();
+      const out = document.getElementById("bench-out");
+      out.textContent = "…";
+
+      const nRaw = document.getElementById("bench-n").value.trim();
+      const sleepRaw = document.getElementById("bench-sleep-ms").value.trim();
+      const n = Math.max(1, Math.min(200, parseInt(nRaw || "10", 10)));
+      const pauseMs = Math.max(0, Math.min(5000, parseInt(sleepRaw || "0", 10)));
+
+      const times = [];
+      const errors = [];
+      for (let i = 0; i < n; i++) {
+        out.textContent = "Run " + (i + 1) + "/" + n + "…";
+        try {
+          const request = buildPilotRouteRequest();
+          const r = await fetch(getBase() + "/v1/pilot/route", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(request),
+          });
+          const j = await r.json();
+          if (!j || typeof j !== "object") throw new Error("réponse JSON invalide");
+          if (j.ok !== true) throw new Error("ok=false: " + (j.error || "erreur inconnue"));
+          if (typeof j.elapsed_ms !== "number") throw new Error("elapsed_ms manquant");
+          times.push(j.elapsed_ms);
+        } catch (e) {
+          errors.push(String(e));
+        }
+        if (pauseMs) await sleep(pauseMs);
+      }
+
+      const sorted = [...times].sort((a, b) => a - b);
+      const p50 = percentile(sorted, 0.50);
+      const p95 = percentile(sorted, 0.95);
+      const min = sorted.length ? sorted[0] : null;
+      const max = sorted.length ? sorted[sorted.length - 1] : null;
+
+      const summary = {
+        n_requested: n,
+        n_ok: times.length,
+        n_errors: errors.length,
+        min_ms: min,
+        p50_ms: p50,
+        p95_ms: p95,
+        max_ms: max,
+        target_vm: { p50_ms_lt: 2000, p95_ms_lt: 6000 },
+        errors: errors.slice(0, 5),
+        samples_ms: sorted.slice(0, 50),
+      };
+      out.textContent = JSON.stringify(summary, null, 2);
+    }
+
+    document.getElementById("btn-refresh").addEventListener("click", refreshHealth);
+    document.getElementById("btn-cap-refresh").addEventListener("click", refreshCapabilities);
+    document.getElementById("btn-send").addEventListener("click", sendIntent);
+    document.getElementById("btn-bench").addEventListener("click", runBenchmark);
+    try { document.getElementById("btn-cache-lat-reset").addEventListener("click", resetCacheLatencyPanel); } catch (_) {}
+    document.getElementById("btn-copy-json").addEventListener("click", async () => {
+      const hint = document.getElementById("copy-hint");
+      const j = window.__last_intent_json;
+      if (!j) { hint.textContent = "Rien à copier (faites un envoi)."; return; }
+      try {
+        await navigator.clipboard.writeText(JSON.stringify(j, null, 2));
+        hint.textContent = "Copié.";
+      } catch (e) {
+        hint.textContent = "Copie impossible: " + e;
+      }
+    });
+
+    document.getElementById("btn-reset-history").addEventListener("click", () => {
+      let context = {};
+      try {
+        const raw = document.getElementById("context-json").value.trim();
+        if (raw) context = JSON.parse(raw);
+      } catch (_) {}
+      const npcKey = getNpcKeyFromContext(context);
+      saveHistory(npcKey, []);
+      const nextContext = { ...(context || {}), history: [] };
+      document.getElementById("context-json").value = JSON.stringify(nextContext, null, 2);
+      document.getElementById("history-pretty").innerHTML = "";
+      saveChatState();
+    });
+
+    const PRESETS = {
+      forge: {
+        text: "Je veux parler au forgeron",
+        context: { npc_name: "Hagen le forgeron", world_npc_id: "npc:smith", history: [] },
+      },
+      healer: {
+        text: "Je ne me sens pas bien… peux-tu m'aider ?",
+        context: { npc_name: "Guérisseuse du village", world_npc_id: "npc:healer", history: [] },
+      },
+      alchemist: {
+        text: "Je cherche une potion ou un remède.",
+        context: { npc_name: "Alchimiste", world_npc_id: "npc:alchemist", history: [] },
+      },
+      mayor: {
+        text: "Y a-t-il des problèmes récents au village ?",
+        context: { npc_name: "Maire", world_npc_id: "npc:mayor", history: [] },
+      },
+      auberge: {
+        text: "Une chambre pour la nuit, s'il vous plaît.",
+        context: { npc_name: "Mara l’aubergiste", world_npc_id: "npc:innkeeper", history: [] },
+      },
+      garde: {
+        text: "Que se passe-t-il en ville ?",
+        context: { npc_name: "Garde de la porte", world_npc_id: "npc:guard", history: [] },
+      },
+      scribe: {
+        text: "Que racontent les rumeurs du jour ?",
+        context: { npc_name: "Scribe du village", world_npc_id: "npc:scribe", history: [] },
+      },
+      quete: {
+        text: "Je cherche une quête ou une mission.",
+        context: { history: [] },
+      },
+      quete_npc: {
+        text: "Aurais-tu une mission pour moi ?",
+        context: { npc_name: "Mara l’aubergiste", history: [] },
+      },
+      quete_avancement: {
+        text: "J'ai avancé sur la quête.",
+        // Ne pas figer quest_state ici : on le réinjecte depuis le stockage local (voir applyPreset/buildPilotRouteRequest).
+        context: { history: [] },
+      },
+      // Valide la phase 2 : l'agent propose output.commit, le backend tente dialogue-commit vers mmmorpg,
+      // et la réponse pilot affiche commit_result.
+      quete_commit: {
+        text: "J'accepte la quête.",
+        context: {
+          npc_name: "Marchand civile",
+          world_npc_id: "npc:merchant",
+          history: [],
+          // quest_state sera réinjecté du stockage si dispo (applyPreset ci-dessous).
+        },
+      },
+      quete_commit_mayor: {
+        text: "J'accepte la quête.",
+        context: {
+          npc_name: "Maire",
+          world_npc_id: "npc:mayor",
+          history: [],
+          // quest_state sera réinjecté du stockage si dispo (applyPreset ci-dessous).
+        },
+      },
+      quete_commit_healer: {
+        text: "J'accepte la quête.",
+        context: {
+          npc_name: "Guérisseuse du village",
+          world_npc_id: "npc:healer",
+          history: [],
+        },
+      },
+      quete_commit_alchemist: {
+        text: "J'accepte la quête.",
+        context: {
+          npc_name: "Alchimiste",
+          world_npc_id: "npc:alchemist",
+          history: [],
+        },
+      },
+      combat: {
+        text: "Je veux attaquer le gobelin",
+        context: { enemy_name: "Gobelin des égouts", history: [] },
+      },
+      combat_avancement: {
+        text: "Je continue le combat en frappant",
+        // encounter_state réinjecté depuis le stockage local (voir applyPreset / buildPilotRouteRequest).
+        context: { history: [] },
+      },
+      devops_sonde: {
+        text: "Sonde DevOps — healthz orchestrator",
+        context: {
+          devops_action: { kind: "http_get", url: "http://127.0.0.1:8010/healthz" },
+          history: [],
+        },
+      },
+      // Texte sans mots-clés quête / dialogue / combat / devops → intent "unknown" → agent.fallback → echo output.lyra
+      lyra_test: {
+        text: "Ping état Lyra (fallback)",
+        context: {
+          history: [],
+          lyra: {
+            gauges: { hunger: 0.1, thirst: 0.05, fatigue: 0.2 },
+            dt_s: 3600,
+            version: "0.1",
+          },
+        },
+      },
+      // Dialogue PNJ + world_npc_id : le backend appelle GET /v1/world/lyra sur LBG_MMO_SERVER_URL (jauges tick monde).
+      lyra_mmo: {
+        text: "Salut, quelle est ta journée au village ?",
+        context: {
+          npc_name: "Forgeron",
+          world_npc_id: "npc:smith",
+          history: [],
+        },
+      },
+    };
+
+    function applyPreset(key) {
+      const src = PRESETS[key];
+      if (!src) return;
+      const p = { text: src.text, context: JSON.parse(JSON.stringify(src.context || {})) };
+      // Convenience : si on veut tester l'avancement, injecter le dernier quest_id connu.
+      if (key === "quete_avancement") {
+        try {
+          // 1) D'abord tenter via l'état persistant (global ou npc_name si présent).
+          let ctx = {};
+          try { ctx = JSON.parse(document.getElementById("context-json").value || "{}"); } catch (_) {}
+          const npcKey = getNpcKeyFromContext(ctx);
+          const stored = loadQuestState(npcKey) || loadQuestState("global");
+          if (stored && stored.quest_id) {
+            p.context.quest_state = stored;
+          } else {
+            // 2) Sinon fallback via la dernière réponse reçue.
+            const last = window.__last_intent_json;
+            const qid = last && last.result && last.result.output && last.result.output.quest_state && last.result.output.quest_state.quest_id;
+            if (qid) p.context.quest_state = { quest_id: qid, status: "open", step: 0 };
+          }
+        } catch (_) {}
+      }
+      if (key === "quete_commit") {
+        try {
+          let ctx = {};
+          try { ctx = JSON.parse(document.getElementById("context-json").value || "{}"); } catch (_) {}
+          const npcKey = getNpcKeyFromContext(ctx);
+          const stored = loadQuestState(npcKey) || loadQuestState("global");
+          if (stored && stored.quest_id) {
+            p.context.quest_state = stored;
+          }
+        } catch (_) {}
+      }
+      if (key === "combat_avancement") {
+        try {
+          let ctx = {};
+          try { ctx = JSON.parse(document.getElementById("context-json").value || "{}"); } catch (_) {}
+          const combatKey = getCombatKeyFromContext(ctx);
+          const stored = loadEncounterState(combatKey) || loadEncounterState("global");
+          if (stored && stored.encounter_id) {
+            p.context.enemy_name = ctx.enemy_name || ctx.target_name || ctx.opponent || stored.opponent || "Adversaire";
+            p.context.encounter_state = stored;
+          } else {
+            const last = window.__last_intent_json;
+            const enc =
+              last && last.result && last.result.output && last.result.output.encounter;
+            if (enc && typeof enc === "object" && enc.encounter_id) {
+              p.context.enemy_name =
+                ctx.enemy_name || ctx.target_name || ctx.opponent || enc.opponent || "Adversaire";
+              p.context.encounter_state = {
+                encounter_id: enc.encounter_id,
+                round: enc.round,
+                opponent: enc.opponent,
+                hp: enc.hp || {},
+                status: enc.status || "ongoing",
+              };
+            }
+          }
+        } catch (_) {}
+      }
+      document.getElementById("text").value = p.text;
+      document.getElementById("context-json").value = JSON.stringify(p.context, null, 2);
+      saveChatState();
+    }
+
+    for (const btn of document.querySelectorAll("button.preset")) {
+      btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
+    }
+
+    async function postJson(url, payload) {
+      const token = getServiceToken();
+      const headers = { "content-type": "application/json" };
+      if (token) headers["X-LBG-Service-Token"] = token;
+      const r = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const t = await r.text();
+      let j = null;
+      try { j = t ? JSON.parse(t) : null; } catch (_) {}
+      return { status: r.status, json: j, text: t };
+    }
+
+    function getWorldNpcIdOrDefault() {
+      try {
+        const raw = document.getElementById("context-json").value.trim();
+        const ctx = raw ? JSON.parse(raw) : {};
+        const id = (ctx && ctx.world_npc_id) ? String(ctx.world_npc_id).trim() : "";
+        return id || "npc:merchant";
+      } catch (_) {
+        return "npc:merchant";
+      }
+    }
+
+    async function refreshReputationPanel() {
+      // Sans LLM : forcer l’intent devops_probe, mais laisser merge_mmo_lyra enrichir lyra_meta via world_npc_id.
+      const npcId = getWorldNpcIdOrDefault();
+      const base = getBase();
+      const payload = {
+        actor_id: "svc:pilot",
+        text: "probe",
+        context: {
+          world_npc_id: npcId,
+          devops_action: { kind: "http_get", url: "http://127.0.0.1:8010/healthz", max_bytes: 200 },
+          devops_dry_run: true,
+          history: [],
+        },
+      };
+      const out = await postJson(base + "/v1/pilot/internal/route", payload);
+      if (out.status !== 200 || !out.json) return;
+      window.__last_intent_json = out.json;
+      document.getElementById("intent-out").textContent = JSON.stringify(out.json, null, 2);
+      try { document.getElementById("intent-pretty").innerHTML = renderPretty(out.json); } catch (_) {}
+    }
+
+    async function commitReputationDelta(delta) {
+      const npcId = getWorldNpcIdOrDefault();
+      const base = getBase();
+      const out = await postJson(base + "/v1/pilot/reputation", { npc_id: npcId, delta });
+      // Afficher le résultat commit dans le panneau principal.
+      if (out.json) {
+        window.__last_intent_json = out.json;
+        document.getElementById("intent-out").textContent = JSON.stringify(out.json, null, 2);
+        try { document.getElementById("intent-pretty").innerHTML = renderPretty(out.json); } catch (_) {}
+      }
+      // Rafraîchir la valeur (lecture via internal/route, sans LLM).
+      try { await refreshReputationPanel(); } catch (_) {}
+    }
+
+    function getLastReputationValue() {
+      const j = window.__last_intent_json;
+      if (!j || typeof j !== "object") return null;
+      const meta = j.lyra_meta;
+      if (!meta || typeof meta !== "object") return null;
+      const rep = meta.reputation;
+      if (!rep || typeof rep !== "object") return null;
+      const v = rep.value;
+      return (typeof v === "number" && Number.isFinite(v)) ? Math.trunc(v) : null;
+    }
+
+    async function resetReputationToZero() {
+      // On lit la valeur via internal/route (sans LLM), puis on applique un delta = -value.
+      try { await refreshReputationPanel(); } catch (_) {}
+      const v = getLastReputationValue();
+      if (v === null) {
+        alert("Impossible de lire la réputation (lyra_meta.reputation.value absent).");
+        return;
+      }
+      if (v === 0) return;
+      await commitReputationDelta(-v);
+    }
+
+    document.getElementById("btn-rep-plus").addEventListener("click", () => commitReputationDelta(11));
+    document.getElementById("btn-rep-minus").addEventListener("click", () => commitReputationDelta(-5));
+    document.getElementById("btn-rep-reset").addEventListener("click", () => resetReputationToZero());
+
+    function applyNpcIdChip(npcId) {
+      const id = (npcId || "").trim();
+      if (!id) return;
+      try {
+        const raw = document.getElementById("context-json").value.trim();
+        const ctx = raw ? JSON.parse(raw) : {};
+        const next = { ...(ctx || {}), world_npc_id: id };
+        if (!Array.isArray(next.history)) next.history = [];
+        document.getElementById("context-json").value = JSON.stringify(next, null, 2);
+        saveChatState();
+        try { refreshLyraContextPreview(); } catch (_) {}
+      } catch (_) {}
+    }
+
+    for (const btn of document.querySelectorAll("button.npc-chip")) {
+      btn.addEventListener("click", () => applyNpcIdChip(btn.dataset.npcId));
+    }
+
+    // Dashboard toggles
+    const leftToggle = document.getElementById("toggle-left");
+    const rightToggle = document.getElementById("toggle-right");
+    const colLeft = document.getElementById("col-left");
+    const colRight = document.getElementById("col-right");
+    function applyToggles() {
+      colLeft.style.display = leftToggle.checked ? "" : "none";
+      colRight.style.display = rightToggle.checked ? "" : "none";
+      try {
+        localStorage.setItem("lbg_pilot_dash_left", leftToggle.checked ? "1" : "0");
+        localStorage.setItem("lbg_pilot_dash_right", rightToggle.checked ? "1" : "0");
+      } catch (_) {}
+    }
+    try {
+      const vL = localStorage.getItem("lbg_pilot_dash_left");
+      const vR = localStorage.getItem("lbg_pilot_dash_right");
+      if (vL === "0") leftToggle.checked = false;
+      if (vR === "0") rightToggle.checked = false;
+    } catch (_) {}
+    leftToggle.addEventListener("change", applyToggles);
+    rightToggle.addEventListener("change", applyToggles);
+    applyToggles();
+    loadStoredBase();
+    loadStoredServiceToken();
+    loadStoredChatState();
+    loadNoCacheToggle();
+    try { document.getElementById("toggle-no-cache").addEventListener("change", saveNoCacheToggle); } catch (_) {}
+    try {
+      document.getElementById("context-json").addEventListener("input", refreshLyraContextPreview);
+    } catch (_) {}
+    try { refreshLyraContextPreview(); } catch (_) {}
+    try { document.getElementById("history-pretty").innerHTML = renderHistoryPretty(); } catch (_) {}
+    refreshHealth();
+    refreshCapabilities();
+    try { renderCacheLatencyPanel(); } catch (_) {}
+  </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+[Unit]
+Description=LBG MMMORPG WebSocket server (Phase 1)
+After=network.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/LBG_IA_MMO/mmmorpg_server
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONUNBUFFERED=1
+# Ports / bind : MMMORPG_HOST (défaut 0.0.0.0), MMMORPG_PORT (défaut 7733) — voir mmmorpg_server/config.py
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python -m mmmorpg_server
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

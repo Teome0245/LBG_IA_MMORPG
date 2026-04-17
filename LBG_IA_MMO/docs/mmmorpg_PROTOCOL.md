@@ -1,0 +1,122 @@
+# Protocole réseau — Phase 1
+
+Transport : **WebSocket** (`ws://host:port`).
+
+Encodage : **JSON** une ligne par message (UTF-8).
+
+**Côté serveur (Phase 1)** : taille max d’une frame configurable (`MMMORPG_MAX_WS_INBOUND_BYTES`, défaut 64 KiB) ; les commandes `move` trop rapprochées peuvent être ignorées (`MMMORPG_MOVE_MIN_INTERVAL_S`).
+
+## Client → serveur
+
+### `hello`
+
+Authentification minimale (Phase 1 : `player_name` seulement).
+
+```json
+{ "type": "hello", "player_name": "NomDuJoueur" }
+```
+
+#### Option (pont jeu → IA, sans nouveau `type`)
+
+Si `MMMORPG_IA_BACKEND_URL` est défini côté serveur, `hello` peut inclure des champs optionnels
+pour demander une première réplique PNJ au moment de la connexion (appel interne au backend :
+`POST /v1/pilot/internal/route` par défaut, configurable via `MMMORPG_IA_BACKEND_PATH`).
+
+Headers optionnels sur l’appel backend :
+- `X-LBG-Service-Token` (valeur `MMMORPG_IA_BACKEND_TOKEN`) si un token service est requis côté backend
+- `X-LBG-Trace-Id` (généré) pour corrélation dans les logs backend/orchestrateur/agents
+
+```json
+{
+  "type": "hello",
+  "player_name": "NomDuJoueur",
+  "world_npc_id": "npc:innkeeper",
+  "npc_name": "Mara l’aubergiste",
+  "text": "Une chambre pour la nuit, s'il vous plaît."
+}
+```
+
+### `move`
+
+Mise à jour intention de position (le serveur valide / applique).
+
+```json
+{ "type": "move", "x": 10.5, "y": 0.0, "z": -3.2 }
+```
+
+#### Option (pont jeu → IA, sans nouveau `type`)
+
+Si `MMMORPG_IA_BACKEND_URL` est défini côté serveur, `move` peut inclure des champs optionnels
+pour déclencher une réplique PNJ **après** `hello` (même mécanisme que `hello` : placeholder + réponse finale sur `world_tick`).
+
+```json
+{
+  "type": "move",
+  "x": 10.5,
+  "y": 0.0,
+  "z": -3.2,
+  "world_npc_id": "npc:innkeeper",
+  "npc_name": "Mara l’aubergiste",
+  "text": "Et pour le souper ?"
+}
+```
+
+## Serveur → client
+
+### `welcome`
+
+```json
+{
+  "type": "welcome",
+  "player_id": "uuid",
+  "planet_id": "terre1",
+  "world_time_s": 123.45,
+  "day_fraction": 0.25,
+  "entities": [ ... ]
+}
+```
+
+Champs optionnels (si pont jeu → IA activé et la requête `hello` contient `world_npc_id` + `text`) :
+
+- `npc_reply` : réplique texte PNJ
+- `trace_id` : identifiant de trace (corrélation backend/orchestrateur/agents)
+
+Note : pour éviter de bloquer `welcome`, l’implémentation peut renvoyer `npc_reply`/`trace_id`
+soit dans `welcome`, soit sur le prochain `world_tick` (champs optionnels).
+Pour fiabiliser (même si l’IA est lente), une implémentation peut aussi renvoyer d’abord une
+**réplique placeholder** (avec `trace_id` vide), puis une réplique “finale” plus tard.
+
+### `world_tick`
+
+Diffusion périodique (état monde).
+
+```json
+{
+  "type": "world_tick",
+  "world_time_s": 200.0,
+  "day_fraction": 0.33,
+  "entities": [ ... ]
+}
+```
+
+### `entity_snapshot`
+
+Une entité : joueur ou PNJ.
+
+```json
+{
+  "id": "uuid",
+  "kind": "player",
+  "name": "Nom",
+  "x": 0, "y": 0, "z": 0,
+  "vx": 0, "vy": 0, "vz": 0
+}
+```
+
+`kind` : `"player"` | `"npc"`.
+
+### `error`
+
+```json
+{ "type": "error", "message": "..." }
+```

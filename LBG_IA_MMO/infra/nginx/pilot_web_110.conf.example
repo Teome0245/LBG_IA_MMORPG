@@ -1,0 +1,53 @@
+# Exemple Nginx — VM 192.168.0.110 : servir `pilot_web` en statique + proxy API vers le core (140).
+#
+# Si :80 est déjà pris par Docker (docker-proxy sur ss -tlnp), ne pas lancer un 2ᵉ
+# service sur 80 : soit arrêter / remapper le conteneur, soit écouter sur 8080 :
+#   LBG_NGINX_PILOT_PORT=8080 bash infra/scripts/install_nginx_pilot_110.sh
+#
+# Copier vers /etc/nginx/sites-available/ (adapter server_name, chemins), puis :
+#   sudo ln -sf /etc/nginx/sites-available/lbg-pilot-110 /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# Le navigateur sur http://192.168.0.110/ charge le pilot.
+# Avec ce fichier, Nginx reverse-proxy `/v1/*` (API backend) vers 192.168.0.140:8000 :
+# - pas de CORS à configurer
+# - l'UI peut laisser “URL du backend” vide (défaut: origine courante)
+
+server {
+    listen 80;
+    # listen [::]:80;   # décommenter si IPv6 OK ; sinon peut faire échouer nginx sur certains hôtes
+    server_name 192.168.0.110;
+
+    root /opt/LBG_IA_MMO/pilot_web;
+    index index.html;
+
+    # API backend (core, VM 140) — même origin côté navigateur.
+    #
+    # Note: on proxifie explicitement /v1/ pour éviter que `try_files ... /index.html`
+    # renvoie de l'HTML aux endpoints JSON (symptôme: "Unexpected token '<'").
+    location ^~ /v1/ {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://192.168.0.140:8000;
+    }
+
+    # (Optionnel) Exposer OpenAPI du backend si besoin depuis le front.
+    location = /openapi.json {
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_pass http://192.168.0.140:8000/openapi.json;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    access_log /var/log/nginx/lbg-pilot-access.log;
+    error_log  /var/log/nginx/lbg-pilot-error.log;
+}

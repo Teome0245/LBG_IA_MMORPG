@@ -1,0 +1,18 @@
+# LBG_IA_MMO — rotation du fichier JSONL d’audit DevOps (orchestrator)
+#
+# Installation : sudo cp infra/logrotate/lbg-devops-audit /etc/logrotate.d/lbg-devops-audit
+# Services sous User=lbg (voir docs/ops_vm_user.md).
+#
+# Prérequis : LBG_DEVOPS_AUDIT_LOG_PATH pointe vers ce fichier (ex. /var/log/lbg/devops_audit.jsonl)
+
+/var/log/lbg/devops_audit.jsonl {
+    daily
+    rotate 30
+    compress
+    delaycompress
+    missingok
+    notifempty
+    dateext
+    dateformat .%Y-%m-%d
+    create 0640 lbg lbg
+}

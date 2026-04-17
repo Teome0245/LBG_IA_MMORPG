@@ -1,0 +1,2 @@
+# Scripts shell : toujours LF (évite bash: set: pipefail sous Linux si le fichier est en CRLF).
+*.sh text eol=lf

@@ -1,0 +1,17 @@
+[Unit]
+Description=LBG_IA_MMO Combat HTTP agent
+After=network.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/LBG_IA_MMO
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/uvicorn lbg_agents.combat_http_app:app --host 0.0.0.0 --port 8040
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
