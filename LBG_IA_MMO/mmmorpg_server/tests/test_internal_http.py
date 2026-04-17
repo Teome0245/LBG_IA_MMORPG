@@ -172,6 +172,39 @@ def test_internal_http_snapshot_exposes_reputation_after_commit() -> None:
         http.stop()
 
 
+def test_internal_http_snapshot_reflects_aid_gauges_after_commit() -> None:
+    game = GameState()
+    http = start_internal_http(host="127.0.0.1", port=0, game=game, token="secret")
+    try:
+        commit_url = f"http://127.0.0.1:{http.port}/internal/v1/npc/npc:merchant/dialogue-commit"
+        headers = {"X-LBG-Service-Token": "secret"}
+
+        snap1 = _http_get_json(
+            f"http://127.0.0.1:{http.port}/internal/v1/npc/npc:merchant/lyra-snapshot?trace_id=t-aid-0",
+            headers=headers,
+        )
+        g1 = snap1["lyra"]["gauges"]
+
+        code, j = _http_post_json(
+            commit_url,
+            {"trace_id": "t-aid-1", "flags": {"aid_hunger_delta": -0.2, "aid_thirst_delta": -0.1, "aid_fatigue_delta": -0.3}},
+            headers=headers,
+        )
+        assert code == 200
+        assert j["accepted"] is True
+
+        snap2 = _http_get_json(
+            f"http://127.0.0.1:{http.port}/internal/v1/npc/npc:merchant/lyra-snapshot?trace_id=t-aid-2",
+            headers=headers,
+        )
+        g2 = snap2["lyra"]["gauges"]
+
+        assert float(g2["hunger"]) < float(g1["hunger"])
+        assert float(g2["thirst"]) < float(g1["thirst"])
+        assert float(g2["fatigue"]) < float(g1["fatigue"])
+    finally:
+        http.stop()
+
 def test_internal_http_rate_limit(monkeypatch: object) -> None:
     # Activer un RL très bas pour provoquer un 429 rapidement.
     import os

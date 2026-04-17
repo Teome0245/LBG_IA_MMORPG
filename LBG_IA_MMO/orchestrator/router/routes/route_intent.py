@@ -37,6 +37,9 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
     # Sonde DevOps : priorité absolue (valider le fil de transmission même avec npc_name / autre bruit).
     if isinstance(ctx.get("devops_action"), dict):
         intent, confidence = ("devops_probe", 1.0)
+    # Gameplay monde (v1) : commit aid déterministe
+    elif isinstance(ctx.get("world_action"), dict):
+        intent, confidence = ("world_aid", 1.0)
     else:
         # Priorité : si le texte exprime clairement une quête/mission/etc., respecter le classifieur
         # même si un PNJ est ciblé (ex: une quête donnée par un PNJ).

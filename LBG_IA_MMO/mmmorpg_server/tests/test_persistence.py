@@ -10,13 +10,15 @@ def test_save_load_roundtrip(tmp_path: Path) -> None:
     seen = {"t1", "t2"}
     flags = {"npc:merchant": {"quest_accepted": True, "quest_id": "q1"}}
     rep = {"npc:merchant": 7}
-    save_state(p, seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep)
+    gauges = {"npc:merchant": {"hunger": 0.2, "thirst": 0.3, "fatigue": 0.4}}
+    save_state(p, seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep, npc_gauges=gauges)
     loaded = load_state(p)
     assert loaded is not None
-    seen2, flags2, rep2 = loaded
+    seen2, flags2, rep2, gauges2 = loaded
     assert "t1" in seen2 and "t2" in seen2
     assert flags2["npc:merchant"]["quest_accepted"] is True
     assert rep2["npc:merchant"] == 7
+    assert gauges2["npc:merchant"]["hunger"] == 0.2
 
 
 def test_load_missing_returns_none(tmp_path: Path) -> None:

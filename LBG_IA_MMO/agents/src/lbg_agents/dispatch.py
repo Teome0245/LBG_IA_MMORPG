@@ -25,6 +25,7 @@ from lbg_agents.devops_executor import (
     run_devops_action,
 )
 from lbg_agents.quests_stub import run_quests_stub
+from lbg_agents.world_stub import run_world_stub
 
 
 def _dialogue_http_timeout() -> httpx.Timeout:
@@ -128,6 +129,8 @@ def _dialogue(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, An
         if not isinstance(data, dict):
             data = {"payload": data}
         out: dict[str, Any] = {"agent": "http_dialogue", "remote": data}
+        if isinstance(data.get("commit"), dict):
+            out["commit"] = data["commit"]
         if lyra_out is not None:
             out["lyra"] = lyra_out
         return out
@@ -246,10 +249,15 @@ def _fallback(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, An
     return _echo("fallback", actor_id, text, context)
 
 
+def _world(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
+    return run_world_stub(actor_id=actor_id, text=text, context=context)
+
+
 _HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
     "agent.dialogue": _dialogue,
     "agent.quests": _quests,
     "agent.combat": _combat,
     "agent.devops": _devops,
+    "agent.world": _world,
     "agent.fallback": _fallback,
 }

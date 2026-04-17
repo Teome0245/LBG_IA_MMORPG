@@ -50,3 +50,30 @@ def test_route_intent_prefers_quest_even_with_npc_name() -> None:
     assert data["routed_to"] == "agent.quests"
     assert data["output"]["capability"] == "quest_request"
 
+
+def test_route_intent_world_action_forces_world_aid() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/route",
+        json={
+            "actor_id": "svc:smoke",
+            "text": "Ignoré si world_action présent",
+            "context": {
+                "world_npc_id": "npc:merchant",
+                "world_action": {"kind": "aid", "hunger_delta": -0.2, "thirst_delta": -0.1, "reputation_delta": 5},
+            },
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["intent"] == "world_aid"
+    assert data["routed_to"] == "agent.world"
+    out = data["output"]
+    assert out["capability"] == "world_aid"
+    assert out.get("agent") == "world_stub"
+    commit = out.get("commit") or {}
+    assert isinstance(commit, dict)
+    flags = commit.get("flags") or {}
+    assert isinstance(flags, dict)
+    assert "aid_hunger_delta" in flags
+

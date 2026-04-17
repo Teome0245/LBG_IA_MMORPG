@@ -35,6 +35,7 @@ def _queue_ia_bridge(
     text0: str,
     world_npc_id: str,
     npc_name: str | None,
+    ia_context: dict[str, Any] | None,
     source: str,
 ) -> None:
     """Déclenche le pont jeu → IA (async) + placeholder optionnel."""
@@ -43,16 +44,29 @@ def _queue_ia_bridge(
     if not (isinstance(text0, str) and text0.strip() and isinstance(world_npc_id, str) and world_npc_id.strip()):
         return
 
+    # Corrélation stable placeholder → réponse finale.
+    # On génère un trace_id une fois, on le réutilise pour l'appel backend, et on met le même trace_id
+    # sur le placeholder pour que le client puisse le remplacer.
+    trace_id = uuid.uuid4().hex
+
     if config.IA_PLACEHOLDER_ENABLED and config.IA_PLACEHOLDER_REPLY:
-        pending_replies[ws] = (config.IA_PLACEHOLDER_REPLY, "")
+        pending_replies[ws] = (config.IA_PLACEHOLDER_REPLY, trace_id)
 
     ctx: dict[str, Any] = {"world_npc_id": world_npc_id.strip(), "history": []}
     if isinstance(npc_name, str) and npc_name.strip():
         ctx["npc_name"] = npc_name.strip()
+    # Permet aux clients/outils d'injecter un mini contexte vers l'IA (borné).
+    # Important: ne pas permettre d'écraser `world_npc_id` ni d'injecter des structures arbitraires.
+    if isinstance(ia_context, dict) and ia_context:
+        for k, v in ia_context.items():
+            if k in ("_require_action_json", "_no_cache"):
+                if isinstance(v, bool):
+                    ctx[k] = v
     payload = {"actor_id": actor_id, "text": text0.strip(), "context": ctx}
 
     async def _fetch_and_queue() -> None:
         t0 = time.perf_counter()
+        tid = trace_id
         try:
             timeout = httpx.Timeout(
                 timeout=config.IA_TIMEOUT_S,
@@ -65,14 +79,13 @@ def _queue_ia_bridge(
             if config.IA_BACKEND_TOKEN:
                 headers["X-LBG-Service-Token"] = config.IA_BACKEND_TOKEN
             # Corrélation : trace_id côté backend/orchestrator/logs.
-            trace_id = uuid.uuid4().hex
-            headers["X-LBG-Trace-Id"] = trace_id
+            headers["X-LBG-Trace-Id"] = tid
             LOG.info(
                 "Pont IA: appel backend (source=%s actor_id=%s npc_id=%s trace_id=%s)",
                 source,
                 actor_id,
                 world_npc_id.strip(),
-                trace_id,
+                tid,
             )
             async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
                 r = await client.post(
@@ -86,30 +99,33 @@ def _queue_ia_bridge(
                     r.status_code,
                     config.IA_BACKEND_URL,
                     config.IA_BACKEND_PATH,
-                    trace_id,
+                    tid,
                     source,
                 )
+                # UX: remplacer le placeholder par une fin explicite (sinon le joueur reste bloqué).
+                pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
                 return
             j = r.json()
             if not isinstance(j, dict):
                 LOG.warning(
                     "Pont IA: réponse JSON invalide (type=%s trace_id=%s source=%s)",
                     type(j).__name__,
-                    trace_id,
+                    tid,
                     source,
                 )
+                pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
                 return
-            trace_id = j.get("trace_id") or trace_id
+            tid = j.get("trace_id") or tid
             res = j.get("result")
             out = res.get("output") if isinstance(res, dict) else None
             remote = out.get("remote") if isinstance(out, dict) else None
             rep = remote.get("reply") if isinstance(remote, dict) else None
-            if isinstance(rep, str) and rep.strip() and isinstance(trace_id, str) and trace_id.strip():
-                pending_replies[ws] = (rep.strip(), trace_id.strip())
+            if isinstance(rep, str) and rep.strip() and isinstance(tid, str) and tid.strip():
+                pending_replies[ws] = (rep.strip(), tid.strip())
                 elapsed_ms = int((time.perf_counter() - t0) * 1000)
                 LOG.info(
                     "Pont IA: reply en file (trace_id=%s elapsed_ms=%s source=%s)",
-                    trace_id.strip(),
+                    tid.strip(),
                     elapsed_ms,
                     source,
                 )
@@ -117,10 +133,12 @@ def _queue_ia_bridge(
                 LOG.warning(
                     "Pont IA: pas de reply/trace_id (reply=%s, trace_id=%s)",
                     isinstance(rep, str) and bool(rep.strip()),
-                    isinstance(trace_id, str) and bool(trace_id.strip()),
+                    isinstance(tid, str) and bool(tid.strip()),
                 )
+                pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
         except Exception:
             LOG.exception("Pont IA: exception pendant l'appel backend (source=%s)", source)
+            pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
             return
 
     asyncio.create_task(_fetch_and_queue())
@@ -233,6 +251,7 @@ async def client_handler(
                     text0 = data.get("text")
                     world_npc_id = data.get("world_npc_id")
                     npc_name = data.get("npc_name")
+                    ia_context = data.get("ia_context")
                     _queue_ia_bridge(
                         ws=ws,
                         pending_replies=pending_replies,
@@ -240,12 +259,14 @@ async def client_handler(
                         text0=text0 if isinstance(text0, str) else "",
                         world_npc_id=world_npc_id if isinstance(world_npc_id, str) else "",
                         npc_name=npc_name if isinstance(npc_name, str) else None,
+                        ia_context=ia_context if isinstance(ia_context, dict) else None,
                         source="hello",
                     )
             elif msg_type == "move" and player_id:
                 text_ia = data.get("text")
                 world_npc_id = data.get("world_npc_id")
                 npc_name = data.get("npc_name")
+                ia_context = data.get("ia_context")
                 if isinstance(text_ia, str) and text_ia.strip() and isinstance(world_npc_id, str) and world_npc_id.strip():
                     # Pont IA via `move` (sans nouveau type) : ne pas être bloqué par l'anti-spam `move`.
                     _queue_ia_bridge(
@@ -255,6 +276,7 @@ async def client_handler(
                         text0=text_ia,
                         world_npc_id=world_npc_id,
                         npc_name=npc_name if isinstance(npc_name, str) else None,
+                        ia_context=ia_context if isinstance(ia_context, dict) else None,
                         source="move",
                     )
 
@@ -321,8 +343,8 @@ async def run_server(
         if raw_path:
             st = load_state(Path(raw_path))
             if st is not None:
-                seen, flags, rep = st
-                game.import_commit_state(seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep)
+                seen, flags, rep, gauges = st
+                game.import_commit_state(seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep, npc_gauges=gauges)
                 LOG.info("état mmmorpg chargé depuis %s (commits=%s, npcs=%s)", raw_path, len(seen), len(flags))
     clients: set[ServerConnection] = set()
     pending_replies: dict[ServerConnection, tuple[str, str] | None] = {}
@@ -383,8 +405,8 @@ async def run_server(
             raw_path = config.STATE_PATH or ""
             if raw_path:
                 try:
-                    seen, flags, rep = game.export_commit_state()
-                    save_state(Path(raw_path), seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep)
+                    seen, flags, rep, gauges = game.export_commit_state()
+                    save_state(Path(raw_path), seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep, npc_gauges=gauges)
                     LOG.info("état mmmorpg sauvegardé vers %s (commits=%s, npcs=%s)", raw_path, len(seen), len(flags))
                 except Exception as e:
                     LOG.warning("impossible de sauvegarder l’état mmmorpg vers %s : %s", raw_path, e)

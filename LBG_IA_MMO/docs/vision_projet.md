@@ -11,7 +11,7 @@ Construire **un orchestrateur IA autonome** capable de piloter :
 - une **IA incarnée** (Lyra)
 - un **univers MMO bac à sable** persistant, où cette IA peut vivre, évoluer et interagir
 
-En une phrase : **un cerveau central** qui pense, apprend, agit, se maintient, se corrige et interagit dans un monde virtuel.
+En une phrase : **un cerveau central** qui pense, apprend, agit, se maintient, se corrige et interagit aussi dans un monde virtuel.
 
 ## Orchestrateur IA — “le cerveau”
 

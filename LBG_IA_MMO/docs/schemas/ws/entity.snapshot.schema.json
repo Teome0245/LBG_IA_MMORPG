@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lbg.local/schemas/mmmorpg-ws/1/entity.snapshot.schema.json",
+  "title": "MMMORPG WS v1 — Entity snapshot",
+  "type": "object",
+  "required": ["id", "kind", "name", "x", "y", "z", "vx", "vy", "vz"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "enum": ["player", "npc"] },
+    "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "x": { "type": "number" },
+    "y": { "type": "number" },
+    "z": { "type": "number" },
+    "vx": { "type": "number" },
+    "vy": { "type": "number" },
+    "vz": { "type": "number" }
+  },
+  "additionalProperties": true
+}
+

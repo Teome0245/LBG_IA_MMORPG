@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lbg.local/schemas/mmmorpg-ws/1/server.welcome.schema.json",
+  "title": "MMMORPG WS v1 — server welcome",
+  "type": "object",
+  "required": ["proto", "type", "player_id", "planet_id", "world_time_s", "day_fraction", "entities"],
+  "properties": {
+    "proto": { "type": "string", "const": "mmmorpg-ws/1" },
+    "type": { "type": "string", "const": "welcome" },
+    "player_id": { "type": "string", "minLength": 1 },
+    "planet_id": { "type": "string", "minLength": 1 },
+    "world_time_s": { "type": "number" },
+    "day_fraction": { "type": "number" },
+    "entities": {
+      "type": "array",
+      "items": { "$ref": "./entity.snapshot.schema.json" }
+    },
+    "npc_reply": { "type": "string", "minLength": 1 },
+    "trace_id": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": true
+}
+

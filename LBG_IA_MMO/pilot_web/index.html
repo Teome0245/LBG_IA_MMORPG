@@ -64,13 +64,22 @@
   <div class="layout-controls">
     <label><input type="checkbox" id="toggle-left" checked> colonne gauche</label>
     <label><input type="checkbox" id="toggle-right" checked> colonne droite</label>
+    <label class="muted">vue:
+      <select id="view-mode" style="margin-left:0.35rem">
+        <option value="all">tout</option>
+        <option value="chat">chat</option>
+        <option value="ws">ws</option>
+        <option value="ops">ops</option>
+        <option value="perf">perf</option>
+      </select>
+    </label>
     <label class="muted">token service (optionnel): <input type="text" id="service-token" placeholder="X-LBG-Service-Token" style="width:14rem"/></label>
     <span class="muted">Astuce: sur petit écran, tout repasse en une colonne.</span>
   </div>
 
   <div class="dashboard" id="dashboard">
     <div class="col" id="col-left">
-      <section>
+      <section data-view="chat ws ops perf">
         <div class="panel-title">
           <h2>Gauche</h2>
           <p class="muted">réservé</p>
@@ -96,6 +105,8 @@
           <button type="button" class="preset" data-preset="devops_sonde">DevOps (sonde)</button>
           <button type="button" class="preset" data-preset="lyra_test">Lyra (test)</button>
           <button type="button" class="preset" data-preset="lyra_mmo">Lyra + monde (MMO)</button>
+          <button type="button" class="preset" data-preset="aid_commit">Aid (commit)</button>
+          <button type="button" class="preset" data-preset="aid_llm">Aid (LLM-on)</button>
         </p>
         <p class="muted" style="margin-top:0.5rem">
           NPC v1 (ids stables) :
@@ -115,12 +126,18 @@
           <button type="button" id="btn-rep-reset">Reset (→0)</button>
           <span class="muted">agit sur <code>context.world_npc_id</code> (ou <code>npc:merchant</code> par défaut)</span>
         </p>
+        <p class="muted" style="margin-top:0.5rem">
+          Monde (aid, sans LLM) :
+          <button type="button" id="btn-aid-help">Aider (−jauges, +rep)</button>
+          <button type="button" id="btn-aid-reset">Reset jauges (→0)</button>
+          <span class="muted">via <code>POST /v1/pilot/aid</code> + relecture <code>GET /v1/pilot/mmo-server/world-lyra</code></span>
+        </p>
         <p class="muted">Astuce : tes champs, l’historique PNJ, l’état quête et l’état combat sont sauvegardés localement à chaque envoi. Le bloc <b>Lyra (output)</b> après envoi n’apparaît que si l’agent renvoie <code>output.lyra</code> — utilise le preset <b>Lyra (test)</b> (routage <code>agent.fallback</code>). Avec <b>Lyra + monde (MMO)</b>, le backend injecte <code>context.lyra</code> depuis le serveur monde si <code>LBG_MMO_SERVER_URL</code> est défini (voir <code>docs/lyra.md</code>).</p>
       </section>
     </div>
 
     <div class="col" id="col-center">
-      <section>
+      <section data-view="chat">
         <div class="panel-title">
           <h2>Chat (intention)</h2>
           <p class="muted">backend → orchestrator → agent</p>
@@ -174,7 +191,7 @@
         <pre id="intent-out">—</pre>
       </section>
 
-      <section>
+      <section data-view="perf">
         <div class="panel-title">
           <h2>Benchmark (latence)</h2>
           <p class="muted">p50 / p95 (VM)</p>
@@ -191,7 +208,7 @@
         <pre id="bench-out">—</pre>
       </section>
 
-      <section>
+      <section data-view="perf">
         <div class="panel-title">
           <h2>Cache (latence)</h2>
           <p class="muted">p50 / p95 (hit vs miss)</p>
@@ -203,7 +220,59 @@
     </div>
 
     <div class="col" id="col-right">
-      <section>
+      <section data-view="ws">
+        <div class="panel-title">
+          <h2>WS (test client minimal)</h2>
+          <p class="muted">hello → npc_reply (placeholder remplacé)</p>
+        </div>
+        <p class="muted">
+          Objectif : tester le flux joueur <code>WS hello</code> → pont IA → <code>world_tick.npc_reply</code>.
+          Le placeholder et la réponse finale partagent le même <code>trace_id</code> : la réponse finale remplace le placeholder.
+        </p>
+        <p class="muted" style="margin-top:0.35rem">
+          Contrat: <code>proto=mmmorpg-ws/1</code> (serveur → client). Doc repo: <code>docs/ws_contract_mmmorpg_ws_v1.md</code>.
+        </p>
+
+        <label for="ws-url">WS URL</label>
+        <input type="text" id="ws-url" value="ws://192.168.0.245:7733" />
+
+        <label for="ws-internal-http">HTTP interne (snapshot) — optionnel</label>
+        <input type="text" id="ws-internal-http" value="http://192.168.0.245:8773" />
+        <p class="muted" style="margin:0.35rem 0 0 0">
+          Utilise le champ “token service” (header <code>X-LBG-Service-Token</code>) si le snapshot est protégé.
+        </p>
+
+        <label for="ws-npc-id">world_npc_id</label>
+        <input type="text" id="ws-npc-id" value="npc:merchant" />
+
+        <label for="ws-npc-name">npc_name</label>
+        <input type="text" id="ws-npc-name" value="Marchand" />
+
+        <label for="ws-text">texte (hello.text)</label>
+        <textarea id="ws-text">Je suis épuisé, j'ai faim et soif. Aide-moi tout de suite s'il te plaît.</textarea>
+
+        <p class="muted" style="margin-top:0.35rem">
+          <label style="margin:0; font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
+            <input type="checkbox" id="ws-require-action" checked>
+            forcer action (<code>ia_context._require_action_json=true</code>)
+          </label>
+          <label style="margin:0 0 0 0.9rem; font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
+            <input type="checkbox" id="ws-no-cache">
+            no-cache (<code>ia_context._no_cache=true</code>)
+          </label>
+        </p>
+
+        <p style="margin:0.5rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button type="button" id="btn-ws-connect">Connect</button>
+          <button type="button" id="btn-ws-disconnect">Disconnect</button>
+          <button type="button" id="btn-ws-send-hello">Send hello</button>
+          <button type="button" id="btn-ws-clear">Clear</button>
+        </p>
+
+        <pre id="ws-out">—</pre>
+      </section>
+
+      <section data-view="ops">
         <div class="panel-title">
           <h2>Monitoring</h2>
           <p class="muted">santé agrégée</p>
@@ -214,7 +283,7 @@
         <pre id="health-out">Chargement…</pre>
       </section>
 
-      <section>
+      <section data-view="ops">
         <div class="panel-title">
           <h2>Capabilities</h2>
           <p class="muted">via backend</p>
@@ -807,6 +876,26 @@
         if (cr.reason) addKV("commit_reason", cr.reason);
       }
 
+      // Résultat "monde" (aid) : /v1/pilot/aid → world_result
+      if (root && root.world_result && typeof root.world_result === "object") {
+        const wr = root.world_result;
+        const ly = wr.lyra;
+        if (ly && typeof ly === "object") {
+          const gm = ly.meta;
+          const gg = ly.gauges;
+          if (gm && typeof gm === "object") {
+            if (gm.source) addKV("world_source", gm.source);
+            const rep = gm.reputation;
+            if (rep && typeof rep === "object" && rep.value != null) addKV("world_reputation_value", rep.value);
+          }
+          if (gg && typeof gg === "object") {
+            if (gg.hunger != null) addKV("world_hunger", gg.hunger);
+            if (gg.thirst != null) addKV("world_thirst", gg.thirst);
+            if (gg.fatigue != null) addKV("world_fatigue", gg.fatigue);
+          }
+        }
+      }
+
       // Lyra meta injectée côté backend (monde / snapshot interne) : ex. réputation locale.
       if (root && root.lyra_meta && typeof root.lyra_meta === "object") {
         const lm = root.lyra_meta;
@@ -1240,6 +1329,22 @@
           history: [],
         },
       },
+      aid_commit: {
+        text: "Aide le PNJ (commit, sans LLM)",
+        context: {
+          world_npc_id: "npc:merchant",
+          world_action: { kind: "aid", hunger_delta: -0.2, thirst_delta: -0.1, fatigue_delta: -0.2, reputation_delta: 5 },
+          history: [],
+        },
+      },
+      aid_llm: {
+        text: "J'ai faim, soif et je suis épuisé. Peux-tu m'aider tout de suite ?",
+        context: {
+          npc_name: "Marchand civile",
+          world_npc_id: "npc:merchant",
+          history: [],
+        },
+      },
     };
 
     function applyPreset(key) {
@@ -1326,6 +1431,156 @@
       return { status: r.status, json: j, text: t };
     }
 
+    // --------------------------
+    // WS test client (minimal)
+    // --------------------------
+    let __ws = null;
+    const __wsMsgs = new Map(); // trace_id -> { text, status }
+    const __WS_PLACEHOLDER = "…un instant.";
+
+    function wsLog(line) {
+      const el = document.getElementById("ws-out");
+      if (!el) return;
+      const now = new Date().toISOString().slice(11, 19);
+      const prev = el.textContent === "—" ? "" : el.textContent;
+      el.textContent = (prev ? (prev + "\n") : "") + "[" + now + "] " + line;
+      // limiter taille
+      if (el.textContent.length > 20000) {
+        el.textContent = el.textContent.slice(el.textContent.length - 20000);
+      }
+    }
+
+    function wsRenderThreads() {
+      const rows = [];
+      for (const [tid, v] of __wsMsgs.entries()) {
+        rows.push({ tid, ...v });
+      }
+      rows.sort((a, b) => (a.tid < b.tid ? -1 : 1));
+      if (!rows.length) {
+        wsLog("threads: (vide)");
+        return;
+      }
+      wsLog("threads: " + rows.map((r) => r.tid + ":" + r.status).join(" | "));
+    }
+
+    async function wsSnapshot(npcId, traceId, label) {
+      const base = document.getElementById("ws-internal-http").value.trim().replace(/\/$/, "");
+      if (!base) return null;
+      const token = getServiceToken();
+      const headers = {};
+      if (token) headers["X-LBG-Service-Token"] = token;
+      const url = base + "/internal/v1/npc/" + encodeURIComponent(npcId) + "/lyra-snapshot?trace_id=" + encodeURIComponent(traceId || "");
+      try {
+        const r = await fetch(url, { headers });
+        const t = await r.text();
+        let j = null;
+        try { j = t ? JSON.parse(t) : null; } catch (_) {}
+        if (r.status !== 200) {
+          wsLog(label + " snapshot HTTP " + r.status + ": " + t.slice(0, 200));
+          return null;
+        }
+        wsLog(label + " snapshot ok");
+        return j;
+      } catch (e) {
+        wsLog(label + " snapshot error: " + e);
+        return null;
+      }
+    }
+
+    function wsConnect() {
+      const url = document.getElementById("ws-url").value.trim();
+      if (!url) { wsLog("WS URL vide"); return; }
+      if (__ws) { try { __ws.close(); } catch (_) {} __ws = null; }
+      wsLog("connect " + url);
+      const ws = new WebSocket(url);
+      __ws = ws;
+      ws.addEventListener("open", () => wsLog("open"));
+      ws.addEventListener("close", () => wsLog("close"));
+      ws.addEventListener("error", () => wsLog("error"));
+      ws.addEventListener("message", (ev) => {
+        let msg = null;
+        try { msg = JSON.parse(String(ev.data || "")); } catch (_) {}
+        if (!msg || typeof msg !== "object") return;
+        if (msg.type === "error") {
+          wsLog("server error: " + (msg.message || JSON.stringify(msg)));
+          return;
+        }
+        if (msg.type === "welcome") {
+          wsLog("welcome player_id=" + msg.player_id);
+          return;
+        }
+        if (msg.type === "world_tick") {
+          const rep = typeof msg.npc_reply === "string" ? msg.npc_reply.trim() : "";
+          const tid = typeof msg.trace_id === "string" ? msg.trace_id.trim() : "";
+          if (rep && tid) {
+            const isPlaceholder = rep.startsWith(__WS_PLACEHOLDER);
+            const prev = __wsMsgs.get(tid);
+            const status = isPlaceholder ? "placeholder" : "final";
+            __wsMsgs.set(tid, { text: rep, status });
+            if (prev && prev.status === "placeholder" && status === "final") {
+              wsLog("replace placeholder -> final (trace_id=" + tid + ")");
+            } else {
+              wsLog("npc_reply (" + status + ", trace_id=" + tid + "): " + rep);
+            }
+            wsRenderThreads();
+          }
+          return;
+        }
+      });
+    }
+
+    function wsDisconnect() {
+      if (!__ws) { wsLog("pas connecté"); return; }
+      wsLog("disconnect");
+      try { __ws.close(); } catch (_) {}
+      __ws = null;
+    }
+
+    async function wsSendHello() {
+      if (!__ws) { wsLog("pas connecté"); return; }
+      const npcId = document.getElementById("ws-npc-id").value.trim() || "npc:merchant";
+      const npcName = document.getElementById("ws-npc-name").value.trim() || "PNJ";
+      const text = document.getElementById("ws-text").value.trim() || "(…)";
+      const reqAction = document.getElementById("ws-require-action").checked;
+      const noCache = document.getElementById("ws-no-cache").checked;
+      const iaContext = {};
+      if (reqAction) iaContext._require_action_json = true;
+      if (noCache) iaContext._no_cache = true;
+
+      // best-effort snapshot avant (trace_id vide => snapshot sans corrélation utile, mais lisible)
+      try { await wsSnapshot(npcId, "ws_before", "avant"); } catch (_) {}
+
+      const payload = {
+        type: "hello",
+        player_name: "pilot_web",
+        world_npc_id: npcId,
+        npc_name: npcName,
+        text,
+        ia_context: iaContext,
+      };
+      wsLog("send hello npc=" + npcId);
+      try { __ws.send(JSON.stringify(payload)); } catch (e) { wsLog("send error: " + e); return; }
+
+      // quand on reçoit un final, on tentera un snapshot après (on ne bloque pas l’UI ici)
+      // => on observe le Map et on déclenche une fois.
+      const t0 = Date.now();
+      const poll = setInterval(async () => {
+        if (Date.now() - t0 > 120000) { clearInterval(poll); return; }
+        for (const [tid, v] of __wsMsgs.entries()) {
+          if (v && v.status === "final") {
+            clearInterval(poll);
+            await wsSnapshot(npcId, tid, "après");
+            return;
+          }
+        }
+      }, 500);
+    }
+
+    function wsClear() {
+      __wsMsgs.clear();
+      document.getElementById("ws-out").textContent = "—";
+    }
+
     function getWorldNpcIdOrDefault() {
       try {
         const raw = document.getElementById("context-json").value.trim();
@@ -1399,6 +1654,63 @@
     document.getElementById("btn-rep-minus").addEventListener("click", () => commitReputationDelta(-5));
     document.getElementById("btn-rep-reset").addEventListener("click", () => resetReputationToZero());
 
+    async function getWorldLyraSnapshot(npcId) {
+      const base = getBase();
+      const url = base + "/v1/pilot/mmo-server/world-lyra?npc_id=" + encodeURIComponent(String(npcId || "").trim());
+      const r = await fetch(url);
+      const t = await r.text();
+      let j = null;
+      try { j = t ? JSON.parse(t) : null; } catch (_) {}
+      if (!j || typeof j !== "object") throw new Error("world-lyra: réponse non JSON");
+      if (r.status !== 200) throw new Error("world-lyra HTTP " + r.status + ": " + t.slice(0, 500));
+      return j;
+    }
+
+    async function postAid(payload) {
+      const base = getBase();
+      const out = await postJson(base + "/v1/pilot/aid", payload);
+      if (out.json) {
+        window.__last_intent_json = out.json;
+        document.getElementById("intent-out").textContent = JSON.stringify(out.json, null, 2);
+        try { document.getElementById("intent-pretty").innerHTML = renderPretty(out.json); } catch (_) {}
+      } else {
+        document.getElementById("intent-out").textContent = "HTTP " + out.status + "\n" + out.text;
+      }
+      // Relecture monde (proxy) pour visibilité immédiate.
+      try {
+        const npcId = payload.npc_id;
+        const snap = await getWorldLyraSnapshot(npcId);
+        const merged = { ...(out.json || {}), world_after: snap };
+        window.__last_intent_json = merged;
+        document.getElementById("intent-out").textContent = JSON.stringify(merged, null, 2);
+      } catch (_) {}
+    }
+
+    async function aidHelp() {
+      const npcId = getWorldNpcIdOrDefault();
+      await postAid({ npc_id: npcId, hunger_delta: -0.2, thirst_delta: -0.1, fatigue_delta: -0.2, reputation_delta: 5 });
+    }
+
+    async function aidResetGaugesToZero() {
+      const npcId = getWorldNpcIdOrDefault();
+      let snap;
+      try { snap = await getWorldLyraSnapshot(npcId); } catch (e) { alert("Impossible de relire le monde: " + e); return; }
+      const g = (snap.lyra && snap.lyra.gauges) ? snap.lyra.gauges : {};
+      const hunger = typeof g.hunger === "number" ? g.hunger : 0;
+      const thirst = typeof g.thirst === "number" ? g.thirst : 0;
+      const fatigue = typeof g.fatigue === "number" ? g.fatigue : 0;
+      await postAid({ npc_id: npcId, hunger_delta: -hunger, thirst_delta: -thirst, fatigue_delta: -fatigue, reputation_delta: 0 });
+    }
+
+    document.getElementById("btn-aid-help").addEventListener("click", () => aidHelp());
+    document.getElementById("btn-aid-reset").addEventListener("click", () => aidResetGaugesToZero());
+
+    // WS buttons
+    try { document.getElementById("btn-ws-connect").addEventListener("click", wsConnect); } catch (_) {}
+    try { document.getElementById("btn-ws-disconnect").addEventListener("click", wsDisconnect); } catch (_) {}
+    try { document.getElementById("btn-ws-send-hello").addEventListener("click", wsSendHello); } catch (_) {}
+    try { document.getElementById("btn-ws-clear").addEventListener("click", wsClear); } catch (_) {}
+
     function applyNpcIdChip(npcId) {
       const id = (npcId || "").trim();
       if (!id) return;
@@ -1422,6 +1734,7 @@
     const rightToggle = document.getElementById("toggle-right");
     const colLeft = document.getElementById("col-left");
     const colRight = document.getElementById("col-right");
+    const viewMode = document.getElementById("view-mode");
     function applyToggles() {
       colLeft.style.display = leftToggle.checked ? "" : "none";
       colRight.style.display = rightToggle.checked ? "" : "none";
@@ -1430,15 +1743,49 @@
         localStorage.setItem("lbg_pilot_dash_right", rightToggle.checked ? "1" : "0");
       } catch (_) {}
     }
+
+    function applyViewMode() {
+      const mode = (viewMode && viewMode.value) ? String(viewMode.value) : "all";
+      try { localStorage.setItem("lbg_pilot_view_mode", mode); } catch (_) {}
+      const wanted = mode === "all" ? ["chat", "ws", "ops", "perf"] : [mode];
+      for (const sec of document.querySelectorAll("section[data-view]")) {
+        const raw = String(sec.getAttribute("data-view") || "");
+        const tags = raw.split(/\s+/).filter(Boolean);
+        const show = wanted.some((w) => tags.includes(w));
+        sec.style.display = show ? "" : "none";
+      }
+      // ergonomie : forcer affichage colonnes utiles
+      if (mode === "ws") {
+        leftToggle.checked = false;
+        rightToggle.checked = true;
+      } else if (mode === "ops") {
+        leftToggle.checked = false;
+        rightToggle.checked = true;
+      } else if (mode === "perf") {
+        leftToggle.checked = false;
+        rightToggle.checked = false;
+      } else {
+        // chat / all
+        leftToggle.checked = true;
+        rightToggle.checked = true;
+      }
+      applyToggles();
+    }
     try {
       const vL = localStorage.getItem("lbg_pilot_dash_left");
       const vR = localStorage.getItem("lbg_pilot_dash_right");
       if (vL === "0") leftToggle.checked = false;
       if (vR === "0") rightToggle.checked = false;
     } catch (_) {}
+    try {
+      const vm = localStorage.getItem("lbg_pilot_view_mode");
+      if (vm && viewMode) viewMode.value = vm;
+    } catch (_) {}
     leftToggle.addEventListener("change", applyToggles);
     rightToggle.addEventListener("change", applyToggles);
+    try { viewMode.addEventListener("change", applyViewMode); } catch (_) {}
     applyToggles();
+    try { applyViewMode(); } catch (_) {}
     loadStoredBase();
     loadStoredServiceToken();
     loadStoredChatState();

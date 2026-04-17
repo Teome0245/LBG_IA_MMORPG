@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lbg.local/schemas/mmmorpg-ws/1/server.error.schema.json",
+  "title": "MMMORPG WS v1 — server error",
+  "type": "object",
+  "required": ["proto", "type", "message"],
+  "properties": {
+    "proto": { "type": "string", "const": "mmmorpg-ws/1" },
+    "type": { "type": "string", "const": "error" },
+    "message": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": true
+}
+

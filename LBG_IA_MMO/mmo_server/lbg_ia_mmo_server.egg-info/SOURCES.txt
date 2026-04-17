@@ -15,6 +15,7 @@ simulation/__init__.py
 simulation/loop.py
 tests/test_gauges.py
 tests/test_http_lyra.py
+tests/test_internal_aid.py
 tests/test_persistence.py
 tests/test_seed.py
 world/__init__.py

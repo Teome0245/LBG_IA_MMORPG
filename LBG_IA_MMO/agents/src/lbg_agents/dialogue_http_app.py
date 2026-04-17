@@ -108,6 +108,35 @@ def invoke(p: InvokeIn) -> dict[str, object]:
             )
             lines = _split_reply_lines(reply_text)
             cache_hit = p.context.get("_cache_hit") is True
+            world_action = p.context.get("_world_action") if isinstance(p.context, dict) else None
+            commit = None
+            if isinstance(world_action, dict):
+                kind = world_action.get("kind")
+                npc_id = (p.context.get("world_npc_id") if isinstance(p.context, dict) else None)
+                # Convertir en commit WS borné (les gardes-fous sont aussi côté backend+serveur WS).
+                if kind == "aid":
+                    commit = {
+                        "npc_id": npc_id,
+                        "flags": {
+                            "aid_hunger_delta": world_action.get("hunger_delta", 0.0),
+                            "aid_thirst_delta": world_action.get("thirst_delta", 0.0),
+                            "aid_fatigue_delta": world_action.get("fatigue_delta", 0.0),
+                            "aid_reputation_delta": world_action.get("reputation_delta", 0),
+                        },
+                    }
+                elif kind == "reputation":
+                    commit = {
+                        "npc_id": npc_id,
+                        "flags": {"reputation_delta": world_action.get("delta", 0)},
+                    }
+                elif kind == "mood":
+                    flags: dict[str, object] = {}
+                    if isinstance(world_action.get("mood"), str) and world_action.get("mood"):
+                        flags["mood"] = world_action.get("mood")
+                    if isinstance(world_action.get("rp_tone"), str) and world_action.get("rp_tone"):
+                        flags["rp_tone"] = world_action.get("rp_tone")
+                    if flags:
+                        commit = {"npc_id": npc_id, "flags": flags}
             return {
                 "agent": "http_dialogue",
                 "reply": reply_text,
@@ -115,12 +144,14 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                 "speaker": speaker,
                 "player_text": player,
                 "actor_id": p.actor_id,
+                "commit": commit,
                 "meta": {
                     "stub": False,
                     "llm": True,
                     "model": dialogue_llm.model_name(),
                     "agent_version": app.version,
                     "cache_hit": cache_hit,
+                    "world_action": world_action if isinstance(world_action, dict) else None,
                 },
             }
         except Exception as e:

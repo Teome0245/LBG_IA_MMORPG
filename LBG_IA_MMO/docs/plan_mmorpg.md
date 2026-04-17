@@ -208,10 +208,17 @@ Cette section fige ce que couvre **MMO v1** sur le LAN (3 VM) avec l’infra act
   - Fallback monde : si snapshot interne KO, backend bascule sur `mmo_server` (`meta.source=mmo_world`).
   - Pont **écriture** : `/v1/pilot/route` peut produire un `commit` vers `mmmorpg_server` (flags en whitelist) ; validation via smokes `smoke_mmmorpg_commit.sh` et `smoke_commit_dialogue*.sh`.
   - Écriture **directe (debug/ops)** : `POST /v1/pilot/reputation` applique un `reputation_delta` sans LLM (token optionnel `LBG_PILOT_INTERNAL_TOKEN`) + double-write `mmo_server` (voir section réputation).
+  - **Gameplay v1 (monde, écriture interne)** : `mmo_server` expose `POST /internal/v1/npc/{npc_id}/aid` (deltas jauges + réputation, bornés) pour une interaction joueur→monde déterministe, testable et persistée.
 - **Smokes et observabilité** :
   - Smokes LAN par rôle : `smoke_vm_lan.sh`, `smoke_lan_minimal.sh`, `smoke_lan_quick.sh` (VM + monde + pont interne + internal route sans LLM).
   - Smokes spécifiques : snapshot auth/RL, bridge WS→Lyra, pilot route Lyra meta, WS→IA final-only JSON, commit (accepté/rejeté).
   - Traçage `trace_id` bout-en-bout (WS→backend→snapshot).
+  - UX WS “placeholder remplacé” : le pont IA envoie un placeholder `world_tick.npc_reply` **avec le même `trace_id`** que la réponse finale, afin qu’un client puisse remplacer la bulle (voir `infra/scripts/smoke_ws_hello_llm_aid_lan.sh`).
+
+### Notes ops (persistance)
+
+- `mmmorpg_server` peut persister son état commits dans `MMMORPG_STATE_PATH` (défaut LAN : `/var/lib/lbg/mmmorpg/state.json`).
+- Sur les VM, il faut que les répertoires `/var/lib/lbg/mmmorpg` (et `/var/lib/lbg/mmo` si utilisé) soient **créés** et **écrits par l’utilisateur de service** (souvent `lbg`).
 
 ### Ce qui est hors v1 (assumé pour plus tard)
 

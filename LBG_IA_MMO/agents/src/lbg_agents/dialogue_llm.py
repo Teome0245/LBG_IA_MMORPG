@@ -381,7 +381,160 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             "Adapte légèrement ton attitude selon cette réputation (plus chaleureux si positive, plus froid si négative), "
             "sans mentionner explicitement un score."
         )
+
+    # Option "LLM-on actions monde" (bornée) : le modèle peut suggérer une action déterministe.
+    # Gated par env + présence d'un PNJ monde (sinon on ignore).
+    v = os.environ.get("LBG_DIALOGUE_WORLD_ACTIONS", "0").strip().lower()
+    if v in ("1", "true", "yes", "on") and isinstance(context.get("world_npc_id"), str) and context.get("world_npc_id"):
+        require_action = bool(context.get("_require_action_json") is True)
+        lines.append(
+            (
+                "Actions monde (REQUIS) : commence ta réponse par UNE ligne :"
+                if require_action
+                else "Optionnel (actions monde) : si tu veux proposer une action sur le monde, commence ta réponse par UNE ligne :"
+            )
+        )
+        lines.append("Exemples (UNE ligne au début) :")
+        lines.append(
+            'ACTION_JSON: {"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}'
+        )
+        lines.append('ACTION_JSON: {"kind":"reputation","delta":3}')
+        lines.append('ACTION_JSON: {"kind":"mood","mood":"bienveillant","rp_tone":"chaleureux"}')
+        lines.append(
+            "Quand le joueur demande une aide immédiate (nourriture, boisson, repos, compassion), "
+            "tu peux utiliser kind=aid pour déclencher l'aide."
+        )
+        lines.append(
+            "Quand le joueur se comporte bien/mal (politesse, menace, insulte, gratitude), "
+            "tu peux utiliser kind=reputation pour ajuster la confiance."
+        )
+        lines.append(
+            "Quand tu veux ancrer un état RP stable (humeur/ton), tu peux utiliser kind=mood (mood + rp_tone courts)."
+        )
+        lines.append(
+            "Contraintes: kind dans {'aid','reputation','mood'}. "
+            "aid: deltas hunger/thirst/fatigue dans [-1,1], reputation_delta dans [-100,100]. "
+            "reputation: delta dans [-100,100]. "
+            "mood: mood/rp_tone chaînes courtes (<=32). "
+            + ("Tu DOIS écrire ACTION_JSON car il est requis." if require_action else "Si aucune action n'est nécessaire, n'écris pas ACTION_JSON.")
+        )
     return "\n".join(lines)
+
+
+def _parse_action_json_prefix(raw: str) -> tuple[dict[str, Any] | None, str]:
+    """
+    Parse une éventuelle première ligne ACTION_JSON: {...}
+    Retourne (action_dict|None, remaining_text).
+    """
+    s = (raw or "").replace("\r\n", "\n").strip()
+    if not s:
+        return None, raw.strip()
+    first, *rest = s.split("\n", 1)
+    if not first.strip().startswith("ACTION_JSON:"):
+        return None, s
+    payload = first.split("ACTION_JSON:", 1)[1].strip()
+    try:
+        # Tolérant : certains modèles collent du texte après le JSON sur la même ligne.
+        dec = json.JSONDecoder()
+        obj, idx = dec.raw_decode(payload)
+        tail = payload[idx:].strip()
+    except Exception:
+        return None, (rest[0].strip() if rest else "")
+    remaining = (tail + ("\n" + rest[0] if rest and rest[0].strip() else "")).strip() if tail or (rest and rest[0].strip()) else ""
+    # Si le modèle a répété ACTION_JSON, on ne garde pas ces lignes dans le texte visible.
+    if remaining.startswith("ACTION_JSON:"):
+        remaining = ""
+    return (obj if isinstance(obj, dict) else None), remaining
+
+
+def _sanitize_world_action(action: dict[str, Any] | None) -> dict[str, Any] | None:
+    """
+    Valide et borne l'action monde (whitelist). Renvoie None si invalide.
+    """
+    if not isinstance(action, dict) or not action:
+        return None
+    kind = str(action.get("kind") or "").strip()
+    if kind not in ("aid", "reputation", "mood"):
+        return None
+
+    def f(name: str) -> float:
+        try:
+            return float(action.get(name, 0.0))
+        except Exception:
+            return 0.0
+
+    def i(name: str) -> int:
+        try:
+            return int(action.get(name, 0))
+        except Exception:
+            return 0
+
+    def s(name: str, max_len: int) -> str:
+        v = action.get(name)
+        if not isinstance(v, str):
+            return ""
+        vv = v.strip()
+        if not vv:
+            return ""
+        return vv[:max_len]
+
+    if kind == "aid":
+        return {
+            "kind": "aid",
+            "hunger_delta": max(-1.0, min(1.0, f("hunger_delta"))),
+            "thirst_delta": max(-1.0, min(1.0, f("thirst_delta"))),
+            "fatigue_delta": max(-1.0, min(1.0, f("fatigue_delta"))),
+            "reputation_delta": max(-100, min(100, i("reputation_delta"))),
+        }
+    if kind == "reputation":
+        return {"kind": "reputation", "delta": max(-100, min(100, i("delta")))}
+    # mood
+    mood = s("mood", 32)
+    rp_tone = s("rp_tone", 32)
+    if not mood and not rp_tone:
+        return None
+    out2: dict[str, Any] = {"kind": "mood"}
+    if mood:
+        out2["mood"] = mood
+    if rp_tone:
+        out2["rp_tone"] = rp_tone
+    return out2
+
+
+def _world_actions_enabled(*, context: dict[str, Any]) -> bool:
+    v = os.environ.get("LBG_DIALOGUE_WORLD_ACTIONS", "0").strip().lower()
+    if v not in ("1", "true", "yes", "on"):
+        return False
+    return isinstance(context.get("world_npc_id"), str) and bool(str(context.get("world_npc_id")).strip())
+
+
+def _require_action_json(*, context: dict[str, Any]) -> bool:
+    return _world_actions_enabled(context=context) and bool(context.get("_require_action_json") is True)
+
+
+def _postprocess_llm_content(*, raw: str, context: dict[str, Any]) -> tuple[str, dict[str, Any] | None]:
+    """
+    Post-traitement central :
+    - optionnellement parse ACTION_JSON (avant normalisation whitespace)
+    - enforce short reply sur le texte visible joueur
+    """
+    if _world_actions_enabled(context=context):
+        action_raw, remaining = _parse_action_json_prefix(raw)
+        action = _sanitize_world_action(action_raw)
+        visible = remaining if action is not None else raw
+        reply = _enforce_short_reply(visible)
+        if action is not None:
+            if not (isinstance(reply, str) and reply.strip()):
+                reply = "D'accord."
+            try:
+                context["_world_action"] = action
+            except Exception:
+                pass
+        return reply, action
+    return _enforce_short_reply(raw), None
+
+
+### Note: pas d'API publique "with_action" : l'action est exposée best-effort via context["_world_action"].
 
 
 def normalize_history(raw: object, *, max_messages: int = 24) -> list[dict[str, str]]:
@@ -467,6 +620,9 @@ def run_dialogue_turn(
         max_tokens = 512
     # Autoriser des sorties très courtes en prod (ex: 24) pour la latence.
     max_tokens = max(1, min(max_tokens, 4096))
+    # Si le caller exige un ACTION_JSON, éviter les réponses tronquées.
+    if _require_action_json(context=context) and max_tokens < 96:
+        max_tokens = 96
 
     payload: dict[str, Any] = {
         "model": model_name(),
@@ -548,7 +704,7 @@ def run_dialogue_turn(
     if looks_like_ollama:
         try:
             raw = _try_ollama_native_api_chat(base=b_norm)
-            reply = _enforce_short_reply(raw)
+            reply, _ = _postprocess_llm_content(raw=raw, context=context)
             if ck:
                 _cache_set(ck, reply)
             return reply
@@ -561,7 +717,7 @@ def run_dialogue_turn(
     try:
         r.raise_for_status()
         raw = _parse_openai_chat_completions(r.json())
-        reply = _enforce_short_reply(raw)
+        reply, _ = _postprocess_llm_content(raw=raw, context=context)
         if ck:
             _cache_set(ck, reply)
         return reply
@@ -572,7 +728,7 @@ def run_dialogue_turn(
         if status >= 500 and looks_like_ollama:
             try:
                 raw = _try_ollama_native_api_chat(base=b_norm)
-                reply = _enforce_short_reply(raw)
+                reply, _ = _postprocess_llm_content(raw=raw, context=context)
                 if ck:
                     _cache_set(ck, reply)
                 return reply

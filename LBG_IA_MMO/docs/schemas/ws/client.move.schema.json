@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lbg.local/schemas/mmmorpg-ws/1/client.move.schema.json",
+  "title": "MMMORPG WS v1 — client move",
+  "type": "object",
+  "required": ["type", "x", "y", "z"],
+  "properties": {
+    "type": { "type": "string", "const": "move" },
+    "x": { "type": "number" },
+    "y": { "type": "number" },
+    "z": { "type": "number" },
+    "world_npc_id": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "npc_name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "ia_context": {
+      "type": "object",
+      "properties": {
+        "_require_action_json": { "type": "boolean" },
+        "_no_cache": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
+

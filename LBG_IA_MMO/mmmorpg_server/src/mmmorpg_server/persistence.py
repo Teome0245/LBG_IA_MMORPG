@@ -13,7 +13,7 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 def state_to_dict(
@@ -21,18 +21,20 @@ def state_to_dict(
     seen_trace_ids: set[str],
     npc_flags: dict[str, dict[str, Any]],
     npc_reputation: dict[str, int] | None = None,
+    npc_gauges: dict[str, dict[str, float]] | None = None,
 ) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA_VERSION,
         "seen_trace_ids": sorted(t for t in seen_trace_ids if isinstance(t, str) and t.strip()),
         "npc_flags": npc_flags,
         "npc_reputation": npc_reputation or {},
+        "npc_gauges": npc_gauges or {},
     }
 
 
-def state_from_dict(data: dict[str, Any]) -> tuple[set[str], dict[str, dict[str, Any]], dict[str, int]]:
+def state_from_dict(data: dict[str, Any]) -> tuple[set[str], dict[str, dict[str, Any]], dict[str, int], dict[str, dict[str, float]]]:
     ver = int(data.get("schema_version", 0))
-    if ver not in (1, 2):
+    if ver not in (1, 2, 3):
         raise ValueError("unsupported schema_version")
     raw_seen = data.get("seen_trace_ids") or []
     if not isinstance(raw_seen, list):
@@ -59,7 +61,26 @@ def state_from_dict(data: dict[str, Any]) -> tuple[set[str], dict[str, dict[str,
                         rep[k.strip()] = int(v)
                     except Exception:
                         continue
-    return seen, npc_flags, rep
+    gauges: dict[str, dict[str, float]] = {}
+    if ver >= 3:
+        raw_g = data.get("npc_gauges") or {}
+        if isinstance(raw_g, dict):
+            for k, v in raw_g.items():
+                if not (isinstance(k, str) and k.strip() and isinstance(v, dict)):
+                    continue
+                out: dict[str, float] = {}
+                for gk in ("hunger", "thirst", "fatigue"):
+                    try:
+                        gf = float(v.get(gk, 0.0))
+                    except Exception:
+                        gf = 0.0
+                    if gf < 0.0:
+                        gf = 0.0
+                    if gf > 1.0:
+                        gf = 1.0
+                    out[gk] = float(gf)
+                gauges[k.strip()] = out
+    return seen, npc_flags, rep, gauges
 
 
 def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -76,14 +97,20 @@ def save_state(
     seen_trace_ids: set[str],
     npc_flags: dict[str, dict[str, Any]],
     npc_reputation: dict[str, int] | None = None,
+    npc_gauges: dict[str, dict[str, float]] | None = None,
 ) -> None:
     atomic_write_json(
         path,
-        state_to_dict(seen_trace_ids=seen_trace_ids, npc_flags=npc_flags, npc_reputation=npc_reputation),
+        state_to_dict(
+            seen_trace_ids=seen_trace_ids,
+            npc_flags=npc_flags,
+            npc_reputation=npc_reputation,
+            npc_gauges=npc_gauges,
+        ),
     )
 
 
-def load_state(path: Path) -> tuple[set[str], dict[str, dict[str, Any]], dict[str, int]] | None:
+def load_state(path: Path) -> tuple[set[str], dict[str, dict[str, Any]], dict[str, int], dict[str, dict[str, float]]] | None:
     try:
         raw = path.read_text(encoding="utf-8")
         data = json.loads(raw)

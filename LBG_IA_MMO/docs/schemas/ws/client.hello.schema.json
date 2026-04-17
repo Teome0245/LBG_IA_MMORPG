@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lbg.local/schemas/mmmorpg-ws/1/client.hello.schema.json",
+  "title": "MMMORPG WS v1 — client hello",
+  "type": "object",
+  "required": ["type", "player_name"],
+  "properties": {
+    "type": { "type": "string", "const": "hello" },
+    "player_name": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "world_npc_id": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "npc_name": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "ia_context": {
+      "type": "object",
+      "description": "Mini contexte whitelisté côté serveur (voir docs).",
+      "properties": {
+        "_require_action_json": { "type": "boolean" },
+        "_no_cache": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}
+

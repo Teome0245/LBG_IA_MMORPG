@@ -78,7 +78,7 @@ def build_lyra_snapshot(*, game: GameState, npc_id: str, trace_id: str | None = 
     lyra: dict[str, Any] = {
         "version": "lyra-context-2",
         "kind": "npc_world",
-        "gauges": _gauges_for_npc(npc_id=npc_id, world_now_s=world_now_s),
+        "gauges": game.get_npc_gauges(npc_id, default=_gauges_for_npc(npc_id=npc_id, world_now_s=world_now_s)),
         "meta": {
             "source": "mmmorpg_ws",
             "world_now_s": world_now_s,

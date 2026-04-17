@@ -5,6 +5,7 @@ import uuid
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
+from pydantic import BaseModel
 
 from models.intents import IntentRequest, IntentResponse
 from services.mmo_lyra_sync import merge_mmo_lyra_if_configured
@@ -333,6 +334,36 @@ async def pilot_proxy_mmo_server_healthz() -> dict[str, object]:
         return {"ok": False, "error": str(e)}
 
 
+@router.get("/mmo-server/world-lyra", tags=["pilot"])
+async def pilot_proxy_mmo_server_world_lyra(npc_id: str) -> dict[str, object]:
+    """Proxy same-origin vers `GET /v1/world/lyra` sur `mmo_server`."""
+    base = os.environ.get("LBG_MMO_SERVER_URL", "").strip().rstrip("/")
+    if not base:
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "LBG_MMO_SERVER_URL non défini"})
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"{base}/v1/world/lyra", params={"npc_id": npc_id})
+        if r.status_code != 200:
+            raise HTTPException(status_code=r.status_code, detail={"error": "upstream_error", "body": r.text[:500]})
+        try:
+            data = r.json()
+        except ValueError:
+            raise HTTPException(status_code=502, detail={"error": "upstream_non_json", "body": r.text[:500]})
+        return data if isinstance(data, dict) else {"payload": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail={"error": "upstream_unreachable", "detail": str(e)})
+
+
+class AidRequest(BaseModel):
+    npc_id: str
+    hunger_delta: float = 0.0
+    thirst_delta: float = 0.0
+    fatigue_delta: float = 0.0
+    reputation_delta: int = 0
+
+
 @router.get("/agent-combat/healthz", tags=["pilot"])
 async def pilot_proxy_agent_combat_healthz() -> dict[str, object]:
     """Proxy same-origin vers l’agent combat (port 8040 typiquement)."""
@@ -469,3 +500,63 @@ async def pilot_commit_reputation(
             pass
 
     return {"ok": True, "trace_id": trace_id, "commit_result": commit_result}
+
+
+@router.post("/aid", tags=["pilot"])
+async def pilot_apply_aid_to_world(
+    payload: AidRequest,
+    x_lbg_service_token: str | None = Header(default=None, alias="X-LBG-Service-Token"),
+) -> dict[str, object]:
+    """
+    Gameplay v1 (monde) : applique des deltas sur un PNJ via `mmo_server` (LAN).
+    Protégé par le même token optionnel que `/v1/pilot/internal/route` (LBG_PILOT_INTERNAL_TOKEN).
+    """
+    npc_id = (payload.npc_id or "").strip()
+    if not npc_id:
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "npc_id requis"})
+
+    # Validation d'inputs avant le gate token pour garder des 400 utiles.
+    if payload.reputation_delta < -100 or payload.reputation_delta > 100:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "bad_request", "hint": "reputation_delta hors bornes [-100,100]"},
+        )
+    for name in ("hunger_delta", "thirst_delta", "fatigue_delta"):
+        v = float(getattr(payload, name))
+        if v < -1.0 or v > 1.0:
+            raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": f"{name} hors bornes [-1,1]"})
+
+    _require_internal_token(x_lbg_service_token)
+
+    base = os.environ.get("LBG_MMO_SERVER_URL", "").strip().rstrip("/")
+    if not base:
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "LBG_MMO_SERVER_URL non défini"})
+
+    trace_id = uuid.uuid4().hex
+    mmo_token = os.environ.get("LBG_MMO_INTERNAL_TOKEN", "").strip()
+    headers = {"X-LBG-Service-Token": mmo_token} if mmo_token else None
+    body = {
+        "hunger_delta": float(payload.hunger_delta),
+        "thirst_delta": float(payload.thirst_delta),
+        "fatigue_delta": float(payload.fatigue_delta),
+        "reputation_delta": int(payload.reputation_delta),
+        "trace_id": trace_id,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=2.5) as client:
+            r = await client.post(
+                f"{base}/internal/v1/npc/{npc_id}/aid",
+                json=body,
+                headers=headers,
+            )
+        if r.status_code != 200:
+            raise HTTPException(status_code=r.status_code, detail={"error": "upstream_error", "body": r.text[:500]})
+        try:
+            data = r.json()
+        except ValueError:
+            raise HTTPException(status_code=502, detail={"error": "upstream_non_json", "body": r.text[:500]})
+        return {"ok": True, "trace_id": trace_id, "world_result": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=502, detail={"error": "upstream_unreachable", "detail": str(e)})

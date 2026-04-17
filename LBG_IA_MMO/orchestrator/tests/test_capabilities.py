@@ -11,5 +11,6 @@ def test_list_capabilities() -> None:
     assert "capabilities" in data
     names = {c["name"] for c in data["capabilities"]}
     assert "npc_dialogue" in names
+    assert "world_aid" in names
     assert "devops_probe" in names
     assert "unknown" in names

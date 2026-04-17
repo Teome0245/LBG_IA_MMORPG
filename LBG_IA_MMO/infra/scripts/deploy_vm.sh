@@ -189,6 +189,9 @@ ${REMOTE_PROMOTE}
     sudo -n apt-get install -y \"python\${PY_VER}-venv\" python3-venv
   fi
   sudo -n chown -R ${SERVICE_USER}:${SERVICE_USER} \"${REMOTE_DIR}\"
+  # Persistance MMO/WS (évite les Permission denied sur /var/lib/lbg/*)
+  sudo -n mkdir -p /var/lib/lbg/mmmorpg /var/lib/lbg/mmo
+  sudo -n chown -R ${SERVICE_USER}:${SERVICE_USER} /var/lib/lbg/mmmorpg /var/lib/lbg/mmo
   sudo -n -u ${SERVICE_USER} -H bash -c \"cd \\\"${REMOTE_DIR}\\\" && bash infra/scripts/install_local_mmo.sh\"
   if [ ! -f infra/systemd/lbg-mmo-server.service ]; then echo ERROR lbg-mmo-server.service; exit 1; fi
   if [ ! -f infra/systemd/lbg-mmmorpg-ws.service ]; then echo ERROR lbg-mmmorpg-ws.service; exit 1; fi

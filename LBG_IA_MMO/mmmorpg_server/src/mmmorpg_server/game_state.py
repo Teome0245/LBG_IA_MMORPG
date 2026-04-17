@@ -23,6 +23,8 @@ class GameState:
         self._seen_commit_trace_ids: set[str] = set()
         self._npc_commit_flags: dict[str, dict[str, Any]] = {}
         self._npc_reputation: dict[str, int] = {}
+        # Gameplay (v1+) : jauges PNJ modifiables via commits (bornées 0–1), persistées.
+        self._npc_gauges: dict[str, dict[str, float]] = {}
         self._seed_npcs()
 
     def get_npc_commit_flags(self, npc_id: str) -> dict[str, Any]:
@@ -37,6 +39,46 @@ class GameState:
         except Exception:
             v = 0
         return -100 if v < -100 else 100 if v > 100 else v
+
+    def get_npc_gauges(self, npc_id: str, *, default: dict[str, float] | None = None) -> dict[str, float]:
+        npc_id = (npc_id or "").strip()
+        cur = self._npc_gauges.get(npc_id)
+        if isinstance(cur, dict) and cur:
+            out = {}
+            for k in ("hunger", "thirst", "fatigue"):
+                try:
+                    out[k] = float(cur.get(k, 0.0))
+                except Exception:
+                    out[k] = 0.0
+                if out[k] < 0.0:
+                    out[k] = 0.0
+                if out[k] > 1.0:
+                    out[k] = 1.0
+            return out
+        if isinstance(default, dict):
+            return {
+                "hunger": float(default.get("hunger", 0.0)),
+                "thirst": float(default.get("thirst", 0.0)),
+                "fatigue": float(default.get("fatigue", 0.0)),
+            }
+        return {"hunger": 0.0, "thirst": 0.0, "fatigue": 0.0}
+
+    def _apply_aid_deltas(self, *, npc_id: str, hunger_delta: float, thirst_delta: float, fatigue_delta: float) -> None:
+        # Init jauges si absentes : base 0–1 (déjà clamp).
+        cur = self.get_npc_gauges(npc_id)
+        nxt = {
+            "hunger": cur["hunger"] + float(hunger_delta),
+            "thirst": cur["thirst"] + float(thirst_delta),
+            "fatigue": cur["fatigue"] + float(fatigue_delta),
+        }
+        for k in ("hunger", "thirst", "fatigue"):
+            v = nxt[k]
+            if v < 0.0:
+                v = 0.0
+            if v > 1.0:
+                v = 1.0
+            nxt[k] = float(v)
+        self._npc_gauges[npc_id] = nxt
 
     def _apply_reputation_delta(self, *, npc_id: str, delta: int) -> None:
         cur = self.get_npc_reputation(npc_id)
@@ -73,6 +115,11 @@ class GameState:
             "rp_tone": (str,),
             # Réputation locale (v2+) : variation bornée appliquée par le serveur.
             "reputation_delta": (int,),
+            # Gameplay v1 (aid) : deltas bornés (appliqués sur les jauges stockées côté serveur WS).
+            "aid_hunger_delta": (int, float),
+            "aid_thirst_delta": (int, float),
+            "aid_fatigue_delta": (int, float),
+            "aid_reputation_delta": (int,),
         }
 
         cleaned: dict[str, Any] = {}
@@ -104,6 +151,17 @@ class GameState:
                 if di < -100 or di > 100:
                     return None, f"invalid value for {key}"
                 cleaned[key] = di
+            elif key.startswith("aid_") and key.endswith("_delta"):
+                if key == "aid_reputation_delta":
+                    di = int(v)
+                    if di < -100 or di > 100:
+                        return None, f"invalid value for {key}"
+                    cleaned[key] = di
+                else:
+                    df = float(v)
+                    if df < -1.0 or df > 1.0:
+                        return None, f"invalid value for {key}"
+                    cleaned[key] = float(df)
             else:
                 cleaned[key] = v
 
@@ -161,14 +219,38 @@ class GameState:
                     self._apply_reputation_delta(npc_id=npc_id, delta=int(cleaned["reputation_delta"]))
                 except Exception:
                     pass
+            # Gameplay v1 : jauges + réputation via keys aid_*
+            if any(k.startswith("aid_") for k in cleaned.keys()):
+                try:
+                    self._apply_aid_deltas(
+                        npc_id=npc_id,
+                        hunger_delta=float(cleaned.get("aid_hunger_delta", 0.0) or 0.0),
+                        thirst_delta=float(cleaned.get("aid_thirst_delta", 0.0) or 0.0),
+                        fatigue_delta=float(cleaned.get("aid_fatigue_delta", 0.0) or 0.0),
+                    )
+                except Exception:
+                    pass
+                if "aid_reputation_delta" in cleaned:
+                    try:
+                        self._apply_reputation_delta(npc_id=npc_id, delta=int(cleaned["aid_reputation_delta"]))
+                    except Exception:
+                        pass
             cur = self._npc_commit_flags.get(npc_id) or {}
-            # Merge léger : dernier write gagne
-            cur.update(cleaned)
+            # Merge léger : dernier write gagne (on n'expose pas les clés aid_* dans world_flags)
+            for k, v in cleaned.items():
+                if isinstance(k, str) and k.startswith("aid_"):
+                    continue
+                cur[k] = v
             self._npc_commit_flags[npc_id] = cur
         return True, "accepted"
 
-    def export_commit_state(self) -> tuple[set[str], dict[str, dict[str, Any]], dict[str, int]]:
-        return set(self._seen_commit_trace_ids), dict(self._npc_commit_flags), dict(self._npc_reputation)
+    def export_commit_state(self) -> tuple[set[str], dict[str, dict[str, Any]], dict[str, int], dict[str, dict[str, float]]]:
+        return (
+            set(self._seen_commit_trace_ids),
+            dict(self._npc_commit_flags),
+            dict(self._npc_reputation),
+            dict(self._npc_gauges),
+        )
 
     def import_commit_state(
         self,
@@ -176,6 +258,7 @@ class GameState:
         seen_trace_ids: set[str],
         npc_flags: dict[str, dict[str, Any]],
         npc_reputation: dict[str, int] | None = None,
+        npc_gauges: dict[str, dict[str, float]] | None = None,
     ) -> None:
         self._seen_commit_trace_ids = {t for t in seen_trace_ids if isinstance(t, str) and t.strip()}
         out_flags: dict[str, dict[str, Any]] = {}
@@ -192,6 +275,24 @@ class GameState:
                     except Exception:
                         continue
         self._npc_reputation = rep_out
+        gauges_out: dict[str, dict[str, float]] = {}
+        if isinstance(npc_gauges, dict):
+            for k, v in npc_gauges.items():
+                if not (isinstance(k, str) and k.strip() and isinstance(v, dict)):
+                    continue
+                out = {}
+                for gk in ("hunger", "thirst", "fatigue"):
+                    try:
+                        gf = float(v.get(gk, 0.0))
+                    except Exception:
+                        gf = 0.0
+                    if gf < 0.0:
+                        gf = 0.0
+                    if gf > 1.0:
+                        gf = 1.0
+                    out[gk] = float(gf)
+                gauges_out[k.strip()] = out
+        self._npc_gauges = gauges_out
 
     def add_player(self, name: str) -> Entity:
         p = Entity.new_player(name)

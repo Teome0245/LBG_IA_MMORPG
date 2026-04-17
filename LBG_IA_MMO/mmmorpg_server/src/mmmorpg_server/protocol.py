@@ -5,8 +5,11 @@ from __future__ import annotations
 from typing import Any
 
 
+PROTO = "mmmorpg-ws/1"
+
+
 def msg_error(message: str) -> dict[str, Any]:
-    return {"type": "error", "message": message}
+    return {"proto": PROTO, "type": "error", "message": message}
 
 
 def msg_welcome(
@@ -20,6 +23,7 @@ def msg_welcome(
     trace_id: str | None = None,
 ) -> dict[str, Any]:
     msg: dict[str, Any] = {
+        "proto": PROTO,
         "type": "welcome",
         "player_id": player_id,
         "planet_id": planet_id,
@@ -43,6 +47,7 @@ def msg_world_tick(
     trace_id: str | None = None,
 ) -> dict[str, Any]:
     msg: dict[str, Any] = {
+        "proto": PROTO,
         "type": "world_tick",
         "world_time_s": world_time_s,
         "day_fraction": day_fraction,

@@ -59,6 +59,45 @@ Les états peuvent **diverger** (acceptable en R&D — ADR 0002).
 - Protéger cet endpoint par token + rate‑limit (`LBG_PILOT_INTERNAL_TOKEN`, `LBG_PILOT_INTERNAL_RL_*`)
   et configurer `MMMORPG_IA_BACKEND_TOKEN` côté serveur WS. Détails : `ops_pont_interne_auth_rl.md`.
 
+### 3.2 Option “LLM‑on actions monde” (aid borné)
+
+Objectif : autoriser le LLM (capability `dialogue`) à **suggérer** une action gameplay simple (`aid`) tout en gardant :
+
+- **autorité serveur jeu** (commit validé/rejeté par `mmmorpg_server`)
+- **whitelist + validation** côté backend (best‑effort)
+- **désactivation par défaut** (opt‑in explicite)
+
+#### Protocole
+
+Si activé, le modèle peut préfixer sa réponse par une **seule ligne** :
+
+- `ACTION_JSON: {...}`
+
+Formes acceptées (whitelist) :
+
+- `{"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}`
+- `{"kind":"reputation","delta":3}`
+- `{"kind":"mood","mood":"bienveillant","rp_tone":"chaleureux"}`
+
+Contraintes :
+
+- `kind` dans `{ "aid", "reputation", "mood" }` uniquement
+- `aid` :
+  - `hunger_delta / thirst_delta / fatigue_delta` bornés \([-1, 1]\)
+  - `reputation_delta` borné \([-100, 100]\)
+- `reputation` :
+  - `delta` borné \([-100, 100]\)
+- `mood` :
+  - `mood` et `rp_tone` chaînes courtes (<=32)
+- Si la ligne est invalide : elle est ignorée (le dialogue reste servi).
+
+#### Activation (LAN)
+
+- Mettre `LBG_DIALOGUE_WORLD_ACTIONS="1"` dans `/etc/lbg-ia-mmo.env` (service `lbg-agent-dialogue`).
+- Pousser + redémarrer via `infra/scripts/push_secrets_vm.sh` (ou `systemctl restart lbg-agent-dialogue`).
+
+Par défaut (sécurité) : `LBG_DIALOGUE_WORLD_ACTIONS="0"`.
+
 ### 3.1 Contrat “commit dialogue” (backend → serveur jeu)
 
 **But** : transformer une proposition du LLM en **événement idempotent** appliqué (ou rejeté) par l’autorité jeu.
@@ -103,6 +142,12 @@ Payload JSON :
 - Ou **canal séparé** (HTTP interne) pour ne pas mélanger avec `move` / `hello` joueurs.
 
 Le détail sera fixé lors du **portage `mmmorpg`** dans le monorepo (RFC courte + tests d’intégration).
+
+### 4.1 Contrat WS v1 (actuel)
+
+Le contrat WebSocket implémenté par `mmmorpg_server` (hello/welcome/world_tick + placeholder remplacé via `trace_id`) est décrit dans :
+
+- `docs/ws_contract_mmmorpg_ws_v1.md`
 
 ---
 

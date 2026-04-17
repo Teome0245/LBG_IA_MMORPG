@@ -8,7 +8,19 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_ALLOWED_FLAG_KEYS: set[str] = {"quest_accepted", "quest_id", "quest_step", "mood", "rp_tone", "reputation_delta"}
+_DEFAULT_ALLOWED_FLAG_KEYS: set[str] = {
+    "quest_accepted",
+    "quest_id",
+    "quest_step",
+    "mood",
+    "rp_tone",
+    "reputation_delta",
+    # Gameplay v1 (commit WS) : deltas bornés appliqués côté serveur WS.
+    "aid_hunger_delta",
+    "aid_thirst_delta",
+    "aid_fatigue_delta",
+    "aid_reputation_delta",
+}
 
 
 def _allowed_flag_keys() -> set[str]:

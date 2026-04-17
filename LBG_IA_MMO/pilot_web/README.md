@@ -11,14 +11,24 @@ Page statique servie par le **backend** sous `/pilot/` pour :
 - affichage optionnel d’**`output.lyra`** (JSON formaté) lorsque l’agent renvoie ce champ — voir `docs/lyra.md` ; aperçu de **`context.lyra`** sous le champ JSON ; le preset **Lyra (test)** route vers **`agent.fallback`** ; avec **`npc_name`** + **`lyra`** dans le contexte et un texte de **dialogue**, l’intent **dialogue** applique aussi le pas de jauges et affiche **`output.lyra`** ;
 - health des agents en **proxy same-origin** : `GET /v1/pilot/agent-dialogue/healthz`, `GET /v1/pilot/agent-quests/healthz`, `GET /v1/pilot/agent-combat/healthz` (évite d’ouvrir 8020/8030/8040 depuis le navigateur).
 - **Réputation (debug, sans LLM)** : boutons **Rep +11 / Rep -5** + **Reset (→0)** sur `context.world_npc_id` (défaut `npc:merchant`) via `POST /v1/pilot/reputation` ; affichage de `lyra_meta.reputation.value` via `POST /v1/pilot/internal/route` (intent `devops_probe`, dry-run). Si le backend active `LBG_PILOT_INTERNAL_TOKEN`, renseigner le champ **Service token** (header `X-LBG-Service-Token`) — valeur stockée localement dans le navigateur.
+- **Monde (aid, sans LLM)** : boutons “Aider / Reset jauges” via `POST /v1/pilot/aid` + relecture `GET /v1/pilot/mmo-server/world-lyra` (proxy same-origin vers `mmo_server`).
+- **WS (test client minimal)** : se connecte au serveur WebSocket `mmmorpg_server` (LAN) et envoie un `hello` avec `world_npc_id` / `npc_name` / `text`. Affiche `world_tick.npc_reply` (placeholder remplacé via `trace_id`). Optionnel : snapshot avant/après via l’HTTP interne `:8773` (header `X-LBG-Service-Token` via le champ “token service”).
 
 L’API publique `POST /v1/intents/route` reste disponible sans métadonnées de timing.
+
+## Runbook “serveurs OK” (LAN)
+
+Pour une recette courte “2–5 minutes” (smokes + page WS test client), voir :
+
+- `docs/runbook_validation_serveurs_lan.md`
 
 ## Réputation (LAN / prod)
 
 Endpoints utilisés par la page :
 
 - `POST /v1/pilot/reputation` — applique un `reputation_delta` côté serveur jeu (HTTP interne) **sans LLM** ; peut être protégé par `LBG_PILOT_INTERNAL_TOKEN`.
+- `POST /v1/pilot/aid` — applique des deltas “gameplay v1” sur `mmo_server` (**sans LLM**) ; peut être protégé par `LBG_PILOT_INTERNAL_TOKEN`.
+- `GET /v1/pilot/mmo-server/world-lyra` — proxy same-origin vers `mmo_server` (`GET /v1/world/lyra`).
 - `POST /v1/pilot/internal/route` — utilisé uniquement pour **relire** `lyra_meta` après modification (pas de LLM si l’intent reste `devops_probe`).
 
 ## Commandes (copier-coller)

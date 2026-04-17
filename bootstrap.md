@@ -85,6 +85,14 @@ bash infra/scripts/verify_stack_local.sh
 
 Le script appelle les **`/healthz`** et tente un **`GET /v1/world/lyra?npc_id=npc:smith`** (échoue sans impact si le PNJ n’existe pas dans le seed). Variables optionnelles : `LBG_BACKEND_URL`, `LBG_ORCH_URL`, `LBG_MMO_HTTP_URL`.
 
+### Tests (pytest)
+
+Depuis `LBG_IA_MMO/` :
+
+```bash
+bash infra/ci/test_pytest.sh
+```
+
 **Prod LAN (trois VM)** — après déploiement et secrets : smoke SSH + systemd + Ollama sur **110** :
 
 ```bash

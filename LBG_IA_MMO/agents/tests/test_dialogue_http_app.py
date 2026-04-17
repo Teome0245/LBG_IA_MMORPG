@@ -65,7 +65,15 @@ def test_invoke_uses_llm_when_configured(monkeypatch: pytest.MonkeyPatch) -> Non
             return None
 
         def json(self) -> dict[str, object]:
-            return {"choices": [{"message": {"content": "Bienvenue à la forge, voyageur."}}]}
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": 'ACTION_JSON: {"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}\nBienvenue à la forge, voyageur.'
+                        }
+                    }
+                ]
+            }
 
     class _Client:
         def __init__(self, *a: object, **k: object) -> None:
@@ -82,10 +90,11 @@ def test_invoke_uses_llm_when_configured(monkeypatch: pytest.MonkeyPatch) -> Non
 
     monkeypatch.setattr(llm_mod.httpx, "Client", lambda **kw: _Client())
 
+    monkeypatch.setenv("LBG_DIALOGUE_WORLD_ACTIONS", "1")
     client = TestClient(app)
     r = client.post(
         "/invoke",
-        json={"actor_id": "p:1", "text": "Salut", "context": {"npc_name": "Hagen"}},
+        json={"actor_id": "p:1", "text": "Salut", "context": {"npc_name": "Hagen", "world_npc_id": "npc:merchant"}},
     )
     assert r.status_code == 200
     j = r.json()
@@ -93,6 +102,103 @@ def test_invoke_uses_llm_when_configured(monkeypatch: pytest.MonkeyPatch) -> Non
     assert j["meta"]["llm"] is True
     assert j["reply"] == "Bienvenue à la forge, voyageur."
     assert j["meta"]["cache_hit"] in (True, False)
+    assert isinstance(j.get("commit"), dict)
+    assert j["commit"]["flags"]["aid_hunger_delta"] == -0.2
+
+
+def test_invoke_maps_reputation_action_to_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_DIALOGUE_LLM_DISABLED", raising=False)
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_MODEL", "test-model")
+
+    import lbg_agents.dialogue_llm as llm_mod
+
+    class _Resp:
+        status_code = 200
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {"choices": [{"message": {"content": 'ACTION_JSON: {"kind":"reputation","delta":7}\nMerci, voyageur.'}}]}
+
+    class _Client:
+        def __init__(self, *a: object, **k: object) -> None:
+            pass
+
+        def __enter__(self) -> "_Client":
+            return self
+
+        def __exit__(self, *a: object) -> None:
+            return None
+
+        def post(self, *a: object, **k: object) -> _Resp:
+            return _Resp()
+
+    monkeypatch.setattr(llm_mod.httpx, "Client", lambda **kw: _Client())
+    monkeypatch.setenv("LBG_DIALOGUE_WORLD_ACTIONS", "1")
+
+    client = TestClient(app)
+    r = client.post(
+        "/invoke",
+        json={
+            "actor_id": "p:1",
+            "text": "Merci pour ton aide",
+            "context": {"npc_name": "Hagen", "world_npc_id": "npc:merchant"},
+        },
+    )
+    assert r.status_code == 200
+    j = r.json()
+    assert j["reply"] == "Merci, voyageur."
+    assert j["commit"]["flags"]["reputation_delta"] == 7
+
+
+def test_invoke_maps_mood_action_to_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_DIALOGUE_LLM_DISABLED", raising=False)
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_MODEL", "test-model")
+
+    import lbg_agents.dialogue_llm as llm_mod
+
+    class _Resp:
+        status_code = 200
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {"choices": [{"message": {"content": 'ACTION_JSON: {"kind":"mood","mood":"méfiant","rp_tone":"sec"}\nJe te surveille.'}}]}
+
+    class _Client:
+        def __init__(self, *a: object, **k: object) -> None:
+            pass
+
+        def __enter__(self) -> "_Client":
+            return self
+
+        def __exit__(self, *a: object) -> None:
+            return None
+
+        def post(self, *a: object, **k: object) -> _Resp:
+            return _Resp()
+
+    monkeypatch.setattr(llm_mod.httpx, "Client", lambda **kw: _Client())
+    monkeypatch.setenv("LBG_DIALOGUE_WORLD_ACTIONS", "1")
+
+    client = TestClient(app)
+    r = client.post(
+        "/invoke",
+        json={
+            "actor_id": "p:1",
+            "text": "Je te menace.",
+            "context": {"npc_name": "Hagen", "world_npc_id": "npc:merchant"},
+        },
+    )
+    assert r.status_code == 200
+    j = r.json()
+    assert j["reply"] == "Je te surveille."
+    assert j["commit"]["flags"]["mood"] == "méfiant"
+    assert j["commit"]["flags"]["rp_tone"] == "sec"
 
 
 def test_healthz_shows_default_llm_when_not_disabled(monkeypatch: pytest.MonkeyPatch) -> None:

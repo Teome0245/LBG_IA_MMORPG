@@ -163,6 +163,75 @@ def _require_mmo_internal_token(got: str | None) -> None:
         )
 
 
+def _clamp01(x: float) -> float:
+    if x < 0.0:
+        return 0.0
+    if x > 1.0:
+        return 1.0
+    return x
+
+
+class AidPayload(BaseModel):
+    """
+    Interaction monde v1 (écriture interne) : aide “déterministe” sur un PNJ
+    via des deltas bornés (jauges Lyra + réputation).
+    """
+
+    hunger_delta: float = 0.0
+    thirst_delta: float = 0.0
+    fatigue_delta: float = 0.0
+    reputation_delta: int = 0
+
+
+@app.post("/internal/v1/npc/{npc_id}/aid")
+def post_internal_aid(
+    npc_id: str,
+    payload: AidPayload,
+    x_lbg_service_token: str | None = Header(default=None, alias="X-LBG-Service-Token"),
+) -> dict[str, object]:
+    """
+    Applique des deltas “gameplay v1” sur un PNJ (LAN only).
+
+    - jauges : clamp [0,1]
+    - réputation : clamp [-100,100]
+    """
+    _require_mmo_internal_token(x_lbg_service_token)
+
+    if payload.reputation_delta < -100 or payload.reputation_delta > 100:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "bad_request", "hint": "reputation_delta hors bornes [-100,100]"},
+        )
+    for name in ("hunger_delta", "thirst_delta", "fatigue_delta"):
+        v = float(getattr(payload, name))
+        if v < -1.0 or v > 1.0:
+            raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": f"{name} hors bornes [-1,1]"})
+
+    lock: threading.Lock = app.state.world_lock
+    with lock:
+        world: WorldState = app.state.world
+        npc = world.npcs.get(npc_id)
+        if npc is None:
+            raise HTTPException(status_code=404, detail=f"npc not found: {npc_id!r}")
+
+        npc.gauges.hunger = _clamp01(npc.gauges.hunger + payload.hunger_delta)
+        npc.gauges.thirst = _clamp01(npc.gauges.thirst + payload.thirst_delta)
+        npc.gauges.fatigue = _clamp01(npc.gauges.fatigue + payload.fatigue_delta)
+
+        if payload.reputation_delta:
+            cur = int(getattr(npc, "reputation_value", 0))
+            nxt = cur + int(payload.reputation_delta)
+            if nxt < -100:
+                nxt = -100
+            if nxt > 100:
+                nxt = 100
+            npc.reputation_value = int(nxt)
+
+        lyra = _lyra_context_for_npc(npc, world.now_s)
+
+    return {"ok": True, "npc_id": npc_id, "lyra": lyra}
+
+
 @app.post("/internal/v1/npc/{npc_id}/reputation")
 def post_internal_reputation(
     npc_id: str,

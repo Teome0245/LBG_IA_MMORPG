@@ -9,6 +9,11 @@ capability_registry = InMemoryCapabilityRegistry(
         CapabilitySpec(name="quest_request", routed_to="agent.quests", description="Quest generation/routing"),
         CapabilitySpec(name="combat_action", routed_to="agent.combat", description="Combat decision support"),
         CapabilitySpec(
+            name="world_aid",
+            routed_to="agent.world",
+            description="Deterministic world-side aid commit (gauges + reputation deltas)",
+        ),
+        CapabilitySpec(
             name="devops_probe",
             routed_to="agent.devops",
             description="Allowlisted DevOps probe (HTTP GET healthz, optional log tail)",

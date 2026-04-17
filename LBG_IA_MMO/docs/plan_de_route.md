@@ -189,6 +189,8 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 | 2026-04-16 | **Pilot (doc)** : `pilot_web/README.md` — contrôles réputation + token service (`LBG_PILOT_INTERNAL_TOKEN`) + endpoints associés. |
 | 2026-04-16 | **Qualité tests** : `pytest` vert sur poste de dev “pollué” (imports orchestrator explicites, tests hermétiques vs env LAN/proxy, gate pilot réputation après validation 400, client httpx `trust_env=false`, boucle WS itère sur snapshot `clients`). |
 | 2026-04-16 | **Plan / pause** : jalons “MMO v1 gameplay vs CI `pytest`” **reportés au lendemain** ; plan de route enrichi (section SSH — droits effectifs agent + poste de dev). |
+| 2026-04-17 | **CI `pytest`** : ajout d’un entrypoint `infra/ci/test_pytest.sh` (venv `.venv-ci`) + workflow GitHub Actions `LBG_IA_MMO/.github/workflows/pytest.yml`. |
+| 2026-04-17 | **MMO v1 gameplay (monde)** : ajout `POST /internal/v1/npc/{npc_id}/aid` (deltas jauges + réputation, bornés + auth optionnelle `LBG_MMO_INTERNAL_TOKEN`) + tests `mmo_server`. |
 
 ---
 
@@ -196,9 +198,9 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 **Règle** : une **seule** phrase actionnable à la fois ; quand elle est **faite**, la remplacer par la suivante et, si utile, ajouter une ligne dans **État courant** ci‑dessus.
 
-**Reporté à demain (2026-04-17)** : la décision et l’exécution du **prochain jalon** (choix **MMO v1 gameplay** *ou* **CI `pytest` sur merge**, ou autre priorité explicitement choisie) sont volontairement laissées à la session suivante — rien de bloquant côté repo pour aujourd’hui.
+**Étape actuelle (reprise 2026-04-17)** : **lancer le premier jalon MMO v1 gameplay** (définir 1 boucle minimale + 1 interaction joueur→monde mesurable) et l’exécuter ; mettre à jour cette section + une ligne **État courant** à la fin du jalon.
 
-**Étape actuelle (reprise 2026-04-17)** : **trancher une option** (une phrase actionnable unique) puis l’exécuter ; mettre à jour cette section + une ligne **État courant** à la fin du jalon.
+**Historique** : CI `pytest` fait (entrée 2026-04-17 ci‑dessus).
 
 **Historique récent (déjà livré, rappel)** : smokes LAN harmonisés / `smoke_lan_quick.sh` / auth `LBG_MMO_INTERNAL_TOKEN` / CRLF + `deploy_vm` / alignement `lbg.env.example` / doc SSH `LBG_SSH_*` / docs fusion+Lyra+`plan_mmorpg` / `pytest` vert — détail dans les lignes **État courant** du **2026-04-16**.
 
@@ -211,6 +213,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
   - **`LBG_VM_USER` / `LBG_VM_HOST`** : comme documenté pour `deploy_vm.sh` / smokes ; sans réseau vers le LAN ou sans clé, **`ssh` échoue** comme pour un humain.
 - **Persistance des `export`** : un reboot ou une nouvelle session shell **ne** conserve **pas** les variables — les remettre dans `~/.bashrc` / `~/.profile` si tu veux le comportement “direct au login”.
 - **Agent Cursor en bac à sable** : si l’environnement d’exécution **n’a pas** accès à ta clé ou au LAN, les scripts SSH/smokes **échouent** ; dans ce cas, lancer les mêmes commandes depuis **ton** terminal WSL avec `LBG_SSH_*` exportés.
+- **Quand l’accès LAN + clé est OK** : l’agent peut exécuter directement les scripts d’ops (ex. `LBG_DEPLOY_ROLE=all bash infra/scripts/deploy_vm.sh`, `bash infra/scripts/push_secrets_vm.sh`) et faire une validation “post-deploy” via `curl` (endpoints `/healthz`, `/v1/pilot/*`) — comme depuis un terminal humain.
 
 ---
 
