@@ -10,6 +10,7 @@ src/lbg_agents/dispatch.py
 src/lbg_agents/lyra_bridge.py
 src/lbg_agents/quests_http_app.py
 src/lbg_agents/quests_stub.py
+src/lbg_agents/world_stub.py
 src/lbg_ia_mmo_agents.egg-info/PKG-INFO
 src/lbg_ia_mmo_agents.egg-info/SOURCES.txt
 src/lbg_ia_mmo_agents.egg-info/dependency_links.txt

@@ -8,6 +8,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from models.intents import IntentRequest, IntentResponse
+from services import metrics as svc_metrics
 from services.mmo_lyra_sync import merge_mmo_lyra_if_configured
 from services.mmmorpg_commit import try_commit_dialogue
 from services.orchestrator_client import OrchestratorClient, OrchestratorError
@@ -70,6 +71,7 @@ def _require_internal_token(got: str | None) -> None:
 
 async def _pilot_route_impl(*, payload: IntentRequest, trace_id: str) -> dict[str, object]:
     t0 = time.perf_counter()
+    svc_metrics.inc("pilot_route_requests_total")
     payload.context.setdefault("_trace_id", trace_id)
     await merge_mmo_lyra_if_configured(payload.context)
     lyra_after_merge = payload.context.get("lyra") if isinstance(payload.context, dict) else None
@@ -77,10 +79,12 @@ async def _pilot_route_impl(*, payload: IntentRequest, trace_id: str) -> dict[st
         client = OrchestratorClient.from_env()
         result: IntentResponse = await client.route_intent(payload)
     except OrchestratorError as e:
+        svc_metrics.inc("pilot_route_orchestrator_errors_total")
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
         return {"ok": False, "trace_id": trace_id, "elapsed_ms": elapsed_ms, "error": str(e)}
 
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
+    svc_metrics.inc("pilot_route_success_total")
     out = {"ok": True, "trace_id": trace_id, "elapsed_ms": elapsed_ms, "result": result.model_dump()}
     if isinstance(lyra_after_merge, dict):
         meta = lyra_after_merge.get("meta")

@@ -84,7 +84,12 @@ Champs optionnels (si pont jeu → IA activé et la requête `hello` contient `w
 Note : pour éviter de bloquer `welcome`, l’implémentation peut renvoyer `npc_reply`/`trace_id`
 soit dans `welcome`, soit sur le prochain `world_tick` (champs optionnels).
 Pour fiabiliser (même si l’IA est lente), une implémentation peut aussi renvoyer d’abord une
-**réplique placeholder** (avec `trace_id` vide), puis une réplique “finale” plus tard.
+**réplique placeholder** puis une réplique “finale” plus tard.
+
+Règle (implémentation actuelle `mmmorpg_server`) :
+
+- le placeholder et la réponse finale partagent le **même `trace_id`**
+- le client doit **remplacer** l’affichage du placeholder par la réponse finale en se basant sur `trace_id`
 
 ### `world_tick`
 
@@ -98,6 +103,11 @@ Diffusion périodique (état monde).
   "entities": [ ... ]
 }
 ```
+
+Champs optionnels (pont jeu → IA) :
+
+- `npc_reply` : réplique PNJ (placeholder ou final)
+- `trace_id` : identifiant de corrélation stable placeholder → final
 
 ### `entity_snapshot`
 

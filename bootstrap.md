@@ -215,6 +215,13 @@ bash infra/scripts/fix_crlf.sh
 
 Note : `infra/scripts/deploy_vm.sh` exécute automatiquement ce correctif avant `rsync` (désactivable via `LBG_SKIP_FIX_CRLF=1`).
 
+### Métriques Prometheus (systemd + secrets)
+
+- **Unités systemd** (`LBG_IA_MMO/infra/systemd/lbg-backend.service`, `lbg-orchestrator.service`, `lbg-mmmorpg-ws.service`) : défauts **désactivés** (`LBG_METRICS_ENABLED=0`, `MMMORPG_INTERNAL_HTTP_METRICS=0`) **avant** `EnvironmentFile=-/etc/lbg-ia-mmo.env`, afin que `/etc/lbg-ia-mmo.env` (poussé depuis `infra/secrets/lbg.env`) puisse activer les endpoints `GET /metrics`.
+- **Après modification des fichiers `.service`** : depuis `LBG_IA_MMO/`, relancer un déploiement qui recopie les unités (ex. `LBG_DEPLOY_ROLE=all bash infra/scripts/deploy_vm.sh`) ; **`push_secrets_vm.sh` seul ne met pas à jour** les fichiers sous `/etc/systemd/system/`.
+- **Variables** (dans `lbg.env` / exemple aligné) : `LBG_METRICS_ENABLED`, `LBG_METRICS_TOKEN` (Bearer optionnel sur backend et orchestrator) ; `MMMORPG_INTERNAL_HTTP_METRICS` sur la VM qui exécute `mmmorpg_server` (HTTP interne, ex. `:8773`).
+- **Recette opérateur** : `LBG_IA_MMO/docs/runbook_validation_serveurs_lan.md` (sections **2bis**, **2ter**) ; UI **`/pilot/`** : bloc *Métriques Prometheus* (liens + test fetch same-origin backend).
+
 ### Pont “jeu WS → IA” (Lyra snapshot, lecture seule)
 
 Quand `mmmorpg_server` (WS) expose son **HTTP interne** et que le backend est configuré avec

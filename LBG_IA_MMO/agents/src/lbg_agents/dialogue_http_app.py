@@ -111,10 +111,9 @@ def invoke(p: InvokeIn) -> dict[str, object]:
             world_action = p.context.get("_world_action") if isinstance(p.context, dict) else None
             commit = None
             if isinstance(world_action, dict):
-                kind = world_action.get("kind")
                 npc_id = (p.context.get("world_npc_id") if isinstance(p.context, dict) else None)
-                # Convertir en commit WS borné (les gardes-fous sont aussi côté backend+serveur WS).
-                if kind == "aid":
+                if world_action.get("kind") == "aid":
+                    # Convertir en commit WS borné (les gardes-fous sont aussi côté backend+serveur WS).
                     commit = {
                         "npc_id": npc_id,
                         "flags": {
@@ -124,19 +123,16 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                             "aid_reputation_delta": world_action.get("reputation_delta", 0),
                         },
                     }
-                elif kind == "reputation":
+                elif world_action.get("kind") == "quest":
+                    # Quête : stocker un état minimal côté monde (whitelist côté serveur WS).
                     commit = {
                         "npc_id": npc_id,
-                        "flags": {"reputation_delta": world_action.get("delta", 0)},
+                        "flags": {
+                            "quest_id": world_action.get("quest_id"),
+                            "quest_step": world_action.get("quest_step", 0),
+                            "quest_accepted": world_action.get("quest_accepted", True),
+                        },
                     }
-                elif kind == "mood":
-                    flags: dict[str, object] = {}
-                    if isinstance(world_action.get("mood"), str) and world_action.get("mood"):
-                        flags["mood"] = world_action.get("mood")
-                    if isinstance(world_action.get("rp_tone"), str) and world_action.get("rp_tone"):
-                        flags["rp_tone"] = world_action.get("rp_tone")
-                    if flags:
-                        commit = {"npc_id": npc_id, "flags": flags}
             return {
                 "agent": "http_dialogue",
                 "reply": reply_text,

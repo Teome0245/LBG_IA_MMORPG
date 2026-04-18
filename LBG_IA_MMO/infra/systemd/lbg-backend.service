@@ -8,6 +8,9 @@ Type=simple
 User=lbg
 Group=lbg
 WorkingDirectory=/opt/LBG_IA_MMO/backend
+# Métriques GET /metrics (Prometheus texte, opt-in) : défaut désactivé.
+# Surcharge : dans /etc/lbg-ia-mmo.env — LBG_METRICS_ENABLED=1 et optionnellement LBG_METRICS_TOKEN (+ Authorization: Bearer).
+Environment=LBG_METRICS_ENABLED=0
 EnvironmentFile=-/etc/lbg-ia-mmo.env
 Environment=PYTHONUNBUFFERED=1
 Environment=LBG_ORCHESTRATOR_URL=http://127.0.0.1:8010

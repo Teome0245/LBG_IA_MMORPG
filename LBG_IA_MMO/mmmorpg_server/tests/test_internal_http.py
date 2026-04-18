@@ -228,3 +228,39 @@ def test_internal_http_rate_limit(monkeypatch: object) -> None:
         # Nettoyage env pour ne pas polluer d'autres tests.
         os.environ.pop("MMMORPG_INTERNAL_HTTP_RL_RPS", None)
         os.environ.pop("MMMORPG_INTERNAL_HTTP_RL_BURST", None)
+
+
+def test_internal_http_metrics_disabled_by_default() -> None:
+    game = GameState()
+    http = start_internal_http(host="127.0.0.1", port=0, game=game, token="")
+    try:
+        req = urllib.request.Request(f"http://127.0.0.1:{http.port}/metrics", method="GET")
+        try:
+            urllib.request.urlopen(req, timeout=2.0)  # nosec - tests only
+            assert False, "expected 404"
+        except urllib.error.HTTPError as e:
+            assert int(e.code) == 404
+            body = e.read().decode("utf-8")
+            assert "metrics disabled" in body
+    finally:
+        http.stop()
+
+
+def test_internal_http_metrics_enabled(monkeypatch: object) -> None:
+    import os
+
+    monkeypatch.setenv("MMMORPG_INTERNAL_HTTP_METRICS", "1")
+    game = GameState()
+    http = start_internal_http(host="127.0.0.1", port=0, game=game, token="")
+    try:
+        # Un hit normal pour générer des compteurs de réponses.
+        _http_get_json(f"http://127.0.0.1:{http.port}/healthz")
+
+        req = urllib.request.Request(f"http://127.0.0.1:{http.port}/metrics", method="GET")
+        with urllib.request.urlopen(req, timeout=2.0) as r:  # nosec - tests only
+            assert int(r.status) == 200
+            body = r.read().decode("utf-8")
+        assert "lbg_process_uptime_seconds" in body
+        assert "mmmorpg_internal_http_http_responses_total" in body
+    finally:
+        http.stop()

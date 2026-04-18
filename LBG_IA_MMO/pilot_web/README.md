@@ -13,6 +13,7 @@ Page statique servie par le **backend** sous `/pilot/` pour :
 - **Réputation (debug, sans LLM)** : boutons **Rep +11 / Rep -5** + **Reset (→0)** sur `context.world_npc_id` (défaut `npc:merchant`) via `POST /v1/pilot/reputation` ; affichage de `lyra_meta.reputation.value` via `POST /v1/pilot/internal/route` (intent `devops_probe`, dry-run). Si le backend active `LBG_PILOT_INTERNAL_TOKEN`, renseigner le champ **Service token** (header `X-LBG-Service-Token`) — valeur stockée localement dans le navigateur.
 - **Monde (aid, sans LLM)** : boutons “Aider / Reset jauges” via `POST /v1/pilot/aid` + relecture `GET /v1/pilot/mmo-server/world-lyra` (proxy same-origin vers `mmo_server`).
 - **WS (test client minimal)** : se connecte au serveur WebSocket `mmmorpg_server` (LAN) et envoie un `hello` avec `world_npc_id` / `npc_name` / `text`. Affiche `world_tick.npc_reply` (placeholder remplacé via `trace_id`). Optionnel : snapshot avant/après via l’HTTP interne `:8773` (header `X-LBG-Service-Token` via le champ “token service”).
+- **Métriques Prometheus** : sous *Monitoring*, liens `GET /metrics` (backend, orchestrator depuis `orchestrator_url` de la santé, HTTP interne depuis le champ WS) ; champ **Bearer métriques** optionnel (stockage `localStorage`, aligné sur `LBG_METRICS_TOKEN` côté VM) ; bouton **Tester fetch backend /metrics** (same-origin). Pour :8010 / :8773, ouvrir les onglets ou utiliser `curl` si CORS / réseau bloque le fetch.
 
 L’API publique `POST /v1/intents/route` reste disponible sans métadonnées de timing.
 

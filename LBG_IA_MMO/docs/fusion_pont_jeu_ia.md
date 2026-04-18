@@ -59,9 +59,9 @@ Les états peuvent **diverger** (acceptable en R&D — ADR 0002).
 - Protéger cet endpoint par token + rate‑limit (`LBG_PILOT_INTERNAL_TOKEN`, `LBG_PILOT_INTERNAL_RL_*`)
   et configurer `MMMORPG_IA_BACKEND_TOKEN` côté serveur WS. Détails : `ops_pont_interne_auth_rl.md`.
 
-### 3.2 Option “LLM‑on actions monde” (aid borné)
+### 3.2 Option “LLM‑on actions monde” (bornées : aid, quest)
 
-Objectif : autoriser le LLM (capability `dialogue`) à **suggérer** une action gameplay simple (`aid`) tout en gardant :
+Objectif : autoriser le LLM (capability `dialogue`) à **suggérer** une action monde simple (ex: aide gameplay, état de quête) tout en gardant :
 
 - **autorité serveur jeu** (commit validé/rejeté par `mmmorpg_server`)
 - **whitelist + validation** côté backend (best‑effort)
@@ -73,22 +73,19 @@ Si activé, le modèle peut préfixer sa réponse par une **seule ligne** :
 
 - `ACTION_JSON: {...}`
 
-Formes acceptées (whitelist) :
+Formes acceptées :
 
 - `{"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}`
-- `{"kind":"reputation","delta":3}`
-- `{"kind":"mood","mood":"bienveillant","rp_tone":"chaleureux"}`
+- `{"kind":"quest","quest_id":"q:help_innkeeper","quest_step":0,"quest_accepted":true}`
 
 Contraintes :
 
-- `kind` dans `{ "aid", "reputation", "mood" }` uniquement
-- `aid` :
-  - `hunger_delta / thirst_delta / fatigue_delta` bornés \([-1, 1]\)
-  - `reputation_delta` borné \([-100, 100]\)
-- `reputation` :
-  - `delta` borné \([-100, 100]\)
-- `mood` :
-  - `mood` et `rp_tone` chaînes courtes (<=32)
+- `kind` ∈ `{ "aid", "quest" }` uniquement
+- `hunger_delta / thirst_delta / fatigue_delta` bornés \([-1, 1]\)
+- `reputation_delta` borné \([-100, 100]\)
+- `quest_id` string non vide
+- `quest_step` int borné \([0, 10000]\)
+- `quest_accepted` bool
 - Si la ligne est invalide : elle est ignorée (le dialogue reste servi).
 
 #### Activation (LAN)
@@ -142,12 +139,6 @@ Payload JSON :
 - Ou **canal séparé** (HTTP interne) pour ne pas mélanger avec `move` / `hello` joueurs.
 
 Le détail sera fixé lors du **portage `mmmorpg`** dans le monorepo (RFC courte + tests d’intégration).
-
-### 4.1 Contrat WS v1 (actuel)
-
-Le contrat WebSocket implémenté par `mmmorpg_server` (hello/welcome/world_tick + placeholder remplacé via `trace_id`) est décrit dans :
-
-- `docs/ws_contract_mmmorpg_ws_v1.md`
 
 ---
 

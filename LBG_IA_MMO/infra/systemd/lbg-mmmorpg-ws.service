@@ -7,6 +7,9 @@ Type=simple
 User=lbg
 Group=lbg
 WorkingDirectory=/opt/LBG_IA_MMO/mmmorpg_server
+# HTTP interne (MMMORPG_INTERNAL_HTTP_*) : GET /metrics désactivé par défaut.
+# Surcharge : /etc/lbg-ia-mmo.env — MMMORPG_INTERNAL_HTTP_METRICS=1
+Environment=MMMORPG_INTERNAL_HTTP_METRICS=0
 EnvironmentFile=-/etc/lbg-ia-mmo.env
 Environment=PYTHONUNBUFFERED=1
 # Ports / bind : MMMORPG_HOST (défaut 0.0.0.0), MMMORPG_PORT (défaut 7733) — voir mmmorpg_server/config.py

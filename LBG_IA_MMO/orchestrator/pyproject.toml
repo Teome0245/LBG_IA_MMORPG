@@ -26,6 +26,6 @@ testpaths = ["tests"]
 py-modules = ["main"]
 
 [tool.setuptools.packages.find]
-include = ["api*", "router*", "introspection*", "registry*", "capabilities*"]
+include = ["api*", "router*", "introspection*", "registry*", "capabilities*", "services*"]
 exclude = ["tests*"]
 

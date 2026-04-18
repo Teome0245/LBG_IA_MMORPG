@@ -59,3 +59,7 @@ Piliers :
 
 Voir aussi `docs/plan_mmorpg.md`.
 
+## Point de situation technique (monorepo, avril 2026)
+
+Sans remplacer la vision ci‑dessus : le dépôt **`LBG_IA_MMO/`** porte déjà **backend**, **orchestrator**, **agents**, **`mmo_server`**, **`mmmorpg_server`**, déploiement **systemd** / LAN documentés (**`bootstrap.md`**, **`docs/fusion_env_lan.md`**, **`docs/runbook_validation_serveurs_lan.md`**). **Observabilité** : métriques Prometheus **`/metrics`** en opt-in sur les services HTTP concernés. **Priorité produit suivante** (tracée dans **`docs/plan_de_route.md`**) : cadrer et exécuter un **premier jalon MMO v1 gameplay** mesurable (boucle joueur → monde).
+

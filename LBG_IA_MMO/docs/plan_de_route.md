@@ -191,6 +191,8 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 | 2026-04-16 | **Plan / pause** : jalons “MMO v1 gameplay vs CI `pytest`” **reportés au lendemain** ; plan de route enrichi (section SSH — droits effectifs agent + poste de dev). |
 | 2026-04-17 | **CI `pytest`** : ajout d’un entrypoint `infra/ci/test_pytest.sh` (venv `.venv-ci`) + workflow GitHub Actions `LBG_IA_MMO/.github/workflows/pytest.yml`. |
 | 2026-04-17 | **MMO v1 gameplay (monde)** : ajout `POST /internal/v1/npc/{npc_id}/aid` (deltas jauges + réputation, bornés + auth optionnelle `LBG_MMO_INTERNAL_TOKEN`) + tests `mmo_server`. |
+| 2026-04-17 | **Observabilité / ops** : métriques Prometheus opt-in (`/metrics` backend, orchestrator, HTTP interne `mmmorpg_server`) + variables dans unités systemd + tests CI ; **checklist déploiement** (`docs/runbook_validation_serveurs_lan.md` §2ter) ; **`pilot_web/`** : liens `/metrics`, Bearer local, fetch backend ; **`bootstrap.md`** : section systemd + secrets + lien runbook. |
+| 2026-04-17 | **Doc + pause** : `architecture.md` (observabilité), `vision_projet.md` (point de situation monorepo) ; **pause nuit** — reprise prévue sur le jalon **MMO v1 gameplay** (voir *Prochaine étape* ci‑dessous). |
 
 ---
 
@@ -198,7 +200,11 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 **Règle** : une **seule** phrase actionnable à la fois ; quand elle est **faite**, la remplacer par la suivante et, si utile, ajouter une ligne dans **État courant** ci‑dessus.
 
-**Étape actuelle (reprise 2026-04-17)** : **lancer le premier jalon MMO v1 gameplay** (définir 1 boucle minimale + 1 interaction joueur→monde mesurable) et l’exécuter ; mettre à jour cette section + une ligne **État courant** à la fin du jalon.
+**Étape actuelle (nuit 2026-04-17)** : **pause** — aucune exécution de jalon requise ce soir ; la branche technique et la doc sont à jour jusqu’aux entrées **État courant** du **2026-04-17**.
+
+**À la prochaine session** : **lancer le premier jalon MMO v1 gameplay** (définir 1 boucle minimale + 1 interaction joueur→monde mesurable), l’exécuter (smoke ou recette LAN), puis remplacer ce paragraphe par la **prochaine** action unique et ajouter une ligne **État courant**.
+
+**File d’attente (intention produit)** : une fois ce jalon MMO v1 cadré, **revenir sur l’orchestrateur et les agents IA** pour des capacités qui **touchent l’infrastructure et le code** (déploiement, lecture/analyse ciblée, patchs assistés, etc.) — en réutilisant et en durcissant les garde-fous déjà posés côté **DevOps** (listes blanches, dry-run, approbation, audit — voir `agents/README.md`, `docs/architecture.md`, ADR / specs fusion).
 
 **Historique** : CI `pytest` fait (entrée 2026-04-17 ci‑dessus).
 
@@ -221,6 +227,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 - `lexique.md` — **termes, acronymes, définitions** (dont **ADR**) pour transmission du projet
 - `architecture.md` — architecture et règles réseau
+- `runbook_validation_serveurs_lan.md` — validation rapide LAN (santé, smokes, **métriques §2bis–2ter**)
 - `ops_pont_interne_auth_rl.md` — ops : token service + rate-limit du pont interne `mmmorpg_server` → backend
 - `plan_fusion_lbg_ia.md` — **fusion LBG_IA + LBG_IA_MMO + mmmorpg** (phases, correspondances, matrice tronc, pont jeu ↔ IA)
 - `fusion_etat_des_lieux_v0.md` — **état des lieux fusion v0** (inventaire HTTP / WS, pont env)

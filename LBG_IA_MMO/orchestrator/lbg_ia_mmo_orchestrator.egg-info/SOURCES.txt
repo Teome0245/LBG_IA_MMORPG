@@ -19,7 +19,10 @@ router/v1.py
 router/routes/__init__.py
 router/routes/capabilities.py
 router/routes/route_intent.py
+services/__init__.py
+services/metrics.py
 tests/test_capabilities.py
 tests/test_classifier.py
+tests/test_metrics_endpoint.py
 tests/test_route.py
 tests/test_route_devops.py

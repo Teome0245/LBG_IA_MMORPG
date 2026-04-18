@@ -3,16 +3,51 @@ from __future__ import annotations
 import json
 import logging
 import math
+import os
 import threading
 import time
 from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
+from urllib.parse import unquote
 
 from mmmorpg_server.game_state import GameState
 
 LOG = logging.getLogger("mmmorpg.internal_http")
+
+_metrics_lock = threading.Lock()
+_metrics_started_s = time.time()
+_metrics_counters: dict[str, int] = {}
+
+
+def _metrics_enabled() -> bool:
+    return os.environ.get("MMMORPG_INTERNAL_HTTP_METRICS", "0").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _metrics_inc(name: str, n: int = 1) -> None:
+    if not _metrics_enabled():
+        return
+    if n <= 0:
+        return
+    with _metrics_lock:
+        _metrics_counters[name] = int(_metrics_counters.get(name, 0)) + int(n)
+
+
+def _metrics_render_text() -> str:
+    with _metrics_lock:
+        snap = dict(_metrics_counters)
+    uptime = max(0.0, time.time() - _metrics_started_s)
+    lines: list[str] = []
+    lines.append("# HELP lbg_process_uptime_seconds Uptime du process (best-effort).")
+    lines.append("# TYPE lbg_process_uptime_seconds gauge")
+    lines.append(f"lbg_process_uptime_seconds {uptime:.3f}")
+    for k in sorted(snap.keys()):
+        lines.append(f"# HELP {k} Counter (auto-generated name).")
+        lines.append(f"# TYPE {k} counter")
+        lines.append(f"{k} {int(snap[k])}")
+    lines.append("")
+    return "\n".join(lines)
 
 @dataclass
 class _TokenBucket:
@@ -128,6 +163,11 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
     from mmmorpg_server import config as cfg
 
     rl = _RateLimiter(rps=cfg.INTERNAL_HTTP_RL_RPS, burst=cfg.INTERNAL_HTTP_RL_BURST)
+    # CORS (pilot_web / outils) : l'HTTP interne est souvent appelé cross-origin depuis un navigateur.
+    # On reste permissif en LAN (serveur exposé uniquement réseau privé) et on s'appuie sur le token optionnel.
+    cors_allow_origin = "*"
+    cors_allow_headers = "Content-Type, X-LBG-Service-Token"
+    cors_allow_methods = "GET, POST, OPTIONS"
 
     class Handler(BaseHTTPRequestHandler):
         server_version = "lbg-mmmorpg-internal-http/0.1"
@@ -156,9 +196,56 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
             data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
             self.send_response(status)
             self.send_header("Content-Type", "application/json; charset=utf-8")
+            # CORS (permet fetch depuis pilot_web ou un client Godot WebView)
+            self.send_header("Access-Control-Allow-Origin", cors_allow_origin)
+            self.send_header("Access-Control-Allow-Methods", cors_allow_methods)
+            self.send_header("Access-Control-Allow-Headers", cors_allow_headers)
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
+            try:
+                meth = str(getattr(self, "command", "GET") or "GET")
+                route = "json"
+                if isinstance(self.path, str):
+                    if self.path.startswith("/internal/v1/npc/") and "/lyra-snapshot" in self.path:
+                        route = "lyra_snapshot"
+                    elif self.path.startswith("/internal/v1/npc/") and self.path.endswith("/dialogue-commit"):
+                        route = "dialogue_commit"
+                    elif self.path == "/healthz":
+                        route = "healthz"
+                _metrics_inc(f"mmmorpg_internal_http_http_responses_total{{method=\"{meth}\",route=\"{route}\",status=\"{int(status)}\"}}")
+            except Exception:
+                pass
+
+        def _send_plain(self, status: int, body: str, content_type: str) -> None:
+            data = body.encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Access-Control-Allow-Origin", cors_allow_origin)
+            self.send_header("Access-Control-Allow-Methods", cors_allow_methods)
+            self.send_header("Access-Control-Allow-Headers", cors_allow_headers)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            try:
+                meth = str(getattr(self, "command", "GET") or "GET")
+                route = "metrics" if self.path == "/metrics" else "plain"
+                _metrics_inc(f"mmmorpg_internal_http_http_responses_total{{method=\"{meth}\",route=\"{route}\",status=\"{int(status)}\"}}")
+            except Exception:
+                pass
+
+        def do_OPTIONS(self) -> None:  # noqa: N802
+            # Preflight CORS (navigateur) — ne nécessite pas d'auth.
+            self.send_response(HTTPStatus.NO_CONTENT)
+            self.send_header("Access-Control-Allow-Origin", cors_allow_origin)
+            self.send_header("Access-Control-Allow-Methods", cors_allow_methods)
+            self.send_header("Access-Control-Allow-Headers", cors_allow_headers)
+            self.send_header("Access-Control-Max-Age", "600")
+            self.end_headers()
+            try:
+                _metrics_inc('mmmorpg_internal_http_http_responses_total{method="OPTIONS",route="cors_preflight",status="204"}')
+            except Exception:
+                pass
 
         def _read_json(self) -> dict[str, Any] | None:
             try:
@@ -175,6 +262,14 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
             return data if isinstance(data, dict) else None
 
         def do_GET(self) -> None:  # noqa: N802
+            # Métriques Prometheus (opt-in) — hors auth / hors rate-limit (sinon on ne peut pas scraper facilement).
+            if self.path == "/metrics":
+                if not _metrics_enabled():
+                    self._send_plain(HTTPStatus.NOT_FOUND, "metrics disabled\n", "text/plain; charset=utf-8")
+                    return
+                self._send_plain(HTTPStatus.OK, _metrics_render_text(), "text/plain; version=0.0.4; charset=utf-8")
+                return
+
             if not self._rate_limit_ok():
                 self._send_ratelimited()
                 return
@@ -205,29 +300,29 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
                 if not (before.startswith(prefix) and before.endswith(suffix)):
                     self._send_json(HTTPStatus.NOT_FOUND, {"error": "not_found"})
                     return
-                npc_id = before[len(prefix) : -len(suffix)]
-                if not npc_id.strip():
+                npc_id = unquote(before[len(prefix) : -len(suffix)]).strip()
+                if not npc_id:
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": "bad_request", "detail": "npc_id vide"})
                     return
                 qs = _parse_qs(self.path)
                 trace_id = qs.get("trace_id")
-                lyra = build_lyra_snapshot(game=game, npc_id=npc_id.strip(), trace_id=trace_id)
+                lyra = build_lyra_snapshot(game=game, npc_id=npc_id, trace_id=trace_id)
                 if not lyra:
                     try:
                         LOG.info(
                             "lyra_snapshot npc_not_found npc_id=%s trace_id=%s remote=%s",
-                            npc_id.strip(),
+                            npc_id,
                             trace_id or "",
                             getattr(self, "client_address", ("?", 0))[0],
                         )
                     except Exception:
                         pass
-                    self._send_json(HTTPStatus.NOT_FOUND, {"error": "npc_not_found", "npc_id": npc_id.strip()})
+                    self._send_json(HTTPStatus.NOT_FOUND, {"error": "npc_not_found", "npc_id": npc_id})
                     return
                 try:
                     LOG.info(
                         "lyra_snapshot ok npc_id=%s trace_id=%s remote=%s",
-                        npc_id.strip(),
+                        npc_id,
                         trace_id or "",
                         getattr(self, "client_address", ("?", 0))[0],
                     )
@@ -254,8 +349,7 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
             if self.path.startswith("/internal/v1/npc/") and self.path.endswith("/dialogue-commit"):
                 prefix = "/internal/v1/npc/"
                 suffix = "/dialogue-commit"
-                npc_id = self.path[len(prefix) : -len(suffix)]
-                npc_id = npc_id.strip("/")
+                npc_id = unquote(self.path[len(prefix) : -len(suffix)]).strip().strip("/")
                 body = self._read_json()
                 if body is None:
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": "bad_request", "detail": "JSON invalide"})

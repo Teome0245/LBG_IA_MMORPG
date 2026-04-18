@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from lbg_agents.dispatch import invoke_after_route
 
 from introspection.deterministic_classifier import DeterministicIntentClassifier
+from services import metrics as svc_metrics
 from shared_registry import capability_registry
 
 router = APIRouter()
@@ -29,6 +30,7 @@ _classifier = DeterministicIntentClassifier()
 @router.post("/route", response_model=RouteResponse)
 def route_intent(payload: RouteRequest) -> RouteResponse:
     t0 = time.perf_counter()
+    svc_metrics.inc("orchestrator_route_requests_total")
     ctx = payload.context if isinstance(payload.context, dict) else {}
     npc_name = ctx.get("npc_name")
     trace_id = ctx.get("_trace_id")
@@ -51,13 +53,18 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
             intent, confidence = ("npc_dialogue", 0.9)
     cap = capability_registry.get(intent) or capability_registry.get("unknown")
     assert cap is not None
-    agent_out = invoke_after_route(
-        cap.routed_to,
-        actor_id=payload.actor_id,
-        text=payload.text,
-        context=payload.context,
-    )
+    try:
+        agent_out = invoke_after_route(
+            cap.routed_to,
+            actor_id=payload.actor_id,
+            text=payload.text,
+            context=payload.context,
+        )
+    except Exception:
+        svc_metrics.inc("orchestrator_route_errors_total")
+        raise
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
+    svc_metrics.inc("orchestrator_route_success_total")
     print(
         json.dumps(
             {

@@ -24,12 +24,20 @@ Les clients doivent :
 - ignorer les champs inconnus (forward compatible)
 - traiter `proto` comme informatif (si absent: accepter, mais logguer)
 
+Les clients devraient :
+
+- ignorer les messages serveur dont `type` est inconnu (logguer + continuer), sauf si tu décides de “fail fast” en dev.
+
 ---
 
 ## 2) Transport
 
 - **WS** : JSON string (texte) ou bytes UTF-8
 - Taille max inbound côté serveur : `config.MAX_WS_INBOUND_BYTES` (frame rejetée avec `type="error"`)
+
+Notes client :
+
+- un `error` serveur n’implique pas forcément une déconnexion : continuer à lire les messages.
 
 ---
 
@@ -44,7 +52,8 @@ Schéma : `docs/schemas/ws/client.hello.schema.json`
 Champs notables :
 
 - `world_npc_id` + `text` (optionnels) : si fournis, déclenchent le pont IA
-- `ia_context` (optionnel) : **mini contexte borné** (whitelist) transmis à l’IA (ex: `_require_action_json`)
+- `ia_context` (optionnel) : **mini contexte borné** (whitelist) transmis à l’IA (ex: `_require_action_json`).
+  Les clés inconnues sont ignorées par le serveur WS.
 
 ### 3.2 `move`
 
@@ -89,6 +98,13 @@ Règle client recommandée :
   - si `npc_reply` commence par `…un instant.` ⇒ afficher en “pending”
   - sinon ⇒ remplacer la thread `trace_id` par la version finale
 
+#### Timeouts / erreurs (comportement recommandé client)
+
+- si un placeholder est affiché et qu’aucune réponse finale n’arrive dans un délai “UX” (ex. 30–120 s),
+  le client devrait proposer une action (bouton “réessayer”, “annuler”, etc.) plutôt que de rester bloqué.
+- si le serveur envoie une fin explicite (ex. `"Désolé, je ne peux pas t'aider maintenant."`) avec le même `trace_id`,
+  cela doit aussi **remplacer** le placeholder.
+
 ### 4.3 `error`
 
 But : erreur protocolaire (JSON invalide, type inconnu, message trop gros, etc.).
@@ -117,6 +133,12 @@ Le `trace_id` issu du pont IA sert aussi à :
 
 - corréler `GET /internal/v1/npc/{npc_id}/lyra-snapshot?trace_id=...`
 - idempotence sur `POST /internal/v1/npc/{npc_id}/dialogue-commit` (même `trace_id` ⇒ noop accepté)
+
+Notes d’implémentation (HTTP interne `mmmorpg_server`) :
+
+- `npc_id` est dans un segment d’URL : un client navigateur va typiquement l’URL-encoder (`npc:merchant` → `npc%3Amerchant`).
+  L’endpoint accepte donc les valeurs encodées.
+- pour un usage navigateur (pilot_web), l’HTTP interne inclut des headers **CORS** et répond aux `OPTIONS` preflight.
 
 Cf. `docs/fusion_pont_jeu_ia.md`.
 

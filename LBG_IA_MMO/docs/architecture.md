@@ -15,9 +15,11 @@ Construire un framework complet permettant :
 ### Backend (`backend/`)
 - API FastAPI typée, stable, orientée contrats.
 - Ne contient pas de logique “métier MMO” directement : elle est portée par `mmo_server/` et exposée via des services/DTO.
+- **Observabilité (opt-in)** : `GET /metrics` (format Prometheus texte) si `LBG_METRICS_ENABLED=1` ; protection optionnelle `LBG_METRICS_TOKEN` (header `Authorization: Bearer …`). Défaut **désactivé** ; checklist déploiement : `docs/runbook_validation_serveurs_lan.md` (§2bis, §2ter) et `bootstrap.md` (section métriques).
 
 ### Orchestrator (`orchestrator/`)
 - Point d’entrée unique pour router une “intention” vers un ou plusieurs agents.
+- **Observabilité (opt-in)** : même schéma que le backend pour `GET /metrics` (`LBG_METRICS_*`, désactivé par défaut).
 - Registry de capacités + introspection robuste.
 - Fallbacks déterministes (graceful degradation).
 - **Lyra (futur)** : le contrat d’état optionnel `context.lyra` / `output.lyra` est décrit dans `lyra.md` ; **`lbg_agents.lyra_bridge`** applique un pas sur **`lyra_engine.gauges`** (si **`mmo_server`** dans le venv) pour **`agent.fallback`** et pour **`agent.dialogue`** avant l’appel HTTP à l’agent dialogue.
@@ -33,6 +35,7 @@ Construire un framework complet permettant :
 ### Serveur jeu WebSocket (`mmmorpg_server/`)
 
 - Portage du serveur **mmmorpg** (dépôt source inchangé) : **`python -m mmmorpg_server`**, **`MMMORPG_PORT`** (défaut **7733**). Voir **`docs/mmmorpg_PROTOCOL.md`**, **`mmmorpg_server/README.md`**. Autorité **multijoueur** (WS) — distinct du **`mmo_server`** HTTP (slice IA Lyra).
+- **HTTP interne** (ex. **8773**) : `GET /metrics` possible si `MMMORPG_INTERNAL_HTTP_METRICS=1` (désactivé par défaut). Voir runbook §2bis.
 
 ## Exécution
 

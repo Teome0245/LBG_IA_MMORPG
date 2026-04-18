@@ -7,6 +7,9 @@ Type=simple
 User=lbg
 Group=lbg
 WorkingDirectory=/opt/LBG_IA_MMO/orchestrator
+# Métriques GET /metrics (Prometheus texte, opt-in) : défaut désactivé.
+# Surcharge : /etc/lbg-ia-mmo.env — LBG_METRICS_ENABLED=1 et optionnellement LBG_METRICS_TOKEN.
+Environment=LBG_METRICS_ENABLED=0
 EnvironmentFile=-/etc/lbg-ia-mmo.env
 Environment=PYTHONUNBUFFERED=1
 # Appel POST http://127.0.0.1:8020/invoke pour agent.dialogue (service lbg-agent-dialogue)

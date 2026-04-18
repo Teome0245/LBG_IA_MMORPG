@@ -4,3 +4,4 @@ introspection
 main
 registry
 router
+services

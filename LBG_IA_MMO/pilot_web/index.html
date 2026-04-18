@@ -64,22 +64,13 @@
   <div class="layout-controls">
     <label><input type="checkbox" id="toggle-left" checked> colonne gauche</label>
     <label><input type="checkbox" id="toggle-right" checked> colonne droite</label>
-    <label class="muted">vue:
-      <select id="view-mode" style="margin-left:0.35rem">
-        <option value="all">tout</option>
-        <option value="chat">chat</option>
-        <option value="ws">ws</option>
-        <option value="ops">ops</option>
-        <option value="perf">perf</option>
-      </select>
-    </label>
     <label class="muted">token service (optionnel): <input type="text" id="service-token" placeholder="X-LBG-Service-Token" style="width:14rem"/></label>
     <span class="muted">Astuce: sur petit écran, tout repasse en une colonne.</span>
   </div>
 
   <div class="dashboard" id="dashboard">
     <div class="col" id="col-left">
-      <section data-view="chat ws ops perf">
+      <section>
         <div class="panel-title">
           <h2>Gauche</h2>
           <p class="muted">réservé</p>
@@ -137,7 +128,7 @@
     </div>
 
     <div class="col" id="col-center">
-      <section data-view="chat">
+      <section>
         <div class="panel-title">
           <h2>Chat (intention)</h2>
           <p class="muted">backend → orchestrator → agent</p>
@@ -191,7 +182,7 @@
         <pre id="intent-out">—</pre>
       </section>
 
-      <section data-view="perf">
+      <section>
         <div class="panel-title">
           <h2>Benchmark (latence)</h2>
           <p class="muted">p50 / p95 (VM)</p>
@@ -208,7 +199,7 @@
         <pre id="bench-out">—</pre>
       </section>
 
-      <section data-view="perf">
+      <section>
         <div class="panel-title">
           <h2>Cache (latence)</h2>
           <p class="muted">p50 / p95 (hit vs miss)</p>
@@ -220,7 +211,7 @@
     </div>
 
     <div class="col" id="col-right">
-      <section data-view="ws">
+      <section>
         <div class="panel-title">
           <h2>WS (test client minimal)</h2>
           <p class="muted">hello → npc_reply (placeholder remplacé)</p>
@@ -228,9 +219,6 @@
         <p class="muted">
           Objectif : tester le flux joueur <code>WS hello</code> → pont IA → <code>world_tick.npc_reply</code>.
           Le placeholder et la réponse finale partagent le même <code>trace_id</code> : la réponse finale remplace le placeholder.
-        </p>
-        <p class="muted" style="margin-top:0.35rem">
-          Contrat: <code>proto=mmmorpg-ws/1</code> (serveur → client). Doc repo: <code>docs/ws_contract_mmmorpg_ws_v1.md</code>.
         </p>
 
         <label for="ws-url">WS URL</label>
@@ -272,18 +260,36 @@
         <pre id="ws-out">—</pre>
       </section>
 
-      <section data-view="ops">
+      <section>
         <div class="panel-title">
           <h2>Monitoring</h2>
           <p class="muted">santé agrégée</p>
         </div>
         <p id="health-summary" class="muted">—</p>
         <div id="services-links" class="muted" style="margin:0.25rem 0 0.5rem 0;">—</div>
+        <hr style="border:none;border-top:1px solid #ddd;margin:1rem 0" />
+        <h3 style="margin:0 0 0.35rem 0;font-size:1rem">Métriques Prometheus</h3>
+        <p class="muted" style="margin:0 0 0.5rem 0">
+          <code>GET /metrics</code> (text/plain). <strong>404</strong> si désactivé sur le serveur. Checklist déploiement :
+          <code>docs/runbook_validation_serveurs_lan.md</code> (sections 2bis / 2ter).
+        </p>
+        <div id="metrics-links" class="muted">—</div>
+        <label class="muted" style="display:block;margin-top:0.65rem">Bearer métriques (optionnel, stockage local navigateur — ne pas partager / ne pas committer) :</label>
+        <input type="password" id="metrics-bearer" placeholder="LBG_METRICS_TOKEN (si défini sur la VM)" autocomplete="off" style="max-width:22rem;margin-top:0.25rem" />
+        <p style="margin:0.5rem 0 0 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+          <button type="button" id="btn-metrics-probe-backend">Tester fetch backend /metrics</button>
+          <button type="button" id="btn-metrics-open-orch">Ouvrir orchestrator /metrics</button>
+          <button type="button" id="btn-metrics-open-internal">Ouvrir HTTP interne /metrics</button>
+        </p>
+        <p class="muted" style="margin:0.35rem 0 0 0;font-size:0.88rem">
+          Le fetch navigateur ne marche en général que pour le <strong>backend</strong> (même origine). Pour :8010 et :8773, préfère un nouvel onglet ou <code>curl</code> (CORS / réseau).
+        </p>
+        <pre id="metrics-probe-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;">—</pre>
         <p><button type="button" id="btn-refresh">Rafraîchir</button></p>
         <pre id="health-out">Chargement…</pre>
       </section>
 
-      <section data-view="ops">
+      <section>
         <div class="panel-title">
           <h2>Capabilities</h2>
           <p class="muted">via backend</p>
@@ -305,6 +311,7 @@
     const STORAGE_NO_CACHE_KEY = "lbg_pilot_no_cache_v1";
     const STORAGE_CACHE_LAT_KEY = "lbg_pilot_cache_lat_v1";
     const STORAGE_SERVICE_TOKEN_KEY = "lbg_pilot_service_token_v1";
+    const STORAGE_METRICS_BEARER_KEY = "lbg_pilot_metrics_bearer_v1";
 
     function getBase() {
       const el = document.getElementById("api-base");
@@ -325,6 +332,92 @@
         const v = localStorage.getItem(STORAGE_SERVICE_TOKEN_KEY);
         if (v) document.getElementById("service-token").value = v;
       } catch (_) {}
+    }
+
+    function getMetricsBearer() {
+      const el = document.getElementById("metrics-bearer");
+      const v = (el && el.value) ? el.value.trim() : "";
+      try {
+        if (v) localStorage.setItem(STORAGE_METRICS_BEARER_KEY, v);
+        else localStorage.removeItem(STORAGE_METRICS_BEARER_KEY);
+      } catch (_) {}
+      return v;
+    }
+
+    function loadStoredMetricsBearer() {
+      try {
+        const v = localStorage.getItem(STORAGE_METRICS_BEARER_KEY);
+        if (v) document.getElementById("metrics-bearer").value = v;
+      } catch (_) {}
+    }
+
+    function renderMetricsLinks() {
+      const el = document.getElementById("metrics-links");
+      if (!el) return;
+      const base = getBase();
+      const j = window.__last_health_json;
+      const orchRaw = j && typeof j.orchestrator_url === "string" ? j.orchestrator_url.trim() : "";
+      const orch = orchRaw.replace(/\/$/, "");
+      const internalEl = document.getElementById("ws-internal-http");
+      const internal = internalEl && internalEl.value ? internalEl.value.trim().replace(/\/$/, "") : "";
+      const items = [];
+      items.push(
+        "<li><a href=\"" + escapeHtml(base + "/metrics") + "\" target=\"_blank\" rel=\"noreferrer\"><code>backend</code> /metrics</a></li>"
+      );
+      if (orch) {
+        items.push(
+          "<li><a href=\"" + escapeHtml(orch + "/metrics") + "\" target=\"_blank\" rel=\"noreferrer\"><code>orchestrator</code> /metrics</a> <span class=\"muted\">(URL depuis santé)</span></li>"
+        );
+      } else {
+        items.push("<li class=\"muted\"><code>orchestrator</code> /metrics — recharge la santé (bouton Rafraîchir) pour afficher le lien.</li>");
+      }
+      if (internal) {
+        items.push(
+          "<li><a href=\"" + escapeHtml(internal + "/metrics") + "\" target=\"_blank\" rel=\"noreferrer\"><code>HTTP interne WS</code> /metrics</a> <span class=\"muted\">(champ WS → HTTP interne)</span></li>"
+        );
+      } else {
+        items.push("<li class=\"muted\"><code>HTTP interne</code> /metrics — renseigne l’URL snapshot (colonne WS).</li>");
+      }
+      el.innerHTML = "<ul style=\"margin:0.25rem 0;padding-left:1.25rem\">" + items.join("") + "</ul>";
+    }
+
+    async function probeBackendMetrics() {
+      const out = document.getElementById("metrics-probe-out");
+      if (!out) return;
+      out.textContent = "…";
+      const base = getBase();
+      const url = base + "/metrics";
+      const tok = getMetricsBearer();
+      const headers = {};
+      if (tok) headers["Authorization"] = "Bearer " + tok;
+      try {
+        const r = await fetch(url, { headers });
+        const t = await r.text();
+        out.textContent = "HTTP " + r.status + " " + url + "\n" + t.slice(0, 6000);
+      } catch (e) {
+        out.textContent = "Erreur: " + e;
+      }
+    }
+
+    function openOrchestratorMetrics() {
+      const j = window.__last_health_json;
+      const orchRaw = j && typeof j.orchestrator_url === "string" ? j.orchestrator_url.trim() : "";
+      const orch = orchRaw.replace(/\/$/, "");
+      if (!orch) {
+        alert("Recharge d'abord la santé (Rafraîchir) pour obtenir orchestrator_url.");
+        return;
+      }
+      window.open(orch + "/metrics", "_blank", "noopener,noreferrer");
+    }
+
+    function openInternalHttpMetrics() {
+      const internalEl = document.getElementById("ws-internal-http");
+      const internal = internalEl && internalEl.value ? internalEl.value.trim().replace(/\/$/, "") : "";
+      if (!internal) {
+        alert("Renseigne l'URL HTTP interne (colonne WS).");
+        return;
+      }
+      window.open(internal + "/metrics", "_blank", "noopener,noreferrer");
     }
 
     function loadStoredChatState() {
@@ -399,6 +492,7 @@
         const base = getBase();
         const r = await fetch(base + "/v1/pilot/status");
         const j = await r.json();
+        window.__last_health_json = j;
         out.textContent = JSON.stringify(j, null, 2);
         const orch = j.orchestrator ?? "—";
         const dlg = j.agent_dialogue ?? "—";
@@ -465,10 +559,13 @@
         } else {
           links.textContent = "Services : —";
         }
+        try { renderMetricsLinks(); } catch (_) {}
       } catch (e) {
         out.textContent = "Erreur: " + e;
         sum.textContent = "Erreur: " + e;
         links.textContent = "Erreur: " + e;
+        window.__last_health_json = null;
+        try { renderMetricsLinks(); } catch (_) {}
       }
     }
 
@@ -1184,6 +1281,13 @@
     }
 
     document.getElementById("btn-refresh").addEventListener("click", refreshHealth);
+    try { document.getElementById("btn-metrics-probe-backend").addEventListener("click", probeBackendMetrics); } catch (_) {}
+    try { document.getElementById("btn-metrics-open-orch").addEventListener("click", openOrchestratorMetrics); } catch (_) {}
+    try { document.getElementById("btn-metrics-open-internal").addEventListener("click", openInternalHttpMetrics); } catch (_) {}
+    try {
+      const wsh = document.getElementById("ws-internal-http");
+      if (wsh) wsh.addEventListener("input", renderMetricsLinks);
+    } catch (_) {}
     document.getElementById("btn-cap-refresh").addEventListener("click", refreshCapabilities);
     document.getElementById("btn-send").addEventListener("click", sendIntent);
     document.getElementById("btn-bench").addEventListener("click", runBenchmark);
@@ -1734,7 +1838,6 @@
     const rightToggle = document.getElementById("toggle-right");
     const colLeft = document.getElementById("col-left");
     const colRight = document.getElementById("col-right");
-    const viewMode = document.getElementById("view-mode");
     function applyToggles() {
       colLeft.style.display = leftToggle.checked ? "" : "none";
       colRight.style.display = rightToggle.checked ? "" : "none";
@@ -1743,51 +1846,18 @@
         localStorage.setItem("lbg_pilot_dash_right", rightToggle.checked ? "1" : "0");
       } catch (_) {}
     }
-
-    function applyViewMode() {
-      const mode = (viewMode && viewMode.value) ? String(viewMode.value) : "all";
-      try { localStorage.setItem("lbg_pilot_view_mode", mode); } catch (_) {}
-      const wanted = mode === "all" ? ["chat", "ws", "ops", "perf"] : [mode];
-      for (const sec of document.querySelectorAll("section[data-view]")) {
-        const raw = String(sec.getAttribute("data-view") || "");
-        const tags = raw.split(/\s+/).filter(Boolean);
-        const show = wanted.some((w) => tags.includes(w));
-        sec.style.display = show ? "" : "none";
-      }
-      // ergonomie : forcer affichage colonnes utiles
-      if (mode === "ws") {
-        leftToggle.checked = false;
-        rightToggle.checked = true;
-      } else if (mode === "ops") {
-        leftToggle.checked = false;
-        rightToggle.checked = true;
-      } else if (mode === "perf") {
-        leftToggle.checked = false;
-        rightToggle.checked = false;
-      } else {
-        // chat / all
-        leftToggle.checked = true;
-        rightToggle.checked = true;
-      }
-      applyToggles();
-    }
     try {
       const vL = localStorage.getItem("lbg_pilot_dash_left");
       const vR = localStorage.getItem("lbg_pilot_dash_right");
       if (vL === "0") leftToggle.checked = false;
       if (vR === "0") rightToggle.checked = false;
     } catch (_) {}
-    try {
-      const vm = localStorage.getItem("lbg_pilot_view_mode");
-      if (vm && viewMode) viewMode.value = vm;
-    } catch (_) {}
     leftToggle.addEventListener("change", applyToggles);
     rightToggle.addEventListener("change", applyToggles);
-    try { viewMode.addEventListener("change", applyViewMode); } catch (_) {}
     applyToggles();
-    try { applyViewMode(); } catch (_) {}
     loadStoredBase();
     loadStoredServiceToken();
+    loadStoredMetricsBearer();
     loadStoredChatState();
     loadNoCacheToggle();
     try { document.getElementById("toggle-no-cache").addEventListener("change", saveNoCacheToggle); } catch (_) {}
@@ -1797,6 +1867,7 @@
     try { refreshLyraContextPreview(); } catch (_) {}
     try { document.getElementById("history-pretty").innerHTML = renderHistoryPretty(); } catch (_) {}
     refreshHealth();
+    try { renderMetricsLinks(); } catch (_) {}
     refreshCapabilities();
     try { renderCacheLatencyPanel(); } catch (_) {}
   </script>

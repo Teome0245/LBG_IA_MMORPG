@@ -394,28 +394,24 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
                 else "Optionnel (actions monde) : si tu veux proposer une action sur le monde, commence ta réponse par UNE ligne :"
             )
         )
-        lines.append("Exemples (UNE ligne au début) :")
+        lines.append('ACTION_JSON: {"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}')
+        lines.append('ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":0,"quest_accepted":true}')
         lines.append(
-            'ACTION_JSON: {"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}'
-        )
-        lines.append('ACTION_JSON: {"kind":"reputation","delta":3}')
-        lines.append('ACTION_JSON: {"kind":"mood","mood":"bienveillant","rp_tone":"chaleureux"}')
-        lines.append(
-            "Quand le joueur demande une aide immédiate (nourriture, boisson, repos, compassion), "
-            "tu peux utiliser kind=aid pour déclencher l'aide."
+            "Quand le joueur demande explicitement une aide immédiate (nourriture, boisson, repos, compassion), "
+            "tu peux utiliser ACTION_JSON pour déclencher l'aide."
         )
         lines.append(
-            "Quand le joueur se comporte bien/mal (politesse, menace, insulte, gratitude), "
-            "tu peux utiliser kind=reputation pour ajuster la confiance."
+            "Quand le joueur accepte une quête, ou qu'il faut enregistrer l'état d'une quête (id + step), "
+            "tu peux utiliser ACTION_JSON kind='quest'."
         )
         lines.append(
-            "Quand tu veux ancrer un état RP stable (humeur/ton), tu peux utiliser kind=mood (mood + rp_tone courts)."
+            "Si tu déclenches une aide, mets en général un petit reputation_delta positif (ex: 1 à 10) "
+            "car l'aide améliore la confiance, sauf raison RP contraire."
         )
         lines.append(
-            "Contraintes: kind dans {'aid','reputation','mood'}. "
-            "aid: deltas hunger/thirst/fatigue dans [-1,1], reputation_delta dans [-100,100]. "
-            "reputation: delta dans [-100,100]. "
-            "mood: mood/rp_tone chaînes courtes (<=32). "
+            "Contraintes: kind='aid' ou kind='quest'. "
+            "Pour aid: deltas hunger/thirst/fatigue dans [-1,1]; reputation_delta dans [-100,100]. "
+            "Pour quest: quest_id string non vide; quest_step int [0,10000]; quest_accepted bool. "
             + ("Tu DOIS écrire ACTION_JSON car il est requis." if require_action else "Si aucune action n'est nécessaire, n'écris pas ACTION_JSON.")
         )
     return "\n".join(lines)
@@ -423,38 +419,44 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
 
 def _parse_action_json_prefix(raw: str) -> tuple[dict[str, Any] | None, str]:
     """
-    Parse une éventuelle première ligne ACTION_JSON: {...}
-    Retourne (action_dict|None, remaining_text).
+    Parse un préfixe d'une ou plusieurs lignes `ACTION_JSON: {...}` (consécutives).
+    Retourne (last_action_dict|None, remaining_text).
+
+    Rationale : certains modèles peuvent émettre plusieurs ACTION_JSON malgré l'instruction "une seule ligne".
+    Dans ce cas, on consomme toutes les lignes consécutives et on garde la dernière action valide.
     """
     s = (raw or "").replace("\r\n", "\n").strip()
     if not s:
         return None, raw.strip()
-    first, *rest = s.split("\n", 1)
-    if not first.strip().startswith("ACTION_JSON:"):
-        return None, s
-    payload = first.split("ACTION_JSON:", 1)[1].strip()
-    try:
-        # Tolérant : certains modèles collent du texte après le JSON sur la même ligne.
-        dec = json.JSONDecoder()
-        obj, idx = dec.raw_decode(payload)
-        tail = payload[idx:].strip()
-    except Exception:
-        return None, (rest[0].strip() if rest else "")
-    remaining = (tail + ("\n" + rest[0] if rest and rest[0].strip() else "")).strip() if tail or (rest and rest[0].strip()) else ""
-    # Si le modèle a répété ACTION_JSON, on ne garde pas ces lignes dans le texte visible.
-    if remaining.startswith("ACTION_JSON:"):
-        remaining = ""
-    return (obj if isinstance(obj, dict) else None), remaining
+
+    lines = s.split("\n")
+    idx = 0
+    last_obj: dict[str, Any] | None = None
+    while idx < len(lines):
+        line = lines[idx].strip()
+        if not line.startswith("ACTION_JSON:"):
+            break
+        payload = line.split("ACTION_JSON:", 1)[1].strip()
+        try:
+            obj = json.loads(payload)
+            if isinstance(obj, dict):
+                last_obj = obj
+        except Exception:
+            # Ligne invalide : on l'ignore et on continue à consommer le préfixe.
+            pass
+        idx += 1
+    remaining = "\n".join(lines[idx:]).strip()
+    return last_obj, remaining
 
 
 def _sanitize_world_action(action: dict[str, Any] | None) -> dict[str, Any] | None:
     """
-    Valide et borne l'action monde (whitelist). Renvoie None si invalide.
+    Valide et borne l'action monde. Renvoie None si invalide.
     """
     if not isinstance(action, dict) or not action:
         return None
-    kind = str(action.get("kind") or "").strip()
-    if kind not in ("aid", "reputation", "mood"):
+    kind = (action.get("kind") or "").strip()
+    if kind not in ("aid", "quest"):
         return None
 
     def f(name: str) -> float:
@@ -469,15 +471,6 @@ def _sanitize_world_action(action: dict[str, Any] | None) -> dict[str, Any] | No
         except Exception:
             return 0
 
-    def s(name: str, max_len: int) -> str:
-        v = action.get(name)
-        if not isinstance(v, str):
-            return ""
-        vv = v.strip()
-        if not vv:
-            return ""
-        return vv[:max_len]
-
     if kind == "aid":
         return {
             "kind": "aid",
@@ -486,19 +479,30 @@ def _sanitize_world_action(action: dict[str, Any] | None) -> dict[str, Any] | No
             "fatigue_delta": max(-1.0, min(1.0, f("fatigue_delta"))),
             "reputation_delta": max(-100, min(100, i("reputation_delta"))),
         }
-    if kind == "reputation":
-        return {"kind": "reputation", "delta": max(-100, min(100, i("delta")))}
-    # mood
-    mood = s("mood", 32)
-    rp_tone = s("rp_tone", 32)
-    if not mood and not rp_tone:
+
+    # kind == "quest"
+    qid = action.get("quest_id")
+    if not isinstance(qid, str) or not qid.strip():
         return None
-    out2: dict[str, Any] = {"kind": "mood"}
-    if mood:
-        out2["mood"] = mood
-    if rp_tone:
-        out2["rp_tone"] = rp_tone
-    return out2
+    qid2 = qid.strip()
+    if len(qid2) > 80:
+        qid2 = qid2[:80]
+    step = i("quest_step")
+    if step < 0:
+        step = 0
+    if step > 10_000:
+        step = 10_000
+    accepted_raw = action.get("quest_accepted")
+    accepted = True if accepted_raw is None else bool(accepted_raw) if isinstance(accepted_raw, bool) else None
+    if accepted is None:
+        # type invalide => rejeter
+        return None
+    return {
+        "kind": "quest",
+        "quest_id": qid2,
+        "quest_step": int(step),
+        "quest_accepted": bool(accepted),
+    }
 
 
 def _world_actions_enabled(*, context: dict[str, Any]) -> bool:
