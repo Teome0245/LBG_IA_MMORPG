@@ -50,26 +50,149 @@
       .dashboard { grid-template-columns: 1fr; }
       body { max-width: 52rem; }
     }
+
+    .pilot-shell-bar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.65rem 1rem;
+      padding: 0.55rem 1rem; margin: 0 -1rem 0.75rem -1rem;
+      border-bottom: 1px solid #ddd; background: #fafafa;
+    }
+    .pilot-shell-brand { font-size: 1rem; }
+    .pilot-nav { display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; align-items: center; }
+    .pilot-nav a {
+      padding: 0.28rem 0.65rem; border-radius: 5px; text-decoration: none;
+      color: #135; border: 1px solid transparent; font-size: 0.92rem;
+    }
+    .pilot-nav a:hover { border-color: #ccc; background: #fff; }
+    .pilot-nav a.pilot-nav-active { background: #e8f0ff; border-color: #8ac; font-weight: 600; }
+    .pilot-shell-tools { display: flex; flex-wrap: wrap; gap: 0.65rem 1rem; align-items: center; margin-left: auto; }
+    .pilot-shell-tools label { margin: 0; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 0.35rem; }
+    .pilot-shell-tools input[type="text"] { width: auto; min-width: 11rem; max-width: 22rem; margin: 0; }
+    .pilot-page { margin-top: 0.35rem; }
+    .pilot-page[hidden] { display: none !important; }
+    body[data-pilot-route="chat"] #pilot-page-work [data-pilot-screen]:not([data-pilot-screen="chat"]),
+    body[data-pilot-route="ops"] #pilot-page-work [data-pilot-screen]:not([data-pilot-screen="ops"]) {
+      display: none !important;
+    }
+    .pilot-home-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+    .pilot-home-card {
+      display: block; padding: 1rem; border: 1px solid #ccc; border-radius: 8px; text-decoration: none;
+      color: inherit; background: #fff;
+    }
+    .pilot-home-card:hover { border-color: #69c; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
+    .pilot-home-card h3 { margin: 0 0 0.35rem 0; font-size: 1rem; }
+    .pilot-home-card p { margin: 0; font-size: 0.88rem; color: #555; }
+    .pilot-pm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
+    @media (max-width: 900px) { .pilot-pm-grid { grid-template-columns: 1fr; } }
+    .pilot-milestone-list, .pilot-task-list { list-style: none; padding: 0; margin: 0.35rem 0 0 0; }
+    .pilot-milestone-list li, .pilot-task-list li {
+      padding: 0.45rem 0.55rem; border: 1px solid #e4e4e4; border-radius: 5px; margin-bottom: 0.35rem; font-size: 0.9rem;
+    }
+    .pilot-task-list li span.src { font-size: 0.78rem; color: #666; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Pilotage & monitoring (minimal)</h1>
-    <p class="muted">
-      Peut être servi depuis le backend (<code>/pilot/</code>) <em>ou</em> en statique (ex. Nginx sur la VM front).
-      Par défaut, l’API de base est le même origine que cette page.
-    </p>
-  </header>
+  <div class="pilot-shell-bar">
+    <div class="pilot-shell-brand"><strong>LBG_IA_MMO</strong> <span class="muted">pilot</span></div>
+    <nav class="pilot-nav" id="pilot-nav" aria-label="Navigation pilot">
+      <a href="#/">Accueil</a>
+      <a href="#/chat">Chat & presets</a>
+      <a href="#/ops">Ops & santé</a>
+      <a href="#/pm">Chef de projet</a>
+      <a href="#/lyra">Lyra (hors MMO)</a>
+    </nav>
+    <div class="pilot-shell-tools">
+      <label>Backend <input type="text" id="api-base" placeholder="http://127.0.0.1:8000" /></label>
+      <label class="muted">Token <input type="text" id="service-token" placeholder="X-LBG-Service-Token" style="min-width:12rem;max-width:20rem" /></label>
+    </div>
+  </div>
+
+  <div id="pilot-page-home" class="pilot-page">
+    <header>
+      <h1>Accueil</h1>
+      <p class="muted">
+        Pilot découpé en <strong>vues</strong> (hash <code>#/…</code>) pour gagner en lisibilité — inspiration de la structure
+        « orchestrateur » du projet <strong>LBG_IA</strong> (Vue), ici en HTML statique minimal.
+        Peut être servi depuis le backend (<code>/pilot/</code>) ou en statique (Nginx sur la VM front).
+      </p>
+    </header>
+    <div class="pilot-home-cards">
+      <a class="pilot-home-card" href="#/chat"><h3>Chat & presets</h3><p>Intentions, PNJ, quêtes, combat, DevOps, Lyra via le monde MMO.</p></a>
+      <a class="pilot-home-card" href="#/ops"><h3>Ops & santé</h3><p>Statut agrégé, capabilities, benchmark, cache, métriques.</p></a>
+      <a class="pilot-home-card" href="#/pm"><h3>Chef de projet</h3><p>Jalons et tâches structurés (<code>brief.milestones</code> / <code>brief.tasks</code>) depuis le plan.</p></a>
+      <a class="pilot-home-card" href="#/lyra"><h3>Lyra (hors MMO)</h3><p>Cadrage UI : état Lyra via pilot sans dépendre du WebSocket <code>mmmorpg</code>.</p></a>
+    </div>
+  </div>
+
+  <div id="pilot-page-pm" class="pilot-page" hidden>
+    <header>
+      <h1>Chef de projet</h1>
+      <p class="muted">Appel <code>POST /v1/pilot/route</code> vers <code>agent.pm</code> — affichage lisible des jalons et tâches (stub, sans LLM).</p>
+    </header>
+    <section>
+      <label for="pm-text">Texte (déclenche aussi les mots-clés plan / jalons)</label>
+      <textarea id="pm-text" rows="2" style="font-family: inherit;">jalons et tâches du plan de route</textarea>
+      <label for="pm-context" style="margin-top:0.75rem">context (JSON)</label>
+      <textarea id="pm-context" rows="8" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
+  "project_pm": true,
+  "pm_include_plan": true,
+  "pm_include_structure": true,
+  "history": []
+}</textarea>
+      <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-pm-send">Interroger le PM</button>
+        <button type="button" id="btn-pm-health">GET agent-pm /healthz</button>
+        <span class="muted" id="pm-health-hint">—</span>
+      </p>
+      <div class="pilot-pm-grid" style="margin-top:1rem;">
+        <section>
+          <h2 style="margin:0 0 0.35rem 0;font-size:1.05rem">Jalons</h2>
+          <ul class="pilot-milestone-list" id="pm-milestones"><li class="muted">—</li></ul>
+        </section>
+        <section>
+          <h2 style="margin:0 0 0.35rem 0;font-size:1.05rem">Tâches</h2>
+          <ul class="pilot-task-list" id="pm-tasks"><li class="muted">—</li></ul>
+        </section>
+      </div>
+      <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Brut (JSON)</h3>
+      <pre id="pm-raw" class="muted" style="font-size:0.82rem;max-height:18rem;">—</pre>
+    </section>
+  </div>
+
+  <div id="pilot-page-lyra" class="pilot-page" hidden>
+    <header>
+      <h1>Lyra (hors mmmorpg)</h1>
+      <p class="muted">
+        Préparation d’une intégration <strong>pilot → Lyra</strong> sans passer par le WebSocket jeu : le contrat
+        <code>context.lyra</code> / <code>output.lyra</code> reste celui de <code>docs/lyra.md</code>.
+        Aujourd’hui : utilise l’onglet <a href="#/chat">Chat</a> avec le preset <strong>Lyra (test)</strong> (echo / fallback) ou
+        <strong>Lyra + monde (MMO)</strong> lorsque le backend peut joindre <code>LBG_MMO_SERVER_URL</code>.
+      </p>
+    </header>
+    <section>
+      <h2 style="margin:0 0 0.5rem 0;font-size:1.05rem">Feuille de route UI (prochaine itération)</h2>
+      <ul class="muted" style="margin:0;padding-left:1.2rem;line-height:1.6;">
+        <li>Reprendre les patterns visuels LBG_IA (<code>LyraPanel.vue</code>, jauges, historique) en version statique ou petite SPA.</li>
+        <li>Brancher une source Lyra « standalone » (orchestrateur / backend) sans exiger <code>world_npc_id</code> ni <code>mmmorpg</code> WS.</li>
+        <li>Conserver le pilot Chat pour les flux déjà câblés (dialogue, MMO, réputation).</li>
+      </ul>
+    </section>
+  </div>
+
+  <div id="pilot-page-work" class="pilot-page" hidden>
+    <header>
+      <h1 id="pilot-work-title">Pilotage</h1>
+      <p class="muted" id="pilot-work-sub">Chargement…</p>
+    </header>
 
   <div class="layout-controls">
     <label><input type="checkbox" id="toggle-left" checked> colonne gauche</label>
     <label><input type="checkbox" id="toggle-right" checked> colonne droite</label>
-    <label class="muted">token service (optionnel): <input type="text" id="service-token" placeholder="X-LBG-Service-Token" style="width:14rem"/></label>
     <span class="muted">Astuce: sur petit écran, tout repasse en une colonne.</span>
   </div>
 
   <div class="dashboard" id="dashboard">
     <div class="col" id="col-left">
+      <div data-pilot-screen="chat">
       <section>
         <div class="panel-title">
           <h2>Gauche</h2>
@@ -125,19 +248,19 @@
         </p>
         <p class="muted">Astuce : tes champs, l’historique PNJ, l’état quête et l’état combat sont sauvegardés localement à chaque envoi. Le bloc <b>Lyra (output)</b> après envoi n’apparaît que si l’agent renvoie <code>output.lyra</code> — utilise le preset <b>Lyra (test)</b> (routage <code>agent.fallback</code>). Avec <b>Lyra + monde (MMO)</b>, le backend injecte <code>context.lyra</code> depuis le serveur monde si <code>LBG_MMO_SERVER_URL</code> est défini (voir <code>docs/lyra.md</code>).</p>
       </section>
+      </div>
     </div>
 
     <div class="col" id="col-center">
+      <div data-pilot-screen="chat">
       <section>
         <div class="panel-title">
           <h2>Chat (intention)</h2>
           <p class="muted">backend → orchestrator → agent</p>
         </div>
-        <label for="api-base">URL du backend (défaut : origine actuelle)</label>
-        <input type="text" id="api-base" placeholder="http://127.0.0.1:8000" />
-        <p class="muted" style="margin:0.35rem 0 0 0">
-          Astuce : si ce pilot est servi sur la VM front avec un proxy Nginx (<code>/v1/*</code> → backend),
-          laisse ce champ vide. Sinon, renseigne par exemple <code>http://192.168.0.140:8000</code>.
+        <p class="muted" style="margin:0 0 0.5rem 0">
+          URL backend et token service : <strong>barre de navigation en haut</strong>.
+          Si ce pilot est servi derrière un proxy Nginx (<code>/v1/*</code> → backend), laisse le champ backend vide (origine courante).
         </p>
 
         <label for="actor">actor_id</label>
@@ -181,7 +304,9 @@
         <div id="history-pretty" style="margin-top:0.75rem"></div>
         <pre id="intent-out">—</pre>
       </section>
+      </div>
 
+      <div data-pilot-screen="ops">
       <section>
         <div class="panel-title">
           <h2>Benchmark (latence)</h2>
@@ -208,9 +333,11 @@
         <p><button type="button" id="btn-cache-lat-reset">Reset stats cache</button></p>
         <pre id="cache-lat-out">—</pre>
       </section>
+      </div>
     </div>
 
     <div class="col" id="col-right">
+      <div data-pilot-screen="chat">
       <section>
         <div class="panel-title">
           <h2>WS (test client minimal)</h2>
@@ -259,7 +386,9 @@
 
         <pre id="ws-out">—</pre>
       </section>
+      </div>
 
+      <div data-pilot-screen="ops">
       <section>
         <div class="panel-title">
           <h2>Monitoring</h2>
@@ -299,7 +428,9 @@
         <div id="cap-table-wrap"></div>
         <pre id="cap-raw" class="muted" style="margin-top:0.75rem;font-size:0.8rem;">—</pre>
       </section>
+      </div>
     </div>
+  </div>
   </div>
 
   <script>
@@ -498,9 +629,11 @@
         const dlg = j.agent_dialogue ?? "—";
         const qst = j.agent_quests ?? "—";
         const cbt = j.agent_combat ?? "—";
+        const pm = j.agent_pm ?? "—";
         const dlgInfo = j.agent_dialogue_info;
         const qstInfo = j.agent_quests_info;
         const cbtInfo = j.agent_combat_info;
+        const pmInfo = j.agent_pm_info;
         let dlgSuffix = "";
         if (dlgInfo && typeof dlgInfo === "object") {
           const parts = [];
@@ -531,12 +664,20 @@
           if (cbtInfo.version != null) parts.push("v" + String(cbtInfo.version));
           if (parts.length) cbtSuffix = " <span class=\"muted\">(" + parts.map(escapeHtml).join(" · ") + ")</span>";
         }
+        let pmSuffix = "";
+        if (pmInfo && typeof pmInfo === "object") {
+          const parts = [];
+          if (pmInfo.service) parts.push(String(pmInfo.service));
+          if (pmInfo.version != null) parts.push("v" + String(pmInfo.version));
+          if (parts.length) pmSuffix = " <span class=\"muted\">(" + parts.map(escapeHtml).join(" · ") + ")</span>";
+        }
         sum.innerHTML =
           "Backend: <span class=\"" + healthStateClass(j.backend) + "\">" + j.backend + "</span> · " +
           "Orchestrator: <span class=\"" + healthStateClass(orch) + "\">" + orch + "</span> · " +
           "Agent dialogue: <span class=\"" + healthStateClass(dlg) + "\">" + dlg + "</span>" + dlgSuffix + " · " +
           "Agent quests: <span class=\"" + healthStateClass(qst) + "\">" + qst + "</span>" + qstSuffix + " · " +
-          "Agent combat: <span class=\"" + healthStateClass(cbt) + "\">" + cbt + "</span>" + cbtSuffix;
+          "Agent combat: <span class=\"" + healthStateClass(cbt) + "\">" + cbt + "</span>" + cbtSuffix + " · " +
+          "Agent PM: <span class=\"" + healthStateClass(pm) + "\">" + pm + "</span>" + pmSuffix;
 
         const b = base;
         const items = [];
@@ -552,10 +693,14 @@
           const href = b + "/v1/pilot/agent-combat/healthz";
           items.push("<a href=\"" + escapeHtml(href) + "\" target=\"_blank\" rel=\"noreferrer\">healthz combat (proxy)</a>");
         }
+        if (j.agent_pm && j.agent_pm !== "skipped") {
+          const href = b + "/v1/pilot/agent-pm/healthz";
+          items.push("<a href=\"" + escapeHtml(href) + "\" target=\"_blank\" rel=\"noreferrer\">healthz PM (proxy)</a>");
+        }
         if (items.length) {
           links.innerHTML =
             "Services : " + items.join(" · ") +
-            "<br><span class=\"muted\" style=\"font-size:0.85rem\">Même origine que le backend : pas besoin d’ouvrir 8020/8030/8040 sur le pare-feu du poste client.</span>";
+            "<br><span class=\"muted\" style=\"font-size:0.85rem\">Même origine que le backend : pas besoin d’ouvrir 8020/8030/8040/8055 sur le pare-feu du poste client.</span>";
         } else {
           links.textContent = "Services : —";
         }
@@ -1535,6 +1680,148 @@
       return { status: r.status, json: j, text: t };
     }
 
+    function pilotParseRoute() {
+      const raw = (location.hash || "").replace(/^#/, "").replace(/^\//, "");
+      const seg = raw.split("/").filter(function (s) { return s; })[0] || "";
+      if (!seg) return "home";
+      if (seg === "chat") return "chat";
+      if (seg === "ops") return "ops";
+      if (seg === "pm") return "pm";
+      if (seg === "lyra") return "lyra";
+      if (seg === "home") return "home";
+      return "home";
+    }
+
+    function pilotApplyRoute() {
+      const r = pilotParseRoute();
+      document.body.dataset.pilotRoute = r;
+      const home = document.getElementById("pilot-page-home");
+      const work = document.getElementById("pilot-page-work");
+      const pm = document.getElementById("pilot-page-pm");
+      const ly = document.getElementById("pilot-page-lyra");
+      if (home) home.hidden = r !== "home";
+      if (work) work.hidden = r !== "chat" && r !== "ops";
+      if (pm) pm.hidden = r !== "pm";
+      if (ly) ly.hidden = r !== "lyra";
+      const title = document.getElementById("pilot-work-title");
+      const sub = document.getElementById("pilot-work-sub");
+      if (title && sub && (r === "chat" || r === "ops")) {
+        if (r === "ops") {
+          title.textContent = "Ops & santé";
+          sub.textContent =
+            "Benchmark, cache, monitoring agrégé, capabilities, métriques — même backend que la barre du haut.";
+        } else {
+          title.textContent = "Chat & presets";
+          sub.textContent =
+            "POST /v1/pilot/route — presets, intentions, Lyra via MMO si configuré.";
+        }
+      }
+      document.querySelectorAll("#pilot-nav a").forEach(function (a) {
+        const h = a.getAttribute("href") || "";
+        let active = r === "home" && (h === "#/" || h === "#/home");
+        if (!active && r !== "home") active = h === "#/" + r;
+        a.classList.toggle("pilot-nav-active", !!active);
+      });
+    }
+
+    function escapeHtmlPm(s) {
+      return String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;");
+    }
+
+    function pmExtractBrief(resp) {
+      if (!resp || typeof resp !== "object") return null;
+      if (resp.brief && typeof resp.brief === "object") return resp.brief;
+      if (resp.output && typeof resp.output === "object" && resp.output.brief && typeof resp.output.brief === "object")
+        return resp.output.brief;
+      const r = resp.result;
+      if (
+        r &&
+        typeof r === "object" &&
+        r.output &&
+        typeof r.output === "object" &&
+        r.output.brief &&
+        typeof r.output.brief === "object"
+      )
+        return r.output.brief;
+      return null;
+    }
+
+    function renderPmCards(resp) {
+      const ms = document.getElementById("pm-milestones");
+      const ts = document.getElementById("pm-tasks");
+      const raw = document.getElementById("pm-raw");
+      if (raw) raw.textContent = JSON.stringify(resp, null, 2);
+      const brief = pmExtractBrief(resp);
+      const mlist = brief && Array.isArray(brief.milestones) ? brief.milestones : [];
+      const tlist = brief && Array.isArray(brief.tasks) ? brief.tasks : [];
+      if (ms) {
+        ms.innerHTML = mlist.length
+          ? mlist
+              .map(function (m) {
+                const d = escapeHtmlPm((m && m.date) || "");
+                const s = escapeHtmlPm((m && m.summary) || "");
+                return "<li><strong>" + d + "</strong> — " + s + "</li>";
+              })
+              .join("")
+          : "<li class=\"muted\">(aucun jalon — plan absent sur la VM, ou réponse sans <code>result.output.brief</code>)</li>";
+      }
+      if (ts) {
+        ts.innerHTML = tlist.length
+          ? tlist
+              .map(function (t) {
+                const ti = escapeHtmlPm((t && t.title) || "");
+                const sr = escapeHtmlPm((t && t.source) || "");
+                return "<li>" + ti + " <span class=\"src\">(" + sr + ")</span></li>";
+              })
+              .join("")
+          : "<li class=\"muted\">(aucune tâche)</li>";
+      }
+    }
+
+    async function pilotPmSend() {
+      const base = getBase();
+      let text = (document.getElementById("pm-text") && document.getElementById("pm-text").value) || "";
+      text = text.trim();
+      if (!text) text = "jalons et tâches du plan de route";
+      let ctx;
+      try {
+        ctx = JSON.parse((document.getElementById("pm-context") && document.getElementById("pm-context").value) || "{}");
+      } catch (e) {
+        alert("JSON contexte invalide");
+        return;
+      }
+      const payload = { actor_id: "svc:pilot-pm", text: text, context: ctx };
+      const out = await postJson(base + "/v1/pilot/route", payload);
+      if (out.json) renderPmCards(out.json);
+      else if (document.getElementById("pm-raw"))
+        document.getElementById("pm-raw").textContent = "HTTP " + out.status + "\n" + (out.text || "");
+    }
+
+    async function pilotPmHealth() {
+      const hint = document.getElementById("pm-health-hint");
+      const base = getBase();
+      try {
+        const r = await fetch(base + "/v1/pilot/agent-pm/healthz");
+        const t = await r.text();
+        if (hint) hint.textContent = "HTTP " + r.status + " " + t.slice(0, 160);
+      } catch (e) {
+        if (hint) hint.textContent = "Erreur: " + e;
+      }
+    }
+
+    if (!location.hash || location.hash === "#") {
+      try {
+        history.replaceState(null, "", "#/");
+      } catch (_) {
+        location.hash = "#/";
+      }
+    }
+    window.addEventListener("hashchange", pilotApplyRoute);
+
     // --------------------------
     // WS test client (minimal)
     // --------------------------
@@ -1866,6 +2153,17 @@
     } catch (_) {}
     try { refreshLyraContextPreview(); } catch (_) {}
     try { document.getElementById("history-pretty").innerHTML = renderHistoryPretty(); } catch (_) {}
+    try {
+      document.getElementById("btn-pm-send").addEventListener("click", function () {
+        pilotPmSend().catch(function (e) {
+          alert("PM: " + e);
+        });
+      });
+    } catch (_) {}
+    try {
+      document.getElementById("btn-pm-health").addEventListener("click", pilotPmHealth);
+    } catch (_) {}
+    pilotApplyRoute();
     refreshHealth();
     try { renderMetricsLinks(); } catch (_) {}
     refreshCapabilities();

@@ -36,6 +36,8 @@ def test_internal_http_healthz_and_lyra_snapshot() -> None:
     try:
         j = _http_get_json(f"http://127.0.0.1:{http.port}/healthz")
         assert j["status"] == "ok"
+        feats = j.get("protocol_features") or {}
+        assert feats.get("ws_move_world_commit") is True
 
         snap = _http_get_json(
             f"http://127.0.0.1:{http.port}/internal/v1/npc/npc:merchant/lyra-snapshot?trace_id=t1"
@@ -75,6 +77,7 @@ def test_internal_http_token_gate() -> None:
             headers={"X-LBG-Service-Token": "secret"},
         )
         assert j["status"] == "ok"
+        assert (j.get("protocol_features") or {}).get("ws_move_world_commit") is True
     finally:
         http.stop()
 

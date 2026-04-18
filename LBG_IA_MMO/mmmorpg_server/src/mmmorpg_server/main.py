@@ -27,6 +27,33 @@ from mmmorpg_server.protocol import (
 LOG = logging.getLogger("mmmorpg")
 
 
+def _parse_move_world_commit(data: dict[str, Any]) -> dict[str, Any] | None | str:
+    """
+    Option `world_commit` sur `move` : commit PNJ synchrones (même liste blanche que HTTP
+    dialogue-commit), **sans** appeler le pont IA — utile gameplay v1 (jalon #2).
+
+    Retourne :
+      - None : absent
+      - str : message d'erreur client
+      - dict : {"npc_id": str, "trace_id": str, "flags": dict | None}
+    """
+    raw = data.get("world_commit")
+    if raw is None:
+        return None
+    if not isinstance(raw, dict):
+        return "world_commit doit être un objet JSON"
+    npc_id = raw.get("npc_id")
+    trace_id = raw.get("trace_id")
+    if not isinstance(npc_id, str) or not npc_id.strip():
+        return "world_commit.npc_id requis (string non vide)"
+    if not isinstance(trace_id, str) or not trace_id.strip():
+        return "world_commit.trace_id requis (string non vide)"
+    flags = raw.get("flags")
+    if flags is not None and not isinstance(flags, dict):
+        return "world_commit.flags doit être un objet ou absent"
+    return {"npc_id": npc_id.strip(), "trace_id": trace_id.strip(), "flags": flags if isinstance(flags, dict) else None}
+
+
 def _queue_ia_bridge(
     *,
     ws: ServerConnection,
@@ -267,7 +294,31 @@ async def client_handler(
                 world_npc_id = data.get("world_npc_id")
                 npc_name = data.get("npc_name")
                 ia_context = data.get("ia_context")
-                if isinstance(text_ia, str) and text_ia.strip() and isinstance(world_npc_id, str) and world_npc_id.strip():
+                wc_payload = _parse_move_world_commit(data)
+                if isinstance(wc_payload, str):
+                    await ws.send(json.dumps(msg_error(wc_payload)))
+                    continue
+                has_ia = isinstance(text_ia, str) and text_ia.strip() and isinstance(world_npc_id, str) and world_npc_id.strip()
+                if wc_payload is not None and has_ia:
+                    await ws.send(
+                        json.dumps(
+                            msg_error(
+                                "world_commit incompatible avec text+world_npc_id (pont IA) sur le même move"
+                            )
+                        )
+                    )
+                    continue
+                if isinstance(wc_payload, dict):
+                    ok, reason = game.commit_dialogue(
+                        npc_id=wc_payload["npc_id"],
+                        trace_id=wc_payload["trace_id"],
+                        flags=wc_payload.get("flags"),
+                    )
+                    if not ok:
+                        await ws.send(json.dumps(msg_error(f"world_commit refusé: {reason}")))
+                        continue
+
+                if has_ia:
                     # Pont IA via `move` (sans nouveau type) : ne pas être bloqué par l'anti-spam `move`.
                     _queue_ia_bridge(
                         ws=ws,

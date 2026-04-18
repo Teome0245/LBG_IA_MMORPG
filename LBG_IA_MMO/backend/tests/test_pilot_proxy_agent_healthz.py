@@ -104,3 +104,48 @@ def test_pilot_proxy_combat_forwards_json(monkeypatch: pytest.MonkeyPatch) -> No
     j = r.json()
     assert j.get("ok") is True
     assert j.get("service") == "combat_http"
+
+
+def test_pilot_proxy_pm_skipped_when_no_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_AGENT_PM_URL", raising=False)
+    from backend.main import app
+
+    client = TestClient(app)
+    r = client.get("/v1/pilot/agent-pm/healthz")
+    assert r.status_code == 200
+    assert r.json().get("skipped") is True
+
+
+def test_pilot_proxy_pm_forwards_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_AGENT_PM_URL", "http://127.0.0.1:8055")
+
+    class _OkPm:
+        status_code = 200
+
+        def json(self) -> dict[str, object]:
+            return {"status": "ok", "service": "pm_http"}
+
+    class _ClientPm:
+        def __init__(self, *a: object, **k: object) -> None:
+            pass
+
+        async def __aenter__(self) -> "_ClientPm":
+            return self
+
+        async def __aexit__(self, *a: object) -> None:
+            return None
+
+        async def get(self, url: str) -> _OkPm:
+            assert url.endswith("/healthz")
+            return _OkPm()
+
+    monkeypatch.setattr(pilot_mod.httpx, "AsyncClient", lambda **kw: _ClientPm())
+
+    from backend.main import app
+
+    client = TestClient(app)
+    r = client.get("/v1/pilot/agent-pm/healthz")
+    assert r.status_code == 200
+    j = r.json()
+    assert j.get("ok") is True
+    assert j.get("service") == "pm_http"

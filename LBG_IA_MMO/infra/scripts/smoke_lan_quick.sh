@@ -27,6 +27,10 @@ set -euo pipefail
 #   LBG_SMOKE_WITH_MMO_AUTH=1 active le smoke auth mmo_server internal (optionnel)
 #   LBG_SMOKE_WITH_PILOT=1 active le smoke pilot route Lyra meta
 #   LBG_SMOKE_WITH_WS=1    active le smoke WS→IA final-only JSON
+#   LBG_SMOKE_WITH_GAMEPLAY_V1=1 active la recette MMO v1 gameplay jalon #1 (sans LLM, core HTTP)
+#   LBG_SMOKE_WITH_GAMEPLAY_V2=1 active le jalon #2 (WS move+world_commit → snapshot :8773)
+#   LBG_SMOKE_WITH_DEVOPS_SYSTEMD=1 active smoke_devops_systemd_lan.sh (dry-run par défaut ; allowlist sur core)
+#   LBG_SMOKE_WITH_DEVOPS_SELFCHECK=1 active smoke_devops_selfcheck_lan.sh (bundle diagnostic ; dry-run par défaut)
 #
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -42,6 +46,10 @@ RESET_REP="${LBG_SMOKE_RESET_REP:-0}"
 WITH_MMO_AUTH="${LBG_SMOKE_WITH_MMO_AUTH:-0}"
 WITH_PILOT="${LBG_SMOKE_WITH_PILOT:-0}"
 WITH_WS="${LBG_SMOKE_WITH_WS:-0}"
+WITH_GAMEPLAY_V1="${LBG_SMOKE_WITH_GAMEPLAY_V1:-0}"
+WITH_GAMEPLAY_V2="${LBG_SMOKE_WITH_GAMEPLAY_V2:-0}"
+WITH_DEVOPS_SYSTEMD="${LBG_SMOKE_WITH_DEVOPS_SYSTEMD:-0}"
+WITH_DEVOPS_SELFCHECK="${LBG_SMOKE_WITH_DEVOPS_SELFCHECK:-0}"
 
 step() {
   local label="$1"
@@ -57,7 +65,7 @@ step() {
 }
 
 echo "=== Smoke LAN quick ==="
-echo "timeout_s=${TIMEOUT_S} minimal=${TIMEOUT_MINIMAL} pilot=${TIMEOUT_PILOT} ws=${TIMEOUT_WS} repeat=${REPEAT} with_rep=${WITH_REP} with_rep_world=${WITH_REP_WORLD} rep_delta=${REP_DELTA} reset_rep=${RESET_REP} with_mmo_auth=${WITH_MMO_AUTH} with_pilot=${WITH_PILOT} with_ws=${WITH_WS}"
+echo "timeout_s=${TIMEOUT_S} minimal=${TIMEOUT_MINIMAL} pilot=${TIMEOUT_PILOT} ws=${TIMEOUT_WS} repeat=${REPEAT} with_rep=${WITH_REP} with_rep_world=${WITH_REP_WORLD} rep_delta=${REP_DELTA} reset_rep=${RESET_REP} with_mmo_auth=${WITH_MMO_AUTH} with_pilot=${WITH_PILOT} with_ws=${WITH_WS} with_gameplay_v1=${WITH_GAMEPLAY_V1} with_gameplay_v2=${WITH_GAMEPLAY_V2} with_devops_systemd=${WITH_DEVOPS_SYSTEMD} with_devops_selfcheck=${WITH_DEVOPS_SELFCHECK}"
 
 step "VM (SSH + systemd + Ollama)" \
   bash "${ROOT_DIR}/infra/scripts/smoke_vm_lan.sh"
@@ -88,6 +96,26 @@ fi
 if [[ "${WITH_WS}" == "1" ]]; then
   step "WS→IA final-only JSON (LLM)" \
     bash -c "LBG_SMOKE_TIMEOUT_S='${TIMEOUT_WS}' LBG_SMOKE_REPEAT='${REPEAT}' bash '${ROOT_DIR}/infra/scripts/smoke_ws_ia_final_only_json.sh'"
+fi
+
+if [[ "${WITH_GAMEPLAY_V1}" == "1" ]]; then
+  step "MMO v1 gameplay jalon #1 (sans LLM)" \
+    bash -c "LBG_SMOKE_TIMEOUT_S='${TIMEOUT_MINIMAL}' bash '${ROOT_DIR}/infra/scripts/smoke_mmo_v1_gameplay_jalon1_lan.sh'"
+fi
+
+if [[ "${WITH_GAMEPLAY_V2}" == "1" ]]; then
+  step "MMO v1 gameplay jalon #2 (WS→snapshot, sans LLM)" \
+    bash -c "LBG_SMOKE_TIMEOUT_S='${TIMEOUT_MINIMAL}' bash '${ROOT_DIR}/infra/scripts/smoke_ws_move_commit_snapshot_lan.sh'"
+fi
+
+if [[ "${WITH_DEVOPS_SYSTEMD}" == "1" ]]; then
+  step "DevOps systemd_is_active (LAN, dry-run par défaut)" \
+    bash -c "LBG_SMOKE_TIMEOUT_S='${TIMEOUT_MINIMAL}' bash '${ROOT_DIR}/infra/scripts/smoke_devops_systemd_lan.sh'"
+fi
+
+if [[ "${WITH_DEVOPS_SELFCHECK}" == "1" ]]; then
+  step "DevOps selfcheck bundle (LAN, dry-run par défaut)" \
+    bash -c "LBG_SMOKE_TIMEOUT_S='${TIMEOUT_MINIMAL}' bash '${ROOT_DIR}/infra/scripts/smoke_devops_selfcheck_lan.sh'"
 fi
 
 echo ""

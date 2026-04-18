@@ -11,6 +11,18 @@ class DeterministicIntentClassifier:
         if not t:
             return ("unknown", 0.0)
 
+        if re.search(
+            r"\b(chef de projet|product owner|état d'avancement|statut du projet|point d'avancement|"
+            r"plan de route|roadmap|vision produit)\b",
+            t,
+        ):
+            return ("project_pm", 0.78)
+        if re.search(
+            r"\b(jalon|milestone)\b.*\b(projet|produit|mmo|release)\b|"
+            r"\b(projet|produit|mmo)\b.*\b(jalon|milestone)\b",
+            t,
+        ):
+            return ("project_pm", 0.74)
         if re.search(r"\b(quest|quête|mission|tâche|tache|travail|travaux)\b", t):
             return ("quest_request", 0.75)
         if re.search(r"\b(parler|dialogue|discuter)\b", t):

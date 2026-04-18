@@ -71,6 +71,21 @@ cd LBG_IA_MMO/mmmorpg_server
 PYTHONPATH=src ../.venv/bin/python -m pytest tests/ -q
 ```
 
+## CLI — smoke jalon gameplay WS → snapshot (sans LLM)
+
+Depuis `LBG_IA_MMO/` (Python avec `websockets`, ex. `.venv-ci/bin/python` après `infra/ci/test_pytest.sh`) :
+
+```bash
+./.venv-ci/bin/python mmmorpg_server/tools/ws_world_commit_smoke.py \
+  --ws ws://192.168.0.245:7733 \
+  --internal http://192.168.0.245:8773 \
+  --npc-id npc:merchant \
+  --token "$LBG_MMMORPG_INTERNAL_HTTP_TOKEN" \
+  --reputation-delta 7
+```
+
+Recette bash (racine `LBG_IA_MMO/`) : `bash infra/scripts/smoke_ws_move_commit_snapshot_lan.sh`.
+
 ## CLI E2E (LAN) — tester le pont WS → IA
 
 Pré-requis :

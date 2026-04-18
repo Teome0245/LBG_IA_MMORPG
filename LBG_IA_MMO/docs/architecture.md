@@ -26,6 +26,10 @@ Construire un framework complet permettant :
 - Après routage, appelle le paquet **`agents/`** (`lbg_agents.dispatch.invoke_after_route`) pour enrichir le champ `output`. Le dialogue peut cibler un **agent HTTP** (`LBG_AGENT_DIALOGUE_URL`, port **8020** en prod systemd, voir `agents/README.md`). L’intention **`devops_probe`** déclenche **`agent.devops`** : GET HTTP et lecture de fichiers **uniquement** via listes blanches d’environnement (`agents/README.md`) ; dry-run **`LBG_DEVOPS_DRY_RUN`** ; garde **`LBG_DEVOPS_APPROVAL_TOKEN`** + `context.devops_approval` ; audit JSON **`agents.devops.audit`** (champ `ts`) sur stdout et/ou fichier **`LBG_DEVOPS_AUDIT_LOG_PATH`** (JSONL).
 - Introspection : **`GET /v1/capabilities`** (liste des `CapabilitySpec`). Le backend expose **`GET /v1/pilot/capabilities`** en proxy pour l’UI `/pilot/`.
 
+#### DevOps — exécution des remédiations (phase 3 produit)
+
+Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure des **`remediation_hints`** : indications **lisibles** pour un opérateur (relancer un service, vérifier une URL, consulter un log). **Règle projet** : ces hints ne déclenchent **aucune** action corrective **automatique** côté LLM ou agent sans revue humaine. L’exécution sur l’infra (ex. **`systemd_restart`** après approbation, quota, fenêtre UTC) reste **explicite** (outil DevOps, systemd, playbook) — typiquement un **humain** ou un **agent d’outillage contrôlé** (ex. Cursor sur poste de confiance avec les mêmes prérequis SSH que la doc `ops_vm_user.md`) applique le correctif. Ne pas brancher de boucle « LLM → restart production » sans garde-fous documentés et revus.
+
 ### MMO Server (`mmo_server/`)
 - Serveur headless tick-based.
 - Monde data-driven, entités, quêtes, classes, simulation.

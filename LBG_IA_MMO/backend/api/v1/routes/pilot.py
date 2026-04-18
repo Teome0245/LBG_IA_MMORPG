@@ -227,6 +227,37 @@ async def pilot_aggregate_status() -> dict[str, object]:
             combat_state = "error"
             combat_detail = str(e)
 
+    pm_url_raw = os.environ.get("LBG_AGENT_PM_URL", "").strip()
+    pm_state: str
+    pm_detail: str | None = None
+    pm_probe_url: str | None = None
+    pm_info: dict[str, object] | None = None
+
+    if not pm_url_raw:
+        pm_state = "skipped"
+        pm_detail = "LBG_AGENT_PM_URL non défini (stub PM côté orchestrator)"
+    else:
+        pm_probe_url = pm_url_raw.rstrip("/") + "/healthz"
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                r = await client.get(pm_probe_url)
+            if r.status_code == 200:
+                pm_state = "ok"
+                try:
+                    raw = r.json()
+                    if isinstance(raw, dict):
+                        pm_info = raw
+                    else:
+                        pm_detail = "healthz: JSON attendu (objet), reçu autre type"
+                except Exception:
+                    pm_detail = "healthz: corps non JSON"
+            else:
+                pm_state = "error"
+                pm_detail = f"HTTP {r.status_code}"
+        except Exception as e:
+            pm_state = "error"
+            pm_detail = str(e)
+
     mmo_url_raw = os.environ.get("LBG_MMO_SERVER_URL", "").strip()
     mmo_state: str
     mmo_detail: str | None = None
@@ -269,6 +300,11 @@ async def pilot_aggregate_status() -> dict[str, object]:
         "agent_combat_health_url": combat_probe_url,
         "agent_combat_detail": combat_detail,
         "agent_combat_info": combat_info,
+        "agent_pm": pm_state,
+        "agent_pm_url": pm_url_raw or None,
+        "agent_pm_health_url": pm_probe_url,
+        "agent_pm_detail": pm_detail,
+        "agent_pm_info": pm_info,
         "mmo_server": mmo_state,
         "mmo_server_url": mmo_url_raw or None,
         "mmo_server_health_url": mmo_probe_url,
@@ -304,6 +340,26 @@ async def pilot_proxy_agent_quests_healthz() -> dict[str, object]:
     base = os.environ.get("LBG_AGENT_QUESTS_URL", "").strip().rstrip("/")
     if not base:
         return {"ok": False, "skipped": True, "detail": "LBG_AGENT_QUESTS_URL non défini"}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"{base}/healthz")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"HTTP {r.status_code}", "body": r.text[:500]}
+        try:
+            data = r.json()
+        except ValueError:
+            return {"ok": False, "error": "corps non JSON", "body": r.text[:500]}
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/agent-pm/healthz", tags=["pilot"])
+async def pilot_proxy_agent_pm_healthz() -> dict[str, object]:
+    """Proxy same-origin vers l’agent chef de projet (port 8055 typiquement)."""
+    base = os.environ.get("LBG_AGENT_PM_URL", "").strip().rstrip("/")
+    if not base:
+        return {"ok": False, "skipped": True, "detail": "LBG_AGENT_PM_URL non défini"}
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             r = await client.get(f"{base}/healthz")

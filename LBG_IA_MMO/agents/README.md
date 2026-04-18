@@ -77,6 +77,23 @@ Le nom d’adversaire peut venir de `context.enemy_name`, `target_name` ou `oppo
 
 Dans `/pilot/`, l’`encounter_state` peut être réinjecté automatiquement depuis le stockage local (comme `quest_state` pour les quêtes).
 
+### Convention « chef de projet » (`agent.pm`)
+
+Intent orchestrateur **`project_pm`** (classifieur ou `context.pm_focus` / `context.project_pm`). Sortie stub :
+- `agent: "pm_stub"`
+- `brief` : `title`, `summary`, `hints` (pistes actionnables), `docs` (chemins repo)
+- `agent_site` (optionnel) : si `context.agent_site` est une chaîne non vide
+
+Options (stub) :
+- `context.pm_include_plan: true` ou texte contenant « plan de route », « roadmap », « jalons », « tâches », « milestones », etc. : tente d’ajouter `brief.current_step`
+  en lisant **uniquement** `docs/plan_de_route.md` via un chemin connu (VM `/opt/LBG_IA_MMO/docs/plan_de_route.md` ou dev `docs/plan_de_route.md`).
+  Override possible : `LBG_PM_PLAN_PATH` (chemin fichier).
+- Sortie : `brief.current_step` (string | null) + `brief.current_step_found` (bool)
+- **Données structurées (sans LLM)** : dès que le plan est inclus (`pm_include_plan` ou mots-clés ci-dessus), ou si `context.pm_include_structure` / `pm_include_tasks` / `pm_include_milestones` vaut `true`, le stub ajoute :
+  - `brief.milestones` : liste d’objets `{ id, date, summary, raw }` (dernières lignes `| YYYY-MM-DD | … |` du fichier, cap `LBG_PM_MILESTONES_MAX`, défaut 8)
+  - `brief.tasks` : liste d’objets `{ id, title, status, source }` (découpage de l’« Étape actuelle », ligne « File d’attente », tâches de contrôle sur les derniers jalons ; cap `LBG_PM_TASKS_MAX`, défaut 12)
+  - `brief.file_attente` / `brief.file_attente_found` : ligne **File d’attente** si présente
+
 ### Lyra (echo + jauges optionnelles)
 
 Si `context.lyra` est un **objet** JSON, les réponses **`minimal_stub`** (handler `_echo`, ex. **`agent.fallback`**) incluent **`lyra`** dans la sortie.
@@ -108,24 +125,50 @@ Le backend applique une **whitelist** et des **limites** avant d’appeler l’H
 | `LBG_AGENT_QUESTS_TIMEOUT` | Secondes pour la réponse HTTP (défaut **30**). |
 | `LBG_AGENT_COMBAT_URL` | Si définie (ex. `http://127.0.0.1:8040`), le handler **`agent.combat`** envoie un `POST {url}/invoke`. Sinon : stub local (`combat_stub`, toujours **stérile** côté monde). |
 | `LBG_AGENT_COMBAT_TIMEOUT` | Secondes pour la réponse HTTP (défaut **30**). |
+| `LBG_AGENT_PM_URL` | Si définie (ex. `http://127.0.0.1:8055`), le handler **`agent.pm`** envoie un `POST {url}/invoke`. Sinon : stub local **`pm_stub`** (brief jalons/risques déterministe). |
+| `LBG_AGENT_PM_TIMEOUT` | Secondes pour la réponse HTTP (défaut **45**). |
+| `LBG_PM_PLAN_PATH` | Chemin absolu ou relatif vers le markdown du plan (prioritaire sur les chemins par défaut VM/dev). |
+| `LBG_PM_MILESTONES_MAX` | Nombre max de lignes datées conservées dans `brief.milestones` (défaut **8**, plafonné à 30). |
+| `LBG_PM_TASKS_MAX` | Nombre max d’entrées dans `brief.tasks` (défaut **12**, plafonné à 40). |
+
+### Topologie cible — un service d’agents par machine (optionnel)
+
+- **Même codebase** : chaque VM (core **140**, MMO **245**, front **110**, poste **dev**) peut exécuter le **paquet agents** avec des **`LBG_AGENT_*_URL`** pointant vers les **ports locaux** de cette machine (`127.0.0.1`) ou vers un autre hôte LAN si l’agent tourne ailleurs.
+- **Orchestrateur unique** : il reste sur le **core** (souvent) ; les URL dans `/etc/lbg-ia-mmo.env` décrivent **où** vivent les workers HTTP (tous sur 140 en LAN typique, ou répartis).
+- **Contrôle infra délégué** : un agent outil sur une autre VM reste possible via URL dédiée (ex. **`AGENT_DEVOPS_VM_URL`** dans `lbg.env` — hors dispatch standard aujourd’hui, réservé aux intégrations futures / ponts HTTP).
+- **Contexte** : `context.agent_site` (ex. `"core"`, `"mmo"`, `"dev"`) peut être propagé pour **étiqueter** la réponse (stub PM, futures métriques) ; le routage reste **déterministe** côté orchestrateur (`project_pm`, `devops_probe`, etc.).
+
+Unité systemd core : **`lbg-agent-pm.service`** (port **8055**), installée par **`deploy_vm.sh`** rôle **core** avec les autres agents HTTP.
 
 ### DevOps — exécuteur à liste blanche (`agent.devops`)
 
-Capability orchestrateur : **`devops_probe`** → handler **`agent.devops`**. Actions décrites dans `context.devops_action` (priorité de routage absolue) ou texte type « sonde devops » / « healthz backend ».
+Capability orchestrateur : **`devops_probe`** → handler **`agent.devops`**. Actions décrites dans `context.devops_action` (priorité de routage absolue) ou texte type « sonde devops » / « healthz backend » / **« diagnostic complet »** (action **`selfcheck`**).
 
 | Variable | Effet |
 |----------|--------|
 | `LBG_DEVOPS_HTTP_ALLOWLIST` | Liste d’URLs **exactes** autorisées pour `http_get`, séparées par des virgules. Si vide : défaut `http://127.0.0.1:8010/healthz` et `http://127.0.0.1:8000/healthz`. |
+| `LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST` | Noms d’unités **exactes** autorisées pour `systemd_is_active` (ex. `lbg-backend.service`), virgules. **Vide par défaut** → `systemd_is_active` refusé. |
+| `LBG_DEVOPS_SYSTEMD_RESTART_ALLOWLIST` | Noms d’unités **exactes** autorisées pour `systemd_restart` (ex. `lbg-backend.service`), virgules. **Vide par défaut** → `systemd_restart` refusé. |
+| `LBG_DEVOPS_SYSTEMD_RESTART_MAX_PER_WINDOW` | Nombre max de **tentatives réelles** `systemd_restart` par fenêtre glissante (défaut **8**, plafonné à 50). |
+| `LBG_DEVOPS_SYSTEMD_RESTART_WINDOW_S` | Taille de la fenêtre glissante en secondes (défaut **3600**, min 60 s, max 7 jours). Compteur **par processus** uvicorn (best-effort multi-workers). |
+| `LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC` | Si non vide : `HH:MM-HH:MM` en **UTC** ; les restarts **réels** sont refusés en dehors de cet intervalle (si début > fin, la fenêtre traverse minuit). |
+| `LBG_DEVOPS_SELFCHECK_HTTP` | (Optionnel) URLs healthz **exactes** pour l’action **`selfcheck`**, virgules — chacune doit être dans `LBG_DEVOPS_HTTP_ALLOWLIST`. Si vide : sonde `LBG_DEVOPS_DEFAULT_PROBE_URL` puis `…/healthz` dérivés de `LBG_ORCHESTRATOR_URL` et `MMMORPG_IA_BACKEND_URL` lorsqu’ils sont définis. |
+| `LBG_DEVOPS_SELFCHECK_SYSTEMD` | (Optionnel) Sous-ensemble d’unités pour **`selfcheck`** (virgules), toutes devant rester dans `LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST`. Si vide : par défaut **`lbg-backend.service`** et **`lbg-orchestrator.service`** s’ils sont dans l’allowlist, sinon les premières unités de l’allowlist. |
 | `LBG_DEVOPS_LOG_ALLOWLIST` | Chemins de fichiers **exactes** pour `read_log_tail` (virgules). **Vide par défaut** → lecture fichier refusée. |
 | `LBG_DEVOPS_DEFAULT_PROBE_URL` | URL utilisée quand le texte déclenche une sonde sans `devops_action` (défaut : healthz orchestrator). |
 | `LBG_DEVOPS_DRY_RUN` | Si `1` / `true` / `yes` / `on` : **aucune** requête HTTP ni lecture fichier ; allowlist et audit inchangés. |
 | `context.devops_dry_run` | Si `true` : même effet dry-run **pour cet appel** (sans redémarrer) ; combiné avec la case « DevOps dry-run » dans `/pilot/`. La variable d’environnement reste prioritaire (si elle active le dry-run, le contexte ne peut pas le désactiver). |
-| `LBG_DEVOPS_APPROVAL_TOKEN` | Si défini (non vide) : toute exécution réelle (`http_get` / `read_log_tail` hors dry-run) exige `context.devops_approval` **égal** au jeton (comparaison `secrets.compare_digest`). Le jeton n’est jamais journalisé dans l’audit. Si non défini : pas de garde (comportement précédent). |
+| `LBG_DEVOPS_APPROVAL_TOKEN` | Si défini (non vide) : toute exécution réelle (`http_get` / `read_log_tail` / `systemd_is_active` / `systemd_restart` / sous-étapes du **`selfcheck`** hors dry-run) exige `context.devops_approval` **égal** au jeton (comparaison `secrets.compare_digest`). Le jeton n’est jamais journalisé dans l’audit. Si non défini : pas de garde (comportement précédent). |
 | `context.devops_approval` | Chaîne à fournir par l’appelant quand `LBG_DEVOPS_APPROVAL_TOKEN` est actif ; à ne pas logger côté client. |
+| `context.devops_selfcheck` | Si `true` : équivalent à `devops_action: { "kind": "selfcheck" }` lorsque aucune action explicite n’est fournie (pratique pour `/pilot/` ou scripts). |
 | `LBG_DEVOPS_AUDIT_LOG_PATH` | Si défini : chaque audit est **ajouté** (append) dans ce fichier au format **JSONL** (une ligne JSON par action, champ `ts` en UTC ISO). Les répertoires parents sont créés si besoin. |
 | `LBG_DEVOPS_AUDIT_STDOUT` | Si `0` / `false` / `no` / `off` : n’écrit plus l’audit sur stdout (fichier seul si `LBG_DEVOPS_AUDIT_LOG_PATH` est défini ; sinon l’audit est perdu — à éviter). |
 
-Chaque action DevOps émet une ligne JSON `event: agents.devops.audit` (`ts`, `outcome`, `dry_run`, `dry_run_source`, `approval_gate_active`, `trace_id`, `url` / `path`, etc.) sur **stdout** par défaut (journald) et **en plus** dans le fichier si configuré. Valeur d’`outcome` supplémentaire : **`approval_denied`**. En cas d’erreur d’écriture fichier, un seul message `agents.devops.audit_file_error` part sur **stderr**.
+Chaque action DevOps émet une ligne JSON `event: agents.devops.audit` (`ts`, `outcome`, `dry_run`, `dry_run_source`, `approval_gate_active`, `trace_id`, `url` / `path` / `unit`, etc.) sur **stdout** par défaut (journald) et **en plus** dans le fichier si configuré. Valeur d’`outcome` supplémentaire : **`approval_denied`**. Le **`selfcheck`** émet en plus des lignes `selfcheck_http_get`, `selfcheck_systemd_is_active` et une synthèse `selfcheck_summary`. En cas d’erreur d’écriture fichier, un seul message `agents.devops.audit_file_error` part sur **stderr**.
+
+**`selfcheck`** : agrège des sondes **bornées** (pas d’URL ou d’unité arbitraires côté prompt) ; le champ `remediation_hints` propose des pistes **textuelles** (ex. `journalctl`, `systemctl restart` — **non exécutées** par l’exécuteur). Une évolution ultérieure pourra ajouter des actions correctives derrière un garde-fou plus strict.
+
+Recette LAN (dry-run par défaut) : `bash infra/scripts/smoke_devops_systemd_lan.sh` (voir en-tête du script pour `LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST` sur le **core**) ; bundle diagnostic : `bash infra/scripts/smoke_devops_selfcheck_lan.sh`.
 
 **Prod** : compte **`lbg`** (sudoer, services non-root) — **`docs/ops_vm_user.md`** ; rotation JSONL / jeton — **`docs/ops_devops_audit.md`** (`infra/logrotate/lbg-devops-audit`).
 
@@ -134,6 +177,19 @@ Exemple `context` (JSON) :
 ```json
 {
   "devops_action": { "kind": "http_get", "url": "http://127.0.0.1:8010/healthz" }
+}
+```
+
+```json
+{
+  "devops_action": { "kind": "systemd_is_active", "unit": "lbg-backend.service" }
+}
+```
+
+```json
+{
+  "devops_action": { "kind": "selfcheck" },
+  "devops_dry_run": true
 }
 ```
 

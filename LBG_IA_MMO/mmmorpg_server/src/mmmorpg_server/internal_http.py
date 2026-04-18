@@ -289,7 +289,16 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
                 return
 
             if self.path == "/healthz":
-                self._send_json(HTTPStatus.OK, {"status": "ok", "service": "mmmorpg_internal_http", "ts": time.time()})
+                self._send_json(
+                    HTTPStatus.OK,
+                    {
+                        "status": "ok",
+                        "service": "mmmorpg_internal_http",
+                        "ts": time.time(),
+                        # Détectable par les smokes / ops : présent uniquement si le paquet déployé inclut le jalon WS.
+                        "protocol_features": {"ws_move_world_commit": True},
+                    },
+                )
                 return
 
             if self.path.startswith("/internal/v1/npc/") and "/lyra-snapshot" in self.path:

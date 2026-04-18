@@ -61,6 +61,36 @@ pour déclencher une réplique PNJ **après** `hello` (même mécanisme que `hel
 }
 ```
 
+### `move` — option `world_commit` (gameplay v1, **sans** pont IA)
+
+Permet d’appliquer un **commit PNJ** synchronisé sur le même message que le déplacement, **sans** appeler le backend LLM. Même liste blanche de `flags` que `POST …/dialogue-commit` (HTTP interne).
+
+**Incompatibilité** : si le `move` déclenche aussi le pont IA (`text` non vide **et** `world_npc_id` non vide), la présence de `world_commit` est **refusée** (erreur `type: error`).
+
+Exemple (réputation locale uniquement) :
+
+```json
+{
+  "type": "move",
+  "x": 3.0,
+  "y": 0.0,
+  "z": 2.0,
+  "world_commit": {
+    "npc_id": "npc:merchant",
+    "trace_id": "client-unique-trace-001",
+    "flags": { "reputation_delta": 7 }
+  }
+}
+```
+
+Champs :
+
+- `world_commit.npc_id` (string, requis) : PNJ cible (`npc:…`).
+- `world_commit.trace_id` (string, requis) : idempotence (même sémantique que le commit HTTP).
+- `world_commit.flags` (objet, optionnel) : ex. `reputation_delta`, `aid_hunger_delta`, etc. (voir serveur / tests).
+
+Recette LAN : `infra/scripts/smoke_ws_move_commit_snapshot_lan.sh`.
+
 ## Serveur → client
 
 ### `welcome`

@@ -51,6 +51,42 @@ def test_route_intent_prefers_quest_even_with_npc_name() -> None:
     assert data["output"]["capability"] == "quest_request"
 
 
+def test_route_intent_project_pm_classifier() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/route",
+        json={
+            "actor_id": "player:1",
+            "text": "Quel est le plan de route pour la release ?",
+            "context": {},
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["intent"] == "project_pm"
+    assert data["routed_to"] == "agent.pm"
+    out = data["output"]
+    assert out["capability"] == "project_pm"
+    assert out.get("agent") == "pm_stub"
+    assert isinstance(out.get("brief"), dict)
+
+
+def test_route_intent_project_pm_context_flag() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/route",
+        json={
+            "actor_id": "svc:1",
+            "text": "x",
+            "context": {"pm_focus": True},
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["intent"] == "project_pm"
+    assert data["routed_to"] == "agent.pm"
+
+
 def test_route_intent_world_action_forces_world_aid() -> None:
     client = TestClient(app)
     r = client.post(

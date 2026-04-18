@@ -13,4 +13,5 @@ def test_list_capabilities() -> None:
     assert "npc_dialogue" in names
     assert "world_aid" in names
     assert "devops_probe" in names
+    assert "project_pm" in names
     assert "unknown" in names

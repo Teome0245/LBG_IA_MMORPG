@@ -8,6 +8,7 @@ def test_pilot_status_shape(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LBG_AGENT_DIALOGUE_URL", raising=False)
     monkeypatch.delenv("LBG_AGENT_QUESTS_URL", raising=False)
     monkeypatch.delenv("LBG_AGENT_COMBAT_URL", raising=False)
+    monkeypatch.delenv("LBG_AGENT_PM_URL", raising=False)
     monkeypatch.delenv("LBG_MMO_SERVER_URL", raising=False)
     monkeypatch.delenv("LBG_MMO_INTERNAL_TOKEN", raising=False)
     client = TestClient(app)
@@ -26,5 +27,8 @@ def test_pilot_status_shape(monkeypatch: pytest.MonkeyPatch) -> None:
     assert data.get("agent_combat") == "skipped"
     assert data.get("agent_combat_url") is None
     assert data.get("agent_combat_info") is None
+    assert data.get("agent_pm") == "skipped"
+    assert data.get("agent_pm_url") is None
+    assert data.get("agent_pm_info") is None
     assert data.get("mmo_server") == "skipped"
     assert data.get("mmo_server_url") is None

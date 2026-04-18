@@ -74,7 +74,7 @@ push_one() {
     echo \"OK: /etc/lbg-ia-mmo.env (640 root:${SECRETS_GROUP})\"
     if [ \"${RESTART}\" = \"1\" ]; then
       echo \"Restart services (unités présentes uniquement)…\"
-      for svc in lbg-agent-dialogue lbg-agent-quests lbg-agent-combat lbg-orchestrator lbg-backend lbg-mmo-server lbg-mmmorpg-ws; do
+      for svc in lbg-agent-dialogue lbg-agent-quests lbg-agent-combat lbg-agent-pm lbg-orchestrator lbg-backend lbg-mmo-server lbg-mmmorpg-ws; do
         if sudo -n systemctl cat \"\${svc}.service\" >/dev/null 2>&1; then
           sudo -n systemctl restart \"\${svc}\"
         fi

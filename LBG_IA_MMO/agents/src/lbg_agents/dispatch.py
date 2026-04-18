@@ -24,6 +24,7 @@ from lbg_agents.devops_executor import (
     is_devops_dry_run,
     run_devops_action,
 )
+from lbg_agents.pm_stub import run_pm_stub
 from lbg_agents.quests_stub import run_quests_stub
 from lbg_agents.world_stub import run_world_stub
 
@@ -52,6 +53,15 @@ def _combat_http_timeout() -> httpx.Timeout:
         read_s = max(2.0, float(raw))
     except ValueError:
         read_s = 30.0
+    return httpx.Timeout(connect=10.0, read=read_s, write=20.0, pool=10.0)
+
+
+def _pm_http_timeout() -> httpx.Timeout:
+    raw = os.environ.get("LBG_AGENT_PM_TIMEOUT", "45").strip()
+    try:
+        read_s = max(2.0, float(raw))
+    except ValueError:
+        read_s = 45.0
     return httpx.Timeout(connect=10.0, read=read_s, write=20.0, pool=10.0)
 
 
@@ -225,8 +235,47 @@ def _combat(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]
     return run_combat_stub(actor_id=actor_id, text=text, context=context)
 
 
+def _pm(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
+    base = os.environ.get("LBG_AGENT_PM_URL", "").strip().rstrip("/")
+    if base:
+        try:
+            with httpx.Client(timeout=_pm_http_timeout()) as client:
+                r = client.post(
+                    f"{base}/invoke",
+                    json={"actor_id": actor_id, "text": text, "context": context},
+                )
+            if r.status_code >= 400:
+                fb = run_pm_stub(actor_id=actor_id, text=text, context=context)
+                return {
+                    **fb,
+                    "agent": "http_pm",
+                    "error": f"HTTP {r.status_code}",
+                    "body_preview": r.text[:200],
+                }
+            data = r.json()
+            if not isinstance(data, dict):
+                return {"agent": "http_pm", "remote": data}
+            merged = dict(data)
+            merged["agent"] = merged.get("agent") or "http_pm"
+            return merged
+        except Exception as e:
+            detail = f"{type(e).__name__}: {e}"
+            fb = run_pm_stub(actor_id=actor_id, text=text, context=context)
+            return {
+                **fb,
+                "agent": "http_pm",
+                "error": f"{detail} | appel {base}/invoke échoué — vérifier l’agent PM et le réseau.",
+            }
+    return run_pm_stub(actor_id=actor_id, text=text, context=context)
+
+
 def _devops(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
     raw = context.get("devops_action")
+    if context.get("devops_selfcheck") is True:
+        if not isinstance(raw, dict):
+            raw = {"kind": "selfcheck"}
+        elif not raw.get("kind"):
+            raw = {**raw, "kind": "selfcheck"}
     if not isinstance(raw, dict):
         inferred = default_action_from_text(text)
         if inferred is not None:
@@ -257,6 +306,7 @@ _HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
     "agent.dialogue": _dialogue,
     "agent.quests": _quests,
     "agent.combat": _combat,
+    "agent.pm": _pm,
     "agent.devops": _devops,
     "agent.world": _world,
     "agent.fallback": _fallback,

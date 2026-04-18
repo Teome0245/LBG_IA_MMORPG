@@ -16,7 +16,12 @@ capability_registry = InMemoryCapabilityRegistry(
         CapabilitySpec(
             name="devops_probe",
             routed_to="agent.devops",
-            description="Allowlisted DevOps probe (HTTP GET healthz, optional log tail)",
+            description="Allowlisted DevOps probe (HTTP GET, log tail, systemd is-active, selfcheck bundle)",
+        ),
+        CapabilitySpec(
+            name="project_pm",
+            routed_to="agent.pm",
+            description="Chef de projet — brief jalons/risques (stub ou HTTP LBG_AGENT_PM_URL)",
         ),
         CapabilitySpec(name="unknown", routed_to="agent.fallback", description="Fallback handler"),
     ]

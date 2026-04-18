@@ -1,8 +1,11 @@
 import json
+from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 
 from lbg_agents.devops_executor import default_action_from_text, is_devops_dry_run, run_devops_action
+from lbg_agents.dispatch import invoke_after_route
 
 
 def _last_audit_line(capsys: pytest.CaptureFixture[str]) -> dict:
@@ -81,6 +84,112 @@ def test_read_log_tail_allowed_path(tmp_path, monkeypatch: pytest.MonkeyPatch) -
 def test_default_action_from_text_devops_keyword() -> None:
     a = default_action_from_text("sonde devops")
     assert a == {"kind": "http_get", "url": "http://127.0.0.1:8010/healthz"}
+
+
+def test_default_action_from_text_selfcheck_phrases() -> None:
+    assert default_action_from_text("diagnostic complet") == {"kind": "selfcheck"}
+    assert default_action_from_text("auto-diagnostic stack") == {"kind": "selfcheck"}
+
+
+def test_selfcheck_dry_run_two_http_urls(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("LBG_DEVOPS_APPROVAL_TOKEN", raising=False)
+    monkeypatch.setenv(
+        "LBG_DEVOPS_SELFCHECK_HTTP",
+        "http://127.0.0.1:8010/healthz,http://127.0.0.1:8000/healthz",
+    )
+    monkeypatch.delenv("LBG_ORCHESTRATOR_URL", raising=False)
+    monkeypatch.delenv("MMMORPG_IA_BACKEND_URL", raising=False)
+    monkeypatch.delenv("LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST", raising=False)
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "selfcheck"},
+        context={"devops_dry_run": True},
+    )
+    assert out.get("error") is None
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("kind") == "selfcheck"
+    assert res.get("ok") is True
+    assert res.get("dry_run") is True
+    assert res.get("http_checked") == 2
+    assert res.get("systemd_checked") == 0
+    steps = res.get("steps")
+    assert isinstance(steps, list) and len(steps) == 2
+    assert all(s.get("healthy") for s in steps)
+    audit = _last_audit_line(capsys)
+    assert audit["action_kind"] == "selfcheck_summary"
+    assert audit["outcome"] == "dry_run_planned"
+
+
+def test_selfcheck_validation_error_when_no_steps(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("LBG_DEVOPS_APPROVAL_TOKEN", raising=False)
+    monkeypatch.setenv("LBG_DEVOPS_HTTP_ALLOWLIST", "http://127.0.0.1:9999/healthz")
+    monkeypatch.setenv("LBG_DEVOPS_SELFCHECK_HTTP", "http://127.0.0.1:8010/healthz")
+    monkeypatch.delenv("LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST", raising=False)
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "selfcheck"},
+        context={"devops_dry_run": True},
+    )
+    assert out.get("error")
+    res = out.get("result")
+    assert res is None
+    audit = _last_audit_line(capsys)
+    assert audit["action_kind"] == "selfcheck"
+    assert audit["outcome"] == "validation_error"
+
+
+def test_selfcheck_systemd_subset_respects_allowlist(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("LBG_DEVOPS_APPROVAL_TOKEN", raising=False)
+    monkeypatch.setenv("LBG_DEVOPS_SELFCHECK_HTTP", "")
+    monkeypatch.setenv("LBG_DEVOPS_HTTP_ALLOWLIST", "http://127.0.0.1:8010/healthz")
+    monkeypatch.setenv(
+        "LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST",
+        "lbg-backend.service,lbg-orchestrator.service",
+    )
+    monkeypatch.setenv("LBG_DEVOPS_SELFCHECK_SYSTEMD", "lbg-orchestrator.service")
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "selfcheck"},
+        context={"devops_dry_run": True},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("kind") == "selfcheck"
+    kinds = [s.get("kind") for s in (res.get("steps") or [])]
+    assert kinds.count("http_get") >= 1
+    assert "systemd_is_active" in kinds
+    systemd_steps = [s for s in (res.get("steps") or []) if s.get("kind") == "systemd_is_active"]
+    assert len(systemd_steps) == 1
+    assert systemd_steps[0].get("unit") == "lbg-orchestrator.service"
+
+
+def test_dispatch_devops_selfcheck_context_flag(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("LBG_DEVOPS_APPROVAL_TOKEN", raising=False)
+    monkeypatch.delenv("LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST", raising=False)
+    out = invoke_after_route(
+        "agent.devops",
+        actor_id="p:1",
+        text="",
+        context={"devops_selfcheck": True, "devops_dry_run": True},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("kind") == "selfcheck"
+    assert res.get("ok") is True
 
 
 def test_http_get_dry_run_env_skips_httpx(
@@ -325,3 +434,268 @@ def test_audit_stdout_disabled_file_only(tmp_path: object, capsys: pytest.Captur
     assert "agents.devops.audit" not in out
     lines = [ln for ln in logf.read_text(encoding="utf-8").splitlines() if ln.strip()]
     assert json.loads(lines[-1])["event"] == "agents.devops.audit"
+
+
+def test_systemd_is_active_dry_run_ok(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST", "lbg-backend.service")
+    monkeypatch.delenv("LBG_DEVOPS_DRY_RUN", raising=False)
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_is_active", "unit": "lbg-backend.service"},
+        context={"devops_dry_run": True},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is True
+    assert res.get("dry_run") is True
+    audit = _last_audit_line(capsys)
+    assert audit["outcome"] == "dry_run_planned"
+    assert audit.get("unit") == "lbg-backend.service"
+
+
+def test_systemd_is_active_empty_allowlist_denied(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST", raising=False)
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_is_active", "unit": "lbg-backend.service"},
+        context={"devops_dry_run": True},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is False
+    audit = _last_audit_line(capsys)
+    assert audit["outcome"] == "denied"
+
+
+def test_systemd_is_active_mock_subprocess_ok(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import lbg_agents.devops_executor as de
+
+    def _fake_run(cmd: list[str], **kw: object) -> SimpleNamespace:
+        assert cmd == ["systemctl", "is-active", "lbg-backend.service"]
+        return SimpleNamespace(returncode=0, stdout="active\n", stderr="")
+
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST", "lbg-backend.service")
+    monkeypatch.delenv("LBG_DEVOPS_APPROVAL_TOKEN", raising=False)
+    monkeypatch.delenv("LBG_DEVOPS_DRY_RUN", raising=False)
+    monkeypatch.setattr(de.subprocess, "run", _fake_run)
+
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_is_active", "unit": "lbg-backend.service"},
+        context={},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is True
+    assert res.get("active_state") == "active"
+    assert res.get("exit_code") == 0
+    audit = _last_audit_line(capsys)
+    assert audit["outcome"] == "executed_ok"
+
+
+def test_systemd_is_active_invalid_unit(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST", "lbg-backend.service")
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_is_active", "unit": "not-a-unit"},
+        context={"devops_dry_run": True},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is False
+    audit = _last_audit_line(capsys)
+    assert audit["outcome"] == "denied"
+
+
+def test_systemd_is_active_not_on_allowlist(capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST", "lbg-backend.service")
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_is_active", "unit": "dbus.service"},
+        context={"devops_dry_run": True},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is False
+    assert "hors" in (res.get("error") or "")
+    audit = _last_audit_line(capsys)
+    assert audit["outcome"] == "denied"
+
+
+def test_systemd_restart_disabled_when_allowlist_empty(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("LBG_DEVOPS_APPROVAL_TOKEN", raising=False)
+    monkeypatch.delenv("LBG_DEVOPS_SYSTEMD_RESTART_ALLOWLIST", raising=False)
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_restart", "unit": "lbg-backend.service"},
+        context={"devops_dry_run": True},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is False
+    assert "RESTART_ALLOWLIST" in (res.get("error") or "")
+    audit = _last_audit_line(capsys)
+    assert audit["action_kind"] == "systemd_restart"
+    assert audit["outcome"] == "denied"
+
+
+def test_systemd_restart_dry_run_ok(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("LBG_DEVOPS_APPROVAL_TOKEN", raising=False)
+    monkeypatch.delenv("LBG_DEVOPS_DRY_RUN", raising=False)
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_ALLOWLIST", "lbg-backend.service")
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_restart", "unit": "lbg-backend.service"},
+        context={"devops_dry_run": True},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is True
+    assert res.get("dry_run") is True
+    audit = _last_audit_line(capsys)
+    assert audit["action_kind"] == "systemd_restart"
+    assert audit["outcome"] == "dry_run_planned"
+    assert audit.get("unit") == "lbg-backend.service"
+
+
+def test_systemd_restart_requires_approval_when_token_set(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import lbg_agents.devops_executor as de
+
+    def _boom(*a: object, **kw: object) -> None:
+        raise AssertionError("subprocess ne doit pas être appelé sans approbation")
+
+    monkeypatch.setenv("LBG_DEVOPS_APPROVAL_TOKEN", "secret-token")
+    monkeypatch.delenv("LBG_DEVOPS_DRY_RUN", raising=False)
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_ALLOWLIST", "lbg-backend.service")
+    monkeypatch.setattr(de.subprocess, "run", _boom)
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_restart", "unit": "lbg-backend.service"},
+        context={},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is False
+    assert res.get("approval_required") is True
+    audit = _last_audit_line(capsys)
+    assert audit["action_kind"] == "systemd_restart"
+    assert audit["outcome"] == "approval_denied"
+
+
+def test_systemd_restart_mock_subprocess_ok(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import lbg_agents.devops_executor as de
+
+    de._restart_real_ts.clear()
+
+    def _fake_run(cmd: list[str], **kw: object) -> SimpleNamespace:
+        assert cmd == ["sudo", "-n", "systemctl", "restart", "lbg-backend.service"]
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.delenv("LBG_DEVOPS_APPROVAL_TOKEN", raising=False)
+    monkeypatch.delenv("LBG_DEVOPS_DRY_RUN", raising=False)
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_ALLOWLIST", "lbg-backend.service")
+    monkeypatch.setattr(de.subprocess, "run", _fake_run)
+    out = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_restart", "unit": "lbg-backend.service"},
+        context={},
+    )
+    res = out.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is True
+    assert res.get("exit_code") == 0
+    audit = _last_audit_line(capsys)
+    assert audit["action_kind"] == "systemd_restart"
+    assert audit["outcome"] == "executed_ok"
+
+
+def test_restart_maintenance_allows_inside_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC", "10:00-12:00")
+    from lbg_agents.devops_executor import _restart_maintenance_allows
+
+    ok, _ = _restart_maintenance_allows(datetime(2026, 1, 1, 11, 30, tzinfo=timezone.utc))
+    assert ok is True
+
+
+def test_restart_maintenance_denies_outside_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC", "10:00-12:00")
+    from lbg_agents.devops_executor import _restart_maintenance_allows
+
+    ok, err = _restart_maintenance_allows(datetime(2026, 1, 1, 15, 0, tzinfo=timezone.utc))
+    assert ok is False
+    assert err and "maintenance" in err.lower()
+
+
+def test_restart_maintenance_overnight_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC", "22:00-06:00")
+    from lbg_agents.devops_executor import _restart_maintenance_allows
+
+    assert _restart_maintenance_allows(datetime(2026, 1, 1, 23, 0, tzinfo=timezone.utc))[0] is True
+    assert _restart_maintenance_allows(datetime(2026, 1, 1, 5, 0, tzinfo=timezone.utc))[0] is True
+    assert _restart_maintenance_allows(datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc))[0] is False
+
+
+def test_systemd_restart_quota_blocks_after_max(
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import lbg_agents.devops_executor as de
+
+    de._restart_real_ts.clear()
+    monkeypatch.delenv("LBG_DEVOPS_APPROVAL_TOKEN", raising=False)
+    monkeypatch.delenv("LBG_DEVOPS_DRY_RUN", raising=False)
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_ALLOWLIST", "lbg-backend.service")
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAX_PER_WINDOW", "2")
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_WINDOW_S", "86400")
+
+    def _fake_run(cmd: list[str], **kw: object) -> SimpleNamespace:
+        assert cmd[:4] == ["sudo", "-n", "systemctl", "restart"]
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(de.subprocess, "run", _fake_run)
+
+    for _ in range(2):
+        out = run_devops_action(
+            actor_id="p:1",
+            text="x",
+            action={"kind": "systemd_restart", "unit": "lbg-backend.service"},
+            context={},
+        )
+        assert out.get("result", {}).get("ok") is True
+
+    out3 = run_devops_action(
+        actor_id="p:1",
+        text="x",
+        action={"kind": "systemd_restart", "unit": "lbg-backend.service"},
+        context={},
+    )
+    res = out3.get("result")
+    assert isinstance(res, dict)
+    assert res.get("ok") is False
+    assert "quota" in (res.get("error") or "").lower()
+    audit = _last_audit_line(capsys)
+    assert audit["outcome"] == "denied"
