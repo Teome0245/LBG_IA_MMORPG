@@ -203,6 +203,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 | 2026-04-18 | **Agents multi-sites + chef de projet** : intent **`project_pm`** → **`agent.pm`** (`pm_stub` / HTTP **`LBG_AGENT_PM_URL`**, port **8055**) ; classifieur + **`context.pm_focus`** / **`project_pm`** ; **`lbg-agent-pm.service`** + **`deploy_vm`/`push_secrets`** ; pilot **`/v1/pilot/status`** + proxy **`/v1/pilot/agent-pm/healthz`** ; topologie documentée (**VM / dev**) dans **`agents/README.md`**. |
 | 2026-04-18 | **LAN — selfcheck + PM (post-deploy)** : **`deploy_vm` core** + **`push_secrets`** sur **140** ; **`GET …/v1/pilot/status`** → **`agent_pm: ok`** ; smoke **`bash infra/scripts/smoke_devops_selfcheck_lan.sh`** **vert** (3 étapes, dry-run). |
 | 2026-04-18 | **Boucle doc + garde-fous + pilot + secrets** : ligne **État courant** + **Étape actuelle** rafraîchies ; **`systemd_restart`** — quota fenêtre glissante + **fenêtre UTC** optionnelle (`LBG_DEVOPS_SYSTEMD_RESTART_*`) ; **phase 3** documentée (humain / Cursor exécute les hints) dans **`architecture.md`** ; **`pilot_web/`** — coque multi-vues (hash `#/chat`, `#/ops`, `#/pm`, `#/lyra`) inspirée de la lisibilité **LBG_IA** (orchestrateur Vue) ; page **Lyra (hors MMO)** = cadrage intégration **`context.lyra` / `output.lyra`** sans dépendre du WS **mmmorpg** ; **`push_secrets_vm.sh`** vers **140 + 245 + 110** (env partagé LAN). |
+| 2026-04-18 | **Pilot PM — fin de sprint + pause** : extraction **`result.output.brief`** (jalons/tâches) ; encarts **Étape actuelle** / **File d’attente** ; URLs cliquables + pastilles **`docs/`** / **`infra/`** (copie presse-papiers) ; bouton **Exporter Markdown** ; **`LBG_DEPLOY_ROLE=all deploy_vm`** + **`smoke_lan_quick`** **vert** ; pilot **#/pm** validé en lecture sur le front LAN. **Reprise ultérieure** : voir *Étape actuelle* ci‑dessous. |
 
 ---
 
@@ -225,7 +226,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 - **LAN** : `bash infra/scripts/smoke_ws_move_commit_snapshot_lan.sh` ; ou `LBG_SMOKE_WITH_GAMEPLAY_V2=1 bash infra/scripts/smoke_lan_quick.sh`.
 - **CI** : `pytest mmmorpg_server/tests/test_ws_world_commit.py`.
 
-**Étape actuelle** : **valider en LAN** après cette livrée : `bash infra/scripts/smoke_lan_quick.sh` (ou smokes ciblés) + un passage manuel sur **`/pilot/#/pm`** et **`/pilot/#/lyra`** (core **140**) ; puis noter le résultat (vert / écarts) dans **État courant**.
+**Étape actuelle** : **À la reprise** — engager **une seule** branche et la noter en **État courant** : **(A)** brancher **#/lyra** sur un flux réel (`output.lyra` via `POST /v1/pilot/route`, sans WS **mmmorpg**), puis enrichir l’UI (jauges / historique, inspiration **LBG_IA**) ; **ou (B)** ajouter dans **#/pm** un **historique local** (navigateur) des derniers briefs PM — pas les deux en parallèle.
 
 **File d’attente (intention produit)** : **phase 2** — actions correctives **explicites** derrière approbation renforcée (ex. **`systemd_restart`** liste blanche + quota + fenêtre de maintenance) ; **phase 3** — pont documenté « **humain / Cursor** exécute les hints » (pas d’auto-exécution LLM sur l’infra sans revue) ; analyse de logs ciblée (`read_log_tail` déjà dispo) et garde-fous **DevOps** (voir `agents/README.md`, `docs/architecture.md`).
 
