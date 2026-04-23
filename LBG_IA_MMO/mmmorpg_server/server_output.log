@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/sdesh/projects/LBG_IA_MMORPG/LBG_IA_MMO/mmmorpg_server/src/mmmorpg_server/main.py", line 14, in <module>
+    import httpx
+ModuleNotFoundError: No module named 'httpx'
