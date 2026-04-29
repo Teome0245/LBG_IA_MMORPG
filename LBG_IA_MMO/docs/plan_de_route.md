@@ -47,6 +47,8 @@ La numérotation **0** = toujours actif en parallèle des autres priorités. La 
 4. **Interface utilisateur (pilotage + monitoring)** : application dédiée (web ou autre selon décision d’implémentation) pour :
    - **piloter** : lancer / paramétrer des scénarios ou intentions de test, voir les réponses ;
    - **monitorer** : état des services, métriques ou health checks, journaux agrégés ou liens opérationnels.
+5. **Architecture Événementielle (Cible)** : Transition vers un modèle piloté par événements (EDA) via un bus de messages (RabbitMQ/Kafka) pour découpler l'orchestrateur des agents et gérer les latences LLM via des **Circuit Breakers**.
+6. **État du Monde (In-Memory)** : Utilisation de Redis pour un accès ultra-rapide à l'état transactionnel du multivers.
 
 Référence réseau : environnement **privé** ; toute exposition publique future = autre brique (voir `architecture.md`).
 
@@ -70,11 +72,30 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 **Objectif** : serveur et systèmes de monde (entités, quêtes, factions, IA PNJ, etc.) conformément à la vision long terme (`plan_mmorpg.md`).
 
-**Périmètre** : moteur headless, données, boucles de simulation, protocoles réseau cibles — **après** stabilisation des briques d’orchestration et de Lyra dans la mesure où elles alimentent le monde ou les PNJ.
+**Périmètre** :
+1. **Stratégie Multi-Moteurs** : 
+   - **Sandbox (OTServ/2D)** : Utilisation de serveurs Tibia-like pour les tests de charge IA massive (10k-30k PNJ) et la validation des comportements émergents.
+   - **Cible (Ryzom Core/3D)** : Intégration finale sur moteur 3D pour le multivers complet.
+2. **Pipeline Industriel PNJ** : 
+   - Génération massive (30k+) via IA (Stable Diffusion/SDXL + ComfyUI) et rendu isométrique automatisé (Blender/Mixamo).
+   - Schéma JSON unifié (Traits, Social, Visuel) piloté par l'orchestrateur.
+3. **MJ IA (Game Master)** : IA capable de modifier l'environnement et de proposer des événements en temps réel.
 
 ---
 
-## État courant (à mettre à jour)
+## État courant (2026-04-27) — v1.1.1
+
+| Composant | Statut | Notes |
+|-----------|--------|-------|
+| **Infrastructure Front** | **STABLE** | Unifié sur Port **8080** (VM 110). Lyra @ racine, client MMO servi sous la **route** `/mmo/`. Port 8081 supprimé. |
+| **Explorateur Local** | **STABLE** | Synchronisation auto du build vers `LBG_IA_MMO/pilot_web/mmo/` via `deploy_web_client.sh`. |
+| **Rendu Client** | **STABLE** | Assets en chemins **relatifs** ; robustesse aux sous-dossiers Nginx. |
+| **Urbanisme** | **STABLE** | Échelle **16px/m** ; alignement bâtiments/PNJ corrigé sur `planet_map.png`. |
+| **Physique Village** | **STABLE** | Collisions **SOLIDES** (hollow=False) sur les bâtiments ; marge ajustée (0.5). |
+| **Monde MMO** | **STABLE** | Bouclage à ±51km (World Wrap) ; interpolation fluide client/serveur. |
+| **Documentation** | **OK** | `architecture.md`, `fusion_env_lan.md`, `runbook` et `lexique` synchronisés. |
+
+## Historique
 
 | Date | Changement notoire |
 |------|---------------------|
@@ -97,6 +118,10 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 | 2026-04-10 | Pilot web : affichage lisible (`reply`/`quest`) + bouton “Copier JSON” + auto-history multi-tours par `npc_name`. |
 | 2026-04-10 | Pilot/backend : ajout `trace_id` (propagé via `context._trace_id`) et affiché dans `/pilot/` pour corrélation. |
 | 2026-04-10 | Logs : `trace_id` journalisé côté orchestrator (`event=orchestrator.route`) et dispatch agents (`event=agents.dispatch`) en JSON. |
+| 2026-04-28 | Desktop “hybride” : nouvelle capability **`desktop_control`** → `agent.desktop` + worker HTTP Windows (module `windows_agent/Agent_IA`, `C:\\Agent_IA`, endpoints `/healthz` + `/invoke`) avec allowlists/dry-run/approval/audit ; UI pilot : ajout de la vue **`#/desktop`** (sync texte↔JSON + presets). Doc : `docs/desktop_hybride.md`. |
+| 2026-04-28 | Rangement : le worker Windows **Agent_IA** est traité comme un module du repo (`windows_agent/Agent_IA`) + script WSL de sync vers `C:\\Agent_IA` : `infra/scripts/sync_windows_agent.sh`. |
+| 2026-04-28 | Ajout module Linux `linux_agent/Agent_IA` (worker HTTP, `linux.env` hot-reload, allowlists/dry-run/approval/audit, actions `open_url`/`file_append`/`open_app` + learn) + script de sync VM `infra/scripts/sync_linux_agent_vm.sh` (à pousser plus tard). |
+| 2026-04-28 | Orchestrateur : ajout d’un **Brain (autonomie) v1** (tick **30s**) avec **conscience** (`gauges`) + **motivation** (`intent`, `narrative`) + file `approval_requests[]`. Endpoints `GET /v1/brain/status`, `POST /v1/brain/toggle`, `POST /v1/brain/approve` ; exécute `selfcheck` (safe, dry-run) + pings `healthz` ; `systemd_restart` uniquement en opt-in + jeton (`LBG_BRAIN_DEVOPS_*`) + approval. UI : panneau “Brain” dans `#/ops` via proxy backend. Doc : `docs/architecture.md`. |
 | 2026-04-10 | Routage : `npc_name` force `npc_dialogue` seulement si le texte ne déclenche pas déjà une intention (ex. `quest_request`). Preset `/pilot/` “Quête (PNJ)”. |
 | 2026-04-10 | Quêtes : `agent.quests` enrichi avec `quest_state` (quest_id/status/step) + preset `/pilot/` “Avancement quête” pour simuler un 2ᵉ appel. |
 | 2026-04-10 | Pilot web : persistance client de `quest_state` (par `npc_name`/global) et réinjection automatique dans `context` pour le flux “quête → avancement”. |
@@ -117,7 +142,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 | 2026-04-10 | Lyra : **`lbg_agents.lyra_bridge`** — pas de jauges **`hunger`/`thirst`/`fatigue`** via `lyra_engine.gauges` quand **`mmo_server`** est installé ; preset `/pilot/` **Lyra (test)** aligné sur ce schéma. |
 | 2026-04-10 | Lyra : **`agent.dialogue`** (HTTP) — `step_context_lyra_once` avant `POST /invoke`, **`output.lyra`** renvoyé + contexte mis à jour pour le LLM. |
 | 2026-04-10 | Lyra : **`dialogue_llm.build_system_prompt`** — résumé **`context.lyra.gauges`** (faim/soif/fatigue, etc.) + consigne de ton pour le LLM. |
-| 2026-04-11 | **Persistance `WorldState`** : JSON atomique (`world/persistence.py`), chargement au boot + sauvegarde périodique + à l’arrêt ; verrou **`world_lock`** ; variables **`LBG_MMO_STATE_PATH`**, **`LBG_MMO_SAVE_INTERVAL_S`**, **`LBG_MMO_DISABLE_PERSIST`** ; défaut `mmo_server/data/world_state.json`. |
+| 2026-04-11 | **Persistance `WorldState`** : JSON atomique (`mmo_server/world/persistence.py`), chargement au boot + sauvegarde périodique + à l’arrêt ; verrou **`world_lock`** ; variables **`LBG_MMO_STATE_PATH`**, **`LBG_MMO_SAVE_INTERVAL_S`**, **`LBG_MMO_DISABLE_PERSIST`** ; défaut `mmo_server/data/world_state.json` (fichier **créé au runtime** au premier run). |
 | 2026-04-11 | **Boucle monde → Lyra** : `mmo_server` expose **HTTP** (`http_app`, uvicorn **8050**) avec tick en arrière-plan et **`GET /v1/world/lyra`** ; backend **`merge_mmo_lyra_if_configured`** si **`LBG_MMO_SERVER_URL`** + **`context.world_npc_id`** ; **`lyra_bridge`** ignore le pas moteur si **`meta.source` = `mmo_world`** ; pilot **status** + proxy **`/v1/pilot/mmo-server/healthz`** ; preset **Lyra + monde (MMO)** ; systemd **`lbg-mmo-server`** bascule sur uvicorn. |
 | 2026-04-11 | **Plan de fusion LBG_IA ↔ MMO** : ajout de **`docs/plan_fusion_lbg_ia.md`** (principes, correspondances agents/Lyra/monde, matrice de décision tronc, phases A–E, risques). |
 | 2026-04-11 | **mmmorpg** intégré au plan de fusion : dépôt **`~/projects/mmmorpg`** (WebSocket, `PROTOCOL.md`) distingué de **`mmo_server`** (HTTP Lyra) ; §3.4 et phases A–C du **`plan_fusion_lbg_ia.md`** mises à jour. |
@@ -204,6 +229,20 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 | 2026-04-18 | **LAN — selfcheck + PM (post-deploy)** : **`deploy_vm` core** + **`push_secrets`** sur **140** ; **`GET …/v1/pilot/status`** → **`agent_pm: ok`** ; smoke **`bash infra/scripts/smoke_devops_selfcheck_lan.sh`** **vert** (3 étapes, dry-run). |
 | 2026-04-18 | **Boucle doc + garde-fous + pilot + secrets** : ligne **État courant** + **Étape actuelle** rafraîchies ; **`systemd_restart`** — quota fenêtre glissante + **fenêtre UTC** optionnelle (`LBG_DEVOPS_SYSTEMD_RESTART_*`) ; **phase 3** documentée (humain / Cursor exécute les hints) dans **`architecture.md`** ; **`pilot_web/`** — coque multi-vues (hash `#/chat`, `#/ops`, `#/pm`, `#/lyra`) inspirée de la lisibilité **LBG_IA** (orchestrateur Vue) ; page **Lyra (hors MMO)** = cadrage intégration **`context.lyra` / `output.lyra`** sans dépendre du WS **mmmorpg** ; **`push_secrets_vm.sh`** vers **140 + 245 + 110** (env partagé LAN). |
 | 2026-04-18 | **Pilot PM — fin de sprint + pause** : extraction **`result.output.brief`** (jalons/tâches) ; encarts **Étape actuelle** / **File d’attente** ; URLs cliquables + pastilles **`docs/`** / **`infra/`** (copie presse-papiers) ; bouton **Exporter Markdown** ; **`LBG_DEPLOY_ROLE=all deploy_vm`** + **`smoke_lan_quick`** **vert** ; pilot **#/pm** validé en lecture sur le front LAN. **Reprise ultérieure** : voir *Étape actuelle* ci‑dessous. |
+| 2026-04-24 | **Moteur ISO & IA Ville** : Layout en **losange (Diamond)** 2:1 aligné ; **Collisions bâtiments** (joueurs/PNJ) basées sur surface ; **Verticalité** (rampes/escaliers) + **filtrage caméra par étage** (0m vs 4m) ; **Patrouilles gardes** (9 gardes, rotation portes N/S, trajets croisés via centre-ville, départs différés) ; **Ollama branché** (`gemma4:e2b` sur 110 via LAN) ; **`deploy_vm` / `push_secrets`** (corrections guillemets/typos). |
+| 2026-04-24 | **Optimisation Navigation & Dialogue** : Correction inversion des axes (Z/Q/S/D) ; **Sélection PNJ au clic** sur canevas ; **Assets Tavern/Forge** haute résolution ; Passage sur **Groq (Llama 3.1)** pour l'IA dialogue; retour sur Ollama avec gemma4:e2b; Correction de l'affichage des noms PNJ dans le chat. |
+| 2026-04-25 | **Village Visuel & Zoom** : Intégration de la carte du monde (`planet_map.png`), alignement précis des bâtiments et PNJ sur le décor. Ajout d'un système de zoom/dézoom à la molette. |
+| 2026-04-25 | **Expansion Continentale** : Génération d'une carte 4K stylisée (`planet_map.png`) avec routes, forêts et rivières. Déploiement à l'échelle 102km x 51km. Système de zoom orbitale (0.001) et HUD en mètres. |
+| 2026-04-25 | Basculement sur **Gemma4:e2b** (Ollama VM 110) avec timeout 240s. Correction des **patrouilles des gardes** (WebSocket) : navigation réelle vers les Portes et la Place d'Armes. Peuplement de l'**Auberge de la Pomme Rouge** (Barnabé, Élise, etc.). |
+| 2026-04-26 | **Génération de Zones Locales** : Intégration de `area_gen.py` (villes, villages, zones de ruines, donjons extérieurs) pour le peuplement futur des points d'intérêt sur le continent. |
+| 2026-04-27 | **Urbanisme & Physique v1.1** : Correction de l'échelle du village (16px/m), bouclage du monde (World Wrap à ±51km) et interpolation consciente du bouclage côté client. Stabilisation du mouvement des personnages (bobbing). |
+| 2026-04-27 | **Unification Architecture Front (Port 8080)** : Fusion de Lyra (racine) et du client MMO (servi sous la **route** `/mmo/`) sous Nginx sur la VM 110. Suppression définitive du service 8081. Mise à jour des scripts de déploiement automatique. |
+| 2026-04-27 | **Correctif Chemins Relatifs** : Passage des assets en relatif (`assets/...`) dans `renderer.js` pour garantir le chargement depuis le sous-dossier `/mmo/` sans erreur. (Build déployé dans `pilot_web/mmo/` : les assets réels vivent dans `pilot_web/mmo/assets/`.) |
+| 2026-04-27 | **Sync Explorateur Local** : Mise à jour de `deploy_web_client.sh` pour synchroniser le build MMO vers `LBG_IA_MMO/pilot_web/mmo/` (visibilité locale assurée). |
+| 2026-04-27 | **Collisions Solides v1.2** : Passage des bâtiments en mode `hollow=False` (pleins) sur le serveur pour interdire la traversée des murs. Ajustement de la marge de précision à 0.5. Déploiement VM 245. |
+| 2026-04-27 | **Régénération PNG Village v1.4** : Passage au buffer XXL (7x5) dans `area_gen.py` pour garantir l'absence totale de chevauchements de bâtiments. Arbres repoussés davantage des toits. PNG déployé. |
+| 2026-04-28 | **Alignement Bâtiments v1.5** : Synchronisation des coordonnées (x, z) et dimensions (w, h) des bâtiments dans `world_initial.json` pour correspondre parfaitement aux rectangles rouges générés dans `bourg_palette_map.png`. Correction du décalage d'axes (y/z) et application de tailles variées (ex: Auberge plus grande que la Mairie). |
+| 2026-04-28 | **Pilot web — Lyra (standalone) visuel** : page `#/lyra` branchée sur `POST /v1/pilot/route` (`context.lyra` → `result.output.lyra`) sans dépendre du WS ; affichage **Énergie dérivée** (moyenne faim/soif/fatigue) + **Confiance** canonique (0–100) + **Stress** (vue `100 - confiance`) ; déploiement **front 110** (`deploy_vm.sh` rôle `front`). Doc fusion mise à jour : `fusion_spec_lyra.md` (§6) + `plan_fusion_lbg_ia.md` (§3.2). |
 
 ---
 
@@ -211,24 +250,12 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 **Règle** : une **seule** phrase actionnable à la fois ; quand elle est **faite**, la remplacer par la suivante et, si utile, ajouter une ligne dans **État courant** ci‑dessus.
 
-**Jalon MMO v1 gameplay #1 (référence)** — *livré / cadré le 2026-04-18* :
+- [x] **Jalon #5 : Physique & Collisions (Priorité 3)** : Bloquer les murs du village (`hollow=False`), ajuster les marges et régénérer le PNG sans chevauchements (v1.4).
+- [/] **Jalon #6 : Interactions & Dialogue (Priorité 2/3)** : Intégration des bulles de dialogue riches, gestion des inventaires basiques ou interaction avec des objets (portes, coffres).
 
-- **Boucle minimale** : snapshot Lyra côté monde (`GET …/world-lyra` via pilot) → **action joueur→monde** (`POST /v1/pilot/aid` avec deltas bornés) → **relecture** ; critères mesurables : **baisse** des jauges `hunger` / `thirst` / `fatigue` et **hausse** contrôlée de `lyra.meta.reputation.value` (+5 sur l’échantillon smoke, bornage global inchangé).
-- **Variante intention** : `POST /v1/pilot/route` avec `context.world_action` (`kind: aid`, mêmes deltas) → intent **`world_aid`** → **`commit_result.accepted=true`** (pont jeu / WS inchangé côté périmètre de ce jalon).
-- **LAN** : `bash infra/scripts/smoke_mmo_v1_gameplay_jalon1_lan.sh` depuis `LBG_IA_MMO/` (prérequis : core joignable, token pilot si `LBG_PILOT_INTERNAL_TOKEN` actif — comme `smoke_pilot_aid_lan.sh`) ; ou `LBG_SMOKE_WITH_GAMEPLAY_V1=1 bash infra/scripts/smoke_lan_quick.sh` pour l’enfiler après les smokes de base.
-- **CI / poste sans LAN** : `pytest` sur les fichiers de tests listés dans la ligne **État courant** du **2026-04-18**.
+**Étape actuelle** : Intégration des bulles de dialogue riches sur le client MMO et liaison avec l'orchestrateur.
 
-**Jalon MMO v1 gameplay #2 (référence)** — *livré le 2026-04-18* :
-
-- **Interaction** : message WebSocket **`move`** avec objet optionnel **`world_commit`** (`npc_id`, `trace_id`, `flags` — même liste blanche que le commit HTTP dialogue).
-- **Sans LLM** : aucun appel backend tant que le `move` ne déclenche pas le pont IA (`text` non vide **et** `world_npc_id` non vide) ; combinaison **interdite** avec `world_commit`.
-- **Mesure** : `GET /internal/v1/npc/{npc_id}/lyra-snapshot` (HTTP interne, ex. **8773**) — ex. `lyra.meta.reputation.value` après `reputation_delta` dans `flags`.
-- **LAN** : `bash infra/scripts/smoke_ws_move_commit_snapshot_lan.sh` ; ou `LBG_SMOKE_WITH_GAMEPLAY_V2=1 bash infra/scripts/smoke_lan_quick.sh`.
-- **CI** : `pytest mmmorpg_server/tests/test_ws_world_commit.py`.
-
-**Étape actuelle** : **À la reprise** — engager **une seule** branche et la noter en **État courant** : **(A)** brancher **#/lyra** sur un flux réel (`output.lyra` via `POST /v1/pilot/route`, sans WS **mmmorpg**), puis enrichir l’UI (jauges / historique, inspiration **LBG_IA**) ; **ou (B)** ajouter dans **#/pm** un **historique local** (navigateur) des derniers briefs PM — pas les deux en parallèle.
-
-**File d’attente (intention produit)** : **phase 2** — actions correctives **explicites** derrière approbation renforcée (ex. **`systemd_restart`** liste blanche + quota + fenêtre de maintenance) ; **phase 3** — pont documenté « **humain / Cursor** exécute les hints » (pas d’auto-exécution LLM sur l’infra sans revue) ; analyse de logs ciblée (`read_log_tail` déjà dispo) et garde-fous **DevOps** (voir `agents/README.md`, `docs/architecture.md`).
+**File d’attente (intention produit)** : **Développement de l'univers MMO** — implémentation des niveaux de détails de simulation PNJ (LOD), Ticks sociaux, événements dynamiques (voir `plan_mmorpg.md`).
 
 **Historique** : CI `pytest` fait (entrée 2026-04-17 ci‑dessus).
 
@@ -236,7 +263,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 ### SSH — droits effectifs (poste de dev **et** agent Cursor)
 
-- **Côté VM (inchangé)** : compte **`lbg`** sur les hôtes LAN, clé publique dans `authorized_keys`, **`sudo` NOPASSWD** sur une **liste blanche** d’actions utiles au déploiement — voir `docs/ops_vm_user.md` et `../bootstrap.md`.
+- **Côté VM (inchangé)** : compte **`lbg`** sur les hôtes LAN, clé publique dans `authorized_keys`, **`sudo` NOPASSWD** sur une **liste blanche** d’actions utiles au déploiement — voir `docs/ops_vm_user.md` et `../../bootstrap.md`.
 - **Côté poste de travail (humain ou agent)** : **aucun “nouveau droit SSH” magique** pour l’agent IA — il exécute les mêmes commandes qu’un terminal local, avec les **mêmes prérequis** :
   - **`LBG_SSH_IDENTITY`** : chemin vers la **clé privée** lisible par le process (ex. sous WSL : `"$HOME/.ssh/id_ed25519"` — éviter les chemins Windows `\\wsl.localhost\...` pour la valeur exportée).
   - **`LBG_SSH_KNOWN_HOSTS_FILE`** (optionnel mais recommandé si `~/.ssh` n’est pas écrivable) : fichier `known_hosts` **dédié** ; utilisé par `infra/scripts/smoke_vm_lan.sh` (évite les erreurs “cannot write known_hosts”).
@@ -259,10 +286,10 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 - `fusion_pont_jeu_ia.md` — **pont jeu ↔ IA** (brouillon)
 - `mmmorpg_PROTOCOL.md` — protocole WebSocket (copie portage)
 - `../mmmorpg_server/README.md` — serveur WS porté dans le monorepo
-- `adr/0001-tronc-monorepo.md` — **ADR** : tronc unique monorepo, dépôts sources non modifiés
-- `adr/0002-mmo-autorite-pont.md` — **ADR** : autorité **`mmmorpg`** vs **`mmo_server`**, pont jeu ↔ IA
+- `docs/adr/0001-tronc-monorepo.md` — **ADR** : tronc unique monorepo, dépôts sources non modifiés
+- `docs/adr/0002-mmo-autorite-pont.md` — **ADR** : autorité **`mmmorpg`** vs **`mmo_server`**, pont jeu ↔ IA
 - `fusion_env_lan.md` — **topologie LAN** : IPs **140 / 245 / 110**, table **`LBG_*`**, déploiement, option **frontend sur 110**
 - `vision_projet.md` — vision orchestrateur / agents / MMO
 - `lyra.md` — périmètre Lyra
 - `plan_mmorpg.md` — feuille de route technique MMO
-- `../bootstrap.md` — installation et déploiement
+- `../../bootstrap.md` — installation et déploiement

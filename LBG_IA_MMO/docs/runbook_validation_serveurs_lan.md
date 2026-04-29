@@ -6,7 +6,7 @@ Topologie LAN par défaut :
 
 - **core** : `192.168.0.140` (backend `:8000`, orchestrator `:8010`, agents `:8020/:8030/:8040`)
 - **mmo** : `192.168.0.245` (mmo_server `:8050`, WS `:7733`, HTTP interne WS `:8773`)
-- **front** : `192.168.0.110` (pilot_web statique)
+- **front** : `192.168.0.110` (Interface Unifiée Nginx `:8080`)
 
 ---
 
@@ -125,7 +125,7 @@ Attendu :
 Ouvrir l’UI `pilot_web` (selon ton reverse-proxy / setup) :
 
 - côté backend : `http://192.168.0.140:8000/pilot/`
-- côté front (si servi) : `http://192.168.0.110/...` (selon Nginx)
+- côté front (Interface Unifiée) : `http://192.168.0.110:8080/` (Lyra) ou `http://192.168.0.110:8080/mmo/` (MMO)
 
 Dans **WS (test client minimal)** :
 

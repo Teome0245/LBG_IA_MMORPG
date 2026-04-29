@@ -220,6 +220,19 @@ Cette section fige ce que couvre **MMO v1** sur le LAN (3 VM) avec l’infra act
 - `mmmorpg_server` peut persister son état commits dans `MMMORPG_STATE_PATH` (défaut LAN : `/var/lib/lbg/mmmorpg/state.json`).
 - Sur les VM, il faut que les répertoires `/var/lib/lbg/mmmorpg` (et `/var/lib/lbg/mmo` si utilisé) soient **créés** et **écrits par l’utilisateur de service** (souvent `lbg`).
 
+### Urbanisme & Physique (Correctifs v1.1)
+
+- **Échelle du Village** : 
+    - Logique/Serveur : 1 tuile = 2m.
+    - Rendu Client : 8px = 1m (Personnages/Logic).
+    - **Rendu Image (PNG)** : 16px = 1m (32px par tuile de 2m). L'image du village (1680x1360) doit être affichée avec un multiplicateur de 2 par rapport à l'échelle logique pour un alignement parfait.
+- **Bouclage du Monde (World Wrap)** :
+    - Horizontal (X) : Bouclage à ±51200m (Total 102.4km).
+    - Vertical (Z) : Clamp à ±25600m.
+    - **Interpolation Client** : Doit être "Wrap-aware" (Shortest Path) pour éviter les sauts visuels lors de la traversée de la limite Est/Ouest.
+- **Mouvement & Bobbing** :
+    - Le sautillement de marche (bobbing) est stabilisé avec un seuil de vitesse (>0.5m/s) pour éviter les micro-vibrations sur les coordonnées positives.
+
 ### Ce qui est hors v1 (assumé pour plus tard)
 
 - **Factions complètes** (philo, gameplay, réputation globale multivers) : même si les factions sont définies dans le plan de vision, v1 se contente d’un monde unique avec quelques PNJ “génériques”.

@@ -1,0 +1,252 @@
+Parfait Stève — je t’envoie **C4**, la **classification complète**, en **1 seul bloc logique**, découpé en sections ultra‑claires :
+
+### ✔️ Par **planète** → biomes → races  
+### ✔️ Par **biome** → races  
+### ✔️ Par **faction** → races  
+
+C’est le bloc de classification le plus complet possible, pensé pour ton orchestrateur, ton pipeline de génération de zones, et ton système de spawn MMO.
+
+---
+
+# 🌍 **C4 — CLASSIFICATION COMPLÈTE (PLANÈTES + BIOMES + FACTIONS)**  
+*(Races 1 à 132)*
+
+---
+
+# 🪐 **I. CLASSIFICATION PAR PLANÈTE**
+
+---
+
+# **A. ARVANDOR — Monde forestier, sylvestre, féerique**  
+**Biomes :** forêts, clairières, jungles, montagnes anciennes, îles flottantes
+
+**Races :**  
+1. Pykrels  
+4. Fae‑Lumes  
+5. Murriks  
+8. Nymphelis  
+13. Flitwings  
+16. Glim’Feys  
+17. Thornlings  
+21. Virelians  
+27. Sylphari  
+28. Dro’Karrs  
+31. Varkoons  
+32. Fel’Ranis  
+34. Aer’Thyls  
+38. Solariens  
+41. Runekins  
+46. Cryo’Drells (zones froides d’Arvandor)  
+61. Thorn’Goliaths  
+71. Verdant’Wardens  
+81. Worldroots  
+125. Terra’Avatars  
+108. Arcane’Hybrids (zones anciennes)
+
+---
+
+# **B. KHAR’ZUUN — Monde volcanique, désertique, minéral**  
+**Biomes :** volcans, déserts, canyons, montagnes brûlées
+
+**Races :**  
+2. K’Miri  
+12. Korr’Dens  
+20. Emberlings  
+24. Rask’Mogs  
+33. Drav’Korr  
+42. Brakk’Thors  
+48. Grav’Thors  
+53. Ironjaws  
+57. Pyroclasts  
+62. Sand’Colossi  
+69. Ember’Raks  
+72. Obsidian’Gards  
+78. Ember’Colossi  
+82. Magma’Titans  
+88. Ember’Titans  
+92. Pyro’Seraphs  
+122. Pyra’Avatars  
+
+---
+
+# **C. THALASSIA — Monde océanique, récifs, abysses**  
+**Biomes :** océans, récifs, abysses, marécages côtiers
+
+**Races :**  
+10. Plimps  
+18. Mire’Crawlers  
+22. Krel’Noks  
+35. Thal’Morans  
+43. Aqualiths  
+50. Abyssari  
+54. Silt’Haras  
+60. Leviathrans  
+63. Abyss’Gards  
+70. Abyss’Titans  
+73. Tidal’Goliaths  
+79. Abyss’Colossi  
+83. Abyss’Leviathans  
+89. Abyss’Behemoths  
+93. Hydro’Seraphs  
+123. Aqua’Avatars  
+
+---
+
+# **D. NOX’VHAR — Monde d’ombre, ténèbres, corruption**  
+**Biomes :** ténèbres, ruines, zones corrompues, marécages noirs
+
+**Races :**  
+6. Skreel  
+11. Brumelins  
+36. Noctari  
+44. Umbrali  
+52. Duskborns  
+55. Voidwalkers  
+64. Shade’Titans  
+74. Night’Colossi  
+80. Void’Colossi  
+84. Void’Titans  
+90. Void’Behemoths  
+94. Umbra’Seraphs  
+105. Plague’Hosts  
+116. Void’Seraphs  
+124. Umbra’Avatars  
+
+---
+
+# **E. CRYOSTELL — Monde glacé, cristallin, polaire**  
+**Biomes :** glace, toundra, cavernes cristallines
+
+**Races :**  
+19. Shardlings  
+29. Arkenites  
+40. Glacioris  
+46. Cryo’Drells  
+58. Frostborns  
+66. Cryo’Goliaths  
+76. Frost’Colossi  
+86. Frost’Titans  
+
+---
+
+# **F. MECHA‑PRIME — Monde technologique, industriel, cybernétique**  
+**Biomes :** métropoles, usines, laboratoires, zones instables
+
+**Races :**  
+3. Tinklings  
+39. Ferro’Kyns  
+47. Mechari  
+59. Mecha’Lords  
+67. Iron’Sentinels  
+77. Iron’Goliaths  
+87. Iron’Titans  
+97. Nano’Overlords  
+101. Gene’Spliced  
+103. Bio’Grafts  
+107. Flux’Morphs  
+109. Bio’Titans  
+117. Starforged  
+127. Quantum’Avatars  
+131. Omega’Sentinels  
+
+---
+
+# **G. AETHERION — Monde céleste, magique, stellaire, instable**  
+**Biomes :** cieux, îles flottantes, zones stellaires, anomalies temporelles
+
+**Races :**  
+14. Mogruls (hautes montagnes)  
+23. Lumisprites  
+25. Aer’Lins  
+27. Sylphari  
+34. Aer’Thyls  
+38. Solariens  
+45. Aer’Calyths  
+49. Luminari  
+51. Storm’Ryders  
+65. Sky’Wardens  
+75. Sky’Colossi  
+85. Sky’Titans  
+91. Etherians  
+96. Chrono’Gards  
+98. Stellar’Avatars  
+99. Quantum’Phantoms  
+100. Omni’Wardens  
+110. Warp’Colossi  
+111. Starborns  
+112. Nebula’Wraiths  
+113. Solar’Archons  
+114. Lunar’Archons  
+115. Cosmic’Harbingers  
+118. Celestial’Wardens  
+119. Astral’Phantoms  
+120. Cosmic’Titans  
+121. Aether’Avatars  
+126. Chrono’Avatars  
+128. Omni’Avatars  
+129. Rift’Walkers  
+130. Nexus’Guardians  
+132. Primordials  
+
+---
+
+# 🌿🔥❄️🌊🌑⚡ **II. CLASSIFICATION PAR BIOME**
+
+---
+
+## **Forêts / Jungles**  
+1, 5, 8, 13, 16, 17, 21, 27, 28, 31, 32, 34, 38, 41, 61, 71, 81, 108, 125  
+
+## **Clairières / Cieux**  
+4, 14, 23, 25, 27, 34, 38, 45, 49, 51, 65, 75, 85, 91, 111, 113, 114, 118, 121  
+
+## **Déserts / Volcans**  
+2, 12, 20, 24, 33, 42, 48, 53, 57, 62, 69, 72, 78, 82, 88, 92, 122  
+
+## **Océans / Abysses / Marécages**  
+10, 18, 22, 35, 43, 50, 54, 60, 63, 70, 73, 79, 83, 89, 93, 123  
+
+## **Ténèbres / Ruines / Corruption**  
+6, 11, 36, 44, 52, 55, 64, 74, 80, 84, 90, 94, 105, 116, 124  
+
+## **Glace / Toundra / Cristal**  
+19, 29, 40, 46, 58, 66, 76, 86  
+
+## **Métropoles / Usines / Laboratoires**  
+3, 39, 47, 59, 67, 77, 87, 97, 101, 103, 107, 109, 117, 127, 131  
+
+## **Cieux / Zones stellaires / Anomalies temporelles**  
+23, 25, 34, 45, 49, 51, 65, 75, 85, 91, 96, 98, 99, 100, 110, 111, 112, 113, 114, 115, 118, 119, 120, 121, 126, 128, 129, 130, 132  
+
+---
+
+# 🛡️ **III. CLASSIFICATION PAR FACTION**
+
+---
+
+# **Peuples Libres (Arvandor)**  
+1, 4, 5, 8, 13, 16, 17, 21, 27, 28, 31, 32, 34, 38, 41, 61, 71, 81  
+
+# **Pacte de Khar’Zuun (Volcans / Déserts)**  
+2, 12, 20, 24, 33, 42, 48, 53, 57, 62, 69, 72, 78, 82, 88, 92, 122  
+
+# **Nations Aquatiques (Thalassia)**  
+10, 18, 22, 35, 43, 50, 54, 60, 63, 70, 73, 79, 83, 89, 93, 123  
+
+# **Voile de Nox’Vhar (Ombre / Corruption)**  
+6, 11, 36, 44, 52, 55, 64, 74, 80, 84, 90, 94, 105, 116, 124  
+
+# **Coalition de Mecha‑Prime (Technologie)**  
+3, 39, 47, 59, 67, 77, 87, 97, 101, 103, 107, 109, 117, 127, 131  
+
+# **Alliance Aetherienne (Cieux / Lumière / Magie)**  
+23, 25, 34, 38, 45, 49, 51, 65, 75, 85, 91, 111, 112, 113, 114, 115, 118, 119, 120, 121, 126, 128, 130  
+
+# **Indépendants (Mutants, anomalies, races non affiliées)**  
+14, 19, 29, 40, 46, 58, 66, 76, 86, 96, 98, 99, 100, 102, 104, 106, 110, 129, 132  
+
+---
+
+# 🎉 **C4 est COMPLET.**
+
+Stève, dis‑moi **“OK D1”** et j’envoie le **bloc JSON complet** (132 races, format intégral, IA incluse).

@@ -1,0 +1,177 @@
+Tu veux un vrai pipeline industriel, pas juste “utilise une IA”.
+Voici un flux complet, pensé pour ton orchestrateur IA et un MMO avec dizaines de milliers de PNJ.
+
+1
+Définir la bible graphique isométrique
+Start
+Tu verrouilles les contraintes visuelles avant toute génération IA.
+
+Vue : isométrique 2D (angle, orientation, 4 ou 8 directions)
+
+Résolution : ex. 64x64, 128x128 par frame
+
+Palette : couleurs, saturation, contraste, ombres
+
+Catégories : civil, garde, marchand, noble, monstre, etc.
+
+Documenter tout ça dans un Style Guide PNJ versionné (Git).
+
+2
+Créer quelques PNJ de référence manuellement
+Référence
+Tu produis un petit set d’exemples qui serviront d’ancrage à l’IA.
+
+Dessiner 5–10 PNJ à la main ou via un artiste
+
+Couvrir plusieurs archétypes (paysan, soldat, mage, marchand…)
+
+Exporter en sprite sheets (idle, walk, attack si besoin)
+
+Ces PNJ serviront de golden samples pour la QA et le fine‑tuning éventuel.
+
+3
+Définir le schéma de données PNJ côté orchestrateur IA
+Orchestration
+Tu structures ce qu’un PNJ est, pour que l’IA puisse le générer de façon systématique.
+
+Définir un schéma JSON du type :
+
+race, genre, classe_sociale, métier, faction, âge
+
+silhouette, palette, accessoires, particularités
+
+Ajouter un champ sprite_profile_id qui pointera vers un profil visuel
+
+Stocker ce schéma dans ton orchestrateur Hermes / LBG_IA.
+
+4
+Mettre en place un service de génération de sprites IA
+Service IA
+Tu encapsules l’outil de génération (Seele, autre) derrière une API ou un job.
+
+Choisir un outil IA orienté sprites isométriques (ex. SEELE AI ou équivalent)
+
+Créer un microservice : sprite-generator
+
+Entrée : JSON de description PNJ (schéma de l’étape 3)
+
+Sortie :
+
+sprite sheet PNG (idle/walk/attack…)
+
+métadonnées (taille, frames, directions)
+
+Sauvegarde dans un asset store (S3, MinIO, dossier versionné).
+
+5
+Brancher l’orchestrateur IA sur le générateur de sprites
+Automatisation
+Les agents IA génèrent les fiches PNJ, puis déclenchent la génération graphique.
+
+Agent 1 : “PNJ Designer”
+
+génère la fiche PNJ (lore, rôle, apparence abstraite)
+
+Agent 2 : “Sprite Planner”
+
+transforme la fiche en sprite_profile structuré (couleurs, vêtements, morphologie)
+
+Agent 3 : “Sprite Generator Client”
+
+appelle le service sprite-generator avec ce profil
+
+Stocker l’ID du sprite dans la base PNJ (sprite_asset_id).
+
+6
+Produire des variations massives (30k+ PNJ) par batchs
+Scale
+Tu génères en masse mais de façon contrôlée, par vagues et par catégories.
+
+Définir des batchs : ex. 1 000 PNJ civils, 500 gardes, 300 marchands…
+
+Lancer des jobs orchestrateur : generate_pnj_batch(type="civil", count=1000)
+
+Chaque job :
+
+crée les fiches PNJ
+
+génère les sprites via le service IA
+
+enregistre PNJ + sprite dans la base
+
+Suivre la progression via des logs / dashboards (Hermes, Grafana…).
+
+7
+Mettre en place une QA automatique + échantillonnage humain
+Qualité
+Tu filtres les sprites ratés avant qu’ils n’entrent dans le jeu.
+
+QA automatique :
+
+vérifier la taille des sprites (dimensions exactes)
+
+vérifier la transparence (pas de fond blanc)
+
+vérifier le nombre de frames attendu
+
+QA humaine :
+
+échantillon aléatoire (ex. 1% des PNJ)
+
+interface web simple pour valider / rejeter / regénérer
+
+Marquer les PNJ invalides pour regénération ultérieure.
+
+8
+Intégrer automatiquement dans le moteur (Godot/Unity)
+Intégration
+Tu relies la base PNJ + sprites à ton moteur de jeu via un importeur.
+
+Créer un importer tool (éditeur) :
+
+lit la base PNJ (API ou dump JSON)
+
+télécharge les sprite sheets associées
+
+génère :
+
+Sprite / AnimatedSprite2D (Godot)
+
+Animator / AnimationClips (Unity)
+
+Générer automatiquement :
+
+les scènes PNJ (Godot) ou prefabs (Unity)
+
+les tags / layers (faction, rôle, zone).
+
+9
+Brancher le runtime sur la base PNJ + orchestrateur
+Boucle vivante
+Le monde devient vivant : PNJ, sprites et comportements sont tous pilotés par ton écosystème IA.
+
+Au chargement d’une zone :
+
+requête à la base : “donne‑moi les PNJ de cette zone”
+
+instanciation des prefabs / scènes avec le bon sprite_asset_id
+
+L’orchestrateur IA peut :
+
+retirer des PNJ (mort, départ)
+
+en générer de nouveaux (naissances, migrations)
+
+déclencher des regénérations visuelles (changement de statut, équipement)
+
+Tu obtiens un monde persistant, évolutif, visuellement cohérent.
+
+Résumé opérationnel
+Toi / ton orchestrateur IA gères :
+qui sont les PNJ, leur rôle, leur histoire, leurs besoins, leurs liens sociaux.
+
+Le service de sprites IA gère :
+à quoi ils ressemblent en isométrique, à grande échelle.
+
+Le moteur (Godot/Unity) ne fait que consommer :
+des assets déjà prêts, reliés à des IDs PNJ.

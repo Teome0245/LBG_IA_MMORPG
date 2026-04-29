@@ -81,6 +81,11 @@
     .pilot-home-card:hover { border-color: #69c; box-shadow: 0 1px 6px rgba(0,0,0,0.06); }
     .pilot-home-card h3 { margin: 0 0 0.35rem 0; font-size: 1rem; }
     .pilot-home-card p { margin: 0; font-size: 0.88rem; color: #555; }
+    .pilot-home-grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 1rem; align-items: start; margin-top: 1rem; }
+    @media (max-width: 980px) { .pilot-home-grid { grid-template-columns: 1fr; } }
+    .pilot-home-chat { padding: 1rem; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
+    .pilot-home-chat h2 { margin: 0 0 0.5rem 0; font-size: 1.05rem; }
+    .pilot-home-chat textarea { min-height: 6rem; font-family: inherit; }
     .pilot-pm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: start; }
     @media (max-width: 900px) { .pilot-pm-grid { grid-template-columns: 1fr; } }
     .pilot-milestone-list, .pilot-task-list { list-style: none; padding: 0; margin: 0.35rem 0 0 0; }
@@ -122,6 +127,19 @@
       color: #135;
     }
     button.pm-path-chip:hover { background: #e8f2ff; border-style: solid; }
+
+    /* Lyra page */
+    .lyra-grid { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(18rem, 1fr); gap: 1rem; align-items: start; }
+    @media (max-width: 900px) { .lyra-grid { grid-template-columns: 1fr; } }
+    .lyra-card { padding: 1rem; border: 1px solid #ddd; border-radius: 8px; background: #fff; }
+    .lyra-gauge { margin: 0.65rem 0; }
+    .lyra-gauge-head { display:flex; justify-content:space-between; gap: 0.75rem; align-items: baseline; }
+    .lyra-gauge-head strong { font-size: 0.92rem; }
+    .lyra-bar { height: 10px; background: #eee; border-radius: 999px; overflow: hidden; border: 1px solid #e0e0e0; }
+    .lyra-bar > div { height: 100%; width: 0%; background: #4a90e2; transition: width 200ms ease; }
+    .lyra-controls { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-top:0.65rem; }
+    .lyra-controls input[type="text"] { width: 7rem; }
+    .lyra-small { font-size: 0.88rem; color: #555; }
   </style>
 </head>
 <body>
@@ -133,6 +151,7 @@
       <a href="#/ops">Ops & santé</a>
       <a href="#/pm">Chef de projet</a>
       <a href="#/lyra">Lyra (hors MMO)</a>
+      <a href="#/desktop">Desktop (hybride)</a>
     </nav>
     <div class="pilot-shell-tools">
       <label>Backend <input type="text" id="api-base" placeholder="http://127.0.0.1:8000" /></label>
@@ -149,11 +168,45 @@
         Peut être servi depuis le backend (<code>/pilot/</code>) ou en statique (Nginx sur la VM front).
       </p>
     </header>
-    <div class="pilot-home-cards">
-      <a class="pilot-home-card" href="#/chat"><h3>Chat & presets</h3><p>Intentions, PNJ, quêtes, combat, DevOps, Lyra via le monde MMO.</p></a>
-      <a class="pilot-home-card" href="#/ops"><h3>Ops & santé</h3><p>Statut agrégé, capabilities, benchmark, cache, métriques.</p></a>
-      <a class="pilot-home-card" href="#/pm"><h3>Chef de projet</h3><p>Jalons, tâches, étape actuelle, file d’attente ; chemins <code>docs/</code> copiables ; export Markdown.</p></a>
-      <a class="pilot-home-card" href="#/lyra"><h3>Lyra (hors MMO)</h3><p>Cadrage UI : état Lyra via pilot sans dépendre du WebSocket <code>mmmorpg</code>.</p></a>
+    <div class="pilot-home-grid">
+      <div>
+        <div class="pilot-home-cards">
+          <a class="pilot-home-card" href="#/chat"><h3>Chat & presets</h3><p>Intentions, PNJ, quêtes, combat, DevOps, Lyra via le monde MMO.</p></a>
+          <a class="pilot-home-card" href="#/ops"><h3>Ops & santé</h3><p>Statut agrégé, capabilities, benchmark, cache, métriques.</p></a>
+          <a class="pilot-home-card" href="#/pm"><h3>Chef de projet</h3><p>Jalons, tâches, étape actuelle, file d’attente ; chemins <code>docs/</code> copiables ; export Markdown.</p></a>
+          <a class="pilot-home-card" href="#/lyra"><h3>Lyra (hors MMO)</h3><p>Lyra via <code>/v1/pilot/route</code> (modes PNJ monde / assistant), échelles alignées en UI.</p></a>
+          <a class="pilot-home-card" href="#/desktop"><h3>Desktop (hybride)</h3><p>Actions PC via <code>desktop_control</code> → worker Windows (allowlist + dry-run + approval + audit).</p></a>
+          <a class="pilot-home-card" href="/mmo/" target="_blank" rel="noopener noreferrer"><h3>MMO</h3><p>Ouvre le client MMO dans un nouvel onglet (<code>/mmo/</code>).</p></a>
+        </div>
+      </div>
+      <div class="pilot-home-chat">
+        <h2>Chat (orchestrateur)</h2>
+        <p class="muted" style="margin:0 0 0.5rem 0">
+          Pour converser avec l’orchestrateur et lui demander d’activer des contrôles, lancer des checks, ou guider un diagnostic.
+          (Utilise <code>POST /v1/pilot/route</code> ; URL backend/token dans la barre du haut.)
+        </p>
+        <label for="home-orch-text">Message</label>
+        <textarea id="home-orch-text">Fais un diagnostic rapide des services et propose la prochaine action concrète.</textarea>
+        <label for="home-orch-context">context (JSON) — optionnel</label>
+        <textarea id="home-orch-context" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
+  "history": []
+}</textarea>
+        <p class="muted" style="margin:0.5rem 0 0 0">Raccourcis :</p>
+        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" id="btn-home-quick-status">Status</button>
+          <button type="button" id="btn-home-quick-caps">Capabilities</button>
+          <button type="button" id="btn-home-quick-selfcheck">DevOps selfcheck (dry-run)</button>
+          <button type="button" id="btn-home-quick-pm">PM (jalons+tâches)</button>
+          <button type="button" id="btn-home-quick-desktop">Desktop (dry-run)</button>
+        </p>
+        <p style="margin:0.6rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" id="btn-home-orch-send">Envoyer</button>
+          <button type="button" id="btn-home-orch-clear">Reset</button>
+          <span class="muted" id="home-orch-hint">—</span>
+        </p>
+        <div id="home-orch-pretty" style="margin-top:0.75rem"></div>
+        <pre id="home-orch-out" class="muted" style="max-height:16rem;">—</pre>
+      </div>
     </div>
   </div>
 
@@ -208,19 +261,105 @@
     <header>
       <h1>Lyra (hors mmmorpg)</h1>
       <p class="muted">
-        Préparation d’une intégration <strong>pilot → Lyra</strong> sans passer par le WebSocket jeu : le contrat
-        <code>context.lyra</code> / <code>output.lyra</code> reste celui de <code>docs/lyra.md</code>.
-        Aujourd’hui : utilise l’onglet <a href="#/chat">Chat</a> avec le preset <strong>Lyra (test)</strong> (echo / fallback) ou
-        <strong>Lyra + monde (MMO)</strong> lorsque le backend peut joindre <code>LBG_MMO_SERVER_URL</code>.
+        Source Lyra « standalone » via <code>POST /v1/pilot/route</code> : on envoie <code>context.lyra</code> et on lit
+        <code>result.output.lyra</code> (echo, ou pas de jauges si <code>lyra_engine</code> est dispo).
+        Objectif : préparer l’intégration hors WS jeu (pas besoin de <code>world_npc_id</code>).
       </p>
     </header>
     <section>
-      <h2 style="margin:0 0 0.5rem 0;font-size:1.05rem">Feuille de route UI (prochaine itération)</h2>
-      <ul class="muted" style="margin:0;padding-left:1.2rem;line-height:1.6;">
-        <li>Reprendre les patterns visuels LBG_IA (<code>LyraPanel.vue</code>, jauges, historique) en version statique ou petite SPA.</li>
-        <li>Brancher une source Lyra « standalone » (orchestrateur / backend) sans exiger <code>world_npc_id</code> ni <code>mmmorpg</code> WS.</li>
-        <li>Conserver le pilot Chat pour les flux déjà câblés (dialogue, MMO, réputation).</li>
-      </ul>
+      <div class="lyra-grid">
+        <div class="lyra-card">
+          <h2 style="margin:0 0 0.5rem 0;font-size:1.05rem">Entrée (context.lyra)</h2>
+          <p class="lyra-small">
+            Deux modes (séparés pour éviter de mélanger 0–1 et 0–100 dans le même objet) :
+            <strong>PNJ monde</strong> (besoins 0–1) et <strong>Assistant</strong> (ton 0–100).
+          </p>
+          <p class="lyra-controls" style="margin-top:0.25rem">
+            <label class="lyra-small"><input type="radio" name="lyra-mode" id="lyra-mode-world" value="world" checked> PNJ monde (0–1)</label>
+            <label class="lyra-small"><input type="radio" name="lyra-mode" id="lyra-mode-assistant" value="assistant"> Assistant (0–100)</label>
+          </p>
+          <label for="lyra-dt">dt_s (secondes simulées)</label>
+          <input type="text" id="lyra-dt" value="60" />
+          <div class="lyra-controls">
+            <button type="button" id="btn-lyra-step">Step (POST /v1/pilot/route)</button>
+            <button type="button" id="btn-lyra-reset">Reset (0)</button>
+            <label class="lyra-small"><input type="checkbox" id="lyra-auto" /> auto (5s)</label>
+          </div>
+          <div class="lyra-card" style="margin-top:0.85rem;background:#fafcff;border-color:#d8e6f6;">
+            <h3 style="margin:0 0 0.35rem 0;font-size:1rem">Dérivées / alias (visuel)</h3>
+            <p class="lyra-small" style="margin:0 0 0.35rem 0">
+              <strong>Énergie</strong> = \(100 × (1 - mean(hunger, thirst, fatigue))\).<br>
+              <strong>Stress</strong> = \(100 - confiance\) (vue).
+            </p>
+            <div class="lyra-controls" style="margin-top:0.35rem">
+              <span class="muted"><strong>Énergie</strong> <span id="lyra-in-energy">—</span></span>
+              <span class="muted"><strong>Confiance</strong> <span id="lyra-in-confiance">—</span></span>
+              <span class="muted"><strong>Stress</strong> <span id="lyra-in-stress">—</span></span>
+            </div>
+            <label for="lyra-confiance" style="margin-top:0.5rem">Confiance (0–100)</label>
+            <input type="text" id="lyra-confiance" value="70" />
+            <p class="lyra-small" style="margin:0.35rem 0 0 0">Note : `confiance` n’est pas envoyée dans <code>context.lyra</code> ici (évite de mélanger 0–1 et 0–100).</p>
+          </div>
+          <div id="lyra-in-gauges" style="margin-top:0.75rem"></div>
+          <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Contexte JSON (debug)</h3>
+          <pre id="lyra-in-raw" class="muted" style="font-size:0.82rem;max-height:14rem;">—</pre>
+        </div>
+
+        <div class="lyra-card">
+          <h2 style="margin:0 0 0.5rem 0;font-size:1.05rem">Sortie (result.output.lyra)</h2>
+          <p class="lyra-small">Affiche <code>gauges</code> + <code>meta</code> si présents (source, dt, etc.).</p>
+          <p class="lyra-small" style="margin:0.35rem 0 0.75rem 0"><strong>Énergie (dérivée)</strong> : <span id="lyra-out-energy">—</span></p>
+          <div id="lyra-out-gauges"></div>
+          <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Meta</h3>
+          <pre id="lyra-out-meta" class="muted" style="font-size:0.82rem;max-height:10rem;">—</pre>
+          <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Brut (JSON)</h3>
+          <pre id="lyra-out-raw" class="muted" style="font-size:0.82rem;max-height:14rem;">—</pre>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="pilot-page-desktop" class="pilot-page" hidden>
+    <header>
+      <h1>Desktop (hybride)</h1>
+      <p class="muted">
+        Exécution PC via <strong>worker Windows</strong> (HTTP) derrière allowlists + dry-run + approval + audit.
+        Le routage est forcé quand <code>context.desktop_action</code> est présent.
+      </p>
+    </header>
+    <section>
+      <label for="desktop-text">Texte (trace / intention)</label>
+      <textarea id="desktop-text" rows="2" style="font-family: inherit;">ouvre https://example.org dans le navigateur</textarea>
+
+      <label for="desktop-action" style="margin-top:0.75rem">desktop_action (JSON)</label>
+      <textarea id="desktop-action" rows="6" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
+  "kind": "open_url",
+  "url": "https://example.org"
+}</textarea>
+
+      <label for="desktop-context" style="margin-top:0.75rem">context (JSON) — optionnel</label>
+      <textarea id="desktop-context" rows="7" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
+  "desktop_dry_run": true,
+  "history": []
+}</textarea>
+      <label for="desktop-approval" style="margin-top:0.75rem">Approval token (optionnel)</label>
+      <input type="password" id="desktop-approval" placeholder="desktop_approval (stocké localement)" autocomplete="off" />
+
+      <p class="muted" style="margin:0.6rem 0 0 0">Presets :</p>
+      <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+        <button type="button" id="btn-desktop-preset-open-url">open_url</button>
+        <button type="button" id="btn-desktop-preset-notepad">notepad_append</button>
+        <button type="button" id="btn-desktop-preset-open-app-learn">open_app (learn)</button>
+      </p>
+
+      <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-desktop-send">Envoyer (POST /v1/pilot/route)</button>
+        <button type="button" id="btn-desktop-health">GET agent-desktop /healthz</button>
+        <span class="muted" id="desktop-hint">—</span>
+      </p>
+
+      <div id="desktop-pretty" style="margin-top:0.75rem"></div>
+      <pre id="desktop-raw" class="muted" style="font-size:0.82rem;max-height:18rem;">—</pre>
     </section>
   </div>
 
@@ -435,6 +574,25 @@
       </div>
 
       <div data-pilot-screen="ops">
+      <section>
+        <div class="panel-title">
+          <h2>Brain (autonomie)</h2>
+          <p class="muted">orchestrator tick 30s</p>
+        </div>
+        <p class="muted" style="margin:0 0 0.5rem 0">
+          Contrôle du scheduler autonomie v0 : <code>selfcheck</code> + pings <code>/healthz</code> (safe).
+          <code>systemd_restart</code> ne peut être tenté qu’en opt-in + jeton côté orchestrator.
+        </p>
+        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" id="btn-brain-refresh">Status</button>
+          <button type="button" id="btn-brain-enable">Activer</button>
+          <button type="button" id="btn-brain-disable">Désactiver</button>
+          <span class="muted" id="brain-hint">—</span>
+        </p>
+        <div id="brain-approvals" class="muted" style="margin-top:0.5rem">—</div>
+        <pre id="brain-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:16rem;">—</pre>
+      </section>
+
       <section>
         <div class="panel-title">
           <h2>Monitoring</h2>
@@ -794,6 +952,111 @@
       const d = document.createElement("div");
       d.textContent = s;
       return d.innerHTML;
+    }
+
+    async function refreshBrain() {
+      const out = document.getElementById("brain-out");
+      const hint = document.getElementById("brain-hint");
+      const approvals = document.getElementById("brain-approvals");
+      if (!out || !hint) return;
+      out.textContent = "…";
+      hint.textContent = "…";
+      if (approvals) approvals.textContent = "…";
+      try {
+        const base = getBase();
+        const r = await fetch(base + "/v1/pilot/orchestrator/brain/status");
+        const j = await r.json();
+        out.textContent = JSON.stringify(j, null, 2);
+        if (j && j.ok === true) {
+          const on = j.enabled === true;
+          const last = j.last_tick_ts ? ("dernier tick: " + new Date(j.last_tick_ts * 1000).toLocaleString()) : "jamais tické";
+          const g = (j.gauges && typeof j.gauges === "object") ? j.gauges : {};
+          const conf = (g.confidence != null) ? Math.round(Number(g.confidence)) : null;
+          const stress = (g.stress != null) ? Math.round(Number(g.stress)) : null;
+          const fatigue = (g.fatigue != null) ? Math.round(Number(g.fatigue)) : null;
+          const curiosity = (g.curiosity != null) ? Math.round(Number(g.curiosity)) : null;
+          const gaugesTxt = [conf != null ? ("conf " + conf) : "", stress != null ? ("stress " + stress) : "", fatigue != null ? ("fatigue " + fatigue) : "", curiosity != null ? ("curiosité " + curiosity) : ""].filter(Boolean).join(" · ");
+          const intent = j.intent ? (" · intent: <code>" + escapeHtml(String(j.intent)) + "</code>") : "";
+          const nar = j.narrative ? ("<br><span class=\"muted\" style=\"font-size:0.85rem\">" + escapeHtml(String(j.narrative)) + "</span>") : "";
+          hint.innerHTML =
+            "État: <strong class=\"" + (on ? "ok" : "muted") + "\">" + (on ? "actif" : "inactif") + "</strong>" +
+            " · " + escapeHtml(last) +
+            (gaugesTxt ? ("<br>Jauges: <span class=\"muted\">" + escapeHtml(gaugesTxt) + "</span>") : "") +
+            intent +
+            (j.last_tick_ok === false ? " · <span class=\"err\">last_tick_ok=false</span>" : "") +
+            nar;
+
+          try {
+            const reqs = Array.isArray(j.approval_requests) ? j.approval_requests : [];
+            const pending = reqs.filter((x) => x && typeof x === "object" && x.done !== true);
+            if (approvals) {
+              if (!pending.length) {
+                approvals.innerHTML = "<strong>Approvals</strong> : —";
+              } else {
+                let html = "<strong>Approvals</strong> :<br>";
+                for (const pr of pending.slice(0, 5)) {
+                  const rid = pr.id ? String(pr.id) : "";
+                  const unit = pr.unit ? String(pr.unit) : "";
+                  const approved = pr.approved === true;
+                  html +=
+                    "<div style=\"margin-top:0.25rem;padding:0.4rem 0.5rem;border:1px solid #e4e4e4;border-radius:6px;background:#fff\">" +
+                    "<code>" + escapeHtml(unit || "—") + "</code>" +
+                    " <span class=\"muted\">(" + escapeHtml(pr.reason || "restart demandé") + ")</span>" +
+                    "<br>" +
+                    (approved
+                      ? "<span class=\"ok\">approuvé</span>"
+                      : "<button type=\"button\" class=\"btn-brain-approve\" data-request-id=\"" + escapeHtml(rid) + "\">Approuver</button>") +
+                    "</div>";
+                }
+                approvals.innerHTML = html;
+                approvals.querySelectorAll("button.btn-brain-approve").forEach((btn) => {
+                  btn.addEventListener("click", async () => {
+                    const rid = btn.getAttribute("data-request-id") || "";
+                    await approveBrain(rid);
+                  });
+                });
+              }
+            }
+          } catch (_) {}
+        } else {
+          hint.textContent = "Erreur proxy (voir JSON).";
+          if (approvals) approvals.textContent = "—";
+        }
+      } catch (e) {
+        out.textContent = "Erreur: " + e;
+        hint.textContent = "Erreur: " + e;
+        if (approvals) approvals.textContent = "Erreur: " + e;
+      }
+    }
+
+    async function approveBrain(requestId) {
+      const out = document.getElementById("brain-out");
+      const hint = document.getElementById("brain-hint");
+      if (!requestId) return;
+      if (hint) hint.textContent = "…";
+      try {
+        const base = getBase();
+        const res = await postJson(base + "/v1/pilot/orchestrator/brain/approve", { request_id: String(requestId) });
+        if (out) out.textContent = JSON.stringify(res.json || { status: res.status, text: res.text }, null, 2);
+        try { await refreshBrain(); } catch (_) {}
+      } catch (e) {
+        if (hint) hint.textContent = "Erreur: " + e;
+      }
+    }
+
+    async function toggleBrain(enabled) {
+      const out = document.getElementById("brain-out");
+      const hint = document.getElementById("brain-hint");
+      if (!out || !hint) return;
+      hint.textContent = "…";
+      try {
+        const base = getBase();
+        const res = await postJson(base + "/v1/pilot/orchestrator/brain/toggle", { enabled: !!enabled });
+        out.textContent = JSON.stringify(res.json || { status: res.status, text: res.text }, null, 2);
+        try { await refreshBrain(); } catch (_) {}
+      } catch (e) {
+        hint.textContent = "Erreur: " + e;
+      }
     }
 
     function refreshLyraContextPreview() {
@@ -1472,6 +1735,9 @@
     }
 
     document.getElementById("btn-refresh").addEventListener("click", refreshHealth);
+    try { document.getElementById("btn-brain-refresh").addEventListener("click", refreshBrain); } catch (_) {}
+    try { document.getElementById("btn-brain-enable").addEventListener("click", () => toggleBrain(true)); } catch (_) {}
+    try { document.getElementById("btn-brain-disable").addEventListener("click", () => toggleBrain(false)); } catch (_) {}
     try { document.getElementById("btn-metrics-probe-backend").addEventListener("click", probeBackendMetrics); } catch (_) {}
     try { document.getElementById("btn-metrics-open-orch").addEventListener("click", openOrchestratorMetrics); } catch (_) {}
     try { document.getElementById("btn-metrics-open-internal").addEventListener("click", openInternalHttpMetrics); } catch (_) {}
@@ -1734,6 +2000,7 @@
       if (seg === "ops") return "ops";
       if (seg === "pm") return "pm";
       if (seg === "lyra") return "lyra";
+      if (seg === "desktop") return "desktop";
       if (seg === "home") return "home";
       return "home";
     }
@@ -1745,10 +2012,12 @@
       const work = document.getElementById("pilot-page-work");
       const pm = document.getElementById("pilot-page-pm");
       const ly = document.getElementById("pilot-page-lyra");
+      const de = document.getElementById("pilot-page-desktop");
       if (home) home.hidden = r !== "home";
       if (work) work.hidden = r !== "chat" && r !== "ops";
       if (pm) pm.hidden = r !== "pm";
       if (ly) ly.hidden = r !== "lyra";
+      if (de) de.hidden = r !== "desktop";
       const title = document.getElementById("pilot-work-title");
       const sub = document.getElementById("pilot-work-sub");
       if (title && sub && (r === "chat" || r === "ops")) {
@@ -1898,6 +2167,342 @@
       return null;
     }
 
+    // --------------------------
+    // Lyra (standalone) page
+    // --------------------------
+    const STORAGE_LYRA_KEY = "lbg_pilot_lyra_state_v1";
+    const STORAGE_LYRA_MODE_KEY = "lbg_pilot_lyra_mode_v1";
+    let __lyraAutoTimer = null;
+
+    function clamp01(n) {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return 0;
+      if (x < 0) return 0;
+      if (x > 1) return 1;
+      return x;
+    }
+
+    function clamp0100(n, fallback) {
+      const x = Number(n);
+      if (!Number.isFinite(x)) return (fallback != null ? fallback : 0);
+      if (x < 0) return 0;
+      if (x > 100) return 100;
+      return x;
+    }
+
+    function lyraDefaultState() {
+      return {
+        dt_s: 60,
+        // jauges "besoins" (monde) — UI alignée 0–100 (conversion 0–1 au bord)
+        gauges: { hunger: 25, thirst: 25, fatigue: 25 },
+        // jauges "ton" 0–100 (assistant) — affichées ici, mais non envoyées dans context.lyra (évite mélange d’échelles)
+        confiance_100: 70,
+        assistant_gauges_100: { chaleur: 70, energie: 60, patience: 70, confiance: 70 },
+        version: "Lyra 2.0",
+      };
+    }
+
+    function lyraLoadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_LYRA_KEY);
+        if (!raw) return lyraDefaultState();
+        const j = JSON.parse(raw);
+        const d = lyraDefaultState();
+        if (j && typeof j === "object") {
+          if (j.dt_s != null) d.dt_s = Number(j.dt_s) || d.dt_s;
+          if (j.version) d.version = String(j.version);
+          if (j.gauges && typeof j.gauges === "object") d.gauges = { ...d.gauges, ...j.gauges };
+          if (j.confiance_100 != null) d.confiance_100 = clamp0100(j.confiance_100, d.confiance_100);
+          if (j.assistant_gauges_100 && typeof j.assistant_gauges_100 === "object")
+            d.assistant_gauges_100 = { ...d.assistant_gauges_100, ...j.assistant_gauges_100 };
+        }
+        return d;
+      } catch (_) {
+        return lyraDefaultState();
+      }
+    }
+
+    function lyraGetMode() {
+      const world = document.getElementById("lyra-mode-world");
+      const asst = document.getElementById("lyra-mode-assistant");
+      if (asst && asst.checked) return "assistant";
+      if (world && world.checked) return "world";
+      try {
+        const m = localStorage.getItem(STORAGE_LYRA_MODE_KEY);
+        if (m === "assistant" || m === "world") return m;
+      } catch (_) {}
+      return "world";
+    }
+
+    function lyraSetMode(mode) {
+      try { localStorage.setItem(STORAGE_LYRA_MODE_KEY, mode); } catch (_) {}
+      const world = document.getElementById("lyra-mode-world");
+      const asst = document.getElementById("lyra-mode-assistant");
+      if (world) world.checked = mode === "world";
+      if (asst) asst.checked = mode === "assistant";
+    }
+
+    function lyraSaveState(st) {
+      try {
+        localStorage.setItem(STORAGE_LYRA_KEY, JSON.stringify(st));
+      } catch (_) {}
+    }
+
+    function lyraGaugeColor(v01) {
+      const v = clamp01(v01);
+      if (v >= 0.75) return "#f87171"; // high = red (stress/fatigue/hunger)
+      if (v >= 0.45) return "#facc15"; // yellow
+      return "#4ade80"; // green
+    }
+
+    function lyraNeedsTo01(needs100) {
+      const g = needs100 && typeof needs100 === "object" ? needs100 : {};
+      return {
+        hunger: clamp0100(g.hunger != null ? g.hunger : 0, 0) / 100.0,
+        thirst: clamp0100(g.thirst != null ? g.thirst : 0, 0) / 100.0,
+        fatigue: clamp0100(g.fatigue != null ? g.fatigue : 0, 0) / 100.0,
+      };
+    }
+
+    function lyraNeedsFrom01(needs01) {
+      const g = needs01 && typeof needs01 === "object" ? needs01 : {};
+      return {
+        hunger: Math.round(clamp01(g.hunger != null ? g.hunger : 0) * 100),
+        thirst: Math.round(clamp01(g.thirst != null ? g.thirst : 0) * 100),
+        fatigue: Math.round(clamp01(g.fatigue != null ? g.fatigue : 0) * 100),
+      };
+    }
+
+    function lyraComputeEnergy100(needs01) {
+      const g = needs01 && typeof needs01 === "object" ? needs01 : {};
+      const h = clamp01(g.hunger != null ? g.hunger : 0);
+      const t = clamp01(g.thirst != null ? g.thirst : 0);
+      const f = clamp01(g.fatigue != null ? g.fatigue : 0);
+      const mean = (h + t + f) / 3.0;
+      return Math.round(100 * (1.0 - mean));
+    }
+
+    function lyraRenderGaugeBlock(containerId, gauges, opts) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      const interactive = !!(opts && opts.interactive);
+      const mode = (opts && opts.mode) || "world";
+      const g = gauges && typeof gauges === "object" ? gauges : {};
+      const items =
+        mode === "assistant"
+          ? [
+              ["chaleur", "Chaleur"],
+              ["energie", "Énergie"],
+              ["patience", "Patience"],
+              ["confiance", "Confiance"],
+            ]
+          : [
+              ["hunger", "Faim"],
+              ["thirst", "Soif"],
+              ["fatigue", "Fatigue"],
+            ];
+      el.innerHTML = items
+        .map(function (it) {
+          const k = it[0];
+          const label = it[1];
+          const v01 =
+            mode === "assistant"
+              ? clamp0100(g[k] != null ? g[k] : 0, 0) / 100.0
+              : clamp0100(g[k] != null ? g[k] : 0, 0) / 100.0;
+          const pct = Math.round(v01 * 100);
+          const bar = "<div class=\"lyra-bar\"><div style=\"width:" + pct + "%;background:" + lyraGaugeColor(v01) + "\"></div></div>";
+          const controls = interactive
+            ? "<div class=\"lyra-controls\">" +
+              (mode === "assistant"
+                ? "<button type=\"button\" data-lyra-inc=\"" + k + "\">+5</button>" +
+                  "<button type=\"button\" data-lyra-dec=\"" + k + "\">-5</button>"
+                : "<button type=\"button\" data-lyra-inc=\"" + k + "\">+0.05</button>" +
+                  "<button type=\"button\" data-lyra-dec=\"" + k + "\">-0.05</button>") +
+              "<span class=\"muted\">" + pct + "%</span>" +
+              "</div>"
+            : "<div class=\"lyra-controls\"><span class=\"muted\">" + pct + "%</span></div>";
+          return (
+            "<div class=\"lyra-gauge\">" +
+            "<div class=\"lyra-gauge-head\"><strong>" +
+            escapeHtmlPm(label) +
+            "</strong><span class=\"muted\">" +
+            escapeHtmlPm(k) +
+            "</span></div>" +
+            bar +
+            controls +
+            "</div>"
+          );
+        })
+        .join("");
+    }
+
+    function lyraBuildContext() {
+      const st = lyraLoadState();
+      const dtEl = document.getElementById("lyra-dt");
+      const dt = dtEl ? Number(dtEl.value) : st.dt_s;
+      st.dt_s = Number.isFinite(dt) ? dt : st.dt_s;
+      // normalize needs gauges (0–100)
+      Object.keys(st.gauges || {}).forEach(function (k) {
+        st.gauges[k] = clamp0100(st.gauges[k], 25);
+      });
+      // normalize confiance (0–100)
+      st.confiance_100 = clamp0100(st.confiance_100, 70);
+      // normalize assistant gauges (0–100)
+      if (st.assistant_gauges_100 && typeof st.assistant_gauges_100 === "object") {
+        ["chaleur", "energie", "patience", "confiance"].forEach(function (k) {
+          st.assistant_gauges_100[k] = clamp0100(st.assistant_gauges_100[k], 70);
+        });
+      }
+      lyraSaveState(st);
+      const mode = lyraGetMode();
+      const needs01 = lyraNeedsTo01(st.gauges);
+      const ctx = {
+        lyra: {
+          version: st.version,
+          dt_s: st.dt_s,
+          kind: mode === "assistant" ? "assistant" : "npc_world",
+          // On garde le contrat PNJ monde en 0–1 côté backend/agents (conversion UI 0–100 → payload 0–1).
+          gauges: mode === "assistant" ? st.assistant_gauges_100 : needs01,
+          meta: { source: mode === "assistant" ? "pilot_assistant" : "pilot_standalone" },
+        },
+        history: [],
+      };
+      return { st, ctx };
+    }
+
+    function lyraExtractOut(resp) {
+      if (!resp || typeof resp !== "object") return null;
+      // Accept a few possible envelopes.
+      if (resp.lyra && typeof resp.lyra === "object") return resp.lyra;
+      const r = resp.result;
+      if (r && typeof r === "object") {
+        const o = r.output;
+        if (o && typeof o === "object" && o.lyra && typeof o.lyra === "object") return o.lyra;
+      }
+      return null;
+    }
+
+    function lyraRenderIn() {
+      const { st, ctx } = lyraBuildContext();
+      const mode = lyraGetMode();
+      lyraRenderGaugeBlock(
+        "lyra-in-gauges",
+        mode === "assistant" ? st.assistant_gauges_100 : st.gauges,
+        { interactive: true, mode: mode }
+      );
+      // derived energy + alias stress from confiance
+      const eEl = document.getElementById("lyra-in-energy");
+      const cEl = document.getElementById("lyra-in-confiance");
+      const sEl = document.getElementById("lyra-in-stress");
+      const c = mode === "assistant" ? clamp0100(st.assistant_gauges_100.confiance, 70) : clamp0100(st.confiance_100, 70);
+      const s = 100 - c;
+      const e =
+        mode === "assistant"
+          ? clamp0100(st.assistant_gauges_100.energie, 60)
+          : lyraComputeEnergy100(lyraNeedsTo01(st.gauges));
+      if (eEl) eEl.textContent = String(e) + "%";
+      if (cEl) cEl.textContent = String(c) + "%";
+      if (sEl) sEl.textContent = String(s) + "%";
+      const raw = document.getElementById("lyra-in-raw");
+      if (raw) raw.textContent = JSON.stringify(ctx, null, 2);
+    }
+
+    function lyraRenderOut(resp) {
+      const out = lyraExtractOut(resp);
+      const raw = document.getElementById("lyra-out-raw");
+      if (raw) raw.textContent = resp ? JSON.stringify(resp, null, 2) : "—";
+      const metaEl = document.getElementById("lyra-out-meta");
+      if (!out) {
+        lyraRenderGaugeBlock("lyra-out-gauges", {}, { interactive: false, mode: lyraGetMode() });
+        if (metaEl) metaEl.textContent = "—";
+        const eEl = document.getElementById("lyra-out-energy");
+        if (eEl) eEl.textContent = "—";
+        return;
+      }
+      const gRaw = out.gauges && typeof out.gauges === "object" ? out.gauges : {};
+      const mode = out.kind === "assistant" ? "assistant" : "world";
+      const g = mode === "assistant" ? gRaw : lyraNeedsFrom01(gRaw);
+      lyraRenderGaugeBlock("lyra-out-gauges", g, { interactive: false, mode: mode });
+      const eEl = document.getElementById("lyra-out-energy");
+      if (eEl) {
+        if (mode === "assistant") eEl.textContent = String(clamp0100(gRaw.energie != null ? gRaw.energie : 0, 0)) + "%";
+        else eEl.textContent = String(lyraComputeEnergy100(gRaw)) + "%";
+      }
+      const meta = out.meta && typeof out.meta === "object" ? out.meta : {};
+      if (metaEl) metaEl.textContent = JSON.stringify(meta, null, 2);
+    }
+
+    async function lyraStepOnce() {
+      lyraRenderIn();
+      const base = getBase();
+      const built = lyraBuildContext();
+      const payload = { actor_id: "svc:pilot-lyra", text: "lyra test", context: built.ctx };
+      const out = await postJson(base + "/v1/pilot/route", payload);
+      if (out && out.json) {
+        // best-effort: if we get gauges back, reuse them as new input
+        const ly = lyraExtractOut(out.json);
+        if (ly && ly.gauges && typeof ly.gauges === "object") {
+          const st = lyraLoadState();
+          // IMPORTANT: côté backend, `npc_world` est en 0–1 ; l'UI stocke `world` en 0–100.
+          // On reconvertit donc avant de fusionner dans l'état local.
+          if (ly.kind === "assistant") {
+            if (!st.assistant_gauges_100) st.assistant_gauges_100 = { chaleur: 70, energie: 60, patience: 70, confiance: 70 };
+            st.assistant_gauges_100 = { ...st.assistant_gauges_100, ...ly.gauges };
+            // miroir confiance (utilisé pour la vue stress)
+            if (ly.gauges.confiance != null) st.confiance_100 = clamp0100(ly.gauges.confiance, st.confiance_100);
+          } else {
+            const nextNeeds100 = lyraNeedsFrom01(ly.gauges);
+            st.gauges = { ...st.gauges, ...nextNeeds100 };
+          }
+          lyraSaveState(st);
+        }
+        lyraRenderOut(out.json);
+      } else {
+        lyraRenderOut(null);
+        const raw = document.getElementById("lyra-out-raw");
+        if (raw) raw.textContent = "HTTP " + out.status + "\n" + (out.text || "");
+      }
+    }
+
+    function lyraReset() {
+      const st = lyraDefaultState();
+      lyraSaveState(st);
+      const dtEl = document.getElementById("lyra-dt");
+      if (dtEl) dtEl.value = String(st.dt_s);
+      const cEl = document.getElementById("lyra-confiance");
+      if (cEl) cEl.value = String(st.confiance_100);
+      lyraRenderIn();
+    }
+
+    function lyraBindControls() {
+      const page = document.getElementById("pilot-page-lyra");
+      if (!page) return;
+      page.addEventListener("click", function (ev) {
+        const inc = ev.target.closest("[data-lyra-inc]");
+        const dec = ev.target.closest("[data-lyra-dec]");
+        if (!inc && !dec) return;
+        const key = (inc || dec).getAttribute(inc ? "data-lyra-inc" : "data-lyra-dec");
+        if (!key) return;
+        const st = lyraLoadState();
+        const mode = lyraGetMode();
+        if (mode === "assistant") {
+          const d = inc ? 5 : -5;
+          if (!st.assistant_gauges_100) st.assistant_gauges_100 = { chaleur: 70, energie: 60, patience: 70, confiance: 70 };
+          st.assistant_gauges_100[key] = clamp0100((st.assistant_gauges_100[key] != null ? st.assistant_gauges_100[key] : 0) + d, 70);
+          if (key === "confiance") {
+            st.confiance_100 = st.assistant_gauges_100.confiance;
+            const cEl = document.getElementById("lyra-confiance");
+            if (cEl) cEl.value = String(st.confiance_100);
+          }
+        } else {
+          const d = inc ? 5 : -5;
+          st.gauges[key] = clamp0100((st.gauges[key] != null ? st.gauges[key] : 0) + d, 25);
+        }
+        lyraSaveState(st);
+        lyraRenderIn();
+      });
+    }
+
     function renderPmCards(resp) {
       const ms = document.getElementById("pm-milestones");
       const ts = document.getElementById("pm-tasks");
@@ -1966,6 +2571,138 @@
         const r = await fetch(base + "/v1/pilot/agent-pm/healthz");
         const t = await r.text();
         if (hint) hint.textContent = "HTTP " + r.status + " " + t.slice(0, 160);
+      } catch (e) {
+        if (hint) hint.textContent = "Erreur: " + e;
+      }
+    }
+
+    async function pilotDesktopSend() {
+      const base = getBase();
+      const hint = document.getElementById("desktop-hint");
+      const rawEl = document.getElementById("desktop-raw");
+      const prettyEl = document.getElementById("desktop-pretty");
+      if (hint) hint.textContent = "…";
+
+      let text = (document.getElementById("desktop-text") && document.getElementById("desktop-text").value) || "";
+      text = String(text || "").trim();
+      if (!text) text = "desktop action";
+
+      let action;
+      try {
+        action = JSON.parse((document.getElementById("desktop-action") && document.getElementById("desktop-action").value) || "{}");
+      } catch (_) {
+        alert("desktop_action JSON invalide");
+        if (hint) hint.textContent = "desktop_action invalide";
+        return;
+      }
+      if (!action || typeof action !== "object") {
+        alert("desktop_action doit être un objet JSON");
+        if (hint) hint.textContent = "desktop_action invalide";
+        return;
+      }
+
+      let ctx;
+      try {
+        ctx = JSON.parse((document.getElementById("desktop-context") && document.getElementById("desktop-context").value) || "{}");
+      } catch (_) {
+        alert("context JSON invalide");
+        if (hint) hint.textContent = "context invalide";
+        return;
+      }
+      if (!ctx || typeof ctx !== "object") ctx = {};
+      try {
+        const ap = document.getElementById("desktop-approval");
+        const v = ap && ap.value ? String(ap.value || "").trim() : "";
+        if (v && !ctx.desktop_approval) ctx.desktop_approval = v;
+      } catch (_) {}
+      ctx.desktop_action = action;
+
+      const payload = { actor_id: "ui:desktop", text: text, context: ctx };
+      const out = await postJson(base + "/v1/pilot/route", payload);
+      if (rawEl) rawEl.textContent = out.json ? JSON.stringify(out.json, null, 2) : ("HTTP " + out.status + "\n" + (out.text || ""));
+      if (prettyEl) {
+        try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
+      }
+      if (hint) hint.textContent = out.status === 200 ? "OK" : ("HTTP " + out.status);
+    }
+
+    // Desktop UI helpers: garder `desktop_action` en phase avec le texte (évite la double saisie).
+    function _extractFirstHttpUrl(s) {
+      const m = String(s || "").match(/https?:\/\/[^\s<>"']+/i);
+      return m ? m[0] : "";
+    }
+
+    function desktopTrySyncActionFromText() {
+      const tEl = document.getElementById("desktop-text");
+      const aEl = document.getElementById("desktop-action");
+      if (!tEl || !aEl) return;
+      const text = String(tEl.value || "");
+      let act;
+      try {
+        act = JSON.parse(aEl.value || "{}");
+      } catch (_) {
+        return;
+      }
+      if (!act || typeof act !== "object") return;
+      const kind = String(act.kind || "").trim();
+
+      if (kind === "open_url") {
+        const u = _extractFirstHttpUrl(text);
+        if (u && act.url !== u) {
+          act.url = u;
+          aEl.value = JSON.stringify(act, null, 2);
+        }
+      } else if (kind === "open_app") {
+        // Heuristique: "ouvre l'application X" / "open app X"
+        const m = text.match(/\b(?:application|app)\s+([A-Za-z0-9_.-]+)\b/i);
+        if (m && m[1]) {
+          const appId = m[1];
+          if (act.app !== appId) {
+            act.app = appId;
+            aEl.value = JSON.stringify(act, null, 2);
+          }
+        }
+      } else if (kind === "notepad_append") {
+        // On évite de réécrire `path`; on sync uniquement le contenu si l’utilisateur tape du texte libre.
+        // Heuristique : si le texte ne ressemble pas à une commande, le mettre comme contenu.
+        if (text && !/^\s*(ouvre|open)\b/i.test(text)) {
+          if (act.text !== text) {
+            act.text = text;
+            aEl.value = JSON.stringify(act, null, 2);
+          }
+        }
+      }
+    }
+
+    function desktopTrySyncTextFromAction() {
+      const tEl = document.getElementById("desktop-text");
+      const aEl = document.getElementById("desktop-action");
+      if (!tEl || !aEl) return;
+      let act;
+      try {
+        act = JSON.parse(aEl.value || "{}");
+      } catch (_) {
+        return;
+      }
+      if (!act || typeof act !== "object") return;
+      const kind = String(act.kind || "").trim();
+      if (kind === "open_url" && typeof act.url === "string" && act.url.trim()) {
+        const want = "ouvre " + act.url.trim() + " dans le navigateur";
+        if (String(tEl.value || "").trim() !== want) tEl.value = want;
+      } else if (kind === "open_app" && typeof act.app === "string" && act.app.trim()) {
+        const suffix = act.learn === true ? " (learn)" : "";
+        const want = "ouvre l'application " + act.app.trim() + suffix;
+        if (String(tEl.value || "").trim() !== want) tEl.value = want;
+      }
+    }
+
+    async function pilotDesktopHealth() {
+      const hint = document.getElementById("desktop-hint");
+      const base = getBase();
+      try {
+        const r = await fetch(base + "/v1/pilot/agent-desktop/healthz");
+        const t = await r.text();
+        if (hint) hint.textContent = "healthz → HTTP " + r.status + " " + t.slice(0, 160);
       } catch (e) {
         if (hint) hint.textContent = "Erreur: " + e;
       }
@@ -2364,6 +3101,252 @@
         } else {
           if (hint) hint.textContent = "";
           alert(md);
+        }
+      });
+    } catch (_) {}
+
+    // Desktop page bindings
+    try {
+      document.getElementById("btn-desktop-send").addEventListener("click", function () {
+        pilotDesktopSend().catch(function (e) {
+          alert("Desktop: " + e);
+        });
+      });
+    } catch (_) {}
+    try { document.getElementById("btn-desktop-health").addEventListener("click", pilotDesktopHealth); } catch (_) {}
+    try { document.getElementById("desktop-text").addEventListener("input", desktopTrySyncActionFromText); } catch (_) {}
+    try { document.getElementById("desktop-action").addEventListener("input", desktopTrySyncTextFromAction); } catch (_) {}
+    try {
+      const DESKTOP_APPROVAL_KEY = "lbg_pilot_desktop_approval_v1";
+      const ap = document.getElementById("desktop-approval");
+      if (ap) {
+        try {
+          const raw = localStorage.getItem(DESKTOP_APPROVAL_KEY);
+          if (raw) ap.value = raw;
+        } catch (_) {}
+        ap.addEventListener("input", function () {
+          try {
+            const v = String(ap.value || "");
+            if (v) localStorage.setItem(DESKTOP_APPROVAL_KEY, v);
+            else localStorage.removeItem(DESKTOP_APPROVAL_KEY);
+          } catch (_) {}
+        });
+      }
+    } catch (_) {}
+    try {
+      document.getElementById("btn-desktop-preset-open-url").addEventListener("click", function () {
+        const a = document.getElementById("desktop-action");
+        const t = document.getElementById("desktop-text");
+        if (t) t.value = "ouvre https://example.org dans le navigateur";
+        if (a) a.value = JSON.stringify({ kind: "open_url", url: "https://example.org" }, null, 2);
+        try { desktopTrySyncTextFromAction(); } catch (_) {}
+      });
+    } catch (_) {}
+    try {
+      document.getElementById("btn-desktop-preset-notepad").addEventListener("click", function () {
+        const a = document.getElementById("desktop-action");
+        const t = document.getElementById("desktop-text");
+        if (t) t.value = "ouvre notepad et ajoute une ligne";
+        if (a) {
+          a.value = JSON.stringify(
+            { kind: "notepad_append", path: "C:\\\\Users\\\\Public\\\\lbg_desktop.txt", text: "Hello depuis Lyra\\n" },
+            null,
+            2
+          );
+        }
+        try { desktopTrySyncActionFromText(); } catch (_) {}
+      });
+    } catch (_) {}
+    try {
+      document.getElementById("btn-desktop-preset-open-app-learn").addEventListener("click", function () {
+        const a = document.getElementById("desktop-action");
+        const t = document.getElementById("desktop-text");
+        if (t) t.value = "ouvre l'application vlc (learn)";
+        if (a) {
+          a.value = JSON.stringify(
+            { kind: "open_app", app: "vlc", args: [], learn: true },
+            null,
+            2
+          );
+        }
+      });
+    } catch (_) {}
+
+    // Home (orchestrator chat) bindings
+    try {
+      const HOME_ORCH_KEY = "lbg_pilot_home_orch_v1";
+      const tEl = document.getElementById("home-orch-text");
+      const cEl = document.getElementById("home-orch-context");
+      const outEl = document.getElementById("home-orch-out");
+      const prettyEl = document.getElementById("home-orch-pretty");
+      const hintEl = document.getElementById("home-orch-hint");
+      try {
+        const raw = localStorage.getItem(HOME_ORCH_KEY);
+        if (raw) {
+          const st = JSON.parse(raw);
+          if (st && typeof st === "object") {
+            if (tEl && typeof st.text === "string") tEl.value = st.text;
+            if (cEl && typeof st.context === "string") cEl.value = st.context;
+          }
+        }
+      } catch (_) {}
+
+      async function homeOrchSend() {
+        if (hintEl) hintEl.textContent = "…";
+        const text = (tEl && tEl.value ? tEl.value : "").trim();
+        let ctx = {};
+        try {
+          ctx = JSON.parse((cEl && cEl.value) ? cEl.value : "{}");
+        } catch (_) {
+          alert("JSON context invalide");
+          if (hintEl) hintEl.textContent = "context invalide";
+          return;
+        }
+        try {
+          localStorage.setItem(HOME_ORCH_KEY, JSON.stringify({ text, context: (cEl && cEl.value) ? cEl.value : "{}" }));
+        } catch (_) {}
+        const base = getBase();
+        const payload = { actor_id: "ui:home", text: text || "diagnostic", context: ctx };
+        const out = await postJson(base + "/v1/pilot/route", payload);
+        if (outEl) outEl.textContent = out.json ? JSON.stringify(out.json, null, 2) : ("HTTP " + out.status + "\n" + (out.text || ""));
+        if (prettyEl) {
+          try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
+        }
+        if (hintEl) hintEl.textContent = out.status === 200 ? "OK" : ("HTTP " + out.status);
+      }
+
+      function homeOrchSet(text, ctxObj) {
+        if (tEl) tEl.value = text;
+        if (cEl) cEl.value = JSON.stringify(ctxObj || {}, null, 2);
+        if (hintEl) hintEl.textContent = "—";
+      }
+
+      async function homeQuickGet(path, label) {
+        if (hintEl) hintEl.textContent = "…";
+        const base = getBase();
+        const token = getServiceToken();
+        const headers = {};
+        if (token) headers["X-LBG-Service-Token"] = token;
+        try {
+          const r = await fetch(base + path, { headers });
+          const t = await r.text();
+          let j = null;
+          try { j = t ? JSON.parse(t) : null; } catch (_) {}
+          if (outEl) outEl.textContent = j ? JSON.stringify(j, null, 2) : ("HTTP " + r.status + "\n" + t);
+          if (prettyEl) {
+            try { prettyEl.innerHTML = j ? renderPretty(j) : ""; } catch (_) { prettyEl.innerHTML = ""; }
+          }
+          if (hintEl) hintEl.textContent = (label || path) + " → HTTP " + r.status;
+        } catch (e) {
+          if (hintEl) hintEl.textContent = "Erreur: " + e;
+        }
+      }
+
+      function homeOrchClear() {
+        if (tEl) tEl.value = "Fais un diagnostic rapide des services et propose la prochaine action concrète.";
+        if (cEl) cEl.value = "{\n  \"history\": []\n}";
+        if (outEl) outEl.textContent = "—";
+        if (prettyEl) prettyEl.innerHTML = "";
+        if (hintEl) hintEl.textContent = "—";
+        try { localStorage.removeItem(HOME_ORCH_KEY); } catch (_) {}
+      }
+
+      try { document.getElementById("btn-home-orch-send").addEventListener("click", () => homeOrchSend().catch((e) => alert(e))); } catch (_) {}
+      try { document.getElementById("btn-home-orch-clear").addEventListener("click", homeOrchClear); } catch (_) {}
+      try { document.getElementById("btn-home-quick-status").addEventListener("click", () => homeQuickGet("/v1/pilot/status", "status")); } catch (_) {}
+      try { document.getElementById("btn-home-quick-caps").addEventListener("click", () => homeQuickGet("/v1/pilot/capabilities", "capabilities")); } catch (_) {}
+      try {
+        document.getElementById("btn-home-quick-selfcheck").addEventListener("click", () => {
+          homeOrchSet(
+            "devops selfcheck (dry-run) : diagnostique et propose une action concrète.",
+            { devops_action: { kind: "selfcheck" }, devops_dry_run: true, devops_selfcheck: true, history: [] }
+          );
+          homeOrchSend().catch((e) => alert(e));
+        });
+      } catch (_) {}
+      try {
+        document.getElementById("btn-home-quick-pm").addEventListener("click", () => {
+          homeOrchSet(
+            "jalons et tâches du plan de route",
+            { project_pm: true, pm_include_plan: true, pm_include_structure: true, history: [] }
+          );
+          homeOrchSend().catch((e) => alert(e));
+        });
+      } catch (_) {}
+      try {
+        document.getElementById("btn-home-quick-desktop").addEventListener("click", () => {
+          homeOrchSet(
+            "desktop (dry-run) : ouvre example.org",
+            {
+              desktop_action: { kind: "open_url", url: "https://example.org" },
+              desktop_dry_run: true,
+              history: []
+            }
+          );
+          homeOrchSend().catch((e) => alert(e));
+        });
+      } catch (_) {}
+    } catch (_) {}
+
+    // Lyra page bindings
+    try { lyraBindControls(); } catch (_) {}
+    try {
+      const st = lyraLoadState();
+      const dtEl = document.getElementById("lyra-dt");
+      if (dtEl) dtEl.value = String(st.dt_s || 60);
+      const cEl = document.getElementById("lyra-confiance");
+      if (cEl) cEl.value = String(st.confiance_100 != null ? st.confiance_100 : 70);
+      // restore mode
+      try {
+        const m = localStorage.getItem(STORAGE_LYRA_MODE_KEY);
+        if (m === "assistant" || m === "world") lyraSetMode(m);
+      } catch (_) {}
+      lyraRenderIn();
+      lyraRenderOut(null);
+    } catch (_) {}
+    try {
+      const cEl = document.getElementById("lyra-confiance");
+      if (cEl) {
+        cEl.addEventListener("input", function () {
+          const st = lyraLoadState();
+          st.confiance_100 = clamp0100(cEl.value, 70);
+          if (st.assistant_gauges_100 && typeof st.assistant_gauges_100 === "object") {
+            st.assistant_gauges_100.confiance = st.confiance_100;
+          }
+          lyraSaveState(st);
+          lyraRenderIn();
+        });
+      }
+    } catch (_) {}
+    try {
+      document.getElementById("lyra-mode-world").addEventListener("change", function () {
+        lyraSetMode("world");
+        lyraRenderIn();
+      });
+      document.getElementById("lyra-mode-assistant").addEventListener("change", function () {
+        lyraSetMode("assistant");
+        lyraRenderIn();
+      });
+    } catch (_) {}
+    try {
+      document.getElementById("btn-lyra-step").addEventListener("click", function () {
+        lyraStepOnce().catch(function (e) {
+          alert("Lyra: " + e);
+        });
+      });
+    } catch (_) {}
+    try { document.getElementById("btn-lyra-reset").addEventListener("click", lyraReset); } catch (_) {}
+    try {
+      document.getElementById("lyra-auto").addEventListener("change", function (ev) {
+        const on = !!(ev.target && ev.target.checked);
+        if (__lyraAutoTimer) {
+          clearInterval(__lyraAutoTimer);
+          __lyraAutoTimer = null;
+        }
+        if (on) {
+          __lyraAutoTimer = setInterval(function () {
+            lyraStepOnce().catch(function () {});
+          }, 5000);
         }
       });
     } catch (_) {}

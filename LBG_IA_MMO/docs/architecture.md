@@ -26,6 +26,42 @@ Construire un framework complet permettant :
 - Après routage, appelle le paquet **`agents/`** (`lbg_agents.dispatch.invoke_after_route`) pour enrichir le champ `output`. Le dialogue peut cibler un **agent HTTP** (`LBG_AGENT_DIALOGUE_URL`, port **8020** en prod systemd, voir `agents/README.md`). L’intention **`devops_probe`** déclenche **`agent.devops`** : GET HTTP et lecture de fichiers **uniquement** via listes blanches d’environnement (`agents/README.md`) ; dry-run **`LBG_DEVOPS_DRY_RUN`** ; garde **`LBG_DEVOPS_APPROVAL_TOKEN`** + `context.devops_approval` ; audit JSON **`agents.devops.audit`** (champ `ts`) sur stdout et/ou fichier **`LBG_DEVOPS_AUDIT_LOG_PATH`** (JSONL).
 - Introspection : **`GET /v1/capabilities`** (liste des `CapabilitySpec`). Le backend expose **`GET /v1/pilot/capabilities`** en proxy pour l’UI `/pilot/`.
 
+#### Brain (autonomie) — v1 (conscience + motivation)
+
+Objectif : fournir une **autonomie safe** (“je fais des checks tout seul”) + une **conscience de l’état** (jauges) qui pilote une **motivation** (intent) — sans exécution destructive implicite.
+
+- **Tick** : toutes les \(30s\) (configurable).
+- **Périmètre v0 (safe)** :
+  - DevOps `selfcheck` en **dry-run** (étapes HTTP + systemd *allowlistées*).
+  - Ping `GET /healthz` du worker desktop (si `LBG_AGENT_DESKTOP_URL` est défini).
+- **Périmètre v0 (sous approbation)** :
+  - `systemd_restart` uniquement si opt-in + jeton d’approbation côté orchestrateur.
+
+Endpoints orchestrator :
+- `GET /v1/brain/status`
+- `POST /v1/brain/toggle` (`{ "enabled": true|false }`)
+- `POST /v1/brain/approve` (`{ "request_id": "…" }`) : approuve une demande (ex. restart) en file.
+
+Proxy backend (same-origin) pour l’UI pilot :
+- `GET /v1/pilot/orchestrator/brain/status`
+- `POST /v1/pilot/orchestrator/brain/toggle`
+- `POST /v1/pilot/orchestrator/brain/approve`
+
+Conscience/motivation exposées via `brain/status` :
+- `gauges` : jauges \([0–100]\) (ex. `confidence`, `stress`, `fatigue`, `curiosity`)
+- `intent` : intention courante (`monitor|diagnose|request_approval|remediate`)
+- `narrative` : résumé 1–2 lignes “pourquoi j’agis”
+- `approval_requests[]` : file des demandes (restart, raison, approved/done)
+
+Variables d’environnement (orchestrator) :
+- `LBG_BRAIN_ENABLED` : `1|0` (défaut `0`)
+- `LBG_BRAIN_INTERVAL_S` : secondes (défaut `30`, borné \([5,3600]\))
+- `LBG_BRAIN_DEVOPS_AUTORESTART` : `1|0` (défaut `0`) — autorise la tentative de restart automatique
+- `LBG_BRAIN_DEVOPS_APPROVAL` : jeton d’approbation (si vide, aucun restart n’est tenté en autonomie)
+- `LBG_BRAIN_STATE_PATH` : chemin du fichier de persistance (défaut `/var/lib/lbg/brain/state.json`)
+- `LBG_BRAIN_MAX_ACTIONS_PER_TICK` : budget d’actions par tick (défaut `3`)
+- `LBG_BRAIN_RESTART_COOLDOWN_S` : cooldown restart systemd (défaut `600`)
+
 #### DevOps — exécution des remédiations (phase 3 produit)
 
 Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure des **`remediation_hints`** : indications **lisibles** pour un opérateur (relancer un service, vérifier une URL, consulter un log). **Règle projet** : ces hints ne déclenchent **aucune** action corrective **automatique** côté LLM ou agent sans revue humaine. L’exécution sur l’infra (ex. **`systemd_restart`** après approbation, quota, fenêtre UTC) reste **explicite** (outil DevOps, systemd, playbook) — typiquement un **humain** ou un **agent d’outillage contrôlé** (ex. Cursor sur poste de confiance avec les mêmes prérequis SSH que la doc `ops_vm_user.md`) applique le correctif. Ne pas brancher de boucle « LLM → restart production » sans garde-fous documentés et revus.
@@ -36,10 +72,15 @@ Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure de
 - NPC gouvernés par `lyra_engine/` (comportements + jauges).
 - **HTTP** (`http_app`, uvicorn typiquement **8050**) : tick en thread d’arrière-plan ; **`GET /v1/world/lyra`** expose les jauges PNJ pour **`context.lyra`** (voir `docs/lyra.md`, variable **`LBG_MMO_SERVER_URL`** côté backend). En **prod systemd** (`lbg-mmo-server`), l’écoute est **`0.0.0.0:8050`** pour permettre au **backend sur une autre VM** d’appeler le LAN (`192.168.x.x:8050`) ; en local, **`127.0.0.1`** reste recommandé. Persistance **`WorldState`** en JSON (chargement au boot, sauvegarde périodique + arrêt) — **`LBG_MMO_STATE_PATH`**, **`LBG_MMO_SAVE_INTERVAL_S`** (`mmo_server/README.md`).
 
-### Serveur jeu WebSocket (`mmmorpg_server/`)
-
-- Portage du serveur **mmmorpg** (dépôt source inchangé) : **`python -m mmmorpg_server`**, **`MMMORPG_PORT`** (défaut **7733**). Voir **`docs/mmmorpg_PROTOCOL.md`**, **`mmmorpg_server/README.md`**. Autorité **multijoueur** (WS) — distinct du **`mmo_server`** HTTP (slice IA Lyra).
-- **HTTP interne** (ex. **8773**) : `GET /metrics` possible si `MMMORPG_INTERNAL_HTTP_METRICS=1` (désactivé par défaut). Voir runbook §2bis.
+### Frontend et Pilotage (`pilot_web/` et `web_client/`)
+- **Routage unifié (Nginx, port 8080)** : La VM 110 centralise l'accès utilisateur.
+    - `http://<IP>:8080/` : Interface **Lyra / Pilotage** (Originale).
+    - `http://<IP>:8080/mmo/` : Interface **Client MMO** (Vite).
+    - `http://<IP>:8080/v1/` : Proxy vers le backend API (VM 140:8000).
+- **Déploiement** : 
+    - Le rôle `front` de `deploy_vm.sh` gère Lyra.
+    - `deploy_web_client.sh` gère le MMO (build avec `--base=/mmo/` et déploiement dans le sous-dossier).
+- **Note** : Le serveur Python sur le port **8081** est déprécié et supprimé.
 
 ## Exécution
 
@@ -54,7 +95,7 @@ La prod **LBG_IA_MMO** sur le LAN privé est actuellement sur **`192.168.0.140`*
 Recommandation pour **cette** machine : **déploiement via systemd** (voir `../../bootstrap.md`) avec :
 - code dans `/opt/LBG_IA_MMO`
 - venv partagé `/opt/LBG_IA_MMO/.venv`
-- ports exposés : API `8000`, orchestrator `8010`
+- ports exposés : API `8000`, orchestrator `8010`, Nginx `8080` (Interface Unifiée).
 
 **Mise à jour depuis le dev** : le chemin nominal pour pousser une évolution vers cette VM est `infra/scripts/deploy_vm.sh` (staging + `rsync` sudo + `install_local.sh` en tant que **`lbg`** + reconfiguration systemd), lancé depuis le poste de développement (ex. WSL) **sans obligation** de faire tourner les mêmes services en local : la pile réelle est celle **systemd sur la VM** (unités `User=lbg`) ; les contrôles se font sur la prod privée (`curl`, UI `/pilot/`). Détail : `bootstrap.md`, `docs/ops_vm_user.md`.
 

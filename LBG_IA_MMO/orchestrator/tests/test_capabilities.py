@@ -14,4 +14,5 @@ def test_list_capabilities() -> None:
     assert "world_aid" in names
     assert "devops_probe" in names
     assert "project_pm" in names
+    assert "desktop_control" in names
     assert "unknown" in names

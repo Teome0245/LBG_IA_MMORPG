@@ -1,0 +1,651 @@
+```markdown
+# Multivers MMO – OTServ + Ryzom Core
+
+## 1. Plan d’intégration IA → OTServ (The Forgotten Server)
+
+### 1.1. Objectif
+
+- **But:** valider ton orchestrateur IA (30k+ NPC, routines, gauges, événements).
+- **Principe:** OTServ reste le “simulateur de monde”, ton orchestrateur IA pilote les NPC via une API maison.
+
+---
+
+### 1.2. Architecture minimale
+
+- **OTServ (C++ + Lua)**
+  - Gère : cartes, joueurs, NPC, combats, inventaires, persistance.
+- **Service IA externe (Python/Go/TS, peu importe)**
+  - Gère : décisions, plannings, comportements, états internes (gauge engine).
+- **Bridge API**
+  - Expose des endpoints type :
+    - `POST /npc/{id}/intent`
+    - `GET /world/snapshot`
+    - `POST /events`
+
+---
+
+### 1.3. Étapes concrètes
+
+#### 1.3.1. Récupérer et lancer OTServ
+
+- **Repo conseillé :** The Forgotten Server (TFS).
+- Étapes génériques (Linux) :
+
+```bash
+git clone https://github.com/otland/forgottenserver.git
+cd forgottenserver
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+```
+
+- Configurer `config.lua` (DB, ports, etc.).
+- Lancer le serveur et vérifier qu’un client peut se connecter.
+
+---
+
+#### 1.3.2. Ajouter un module “bridge” côté serveur
+
+- **But:** permettre à OTServ de parler à ton orchestrateur IA.
+- Options :
+  - **HTTP client léger** (libcurl) dans le C++.
+  - Ou **socket TCP/UDP** vers un daemon IA.
+- Exemple de flux :
+  - OTServ tick → collecte les NPC “contrôlés par IA externe”.
+  - Pour chaque NPC :
+    - Envoie un `state` à l’IA (position, HP, contexte).
+    - Reçoit une `action` (move, talk, attack, emote).
+    - Applique l’action via les fonctions natives OTServ.
+
+---
+
+#### 1.3.3. Côté orchestrateur IA
+
+- **Responsabilités :**
+  - Maintenir un état interne par NPC (gauge engine, objectifs, mémoire).
+  - Décider des actions à chaque tick ou sur événement.
+  - Gérer les “rôles” (citoyen, marchand, garde, bandit, etc.).
+- **API à exposer (exemple) :**
+
+```text
+POST /decide
+Body: { npc_id, state_snapshot }
+→ Response: { action: "move|talk|attack|idle", params: {...} }
+```
+
+---
+
+#### 1.3.4. Scalabilité IA
+
+- **Stratégies :**
+  - Tick différencié (NPC “loin” = tick moins fréquent).
+  - Batching : envoyer des groupes de NPC à la fois.
+  - Prioriser les NPC proches des joueurs.
+
+---
+
+## 2. Plan d’installation + build Ryzom Core
+
+### 2.1. Objectif
+
+- Avoir un **serveur + client Ryzom Core** fonctionnels.
+- Préparer le terrain pour intégrer ton orchestrateur IA plus tard.
+
+---
+
+### 2.2. Récupération du code
+
+```bash
+git clone https://github.com/ryzom/ryzomcore.git
+cd ryzomcore
+```
+
+---
+
+### 2.3. Dépendances (vue d’ensemble)
+
+- **Outils :** CMake, compilateur C++17+, Git.
+- **Libs fréquentes :** Boost, MySQL/MariaDB, zlib, OpenAL, etc.
+- Le projet fournit un setup via **vcpkg** et/ou Docker (voir README).
+
+---
+
+### 2.4. Build simplifié (exemple Linux)
+
+```bash
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make -j$(nproc)
+```
+
+- Tu obtiens :
+  - Binaire serveur (shard).
+  - Binaire client.
+  - Outils (éditeur, etc.).
+
+---
+
+### 2.5. Configuration serveur
+
+- Configs typiques :
+  - Fichiers de shard (DB, login, game, patch).
+  - Connexion à la base de données.
+- Objectif : lancer un **shard local** avec un client Ryzom Core qui se connecte.
+
+---
+
+### 2.6. Intégration IA future
+
+- Ajouter un **service “AI external”** dans la stack serveur :
+  - Exposer un module qui :
+    - Observe les entités (NPC, créatures, PNJ civils).
+    - Envoie leur état à ton orchestrateur IA.
+    - Reçoit des intentions (déplacements, interactions, dialogues).
+  - Ryzom Core ayant déjà une AI interne, tu peux :
+    - soit la désactiver pour certains NPC,
+    - soit la combiner (AI interne = fallback, IA externe = prioritaire).
+
+---
+
+## 3. Architecture hybride OTServ → Ryzom Core
+
+### 3.1. Vision
+
+- **Phase 1 :** OTServ = bac à sable IA.
+- **Phase 2 :** Ryzom Core = moteur final du multivers.
+- **Pont :** ton orchestrateur IA reste le même, seul le “connecteur moteur” change.
+
+---
+
+### 3.2. Schéma logique
+
+- **Orchestrateur IA** (cœur commun)
+  - Modules :
+    - Gestion des NPC (identité, background, objectifs).
+    - Gauge engine (Lyra).
+    - Planification (jobs, routines, quêtes).
+    - Interface moteur (adapter OTServ / Ryzom Core).
+
+- **Connecteur OTServ**
+  - Implémente :
+    - `list_npcs()`
+    - `get_state(npc_id)`
+    - `apply_action(npc_id, action)`
+
+- **Connecteur Ryzom Core**
+  - Implémente les mêmes interfaces, mais avec les APIs Ryzom.
+
+👉 **Résultat :** tu peux développer ton IA une fois, et changer de moteur sans tout réécrire.
+
+---
+
+### 3.3. Roadmap proposée
+
+1. **Semaine 1–4 : OTServ**
+   - Intégration IA.
+   - Simulation de ville.
+   - Stress test 10k–30k NPC.
+2. **En parallèle : Ryzom Core**
+   - Installation + build.
+   - Compréhension de l’architecture serveur.
+3. **Phase suivante :**
+   - Implémenter le connecteur Ryzom Core.
+   - Migrer progressivement les concepts IA (rôles, routines, événements).
+
+---
+
+## 4. Comparatif technique détaillé – OTServ vs Ryzom Core
+
+### 4.1. Vue d’ensemble
+
+| Critère                    | OTServ (TFS)                           | Ryzom Core                                      |
+|---------------------------|----------------------------------------|-------------------------------------------------|
+| Type                      | Serveur Tibia-like 2D                  | Moteur MMORPG 3D complet                        |
+| Langage                   | C++ + Lua                              | C++                                             |
+| Licence                   | GPL / open-source                      | AGPL + assets CC-BY-SA                          |
+| Complexité                | Faible à moyenne                       | Élevée                                          |
+| Temps de prise en main    | Rapide                                  | Long                                            |
+| IA interne                | Simple                                  | Présente, modulaire                             |
+| Monde                     | 2D tile-based                          | 3D, terrains massifs                            |
+| Cible pour toi            | Bac à sable IA                         | Moteur final multivers                          |
+
+---
+
+### 4.2. Architecture serveur
+
+- **OTServ**
+  - Monolithique mais lisible.
+  - Boucle de jeu simple.
+  - NPC scriptables en Lua.
+  - Facile à hooker pour ajouter un bridge IA.
+
+- **Ryzom Core**
+  - Architecture en services :
+    - Login, shard, AI, world, etc.
+  - Basé sur NeL (Nevrax Library).
+  - Beaucoup de couches (réseau, entités, gameplay, outils).
+  - Plus proche d’un vrai MMO commercial.
+
+---
+
+### 4.3. Performance & scalabilité
+
+- **OTServ**
+  - Très léger.
+  - Peut gérer beaucoup de NPC (surtout si IA externe).
+  - Limité par la représentation 2D et les mécaniques simples.
+
+- **Ryzom Core**
+  - Pensé pour un MMO 3D.
+  - Réseau optimisé, gros mondes.
+  - Plus lourd à scaler, mais plus réaliste pour un jeu final.
+
+---
+
+### 4.4. Extensibilité & modding
+
+- **OTServ**
+  - Scripts Lua très simples.
+  - Idéal pour expérimenter des systèmes de jobs, routines, quêtes.
+  - Limité pour des features avancées (véhicules, housing 3D, etc.).
+
+- **Ryzom Core**
+  - Très extensible, mais demande de comprendre l’architecture.
+  - Permet :
+    - nouveaux systèmes de skills,
+    - nouveaux types d’entités,
+    - nouveaux systèmes de gameplay (professions, housing, etc.).
+
+---
+
+### 4.5. Alignement avec ton multivers
+
+- **OTServ**
+  - Parfait pour :
+    - tester ton orchestrateur IA,
+    - valider les comportements émergents,
+    - simuler des sociétés massives.
+  - Pas adapté comme moteur final de ton multivers 3D.
+
+- **Ryzom Core**
+  - Aligné avec :
+    - sandbox 3D,
+    - professions,
+    - crafting profond,
+    - villes vivantes,
+    - multivers à long terme.
+
+---
+
+## 5. Résumé stratégique
+
+- **Court terme (résultat rapide, IA massive) :**  
+  → OTServ + orchestrateur IA.
+
+- **Moyen / long terme (jeu final, multivers SWG-like) :**  
+  → Ryzom Core + même orchestrateur IA, nouveau connecteur.
+
+- **Clé :**  
+  Tu investis ton énergie dans **l’IA et la simulation sociale**, pas dans un moteur unique.  
+  Le moteur devient un “backend de monde” interchangeable.
+
+---
+```
+
+Voici la réponse claire, directe et utile que tu attends, Stève — **quelle configuration matérielle pour OTServ + Ryzom Core**, et **est‑ce que tu peux les faire tourner sur la même VM ou non**.
+
+Je vais droit au but, puis j’élargis.
+
+---
+
+# 🎯 **Takeaway immédiat**
+- **Oui**, tu *peux* faire tourner OTServ + Ryzom Core sur la même VM.  
+- **Non**, ce n’est pas optimal si tu veux évoluer vers un vrai multivers + IA massive.  
+- **Recommandation** :  
+  - **OTServ → petite VM dédiée** (IA sandbox).  
+  - **Ryzom Core → VM séparée** (moteur MMO 3D).  
+  - **Orchestrateur IA → VM ou machine dédiée** (selon charge).
+
+---
+
+# 🧱 1. Configuration matérielle recommandée
+
+## 🟦 **OTServ (TFS) – Ultra léger**
+OTServ est tellement léger que même un Raspberry Pi peut le faire tourner.
+
+### **Config minimale**
+- **1 vCPU**
+- **1 Go RAM**
+- **5 Go disque**
+
+### **Config recommandée pour IA + 10k NPC**
+- **2 vCPU**
+- **2–4 Go RAM**
+- **10 Go disque**
+
+👉 **OTServ ne consomme rien.**  
+Le vrai coût vient de ton orchestrateur IA, pas du serveur.
+
+---
+
+## 🟩 **Ryzom Core – Moteur MMORPG complet**
+Ryzom Core est un vrai moteur 3D avec plusieurs services (login, shard, AI, world, etc.).  
+Il demande **beaucoup plus** que OTServ.
+
+### **Config minimale**
+- **2 vCPU**
+- **4 Go RAM**
+- **20 Go disque**
+
+### **Config recommandée pour un shard stable**
+- **4–6 vCPU**
+- **8–12 Go RAM**
+- **40–60 Go disque SSD**
+
+### **Config idéale pour développement + tests**
+- **8 vCPU**
+- **16 Go RAM**
+- **SSD NVMe**
+
+👉 Ryzom Core n’est pas lourd comme Unreal, mais c’est un vrai MMO :  
+**il aime avoir de la RAM et du CPU.**
+
+---
+
+## 🟥 **Orchestrateur IA (ton cœur du multivers)**
+C’est lui qui va consommer le plus, pas les moteurs.
+
+### **Config recommandée**
+- **4–8 vCPU**
+- **8–16 Go RAM**
+- **SSD rapide**
+- **Optionnel : GPU si tu fais tourner des modèles locaux**
+
+👉 Si tu veux simuler 30k–80k NPC, c’est ici que tu dois investir.
+
+---
+
+# 🧩 2. Peut‑on tout mettre dans une seule VM ?
+
+## ✔ Techniquement : **oui**
+Tu peux mettre :
+
+- OTServ  
+- Ryzom Core  
+- Orchestrateur IA  
+- Base de données  
+- Outils  
+
+…dans une seule VM de **8 vCPU / 16 Go RAM**.
+
+Ça va tourner.
+
+## ✘ Stratégiquement : **non**
+Voici pourquoi :
+
+### ❌ 1. Les moteurs n’ont pas les mêmes cycles de vie
+- OTServ = sandbox IA → tu vas le redémarrer souvent.  
+- Ryzom Core = shard MMO → tu veux qu’il reste stable.  
+
+### ❌ 2. Les charges CPU ne sont pas synchrones
+- OTServ = léger, mais ton IA peut saturer le CPU.  
+- Ryzom Core = sensible aux spikes CPU → lag si l’IA charge trop.
+
+### ❌ 3. Tu veux isoler les crashs
+- Si ton orchestrateur IA plante → Ryzom Core doit continuer.  
+- Si Ryzom Core plante → ton IA doit continuer.
+
+### ❌ 4. Tu veux scaler indépendamment
+- OTServ peut rester petit.  
+- Ryzom Core peut grandir.  
+- L’IA peut devenir énorme.
+
+---
+
+# 🟨 3. Recommandation d’architecture matérielle (optimale)
+
+## 🟦 **VM 1 – OTServ (IA Sandbox)**
+- 2 vCPU  
+- 2–4 Go RAM  
+- 10 Go SSD  
+
+## 🟩 **VM 2 – Ryzom Core (Shard principal)**
+- 6–8 vCPU  
+- 12–16 Go RAM  
+- 40–60 Go SSD  
+
+## 🟥 **VM 3 – Orchestrateur IA**
+- 4–8 vCPU  
+- 8–16 Go RAM  
+- 20 Go SSD  
+- Option GPU si modèles locaux
+
+## 🟧 **VM 4 – Base de données (MariaDB / PostgreSQL)**
+- 2 vCPU  
+- 4 Go RAM  
+- 20 Go SSD  
+
+👉 **Total : 4 VM**  
+C’est propre, modulaire, scalable, et parfait pour ton multivers.
+
+---
+
+# 🟦 4. Si tu veux tout mettre dans UNE VM (setup minimal)
+
+### **VM unique**
+- **8 vCPU**
+- **16 Go RAM**
+- **80 Go SSD**
+
+### Services dans la VM
+- OTServ  
+- Ryzom Core  
+- Orchestrateur IA  
+- DB  
+- Monitoring  
+
+👉 Ça marche, mais tu vas vite vouloir séparer.
+
+---
+
+# 🔥 Recommandation finale (personnalisée pour ton projet)
+Vu ton objectif :
+
+- multivers  
+- 30k–80k NPC  
+- orchestrateur IA massif  
+- monde vivant  
+- architecture propre  
+- évolutive  
+- reproductible  
+
+👉 **Sépare OTServ et Ryzom Core.**  
+👉 **Sépare l’orchestrateur IA.**  
+👉 **Garde OTServ sur une petite VM.**  
+👉 **Donne de la RAM et du CPU à Ryzom Core.**
+
+C’est la meilleure base pour ton futur multivers.
+
+---
+
+Parfait Stève — merci pour la précision.  
+Tu n’as **qu’un seul hôte Proxmox**, et **deux VM dessus** :
+
+- **VM 110 → LLM + Ollama**  
+- **VM 140 → Orchestrateur IA**
+
+Et ton **serveur MMO actuel** tourne sur **un hôte VMware séparé** (Dell R610).
+
+👉 Ça change complètement la stratégie d’architecture.  
+👉 Et ça explique pourquoi tu te sens limité pour ton multivers.
+
+Je te fais une synthèse claire, puis je te propose **l’architecture optimale avec TON matériel réel**.
+
+---
+
+# 🎯 1. Ton infrastructure réelle (diagnostic clair)
+
+## 🟦 **Hôte Proxmox unique**
+- CPU : **Intel i5‑6260U (4 threads)**  
+- RAM : **32 Go**  
+- Stockage : **66 Go**  
+- VM 110 : LLM/Ollama  
+- VM 140 : Orchestrateur IA  
+
+### ➤ Diagnostic
+- CPU trop faible pour LLM + IA + MMO  
+- RAM correcte mais vite saturée  
+- Stockage trop petit  
+- Très bon pour orchestrateur IA  
+- Trop faible pour moteur MMO 3D (Ryzom Core)
+
+---
+
+## 🟥 **Hôte VMware (Dell R610)**
+- CPU : **2× Xeon E5520 (8C/16T)**  
+- RAM : **12 Go**  
+- Stockage : **~900 Go**  
+- VM 245 : Serveur MMO actuel  
+
+### ➤ Diagnostic
+- CPU OK pour SWGEmu / OTServ  
+- RAM trop faible pour Ryzom Core  
+- Matériel ancien (2009)  
+- Très bon comme serveur secondaire  
+- Pas adapté pour un multivers moderne
+
+---
+
+# 🧩 2. Architecture Proxmox réaliste avec TON matériel
+
+Tu n’as **qu’un seul hôte Proxmox**, donc voici l’architecture **optimale possible** sans rien acheter.
+
+```
+                   ┌──────────────────────────────┐
+                   │      Proxmox Host (unique)   │
+                   │   i5-6260U – 32 Go RAM       │
+                   └──────────────┬───────────────┘
+                                  │
+        ┌─────────────────────────┼─────────────────────────┐
+        │                         │                         │
+┌───────┴────────┐      ┌────────┴────────┐      ┌─────────┴────────┐
+│ VM 110 : LLM    │      │ VM 140 : IA     │      │ VM OTServ (new)   │
+│ 4 vCPU / 16 Go   │      │ 4 vCPU / 12 Go  │      │ 2 vCPU / 2 Go     │
+└──────────────────┘      └─────────────────┘      └───────────────────┘
+```
+
+👉 **OTServ peut tourner sur Proxmox sans problème.**  
+👉 **Ton orchestrateur IA aussi.**  
+👉 **Ton LLM doit rester léger (3B–7B).**
+
+---
+
+# 🟥 3. Ce que tu NE peux pas faire avec un seul hôte Proxmox
+
+### ❌ Ryzom Core  
+Il demande :
+- 8 vCPU  
+- 16 Go RAM  
+- CPU moderne  
+
+Ton hôte Proxmox ne peut pas fournir ça.
+
+### ❌ LLM 13B–70B  
+Il faut :
+- 32–64 Go RAM  
+- CPU moderne  
+- idéalement un GPU  
+
+---
+
+# 🟩 4. Architecture globale avec TON matériel actuel
+
+Voici la meilleure architecture possible **sans rien changer** :
+
+```
+                     ┌──────────────────────────────┐
+                     │      Proxmox Host (unique)   │
+                     │   IA + LLM + OTServ          │
+                     └──────────────┬───────────────┘
+                                    │
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+┌───────┴────────┐        ┌────────┴────────┐        ┌─────────┴────────┐
+│ VM 110 : LLM    │        │ VM 140 : IA     │        │ VM OTServ (new)   │
+│ 4 vCPU / 16 Go   │        │ 4 vCPU / 12 Go  │        │ 2 vCPU / 2 Go     │
+└──────────────────┘        └─────────────────┘        └───────────────────┘
+```
+
+```
+                     ┌──────────────────────────────┐
+                     │      VMware Host (R610)      │
+                     │   Serveur MMO actuel         │
+                     └──────────────┬───────────────┘
+                                    │
+                           ┌────────┴────────┐
+                           │ VM 245 : MMO     │
+                           │ 4 vCPU / 8 Go    │
+                           └──────────────────┘
+```
+
+---
+
+# 🧠 5. Ce que tu peux faire MAINTENANT
+
+### ✔ Ajouter OTServ sur Proxmox  
+→ 2 vCPU / 2 Go RAM  
+→ Parfait pour tester ton orchestrateur IA  
+→ Parfait pour simuler 10k–30k NPC
+
+### ✔ Garder ton orchestrateur IA sur VM 140  
+→ CPU OK  
+→ RAM OK
+
+### ✔ Garder ton LLM sur VM 110  
+→ Mais limité aux petits modèles
+
+### ✔ Garder ton MMO actuel sur le R610  
+→ Il tourne bien  
+→ Pas besoin de changer
+
+---
+
+# 🔥 6. Ce que tu devras faire PLUS TARD
+
+Pour ton **multivers final**, il te faudra :
+
+### 👉 Un nouveau serveur physique Proxmox  
+Avec :
+- **16C/32T**  
+- **64–128 Go RAM**  
+- **2× NVMe 1 To**  
+
+Pour héberger :
+- Ryzom Core  
+- LLM moyens  
+- IA massive  
+- DB  
+- Monitoring  
+
+---
+
+# 🎯 Conclusion
+
+Tu n’as **qu’un seul hôte Proxmox**, donc :
+
+### ✔ Tu peux faire tourner :
+- LLM léger  
+- Orchestrateur IA  
+- OTServ  
+- Serveur MMO actuel (sur VMware)
+
+### ❌ Tu ne peux pas faire tourner :
+- Ryzom Core  
+- LLM moyens  
+- Multivers complet
+
+### ⭐ Prochaine étape idéale :
+**Ajouter OTServ sur Proxmox** pour tester ton IA massive.  
+**Prévoir un nouveau serveur physique** pour Ryzom Core + LLM plus gros.
+
+---

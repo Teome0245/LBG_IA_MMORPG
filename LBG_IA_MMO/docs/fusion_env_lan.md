@@ -8,8 +8,7 @@ Document **vivant** : à mettre à jour si les IPs ou les rôles changent. Lié 
 |----|------------------|--------|
 | **`192.168.0.140`** | **Orchestrateur LBG** (monorepo : `lbg-orchestrator`, etc.) + **stack LBG_IA** (orchestrateur « produit » : Vue / Docker / `RouterIA`, Postgres selon déploiement) | Point d’entrée **logique** pour l’IA et l’UI produit ; **`deploy_vm.sh`** déploie **ce monorepo** vers cette machine par défaut (`LBG_VM_HOST`). |
 | **`192.168.0.245`** | **Serveur MMO** : **`mmmorpg`** (WebSocket, jeu) + idéalement **`mmo_server`** HTTP (Lyra PNJ, `/v1/world/lyra`, persistance `WorldState`) | Séparer le **monde jeu** et la **slice Lyra** réseau du reste ; les services **140** appellent **245** via URLs (voir ci‑dessous). |
-| **`192.168.0.110`** | **LLM local** (ex. **Ollama** `11434`) + **modules déportés** (agents HTTP, outils, etc. si besoin) | Réduit la charge GPU/CPU sur **140** ; dialogue pointe vers **110** pour l’inférence. |
-| **Option** | **Frontend** (build Vue / Nginx) sur **110** au lieu de **140** | Possible si tu veux isoler la **static** : voir §4. |
+| **`192.168.0.110`** | **LLM local** (Ollama) + **Frontend Unifié** (Nginx :8080) | Héberge l'interface **Lyra** (racine) et le **Client MMO** (`/mmo/`). |
 
 ---
 
@@ -149,9 +148,11 @@ LBG_DEPLOY_ROLE=all bash infra/scripts/deploy_vm.sh
 **À prévoir** :
 
 - **CORS** : sur la VM **140**, définir **`LBG_CORS_ORIGINS`** (fichier env systemd, ex. `http://192.168.0.110` si Nginx écoute le port 80). Le backend expose **`create_app()`** / middleware CORS si cette variable est non vide — voir `backend/main.py`.
-- **Nginx (110)** : exemple **`infra/nginx/pilot_web_110.conf.example`** ; installation : **`bash infra/scripts/install_nginx_pilot_110.sh`** depuis le **poste de dev** (scp/ssh ; le déploiement **front** ne copie pas `infra/` sur la 110). Après `deploy_vm.sh` **front**. Le script applique **`chmod`** pour **`www-data`**. Si **`docker-proxy`** occupe déjà **:80** (`ss -tlnp`) : **ne pas** empiler un second nginx sur 80 — soit **remapper / arrêter** le conteneur Docker, soit **`LBG_NGINX_PILOT_PORT=8080 bash infra/scripts/install_nginx_pilot_110.sh`** et ajouter **`http://192.168.0.110:8080`** dans **`LBG_CORS_ORIGINS`** sur **140**. **Cas fréquent (LBG_IA sur la même VM)** : le conteneur **`orchestrateur-traefik`** publie **`0.0.0.0:80->80`** — c’est lui qui monopolise **:80** ; l’UI **`lbg-frontend`** est souvent sur **5174** (`5174->80` dans le conteneur). Tant que Traefik tient **:80**, le pilot MMO en nginx doit passer par un **autre port hôte** (ex. **8080**) ou être **derrière Traefik** (règle de route dédiée, hors monorepo MMO).
-- **Cookies / auth** : si session, préférer même domaine ou config explicite cross-site.
-- **Pilot MMO** (`/pilot/`) : si servi depuis **140**, pas de changement ; servi depuis **110**, renseigner l’URL du backend dans le pilot (**`http://192.168.0.140:8000`**) + CORS comme ci-dessus.
+- **Nginx (110)** : L'interface est servie sur le port **8080** (standard projet). 
+    - Racine `/` : Lyra / Pilotage.
+    - Sous-dossier `/mmo/` : Client MMO (Vite).
+    - Proxy `/v1/` : Vers l'API sur 140:8000.
+- **Déploiement** : Utiliser `deploy_web_client.sh` pour le MMO et `deploy_vm.sh front` pour Lyra.
 
 **Alternative** : garder le **frontend sur 140** avec le reste LBG_IA pour limiter la latence et la config réseau.
 
@@ -175,4 +176,5 @@ LBG_DEPLOY_ROLE=all bash infra/scripts/deploy_vm.sh
 | 2026-04-11 | Création : répartition 140 / 245 / 110 ; table variables ; option front sur 110. |
 | 2026-04-11 | Schéma Mermaid « qui appelle qui » ; compte **lbg** sudoer sur 3 VM ; **`deploy_vm.sh`** multi-cible via **`LBG_VM_HOST`**. |
 | 2026-04-11 | **`LBG_DEPLOY_ROLE`** (`core` / `mmo` / `front` / `all`) ; table et exemples ; **point d’arrêt** après déploiement LAN validé. |
+| 2026-04-27 | **Unification Port 8080** : Frontend Lyra + MMO sur Nginx 110. Dépréciation du port 8081. |
 | 2026-04-16 | Ajouts env : **`LBG_MMO_INTERNAL_TOKEN`** (écriture interne `mmo_server`) ; déploiement : **`LBG_SSH_*`** + **`LBG_SKIP_FIX_CRLF`** / `fix_crlf` avant `rsync`. |
