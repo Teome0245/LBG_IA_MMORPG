@@ -120,7 +120,7 @@ if [ "${DEPLOY_ROLE}" = "front" ]; then
   ssh -tt "${SSH_OPTS[@]}" "${VM_USER}@${VM_HOST}" "bash -lc '
     set -euo pipefail
     sudo -n mkdir -p \"${REMOTE_DIR}/pilot_web\"
-    sudo -n rsync -a --delete \"${REMOTE_STAGE_DIR}/pilot_web/\" \"${REMOTE_DIR}/pilot_web/\"
+    sudo -n rsync -a --delete --exclude \"mmo/\" \"${REMOTE_STAGE_DIR}/pilot_web/\" \"${REMOTE_DIR}/pilot_web/\"
     sudo -n chown -R ${SERVICE_USER}:${SERVICE_USER} \"${REMOTE_DIR}/pilot_web\"
   '"
   echo "Front (pilot_web) déployé vers ${REMOTE_DIR}/pilot_web — configurer Nginx ou servir les fichiers ; API : LBG backend sur le host core (ex. http://192.168.0.140:8000)."

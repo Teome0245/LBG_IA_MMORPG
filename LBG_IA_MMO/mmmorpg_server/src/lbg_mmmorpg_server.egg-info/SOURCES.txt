@@ -29,3 +29,4 @@ tests/test_persistence.py
 tests/test_time_manager.py
 tests/test_ws_inbound.py
 tests/test_ws_integration.py
+tests/test_ws_world_commit.py

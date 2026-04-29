@@ -19,6 +19,7 @@ def msg_welcome(
     world_time_s: float,
     day_fraction: float,
     entities: list[dict[str, Any]],
+    locations: list[dict[str, Any]] | None = None,
     npc_reply: str | None = None,
     trace_id: str | None = None,
 ) -> dict[str, Any]:
@@ -30,6 +31,7 @@ def msg_welcome(
         "world_time_s": world_time_s,
         "day_fraction": day_fraction,
         "entities": entities,
+        "locations": locations or [],
     }
     if isinstance(npc_reply, str) and npc_reply.strip():
         msg["npc_reply"] = npc_reply.strip()
@@ -43,6 +45,7 @@ def msg_world_tick(
     world_time_s: float,
     day_fraction: float,
     entities: list[dict[str, Any]],
+    locations: list[dict[str, Any]] | None = None,
     npc_reply: str | None = None,
     trace_id: str | None = None,
 ) -> dict[str, Any]:
@@ -52,6 +55,7 @@ def msg_world_tick(
         "world_time_s": world_time_s,
         "day_fraction": day_fraction,
         "entities": entities,
+        "locations": locations or [],
     }
     if isinstance(npc_reply, str) and npc_reply.strip():
         msg["npc_reply"] = npc_reply.strip()

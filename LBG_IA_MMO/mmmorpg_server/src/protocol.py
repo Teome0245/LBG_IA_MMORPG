@@ -16,6 +16,7 @@ def msg_welcome(
     world_time_s: float,
     day_fraction: float,
     entities: list[dict[str, Any]],
+    locations: list[dict[str, Any]],
 ) -> dict[str, Any]:
     return {
         "type": "welcome",
@@ -24,6 +25,7 @@ def msg_welcome(
         "world_time_s": world_time_s,
         "day_fraction": day_fraction,
         "entities": entities,
+        "locations": locations,
     }
 
 
@@ -32,10 +34,12 @@ def msg_world_tick(
     world_time_s: float,
     day_fraction: float,
     entities: list[dict[str, Any]],
+    locations: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     return {
         "type": "world_tick",
         "world_time_s": world_time_s,
         "day_fraction": day_fraction,
         "entities": entities,
+        "locations": locations or [],
     }

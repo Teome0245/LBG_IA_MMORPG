@@ -13,3 +13,6 @@ Requires-Dist: uvicorn[standard]>=0.27; extra == "quests-http-service"
 Provides-Extra: combat-http-service
 Requires-Dist: fastapi>=0.110; extra == "combat-http-service"
 Requires-Dist: uvicorn[standard]>=0.27; extra == "combat-http-service"
+Provides-Extra: pm-http-service
+Requires-Dist: fastapi>=0.110; extra == "pm-http-service"
+Requires-Dist: uvicorn[standard]>=0.27; extra == "pm-http-service"
