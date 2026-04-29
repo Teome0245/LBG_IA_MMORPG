@@ -127,6 +127,7 @@ Le backend applique une **whitelist** et des **limites** avant d’appeler l’H
 | `LBG_AGENT_COMBAT_TIMEOUT` | Secondes pour la réponse HTTP (défaut **30**). |
 | `LBG_AGENT_PM_URL` | Si définie (ex. `http://127.0.0.1:8055`), le handler **`agent.pm`** envoie un `POST {url}/invoke`. Sinon : stub local **`pm_stub`** (brief jalons/risques déterministe). |
 | `LBG_AGENT_PM_TIMEOUT` | Secondes pour la réponse HTTP (défaut **45**). |
+| `LBG_AGENT_DESKTOP_URL` | Si définie (ex. `http://192.168.0.50:8060`), le handler **`agent.desktop`** envoie un `POST {url}/invoke`. Sinon : exécution locale **uniquement** (utile dev), mais en prod on vise un worker Windows. |
 | `LBG_PM_PLAN_PATH` | Chemin absolu ou relatif vers le markdown du plan (prioritaire sur les chemins par défaut VM/dev). |
 | `LBG_PM_MILESTONES_MAX` | Nombre max de lignes datées conservées dans `brief.milestones` (défaut **8**, plafonné à 30). |
 | `LBG_PM_TASKS_MAX` | Nombre max d’entrées dans `brief.tasks` (défaut **12**, plafonné à 40). |
@@ -169,6 +170,33 @@ Chaque action DevOps émet une ligne JSON `event: agents.devops.audit` (`ts`, `o
 **`selfcheck`** : agrège des sondes **bornées** (pas d’URL ou d’unité arbitraires côté prompt) ; le champ `remediation_hints` propose des pistes **textuelles** (ex. `journalctl`, `systemctl restart` — **non exécutées** par l’exécuteur). Une évolution ultérieure pourra ajouter des actions correctives derrière un garde-fou plus strict.
 
 Recette LAN (dry-run par défaut) : `bash infra/scripts/smoke_devops_systemd_lan.sh` (voir en-tête du script pour `LBG_DEVOPS_SYSTEMD_UNIT_ALLOWLIST` sur le **core**) ; bundle diagnostic : `bash infra/scripts/smoke_devops_selfcheck_lan.sh`.
+
+### Desktop — agent Windows hybride (`agent.desktop`)
+
+Capability orchestrateur : **`desktop_control`** → handler **`agent.desktop`**. Par design, on n’exécute **rien**
+sur simple texte : il faut fournir une action structurée via `context.desktop_action` (priorité de routage).
+
+Actions MVP :
+- `open_url` : `{"kind":"open_url","url":"https://…"}`
+- `notepad_append` : `{"kind":"notepad_append","path":"C:\\…\\notes.txt","text":"…"}`
+
+Garde-fous :
+- **Allowlist URL** (match exact)
+- **Allowlist répertoires fichiers**
+- **Dry-run par défaut**
+- **Approval token** optionnel pour toute exécution réelle
+- **Audit JSONL** (stdout et/ou fichier)
+
+| Variable | Effet |
+|----------|--------|
+| `LBG_DESKTOP_URL_ALLOWLIST` | URLs **exactes** autorisées pour `open_url` (virgules). Vide → tout refusé. |
+| `LBG_DESKTOP_FILE_ALLOWLIST_DIRS` | Répertoires parents autorisés pour `notepad_append` (virgules). Vide → tout refusé. |
+| `LBG_DESKTOP_DRY_RUN` | Si `1`/`true`/`yes`/`on` : aucune action réelle (défaut recommandé **1**). |
+| `context.desktop_dry_run` | Si `true` : force le dry-run pour cet appel (si l’env ne l’a pas déjà activé). |
+| `LBG_DESKTOP_APPROVAL_TOKEN` | Si défini : toute exécution réelle exige `context.desktop_approval` identique (comparaison constante). |
+| `LBG_DESKTOP_AUDIT_LOG_PATH` | Chemin fichier JSONL (append) pour l’audit. |
+| `LBG_DESKTOP_AUDIT_STDOUT` | Si `0`/`false` : n’écrit plus l’audit sur stdout. |
+
 
 **Prod** : compte **`lbg`** (sudoer, services non-root) — **`docs/ops_vm_user.md`** ; rotation JSONL / jeton — **`docs/ops_devops_audit.md`** (`infra/logrotate/lbg-devops-audit`).
 

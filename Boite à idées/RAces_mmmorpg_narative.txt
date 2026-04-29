@@ -1,0 +1,886 @@
+Parfait Stève — on démarre **B2‑1**.  
+Format : **1 paragraphe narratif condensé + fiche technique courte**.  
+Races **1 à 15**.
+
+---
+
+# 🌿 **B2‑1 — Races 1 à 15 (Narratif condensé + Technique courte)**
+
+---
+
+# **1. Pykrels**  
+Petits êtres sylvestres vifs et curieux, les Pykrels vivent dans les racines des arbres géants d’Arvandor. Leur fourrure douce et leurs mouvements silencieux en font des éclaireurs naturels, toujours en harmonie avec les animaux de la forêt.  
+**Technique :** Taille 20–30 cm • Biomes : forêts • Aptitudes : furtivité, agilité, communication animale • Faiblesses : feu • Rôle : éclaireur
+
+---
+
+# **2. K’Miri**  
+Ces insectoïdes miniatures se fondent dans le sable grâce à leur carapace réfléchissante. Espions nés, ils observent les caravanes et les tribus du désert sans jamais être repérés.  
+**Technique :** 25–40 cm • Désert • Camouflage, vision thermique • Faiblesse : froid • Rôle : espion
+
+---
+
+# **3. Tinklings**  
+Gobelins ingénieurs hyperactifs, capables de transformer n’importe quel débris en gadget utile… ou explosif. Leur créativité est aussi brillante que dangereuse.  
+**Technique :** 30–50 cm • Usines, villes • Ingénierie, bricolage • Faiblesse : distraction • Rôle : artisan
+
+---
+
+# **4. Fae‑Lumes**  
+Petites créatures lumineuses flottant légèrement au-dessus du sol, elles soignent par simple contact et illuminent les clairières nocturnes.  
+**Technique :** 35–45 cm • Clairières • Lumière, soin, lévitation • Faiblesse : obscurité totale • Rôle : guérisseur
+
+---
+
+# **5. Murriks**  
+Rongeurs bipèdes organisés en clans, rapides et experts en tunnels. Ils posent des pièges ingénieux pour défendre leurs territoires.  
+**Technique :** 40–60 cm • Forêts, ruines • Pièges, creusage • Faiblesse : faible force • Rôle : saboteur
+
+---
+
+# **6. Skreel**  
+Mini‑chauves‑souris humanoïdes utilisant un sonar précis pour naviguer dans les ruines et les grottes. Leur vol court est silencieux et efficace.  
+**Technique :** 20–25 cm • Grottes • Sonar, furtivité • Faiblesse : lumière forte • Rôle : espion nocturne
+
+---
+
+# **7. Pebblys**  
+Golems miniatures de pierre, lourds et résistants. Ils roulent plus qu’ils ne marchent et servent souvent de gardiens naturels.  
+**Technique :** 30–40 cm • Montagnes • Résistance, stabilité • Faiblesse : eau • Rôle : tank miniature
+
+---
+
+# **8. Nymphelis**  
+Fées végétales capables de manipuler fleurs et spores. Leur présence apaise la nature et favorise la croissance.  
+**Technique :** 40–55 cm • Forêts • Magie végétale, soin • Faiblesse : feu • Rôle : support
+
+---
+
+# **9. Zik’Tar**  
+Guerriers insectoïdes disciplinés, rapides et féroces malgré leur petite taille. Leur coordination est redoutable.  
+**Technique :** 50–60 cm • Désert, ruche • Combat rapide • Faiblesse : froid • Rôle : guerrier léger
+
+---
+
+# **10. Plimps**  
+Amphibiens bondissants, capables de sauter sur de longues distances et de nager comme des torpilles.  
+**Technique :** 25–35 cm • Marécages • Saut, nage, camouflage • Faiblesse : sécheresse • Rôle : éclaireur amphibie
+
+---
+
+# **11. Brumelins**  
+Humanoïdes brumeux glissant silencieusement dans les marais. Leur corps semi‑vaporeux les rend difficiles à percevoir.  
+**Technique :** 60–80 cm • Marais • Dissimulation, lévitation faible • Faiblesse : vent • Rôle : espion spectral
+
+---
+
+# **12. Korr’Dens**  
+Petits reptiliens du désert, rapides et agressifs. Leur peau écailleuse rouge les protège de la chaleur extrême.  
+**Technique :** 70–100 cm • Désert • Résistance chaleur, morsure venimeuse • Faiblesse : froid • Rôle : guerrier léger
+
+---
+
+# **13. Flitwings**  
+Humanoïdes ailés aux plumes colorées, messagers naturels des falaises et des îles flottantes.  
+**Technique :** 80–110 cm • Falaises • Vol court, vision perçante • Faiblesse : fragilité osseuse • Rôle : éclaireur aérien
+
+---
+
+# **14. Mogruls**  
+Humanoïdes trapus et robustes, mineurs infatigables des montagnes glacées. Leur force dépasse largement leur taille.  
+**Technique :** 90–120 cm • Montagnes • Force, minage • Faiblesse : lenteur • Rôle : artisan / mineur
+
+---
+
+# **15. Sélénites**  
+Humanoïdes lunaires à la peau pâle luminescente. Ils se déplacent silencieusement sous la lumière de la lune.  
+**Technique :** 60–90 cm • Clairières nocturnes • Magie lunaire, furtivité • Faiblesse : soleil • Rôle : mage nocturne
+
+---
+
+# 🎯 **Stève, prêt pour B2‑2 (races 16 à 30) ?**
+Parfait Stève — on enchaîne avec **B2‑2**, races **16 à 30**.  
+Toujours : **1 paragraphe narratif condensé + fiche technique courte**.
+
+---
+
+# 🔥 **B2‑2 — Races 16 à 30**
+
+---
+
+# **16. Glim’Feys**  
+Esprits lumineux des clairières, les Glim’Feys apparaissent comme des silhouettes translucides flottant au-dessus du sol. Leur magie douce influence les émotions et apaise les conflits.  
+**Technique :** 70–90 cm • Clairières • Lumière, apaisement • Faiblesse : obscurité • Rôle : support magique
+
+---
+
+# **17. Thornlings**  
+Petits humanoïdes végétaux couverts d’épines flexibles. Ils protègent férocement les jeunes pousses et les zones sacrées de la forêt.  
+**Technique :** 60–80 cm • Forêts • Épines, camouflage • Faiblesse : feu • Rôle : défenseur naturel
+
+---
+
+# **18. Mire’Crawlers**  
+Créatures amphibies des marais, rampantes et silencieuses. Leur peau visqueuse les rend difficiles à saisir et leur permet de se faufiler partout.  
+**Technique :** 50–70 cm • Marécages • Camouflage, nage • Faiblesse : sécheresse • Rôle : éclaireur
+
+---
+
+# **19. Shardlings**  
+Humanoïdes cristallins miniatures, nés dans les cavernes de Cryostell. Leur corps réfracte la lumière en éclats colorés.  
+**Technique :** 40–60 cm • Glace, grottes • Lumière, résistance • Faiblesse : vibrations • Rôle : mage cristallin
+
+---
+
+# **20. Emberlings**  
+Petits êtres de braise vivante, nés dans les fissures volcaniques. Ils émettent une chaleur constante et manipulent de petites flammes.  
+**Technique :** 30–50 cm • Volcans • Feu, chaleur • Faiblesse : eau • Rôle : mage du feu
+
+---
+
+# **21. Virelians**  
+Humanoïdes végétaux souples et rapides, capables de photosynthèse. Ils se déplacent comme des ombres dans les jungles d’Arvandor.  
+**Technique :** 100–120 cm • Forêts, jungles • Camouflage, agilité • Faiblesse : feu • Rôle : éclaireur / guérisseur
+
+---
+
+# **22. Krel’Noks**  
+Reptiliens amphibies agressifs, maîtres des embuscades aquatiques. Leur mâchoire puissante inspire la crainte dans les marais.  
+**Technique :** 110–130 cm • Marécages • Nage, morsure • Faiblesse : lenteur sur terre sèche • Rôle : guerrier amphibie
+
+---
+
+# **23. Lumisprites**  
+Petits humanoïdes lumineux, presque féeriques. Leur lueur interne varie selon leurs émotions et leur magie.  
+**Technique :** 90–110 cm • Clairières, cieux • Lumière, lévitation • Faiblesse : obscurité totale • Rôle : mage de lumière
+
+---
+
+# **24. Rask’Mogs**  
+Humanoïdes massifs à la peau rocheuse, protecteurs des montagnes de Khar’Zuun. Leur force brute est légendaire.  
+**Technique :** 110–140 cm • Montagnes • Force, résistance • Faiblesse : lenteur • Rôle : tank
+
+---
+
+# **25. Aer’Lins**  
+Humanoïdes ailés gracieux, vivant sur les falaises et les îles flottantes. Leur vol agile en fait d’excellents archers aériens.  
+**Technique :** 120–150 cm • Cieux • Vol, vision longue • Faiblesse : fragilité osseuse • Rôle : archer aérien
+
+---
+
+# **26. Myr’Gols**  
+Insectoïdes travailleurs, organisés en castes. Leur discipline et leur force en font des bâtisseurs hors pair.  
+**Technique :** 130–160 cm • Déserts, ruches • Construction, force • Faiblesse : dépendance à la ruche • Rôle : ouvrier
+
+---
+
+# **27. Sylphari**  
+Humanoïdes semi‑éthérés liés au vent. Leur corps vaporeux leur permet de se déplacer avec une grâce surnaturelle.  
+**Technique :** 140–170 cm • Cieux, clairières • Vent, vitesse • Faiblesse : métal lourd • Rôle : mage du vent
+
+---
+
+# **28. Dro’Karrs**  
+Reptiliens chasseurs rapides et silencieux, maîtres des jungles humides. Leur odorat est exceptionnel.  
+**Technique :** 150–180 cm • Jungles • Traque, agilité • Faiblesse : froid • Rôle : chasseur
+
+---
+
+# **29. Arkenites**  
+Humanoïdes cristallins irradiant une lumière interne. Leur magie résonne avec les minéraux de Cryostell.  
+**Technique :** 160–180 cm • Glace, montagnes • Résonance, résistance • Faiblesse : vibrations • Rôle : mage cristallin
+
+---
+
+# **30. Ferrox**  
+Humanoïdes métalliques naturels, lourds et puissants. Ils s’intègrent facilement aux machines de Mecha‑Prime.  
+**Technique :** 170–200 cm • Usines, métropoles • Force, intégration technologique • Faiblesse : lenteur • Rôle : tank / garde
+
+---
+
+# 🎯 **Stève, prêt pour B2‑3 (races 31 à 45) ?**
+Parfait Stève — on enchaîne avec **B2‑3**, races **31 à 45**.  
+Toujours : **1 paragraphe narratif condensé + fiche technique courte**, calibré pour ingestion Hermes et ton pipeline MMO.
+
+---
+
+# ⚔️ **B2‑3 — Races 31 à 45**
+
+---
+
+# **31. Varkoons**  
+Caninoïdes bipèdes organisés en meutes soudées, les Varkoons sont des chasseurs loyaux et protecteurs. Leur odorat exceptionnel et leur endurance en font des gardiens naturels des forêts froides.  
+**Technique :** 150–190 cm • Forêts froides, toundra • Odorat, endurance • Faiblesse : chaleur • Rôle : chasseur / garde
+
+---
+
+# **32. Fel’Ranis**  
+Félins humanoïdes agiles et silencieux, maîtres des embuscades dans les jungles d’Arvandor. Leur vision nocturne est redoutable.  
+**Technique :** 140–180 cm • Jungles • Furtivité, agilité • Faiblesse : endurance faible • Rôle : assassin / éclaireur
+
+---
+
+# **33. Drav’Korr**  
+Reptiliens cuirassés issus des volcans de Khar’Zuun, disciplinés et puissants. Leur peau écailleuse résiste à la chaleur extrême.  
+**Technique :** 160–200 cm • Volcans, déserts • Force, résistance thermique • Faiblesse : eau • Rôle : soldat lourd
+
+---
+
+# **34. Aer’Thyls**  
+Humanoïdes ailés nobles et gracieux, vivant sur les îles flottantes. Leur magie céleste éclaire les cieux d’Aetherion.  
+**Technique :** 150–180 cm • Cieux • Vol, magie céleste • Faiblesse : fragilité • Rôle : mage céleste
+
+---
+
+# **35. Thal’Morans**  
+Humanoïdes aquatiques élégants, nageant avec une aisance surnaturelle. Leur communication sonar leur permet de coordonner des patrouilles sous‑marines.  
+**Technique :** 160–190 cm • Océans • Nage, sonar • Faiblesse : faibles sur terre • Rôle : mage aquatique
+
+---
+
+# **36. Noctari**  
+Humanoïdes nocturnes aux yeux luminescents, maîtres des ruines et des ténèbres. Leur magie d’ombre est subtile et dangereuse.  
+**Technique :** 150–180 cm • Ténèbres, ruines • Ombre, furtivité • Faiblesse : lumière • Rôle : mage d’ombre
+
+---
+
+# **37. Kryll’Gans**  
+Insectoïdes massifs à quatre bras, nés pour la guerre. Leur carapace épaisse et leur discipline en font des soldats d’élite.  
+**Technique :** 170–200 cm • Déserts, ruches • Force, multi‑armes • Faiblesse : intelligence individuelle faible • Rôle : soldat d’élite
+
+---
+
+# **38. Solariens**  
+Humanoïdes irradiants, nourris par la lumière. Leur magie solaire purifie et brûle.  
+**Technique :** 160–190 cm • Clairières, cieux • Magie solaire, régénération lumière • Faiblesse : nuit • Rôle : paladin solaire
+
+---
+
+# **39. Ferro’Kyns**  
+Cyborgs lourds issus de Mecha‑Prime, intégrés au réseau tactique. Leur corps métallique est conçu pour la guerre.  
+**Technique :** 170–200 cm • Usines, métropoles • Analyse, force • Faiblesse : énergie • Rôle : soldat lourd
+
+---
+
+# **40. Glacioris**  
+Humanoïdes de glace massifs, stoïques et résistants. Leur souffle glacé peut figer un adversaire en un instant.  
+**Technique :** 180–200 cm • Glace, toundra • Froid, force • Faiblesse : chaleur • Rôle : tank élémentaire
+
+---
+
+# **41. Runekins**  
+Humanoïdes gravés de runes vivantes, gardiens des savoirs anciens. Leur magie runique est stable et puissante.  
+**Technique :** 150–180 cm • Forêts anciennes • Runes, résistance magique • Faiblesse : anti‑magie • Rôle : mage runique
+
+---
+
+# **42. Brakk’Thors**  
+Géants volcaniques à la peau de basalte, implacables et brûlants. Leur simple présence chauffe l’air.  
+**Technique :** 170–200 cm • Volcans • Feu, force • Faiblesse : froid • Rôle : tank volcanique
+
+---
+
+# **43. Aqualiths**  
+Humanoïdes semi‑liquides, capables de changer légèrement de forme. Leur corps d’eau amortit les coups.  
+**Technique :** 160–190 cm • Océans, marais • Amorphie, résistance • Faiblesse : électricité • Rôle : tank aquatique
+
+---
+
+# **44. Umbrali**  
+Humanoïdes d’ombre presque intangibles, rôdant dans les ruines. Leur magie noire est subtile et mortelle.  
+**Technique :** 150–180 cm • Ténèbres • Ombre, furtivité • Faiblesse : lumière • Rôle : assassin spectral
+
+---
+
+# **45. Aer’Calyths**  
+Guerriers ailés rapides, caste martiale d’Aetherion. Leur maîtrise du vent en fait des combattants aériens redoutables.  
+**Technique :** 160–190 cm • Cieux • Vol rapide, vent • Faiblesse : projectiles lourds • Rôle : guerrier aérien
+
+---
+
+# 🎯 **Stève, prêt pour B2‑4 (races 46 à 60) ?**
+Parfait Stève — on enchaîne avec **B2‑4**, races **46 à 60**.  
+Toujours : **1 paragraphe narratif condensé + fiche technique courte**, calibré pour ingestion Hermes et ton pipeline MMO.
+
+---
+
+# ❄️🔥 **B2‑4 — Races 46 à 60**
+
+---
+
+# **46. Cryo’Drells**  
+Mystiques des terres gelées, les Cryo’Drells sont des humanoïdes de glace dont le corps semble sculpté dans un givre éternel. Leur magie glaciale est précise, disciplinée et redoutable.  
+**Technique :** 170–200 cm • Glace, toundra • Magie de glace, résistance froid • Faiblesse : chaleur • Rôle : mage de glace
+
+---
+
+# **47. Mechari**  
+Synthétiques humanoïdes autonomes, conçus pour l’analyse et la précision. Leur corps métallique est optimisé pour l’efficacité tactique.  
+**Technique :** 160–190 cm • Métropoles, usines • Analyse, précision • Faiblesse : énergie • Rôle : soldat / technicien
+
+---
+
+# **48. Grav’Thors**  
+Humanoïdes denses comme la pierre, presque impossibles à renverser. Leur masse extrême leur donne une stabilité parfaite.  
+**Technique :** 180–200 cm • Montagnes, canyons • Gravité interne, force • Faiblesse : ne nagent pas • Rôle : tank lourd
+
+---
+
+# **49. Luminari**  
+Humanoïdes lumineux, irradiant une énergie douce et bienveillante. Leur magie stellaire soigne et protège.  
+**Technique :** 160–190 cm • Cieux, clairières • Lumière, soin • Faiblesse : obscurité totale • Rôle : prêtre stellaire
+
+---
+
+# **50. Abyssari**  
+Humanoïdes abyssaux aux yeux bioluminescents, parfaitement adaptés aux profondeurs. Leur silence est presque inquiétant.  
+**Technique :** 170–200 cm • Abysses • Vision abyssale, camouflage • Faiblesse : lumière forte • Rôle : éclaireur abyssal
+
+---
+
+# **51. Storm’Ryders**  
+Humanoïdes électriques nés des tempêtes d’Aetherion. Leur peau crépite d’arcs instables et leur vitesse est fulgurante.  
+**Technique :** 170–200 cm • Orages, cieux • Électrokinésie, vitesse • Faiblesse : eau salée • Rôle : mage électrique
+
+---
+
+# **52. Duskborns**  
+Êtres crépusculaires maîtrisant la magie du clair‑obscur. Leur présence est hypnotique et mystérieuse.  
+**Technique :** 160–190 cm • Ténèbres, clairières nocturnes • Ombre‑lumière, charme • Faiblesse : soleil • Rôle : mage crépusculaire
+
+---
+
+# **53. Ironjaws**  
+Humanoïdes massifs dotés d’une mâchoire métallique naturelle. Leur force brute en fait des mineurs et guerriers redoutables.  
+**Technique :** 180–200 cm • Montagnes, mines • Force, morsure • Faiblesse : lenteur • Rôle : tank / mineur
+
+---
+
+# **54. Silt’Haras**  
+Amphibiens des marais, à la peau visqueuse et aux doigts palmés. Ils se fondent dans la boue comme des ombres.  
+**Technique :** 170–200 cm • Marécages • Camouflage, respiration aquatique • Faiblesse : feu • Rôle : chasseur des marais
+
+---
+
+# **55. Voidwalkers**  
+Humanoïdes du vide, semi‑éthérés, capables de téléportations courtes et d’absorption d’énergie.  
+**Technique :** 160–190 cm • Ténèbres, ruines • Téléportation, furtivité • Faiblesse : instabilité • Rôle : assassin magique
+
+---
+
+# **56. Aer’Vantyrs**  
+Guerriers ailés robustes, caste supérieure des combattants célestes. Leur vol prolongé en fait des maîtres du ciel.  
+**Technique :** 180–210 cm • Cieux, falaises • Vol, combat aérien • Faiblesse : projectiles perforants • Rôle : chevalier aérien
+
+---
+
+# **57. Pyroclasts**  
+Humanoïdes de magma, véritables volcans vivants. Leur peau fissurée laisse apparaître une lave brûlante.  
+**Technique :** 190–220 cm • Volcans • Feu, projection de lave • Faiblesse : eau • Rôle : tank volcanique / boss
+
+---
+
+# **58. Frostborns**  
+Guerriers de glace massifs, forgés dans les tempêtes de Cryostell. Leur armure naturelle est faite de givre solide.  
+**Technique :** 180–210 cm • Glace • Force, souffle gelant • Faiblesse : chaleur • Rôle : tank de glace
+
+---
+
+# **59. Mecha’Lords**  
+Synthétiques lourds, caste dirigeante de Mecha‑Prime. Leur intelligence tactique est redoutable.  
+**Technique :** 190–220 cm • Métropoles • Commandement, analyse • Faiblesse : énergie • Rôle : commandant / boss
+
+---
+
+# **60. Leviathrans**  
+Humanoïdes marins colossaux, protecteurs des récifs et des profondeurs. Leur puissance physique est immense.  
+**Technique :** 200–240 cm • Océans profonds • Force, nage rapide • Faiblesse : lents sur terre • Rôle : tank marin / boss
+
+---
+
+# 🎯 **Stève, prêt pour B2‑5 (races 61 à 75) ?**
+Parfait Stève — on continue avec **B2‑5**, races **61 à 75**.  
+Toujours : **1 paragraphe narratif condensé + fiche technique courte**, calibré pour ingestion Hermes et ton pipeline MMO.
+
+---
+
+# ⚡❄️🔥 **B2‑5 — Races 61 à 75**
+
+---
+
+# **61. Thorn’Goliaths**  
+Géants sylvestres massifs, les Thorn’Goliaths sont des gardiens millénaires des forêts d’Arvandor. Leur corps d’écorce vivante se régénère lentement, et leurs bras épineux peuvent transpercer la pierre.  
+**Technique :** 200–240 cm • Forêts anciennes • Régénération, camouflage • Faiblesse : feu • Rôle : tank naturel
+
+---
+
+# **62. Sand’Colossi**  
+Titans de sable compacté, immobiles pendant des jours avant de surgir pour défendre les dunes sacrées. Leur corps granuleux peut se désagréger partiellement pour esquiver les attaques.  
+**Technique :** 210–250 cm • Déserts • Amorphie, résistance chaleur • Faiblesse : eau • Rôle : tank du désert
+
+---
+
+# **63. Abyss’Gards**  
+Gardiens abyssaux colossaux, dotés d’une chitine épaisse et d’yeux multiples adaptés aux profondeurs. Leur présence inspire la crainte dans les abysses.  
+**Technique :** 220–260 cm • Abysses • Vision abyssale, résistance pression • Faiblesse : surface • Rôle : boss abyssal
+
+---
+
+# **64. Shade’Titans**  
+Titans d’ombre massifs, silhouettes colossales errant dans les ruines corrompues. Leur corps semi‑intangibles absorbe la lumière autour d’eux.  
+**Technique :** 200–240 cm • Ténèbres • Ombre, intangibilité partielle • Faiblesse : lumière • Rôle : boss d’ombre
+
+---
+
+# **65. Sky’Wardens**  
+Gardiens ailés géants, protecteurs des sanctuaires célestes. Leur vol majestueux et leur vision extrême en font des sentinelles parfaites.  
+**Technique :** 200–230 cm • Cieux • Vol prolongé, vision extrême • Faiblesse : projectiles lourds • Rôle : garde aérien élite
+
+---
+
+# **66. Cryo’Goliaths**  
+Géants de glace cristallisée, véritables montagnes vivantes. Leur souffle glacial peut figer un ennemi en quelques secondes.  
+**Technique :** 220–250 cm • Glace • Froid extrême, force • Faiblesse : chaleur • Rôle : boss de glace
+
+---
+
+# **67. Iron’Sentinels**  
+Gardiens métalliques autonomes, programmés pour protéger les zones industrielles de Mecha‑Prime. Leur logique froide les rend implacables.  
+**Technique :** 210–240 cm • Métropoles • Analyse, résistance • Faiblesse : énergie • Rôle : garde élite
+
+---
+
+# **68. Terra’Gards**  
+Statues vivantes de pierre, immobiles pendant des siècles avant de s’éveiller pour défendre les temples anciens. Leur force est titanesque.  
+**Technique :** 200–230 cm • Montagnes, forêts anciennes • Force, résistance • Faiblesse : vibrations • Rôle : gardien de sanctuaire
+
+---
+
+# **69. Ember’Raks**  
+Guerriers incandescents, nés dans les volcans de Khar’Zuun. Leur corps fissuré laisse apparaître une lave brûlante.  
+**Technique :** 210–250 cm • Volcans • Feu, projection de flammes • Faiblesse : eau • Rôle : guerrier du feu
+
+---
+
+# **70. Abyss’Titans**  
+Titans marins colossaux, maîtres des abysses. Leur peau épaisse et leurs nageoires géantes leur permettent de survivre à des pressions extrêmes.  
+**Technique :** 230–260 cm • Abysses • Force colossale, vision abyssale • Faiblesse : surface • Rôle : boss abyssal
+
+---
+
+# **71. Verdant’Wardens**  
+Gardiens sylvestres géants, fusion d’arbre et d’humanoïde. Ils protègent les clairières sacrées avec une patience infinie.  
+**Technique :** 210–250 cm • Forêts anciennes • Régénération, contrôle végétal • Faiblesse : feu • Rôle : tank naturel
+
+---
+
+# **72. Obsidian’Gards**  
+Géants d’obsidienne noire, tranchants et imposants. Leur peau volcanique peut briser les armes au contact.  
+**Technique :** 220–260 cm • Volcans • Résistance chaleur, peau tranchante • Faiblesse : froid • Rôle : boss volcanique
+
+---
+
+# **73. Tidal’Goliaths**  
+Géants marins écailleux, protecteurs des récifs. Leur puissance physique est inégalée sous l’eau.  
+**Technique :** 210–250 cm • Océans • Nage puissante, résistance pression • Faiblesse : terre ferme • Rôle : tank marin
+
+---
+
+# **74. Night’Colossi**  
+Colosses nocturnes faits d’ombre dense, rôdant dans les ruines maudites. Leur présence obscurcit l’air.  
+**Technique :** 220–260 cm • Ténèbres • Ombre, magie noire • Faiblesse : lumière • Rôle : boss d’ombre
+
+---
+
+# **75. Sky’Colossi**  
+Géants ailés majestueux, seigneurs des îles flottantes. Leur magie céleste éclaire les cieux.  
+**Technique :** 230–260 cm • Cieux • Vol prolongé, magie céleste • Faiblesse : projectiles lourds • Rôle : boss aérien
+
+---
+
+# 🎯 **Stève, prêt pour B2‑6 (races 76 à 90) ?**
+Parfait Stève — on continue avec **B2‑6**, races **76 à 90**.  
+Toujours : **1 paragraphe narratif condensé + fiche technique courte**, calibré pour ingestion Hermes et ton pipeline MMO.
+
+---
+
+# ⚔️❄️🔥🌊 **B2‑6 — Races 76 à 90**
+
+---
+
+# **76. Frost’Colossi**  
+Colosses de glace aux corps cristallisés, les Frost’Colossi sont des montagnes vivantes qui avancent lentement mais inexorablement. Leur souffle glacial peut figer une armée entière.  
+**Technique :** 230–260 cm • Glace, toundra • Souffle gelant, résistance froid • Faiblesse : chaleur • Rôle : boss de glace
+
+---
+
+# **77. Iron’Goliaths**  
+Géants métalliques forgés dans les usines de Mecha‑Prime, les Iron’Goliaths sont des sentinelles lourdes capables d’encaisser des dégâts titanesques. Leur logique tactique est implacable.  
+**Technique :** 220–260 cm • Métropoles, usines • Analyse, résistance extrême • Faiblesse : énergie • Rôle : boss mécanique
+
+---
+
+# **78. Ember’Colossi**  
+Colosses de feu, véritables volcans ambulants. Leur corps de magma solidifié laisse apparaître des fissures incandescentes qui illuminent les cavernes de Khar’Zuun.  
+**Technique :** 230–260 cm • Volcans • Projection de lave, chaleur extrême • Faiblesse : eau • Rôle : boss volcanique
+
+---
+
+# **79. Abyss’Colossi**  
+Titans marins chitineux, maîtres des abysses. Leur corps massif est conçu pour résister à des pressions inimaginables, et leurs yeux multiples scrutent les ténèbres.  
+**Technique :** 240–260 cm • Abysses • Résistance pression, vision abyssale • Faiblesse : surface • Rôle : boss abyssal
+
+---
+
+# **80. Void’Colossi**  
+Colosses du vide, silhouettes semi‑éthérées parcourues de fissures d’énergie noire. Ils apparaissent et disparaissent dans les zones corrompues.  
+**Technique :** 230–260 cm • Ténèbres • Téléportation, absorption énergie • Faiblesse : lumière pure • Rôle : boss du vide
+
+---
+
+# **81. Worldroots**  
+Titans sylvestres millénaires, incarnations vivantes des arbres anciens. Leur voix ressemble au craquement d’un tronc géant et leur sagesse est infinie.  
+**Technique :** 260–320 cm • Forêts anciennes • Régénération extrême, racines • Faiblesse : feu • Rôle : boss de forêt
+
+---
+
+# **82. Magma’Titans**  
+Volcans vivants, les Magma’Titans sont des entités colossales de roche et de magma. Chaque pas fait trembler la terre.  
+**Technique :** 280–340 cm • Volcans • Lave, ondes de choc • Faiblesse : eau • Rôle : boss volcanique majeur
+
+---
+
+# **83. Abyss’Leviathans**  
+Seigneurs absolus des abysses, ces titans marins sont entourés de tentacules dorsaux et d’une chitine impénétrable.  
+**Technique :** 300–350 cm • Abysses • Force colossale, pression extrême • Faiblesse : surface • Rôle : boss abyssal suprême
+
+---
+
+# **84. Void’Titans**  
+Titans du vide, entités semi‑éthérées dont la présence déforme la réalité. Leur magie noire est d’une puissance cosmique.  
+**Technique :** 280–330 cm • Ténèbres • Téléportation, magie du vide • Faiblesse : lumière pure • Rôle : boss du vide
+
+---
+
+# **85. Sky’Titans**  
+Seigneurs ailés des cieux, dotés d’ailes gigantesques et d’une magie céleste éclatante. Ils dominent les îles flottantes.  
+**Technique :** 260–320 cm • Cieux • Vol prolongé, magie céleste • Faiblesse : projectiles lourds • Rôle : boss aérien suprême
+
+---
+
+# **86. Frost’Titans**  
+Montagnes vivantes de glace, forgées dans les tempêtes éternelles de Cryostell. Leur souffle peut geler un lac entier.  
+**Technique :** 280–340 cm • Glace • Froid extrême, force colossale • Faiblesse : chaleur • Rôle : boss de glace suprême
+
+---
+
+# **87. Iron’Titans**  
+Titans métalliques, machines vivantes alimentées par des cœurs énergétiques massifs. Ils sont les protecteurs ultimes de Mecha‑Prime.  
+**Technique :** 260–320 cm • Métropoles • Analyse tactique, résistance totale • Faiblesse : surcharge énergétique • Rôle : boss mécanique suprême
+
+---
+
+# **88. Ember’Titans**  
+Titans de feu, volcans ambulants dont la chaleur peut faire fondre la pierre. Leur rugissement ressemble à une éruption.  
+**Technique :** 280–340 cm • Volcans • Lave, ondes de choc • Faiblesse : eau • Rôle : boss volcanique suprême
+
+---
+
+# **89. Abyss’Behemoths**  
+Behemoths marins monstrueux, dotés de tentacules et d’une force inimaginable. Ils règnent sur les abysses les plus profondes.  
+**Technique :** 300–350 cm • Abysses • Force colossale, vision abyssale • Faiblesse : surface • Rôle : boss abyssal ultime
+
+---
+
+# **90. Void’Behemoths**  
+Entités d’ombre colossales, incarnations du vide cosmique. Leur présence dévore la lumière et déforme l’espace.  
+**Technique :** 300–350 cm • Ténèbres • Absorption énergie, téléportation • Faiblesse : lumière pure • Rôle : boss du vide ultime
+
+---
+
+# 🎯 **Stève, prêt pour B2‑7 (races 91 à 105) ?**
+Parfait Stève — on continue avec **B2‑7**, races **91 à 105**.  
+Toujours : **1 paragraphe narratif condensé + fiche technique courte**, calibré pour ingestion Hermes et ton pipeline MMO.
+
+---
+
+# 🌌🔥❄️⚡ **B2‑7 — Races 91 à 105**
+
+---
+
+# **91. Etherians**  
+Esprits humanoïdes d’air condensé, les Etherians flottent plus qu’ils ne marchent. Leur corps semi‑gazeux se dissout parfois dans le vent, et leur voix résonne comme un souffle. Ils veillent sur les courants célestes d’Aetherion.  
+**Technique :** 260–300 cm • Cieux, orages • Lévitation, vent, vitesse • Faiblesse : attaques physiques lourdes • Rôle : mage céleste / boss aérien
+
+---
+
+# **92. Pyro’Seraphs**  
+Séraphins de feu pur, flamboyants et majestueux. Leur corps incandescent illumine les volcans de Khar’Zuun, et leurs ailes de flammes laissent des traînées ardentes dans l’air.  
+**Technique :** 270–320 cm • Volcans • Pyrokinésie, vol thermique • Faiblesse : eau, froid • Rôle : boss élémentaire du feu
+
+---
+
+# **93. Hydro’Seraphs**  
+Entités liquides humanoïdes, incarnations de l’eau pure. Leur corps fluide se reforme sans cesse, et leur magie aquatique est d’une précision absolue.  
+**Technique :** 260–310 cm • Océans • Hydrokinésie, amorphie • Faiblesse : électricité • Rôle : boss élémentaire de l’eau
+
+---
+
+# **94. Umbra’Seraphs**  
+Séraphins d’ombre, silhouettes mouvantes aux yeux rouges. Ils glissent dans les ténèbres comme des spectres et manipulent la magie noire avec une élégance terrifiante.  
+**Technique :** 270–330 cm • Ténèbres • Intangibilité, magie noire • Faiblesse : lumière pure • Rôle : boss élémentaire d’ombre
+
+---
+
+# **95. Luma’Seraphs**  
+Entités de lumière pure, rayonnantes et majestueuses. Leur aura sacrée purifie les lieux corrompus et éclaire les cieux d’Aetherion.  
+**Technique :** 260–320 cm • Cieux, clairières • Lumière, purification • Faiblesse : obscurité totale • Rôle : boss élémentaire de lumière
+
+---
+
+# **96. Chrono’Gards**  
+Gardiens temporels fractals, existant sur plusieurs instants simultanément. Leur corps semble vibrer entre différentes versions d’eux‑mêmes.  
+**Technique :** 280–330 cm • Zones instables • Ralentissement, accélération, duplication • Faiblesse : paradoxes • Rôle : boss temporel
+
+---
+
+# **97. Nano’Overlords**  
+Entités synthétiques composées de milliards de nanites. Leur corps se reconfigure en permanence, adoptant la forme la plus efficace pour chaque situation.  
+**Technique :** 260–300 cm • Métropoles, usines • Reconstruction, morphing • Faiblesse : EMP • Rôle : boss synthétique suprême
+
+---
+
+# **98. Stellar’Avatars**  
+Humanoïdes d’énergie stellaire, incarnations vivantes des étoiles. Leur présence irradie une puissance cosmique difficile à soutenir pour les mortels.  
+**Technique :** 300–350 cm • Zones stellaires • Magie stellaire, projection cosmique • Faiblesse : instabilité énergétique • Rôle : boss stellaire
+
+---
+
+# **99. Quantum’Phantoms**  
+Entités quantiques superposées, apparaissant sous plusieurs formes simultanées. Leur existence même défie les lois de la réalité.  
+**Technique :** 280–330 cm • Zones instables • Téléportation, duplication, intangibilité • Faiblesse : ondes stabilisatrices • Rôle : boss quantique
+
+---
+
+# **100. Omni’Wardens**  
+Gardiens multi‑élémentaires, fusion de lumière, vent, pierre et eau. Ils incarnent l’équilibre ultime entre les forces du monde.  
+**Technique :** 300–350 cm • Zones sacrées • Poly‑élémentalisme, résistance totale • Faiblesse : instabilité élémentaire • Rôle : boss suprême
+
+---
+
+# **101. Gene’Spliced**  
+Hybrides génétiques instables, mélange d’humanoïde et d’animaux divers. Leur corps change légèrement au fil du temps, résultat d’expériences interdites.  
+**Technique :** 180–220 cm • Laboratoires • Adaptation, régénération • Faiblesse : instabilité génétique • Rôle : soldat mutant
+
+---
+
+# **102. Chimera’Born**  
+Créatures hybrides issues de fusions magiques incontrôlées. Leur corps combine griffes, cornes, ailes ou queues selon les mutations.  
+**Technique :** 200–260 cm • Forêts, ruines • Poly‑attaque, résistance magique • Faiblesse : instabilité mentale • Rôle : boss sauvage
+
+---
+
+# **103. Bio’Grafts**  
+Humanoïdes augmentés par greffes organiques expérimentales. Leurs membres renforcés et leurs sens améliorés en font des combattants redoutables.  
+**Technique :** 170–210 cm • Laboratoires • Vision améliorée, force • Faiblesse : rejet organique • Rôle : soldat expérimental
+
+---
+
+# **104. Warp’Mutants**  
+Mutants temporels instables, leurs membres se déphasent et leurs silhouettes se superposent. Ils existent à moitié hors du temps.  
+**Technique :** 200–260 cm • Zones instables • Distorsion temporelle, téléportation erratique • Faiblesse : instabilité corporelle • Rôle : boss temporel sauvage
+
+---
+
+# **105. Plague’Hosts**  
+Humanoïdes infectés par une symbiose parasitaire. Leur corps est couvert d’excroissances organiques et de spores toxiques.  
+**Technique :** 180–220 cm • Marécages, ruines • Infection, nuage toxique • Faiblesse : feu, purification • Rôle : boss parasitaire
+
+---
+
+# 🎯 **Stève, prêt pour B2‑8 (races 106 à 120) ?**
+Parfait Stève — on continue avec **B2‑8**, races **106 à 120**.  
+Toujours : **1 paragraphe narratif condensé + fiche technique courte**, calibré pour ingestion Hermes et ton pipeline MMO.
+
+---
+
+# 🌫️⚡🌌 **B2‑8 — Races 106 à 120**
+
+---
+
+# **106. Symbio’Twins**  
+Deux humanoïdes fusionnés partageant un seul esprit. Leur coordination parfaite en combat est presque surnaturelle, chaque mouvement étant anticipé par l’autre comme s’ils ne formaient qu’un seul être.  
+**Technique :** 160–200 cm • Laboratoires, ruines • Double attaque, coordination parfaite • Faiblesse : désorientation si séparés • Rôle : mini‑boss
+
+---
+
+# **107. Flux’Morphs**  
+Humanoïdes liquides instables, constamment en mutation. Leur corps change de forme selon leurs émotions, oscillant entre humanoïde, masse fluide et formes monstrueuses.  
+**Technique :** 200–260 cm • Zones instables • Morphing, absorption • Faiblesse : températures extrêmes • Rôle : boss mutant
+
+---
+
+# **108. Arcane’Hybrids**  
+Humanoïdes fusionnés avec des entités magiques. Leur peau est parcourue de runes vivantes, et leur aura arcanique pulse comme un cœur secondaire.  
+**Technique :** 180–230 cm • Forêts anciennes • Magie brute, résistance magique • Faiblesse : instabilité magique • Rôle : mage sauvage
+
+---
+
+# **109. Bio’Titans**  
+Titans organiques créés artificiellement, masses de muscles hypertrophiés et d’organes externes pulsants. Leur rugissement sonique peut briser la pierre.  
+**Technique :** 260–320 cm • Laboratoires • Force colossale, régénération • Faiblesse : toxines • Rôle : boss biologique suprême
+
+---
+
+# **110. Warp’Colossi**  
+Colosses temporels instables, existant à plusieurs instants simultanément. Leur silhouette fracturée semble vibrer entre différentes versions d’eux‑mêmes.  
+**Technique :** 280–350 cm • Zones instables • Distorsion temporelle, duplication • Faiblesse : instabilité extrême • Rôle : boss temporel ultime
+
+---
+
+# **111. Starborns**  
+Humanoïdes nés dans le cœur des étoiles, irradiant une lumière cosmique. Leur présence seule perturbe les flux magiques environnants.  
+**Technique :** 260–320 cm • Zones stellaires • Magie stellaire, résistance extrême • Faiblesse : instabilité énergétique • Rôle : boss stellaire
+
+---
+
+# **112. Nebula’Wraiths**  
+Entités nébuleuses faites de gaz coloré. Leur corps flotte et se déforme comme une brume vivante, et leurs yeux brillent comme des étoiles lointaines.  
+**Technique :** 280–330 cm • Zones stellaires • Intangibilité, magie nébulaire • Faiblesse : vents violents • Rôle : boss cosmique
+
+---
+
+# **113. Solar’Archons**  
+Archanges solaires irradiant une lumière brûlante. Leur aura purifie tout autour d’eux, et leurs ailes flamboyantes illuminent les cieux.  
+**Technique :** 300–350 cm • Cieux • Magie solaire, purification • Faiblesse : obscurité totale • Rôle : boss solaire
+
+---
+
+# **114. Lunar’Archons**  
+Archanges lunaires à l’aura argentée. Leur magie douce manipule illusions, rêves et lumière nocturne.  
+**Technique :** 260–320 cm • Clairières nocturnes • Magie lunaire, illusions • Faiblesse : soleil • Rôle : boss lunaire
+
+---
+
+# **115. Cosmic’Harbingers**  
+Messagers cosmiques, silhouettes d’énergie pure. Ils apparaissent lors d’événements stellaires majeurs pour transmettre des avertissements ou des prophéties.  
+**Technique :** 300–350 cm • Zones stellaires • Projection cosmique, téléportation • Faiblesse : instabilité énergétique • Rôle : boss cosmique suprême
+
+---
+
+# **116. Void’Seraphs**  
+Séraphins du vide, incarnations d’ombre cosmique. Leur présence dévore la lumière et leur magie noire est d’une puissance terrifiante.  
+**Technique :** 280–330 cm • Ténèbres • Absorption énergie, téléportation • Faiblesse : lumière pure • Rôle : boss du vide céleste
+
+---
+
+# **117. Starforged**  
+Humanoïdes métalliques forgés dans le cœur des étoiles. Leur corps est un alliage inconnu imprégné d’énergie cosmique.  
+**Technique :** 260–320 cm • Zones stellaires • Résistance extrême, projection énergie • Faiblesse : surchauffe • Rôle : boss mécanique stellaire
+
+---
+
+# **118. Celestial’Wardens**  
+Gardiens célestes suprêmes, incarnations divines de l’ordre cosmique. Leur aura sacrée inspire respect et crainte.  
+**Technique :** 300–350 cm • Cieux • Poly‑élémentalisme, purification • Faiblesse : instabilité sacrée • Rôle : boss divin suprême
+
+---
+
+# **119. Astral’Phantoms**  
+Entités astrales translucides, glissant entre les plans. Leur magie mentale perturbe les perceptions et les pensées.  
+**Technique :** 260–320 cm • Plans astraux • Projection astrale, téléportation • Faiblesse : ancrages physiques • Rôle : boss astral
+
+---
+
+# **120. Cosmic’Titans**  
+Titans cosmiques, incarnations de l’énergie universelle. Leur silhouette gigantesque semble contenir des galaxies miniatures.  
+**Technique :** 300–350 cm • Zones stellaires • Poly‑élémentalisme cosmique • Faiblesse : instabilité cosmique • Rôle : boss cosmique final
+
+---
+
+# 🎯 **Stève, prêt pour B2‑9 (races 121 à 132 — les avatars et entités finales) ?**
+Parfait Stève — on attaque **B2‑9**, races **121 à 132**, le dernier bloc narratif.  
+Toujours : **1 paragraphe narratif condensé + fiche technique courte**, calibré pour ingestion Hermes et ton pipeline MMO.
+
+---
+
+# 🌪️🔥🌊🌑🌍⏳ **B2‑9 — Races 121 à 132 (Avatars & Entités Finales)**
+
+---
+
+# **121. Aether’Avatars**  
+Incarnations vivantes du vent et du ciel, les Aether’Avatars sont des silhouettes lumineuses aux ailes infinies. Leur présence fait vibrer l’air et déchaîne les courants célestes. Ils apparaissent lorsque l’équilibre des cieux est menacé.  
+**Technique :** 300–350 cm • Cieux, orages • Contrôle du vent, vol absolu • Faiblesse : ancrages terrestres • Rôle : avatar céleste / boss final aérien
+
+---
+
+# **122. Pyra’Avatars**  
+Entités de feu primordial, véritables incarnations de la flamme originelle. Leur corps incandescent brûle tout ce qu’il touche, et leur aura transforme l’air en chaleur ondulante.  
+**Technique :** 300–350 cm • Volcans • Pyrokinésie totale, chaleur extrême • Faiblesse : eau, froid • Rôle : avatar du feu / boss final volcanique
+
+---
+
+# **123. Aqua’Avatars**  
+Avatars de l’eau primordiale, silhouettes liquides parfaites. Leur corps fluide reflète les courants marins, et leur magie aquatique peut engloutir des armées entières.  
+**Technique :** 300–350 cm • Océans, abysses • Hydrokinésie totale, amorphie • Faiblesse : électricité • Rôle : avatar de l’eau / boss final marin
+
+---
+
+# **124. Umbra’Avatars**  
+Incarnations de l’ombre primordiale, êtres mouvants dont la silhouette se déforme en permanence. Leur présence absorbe la lumière et étouffe les sons.  
+**Technique :** 300–350 cm • Ténèbres • Intangibilité totale, magie noire • Faiblesse : lumière pure • Rôle : avatar d’ombre / boss final obscur
+
+---
+
+# **125. Terra’Avatars**  
+Avatars de la terre vivante, statues colossales de pierre, de racines et de minéraux. Leur pas fait trembler les montagnes et leur force est incommensurable.  
+**Technique :** 300–350 cm • Montagnes, forêts anciennes • Géokinésie, force colossale • Faiblesse : vibrations, acide • Rôle : avatar terrestre / boss final terrestre
+
+---
+
+# **126. Chrono’Avatars**  
+Incarnations du temps lui‑même, existant simultanément dans plusieurs instants. Leur corps fractal se superpose en versions passées et futures d’eux‑mêmes.  
+**Technique :** 300–350 cm • Zones instables • Ralentissement, accélération, duplication • Faiblesse : paradoxes • Rôle : avatar temporel / boss final temporel
+
+---
+
+# **127. Quantum’Avatars**  
+Entités quantiques suprêmes, superposées en multiples états. Leur existence défie la logique, et leurs mouvements semblent aléatoires mais parfaitement calculés.  
+**Technique :** 300–350 cm • Zones instables, laboratoires • Téléportation, duplication, intangibilité • Faiblesse : ondes stabilisatrices • Rôle : avatar quantique / boss final scientifique
+
+---
+
+# **128. Omni’Avatars**  
+Fusion ultime de tous les éléments : lumière, vent, pierre, eau, ombre. Leur corps change d’aspect selon l’énergie dominante, incarnant l’équilibre absolu du multivers.  
+**Technique :** 300–350 cm • Zones sacrées • Poly‑élémentalisme total, résistance absolue • Faiblesse : instabilité élémentaire • Rôle : avatar suprême / boss final du multivers
+
+---
+
+# **129. Rift’Walkers**  
+Humanoïdes interdimensionnels, marchant entre les failles. Leur corps fracturé laisse apparaître des fragments d’autres réalités, et leurs déplacements défient l’espace.  
+**Technique :** 260–320 cm • Failles, zones instables • Marche interdimensionnelle, distorsion • Faiblesse : ancrages dimensionnels • Rôle : boss interdimensionnel
+
+---
+
+# **130. Nexus’Guardians**  
+Gardiens du Nexus, protecteurs du cœur du multivers. Leur corps d’énergie pure est enveloppé d’une armure cosmique, et leur présence stabilise les failles.  
+**Technique :** 300–350 cm • Zones sacrées, failles • Poly‑élémentalisme, résistance totale • Faiblesse : instabilité du Nexus • Rôle : boss final du Nexus
+
+---
+
+# **131. Omega’Sentinels**  
+Sentinelles ultimes, fusion parfaite entre technologie avancée et énergie cosmique. Leur logique froide et leur puissance destructrice en font les protecteurs suprêmes de Mecha‑Prime.  
+**Technique :** 300–350 cm • Métropoles, zones stellaires • Analyse totale, projection cosmique • Faiblesse : EMP cosmique • Rôle : boss technocosmique
+
+---
+
+# **132. Primordials**  
+Les premiers êtres, créateurs du multivers. Leur silhouette humanoïde parfaite semble faite d’énergie pure, et leur simple présence altère la réalité. Ils n’appartiennent à aucune faction et n’obéissent à aucune loi connue.  
+**Technique :** 350 cm • Tous biomes • Création, destruction, réalité altérée • Faiblesse : instabilité cosmique • Rôle : boss final absolu / entité unique
+
+---
+
+# 🎉 **B2 est COMPLET.**
+
+Stève, on passe maintenant à **C4 — Classification complète (planètes + biomes + factions)**.  
+Dis‑moi **“OK C4”** et j’envoie le bloc.

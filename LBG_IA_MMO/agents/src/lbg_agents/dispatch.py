@@ -27,6 +27,7 @@ from lbg_agents.devops_executor import (
 from lbg_agents.pm_stub import run_pm_stub
 from lbg_agents.quests_stub import run_quests_stub
 from lbg_agents.world_stub import run_world_stub
+from lbg_agents.desktop_executor import run_desktop_action
 
 
 def _dialogue_http_timeout() -> httpx.Timeout:
@@ -294,6 +295,57 @@ def _devops(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]
     return run_devops_action(actor_id=actor_id, text=text, action=raw, context=context)
 
 
+def _desktop(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
+    """
+    Hybrid desktop control.
+
+    Par design, on exige `context.desktop_action` structuré, sinon on refuse :
+    éviter qu’un texte ambigu déclenche une action PC.
+    """
+    base = os.environ.get("LBG_AGENT_DESKTOP_URL", "").strip().rstrip("/")
+    raw = context.get("desktop_action")
+    if not isinstance(raw, dict):
+        return {
+            "agent": "desktop_dispatch",
+            "handler": "desktop",
+            "actor_id": actor_id,
+            "request_text": text,
+            "ok": False,
+            "outcome": "bad_request",
+            "error": "Aucune desktop_action dans context.",
+            "hint": 'Ex. {"desktop_action": {"kind":"open_url","url":"https://example.org"}}',
+        }
+
+    # Mode hybride : exécution attendue sur un worker Windows.
+    if base:
+        try:
+            with httpx.Client(timeout=15.0) as client:
+                r = client.post(f"{base}/invoke", json={"actor_id": actor_id, "text": text, "context": context})
+            if r.status_code >= 400:
+                return {
+                    "agent": "http_desktop",
+                    "error": f"HTTP {r.status_code}",
+                    "body_preview": r.text[:200],
+                }
+            data = r.json()
+            if not isinstance(data, dict):
+                return {"agent": "http_desktop", "remote": data}
+            merged = dict(data)
+            merged["agent"] = merged.get("agent") or "http_desktop"
+            return merged
+        except Exception as e:
+            detail = f"{type(e).__name__}: {e}"
+            return {
+                "agent": "http_desktop",
+                "error": (
+                    f"{detail} | appel {base}/invoke échoué — vérifier l’agent desktop Windows et le réseau."
+                ),
+            }
+
+    # Fallback dev (si on veut lancer le worker sur Linux pour tests) : exécution locale.
+    return run_desktop_action(actor_id=actor_id, text=text, action=raw, context=context)
+
+
 def _fallback(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
     return _echo("fallback", actor_id, text, context)
 
@@ -308,6 +360,7 @@ _HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
     "agent.combat": _combat,
     "agent.pm": _pm,
     "agent.devops": _devops,
+    "agent.desktop": _desktop,
     "agent.world": _world,
     "agent.fallback": _fallback,
 }

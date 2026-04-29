@@ -23,6 +23,11 @@ capability_registry = InMemoryCapabilityRegistry(
             routed_to="agent.pm",
             description="Chef de projet — brief jalons/risques (stub ou HTTP LBG_AGENT_PM_URL)",
         ),
+        CapabilitySpec(
+            name="desktop_control",
+            routed_to="agent.desktop",
+            description="Desktop tools (hybride) — exécution via agent Windows allowlist (UI/web/mail) derrière approval",
+        ),
         CapabilitySpec(name="unknown", routed_to="agent.fallback", description="Fallback handler"),
     ]
 )

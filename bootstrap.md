@@ -530,6 +530,39 @@ curl -sS "http://192.168.0.140:8010/v1/capabilities"
 curl -sS "http://192.168.0.140:8000/v1/pilot/capabilities"
 ```
 
+#### Brain (autonomie) — recette opérateur (status / toggle / approve)
+
+Le Brain tourne dans l’orchestrator et expose un état “conscient” (`gauges`, `intent`, `narrative`) + une file `approval_requests[]`.  
+Sur LAN, l’UI `/pilot/#/ops` permet de piloter/voir cet état ; sinon, voici la recette minimale en `curl`.
+
+**Lire le statut** :
+
+```bash
+curl -sS "http://192.168.0.140:8010/v1/brain/status"
+```
+
+**Activer (ou désactiver)** :
+
+```bash
+curl -sS -X POST "http://192.168.0.140:8010/v1/brain/toggle" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":true}'
+```
+
+**Approuver une demande** (ex. restart proposé) :
+
+1) lire `approval_requests[]` dans `/v1/brain/status` et récupérer l’`id` d’une demande en attente ; puis :
+
+```bash
+curl -sS -X POST "http://192.168.0.140:8010/v1/brain/approve" \
+  -H "Content-Type: application/json" \
+  -d '{"request_id":"<ID_DE_LA_DEMANDE>"}'
+```
+
+Notes :
+- `systemd_restart` ne peut être tenté automatiquement que si l’opt-in est activé (`LBG_BRAIN_DEVOPS_AUTORESTART=1`) et qu’un jeton est présent (`LBG_BRAIN_DEVOPS_APPROVAL`), avec cooldown.
+- La persistance best-effort du Brain est configurable (`LBG_BRAIN_STATE_PATH`, défaut `/var/lib/lbg/brain/state.json`).
+
 #### Documentation projet (à lire)
 
 Dans `LBG_IA_MMO/docs/` :

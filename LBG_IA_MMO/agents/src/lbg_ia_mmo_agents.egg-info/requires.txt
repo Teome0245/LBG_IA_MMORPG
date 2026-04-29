@@ -8,6 +8,10 @@ uvicorn[standard]>=0.27
 fastapi>=0.110
 uvicorn[standard]>=0.27
 
+[pm_http_service]
+fastapi>=0.110
+uvicorn[standard]>=0.27
+
 [quests_http_service]
 fastapi>=0.110
 uvicorn[standard]>=0.27

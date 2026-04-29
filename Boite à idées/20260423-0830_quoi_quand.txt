@@ -1,0 +1,130 @@
+Parfait Stève — je te prépare **un arbre de décision clair, opérationnel et adapté à ton workflow d’architecte + orchestrateur IA + MMO**.  
+L’objectif : que tu saches **instantanément** quel outil utiliser selon la tâche, sans hésitation.
+
+---
+
+# 🌳 Arbre de décision : VS Code vs Cursor vs Antigravity  
+*(optimisé pour ton orchestrateur IA, Hermes, et ton projet de multivers MMO)*
+
+---
+
+## 🟦 1) Première question : **Quel est ton objectif immédiat ?**
+
+### **A — Je veux coder / refactorer / produire du code propre rapidement**  
+→ Passe à **Section 2**
+
+### **B — Je veux générer un module complet, explorer un codebase, ou lancer des agents autonomes**  
+→ Passe à **Section 3**
+
+### **C — Je veux déboguer, profiler, utiliser des extensions avancées, ou travailler en environnement complexe**  
+→ Passe à **Section 4**
+
+---
+
+# 🟩 2) Objectif : **Coder vite, proprement, avec IA intégrée**  
+### → **Choix : Cursor**
+
+Utilise Cursor si tu veux :  
+- générer un module (API, système d’inventaire, PNJ, etc.)  
+- faire des modifications multi‑fichiers cohérentes  
+- refactorer un système entier  
+- restructurer ton orchestrateur IA  
+- créer des agents Hermes spécialisés  
+- produire du code propre, typé, structuré  
+
+**Pourquoi Cursor ?**  
+- Il comprend mieux le contexte que VS Code.  
+- Il applique des changements multi‑fichiers sans se perdre.  
+- Il propose des plans d’action cohérents.  
+
+**Exemples typiques**  
+- “Refactorer tout le système de loot pour supporter les factions civiles.”  
+- “Créer un module NPC_goals avec routines, besoins et motivations.”  
+- “Générer un orchestrateur Hermes pour gérer 5 agents spécialisés.”
+
+---
+
+# 🟧 3) Objectif : **Autonomie, agents, génération massive, exploration intelligente**  
+### → **Choix : Antigravity**
+
+Utilise Antigravity si tu veux :  
+- générer un **système entier** (ex : économie, météo, IA sociale)  
+- explorer automatiquement un codebase  
+- lancer plusieurs agents en parallèle  
+- obtenir une vision globale d’un projet complexe  
+- faire travailler l’IA comme une **équipe** plutôt qu’un assistant  
+- produire des modules MMO massifs (PNJ, quêtes, lore, systèmes dynamiques)
+
+**Pourquoi Antigravity ?**  
+- Multi‑agents natif  
+- Compréhension automatique du codebase  
+- Capacité à produire des blocs entiers sans micro‑gestion  
+- Parfait pour ton ambition de **30 000–80 000 PNJ autonomes**  
+
+**Exemples typiques**  
+- “Génère un système complet de quêtes dynamiques basé sur les besoins des PNJ.”  
+- “Analyse tout le code et propose une architecture modulaire pour l’IA sociale.”  
+- “Crée un module d’économie vivante avec production, consommation et rareté.”
+
+---
+
+# 🟪 4) Objectif : **Stabilité, debugging, extensions, environnements complexes**  
+### → **Choix : VS Code**
+
+Utilise VS Code si tu veux :  
+- debugger un serveur MMO  
+- profiler des performances  
+- utiliser des extensions spécialisées (Docker, Kubernetes, Protobuf, etc.)  
+- travailler sur des environnements sensibles (prod, staging)  
+- faire du low‑level (C++, Rust, Go, réseau, sockets)  
+- gérer des projets multi‑langages complexes  
+
+**Pourquoi VS Code ?**  
+- Le plus stable  
+- Le plus extensible  
+- Le meilleur pour le debugging réel  
+- Le plus fiable pour les environnements critiques  
+
+**Exemples typiques**  
+- “Debugger un crash du serveur de simulation.”  
+- “Analyser les performances du pathfinding.”  
+- “Gérer les conteneurs Docker du cluster Hermes.”
+
+---
+
+# 🧭 Synthèse ultra‑rapide (à garder sous les yeux)
+
+| Situation | Outil |
+|----------|--------|
+| Je veux coder vite | **Cursor** |
+| Je veux refactorer proprement | **Cursor** |
+| Je veux générer un système entier | **Antigravity** |
+| Je veux explorer un codebase | **Antigravity** |
+| Je veux lancer plusieurs agents IA | **Antigravity** |
+| Je veux debugger / profiler | **VS Code** |
+| Je veux utiliser des extensions avancées | **VS Code** |
+| Je veux un environnement stable | **VS Code** |
+
+---
+
+# 🔥 Version “instinctive” (celle que tu vas utiliser au quotidien)
+
+- **Cursor = ton IDE principal**  
+  Pour tout ce qui touche au code propre, modulaire, multi‑fichiers.
+
+- **Antigravity = ton atelier d’IA autonome**  
+  Pour générer des systèmes entiers, explorer, orchestrer des agents.
+
+- **VS Code = ton socle technique**  
+  Pour le debugging, les extensions, les environnements complexes.
+
+---
+
+# 🎯 Question suivante  
+Veux‑tu que je te génère **un workflow complet** (étape par étape) qui combine les trois outils pour :  
+- ton orchestrateur Hermes,  
+- ton multivers MMO,  
+- tes PNJ autonomes,  
+- et tes agents IA spécialisés ?
+
+Je peux te faire un pipeline optimal, prêt à appliquer.

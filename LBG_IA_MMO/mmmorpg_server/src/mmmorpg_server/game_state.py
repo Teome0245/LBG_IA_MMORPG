@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import math
+import json
+import os
 from typing import Any
 
 from mmmorpg_server.entities.entity import Entity
@@ -10,8 +12,56 @@ from mmmorpg_server.world_core.planet import PlanetConfig
 from mmmorpg_server.world_core.time_manager import TimeManager
 
 
-MAX_SPEED_UNITS_PER_S = 12.0
-BOUNDS_HALF = 500.0  # zone "platte" temporaire avant sphère
+class StaticObstacle:
+    def __init__(self, x: float, z: float, radius: float = 1.0, width: float = 0.0, depth: float = 0.0, kind: str = "circle", hollow: bool = False):
+        self.x = x
+        self.z = z
+        self.radius = radius
+        self.width = width
+        self.depth = depth
+        self.kind = kind # "circle" or "box"
+        self.hollow = hollow
+
+    def is_inside(self, px: float, pz: float, margin: float = 0.5) -> bool:
+        if self.kind == "circle":
+            dist = math.sqrt((px - self.x)**2 + (pz - self.z)**2)
+            return dist < (self.radius + margin)
+        elif self.kind == "box":
+            half_w = (self.width / 2.0)
+            half_d = (self.depth / 2.0)
+            
+            # Si on est à l'extérieur (avec une marge de sécurité), on ne bloque pas
+            # Sauf si c'est une boîte pleine (non creuse)
+            is_outside = (px < self.x - half_w - margin) or (px > self.x + half_w + margin) or \
+                         (pz < self.z - half_d - margin) or (pz > self.z + half_d + margin)
+            
+            if is_outside:
+                return False
+                
+            if not self.hollow:
+                # Boîte pleine : on bloque tout ce qui n'est pas "dehors"
+                return True
+            
+            # Pour une boîte creuse (bâtiment) : on bloque si on touche les bords de l'intérieur
+            wall_margin = 1.0
+            at_edge = (
+                px < self.x - half_w + wall_margin or 
+                px > self.x + half_w - wall_margin or 
+                pz < self.z - half_d + wall_margin or 
+                pz > self.z + half_d - wall_margin
+            )
+            
+            if at_edge:
+                # Porte : Bord Sud (z max), au centre (largeur 5m)
+                is_door = (pz > self.z + half_d - wall_margin) and (abs(px - self.x) < 2.5)
+                if not is_door:
+                    return True
+            
+        return False
+
+
+MAX_SPEED_UNITS_PER_S = 15.0
+BOUNDS_HALF = 60000.0 # Augmenté pour le continent (102km)
 
 
 class GameState:
@@ -19,13 +69,100 @@ class GameState:
         self.planet = PlanetConfig(id="terre1", label="Terre1")
         self.time = TimeManager()
         self.entities: dict[str, Entity] = {}
+        self.locations: list[dict[str, Any]] = []
         # Phase 2 (réconciliation) : commits idempotents (trace_id) enregistrés en mémoire.
         self._seen_commit_trace_ids: set[str] = set()
         self._npc_commit_flags: dict[str, dict[str, Any]] = {}
         self._npc_reputation: dict[str, int] = {}
         # Gameplay (v1+) : jauges PNJ modifiables via commits (bornées 0–1), persistées.
         self._npc_gauges: dict[str, dict[str, float]] = {}
-        self._seed_npcs()
+        
+        # Obstacles du décor
+        self.obstacles: list[StaticObstacle] = []
+        # Rampes verticales (Escaliers)
+        self.vertical_ramps = [
+            # Auberge: Zone d'escalier vers l'étage
+            {"x": -25, "z": -45, "w": 6, "d": 6, "y_start": 0, "y_end": 4}
+        ]
+        
+        self._load_world_data()
+
+    def _load_world_data(self) -> None:
+        # Tente de charger les données réelles depuis le seed du mmo_server
+        paths = [
+            "../mmo_server/world/seed_data/world_initial.json",
+            "../../mmo_server/world/seed_data/world_initial.json",
+            "/opt/LBG_IA_MMO/mmo_server/world/seed_data/world_initial.json",
+            "world_initial.json"
+        ]
+        seed_path = None
+        for p in paths:
+            if os.path.exists(p):
+                seed_path = p
+                break
+
+        if seed_path:
+            try:
+                import random
+                with open(seed_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                
+                loc_coords = {}
+                # Charger les Lieux (Locations)
+                for loc in data.get("locations", []):
+                    geom = loc.get("geometry", {})
+                    coords = geom.get("coordinates", {})
+                    if "x" in coords and "y" in coords:
+                        # Calcul des dimensions basées sur la surface si width/height manquent
+                        surface = float(geom.get("surface_m2", 64.0))
+                        side = math.sqrt(surface)
+                        w = float(geom.get("width", side))
+                        h = float(geom.get("height", side))
+                        
+                        l_data = {
+                            "id": loc["id"],
+                            "name": loc["name"],
+                            "type": loc["type"],
+                            "x": float(coords["x"]),
+                            "y": float(coords.get("z", 0.0)),
+                            "z": float(coords["y"]),
+                            "w": w,
+                            "h": h,
+                        }
+                        self.locations.append(l_data)
+                        loc_coords[loc["id"]] = (l_data["x"], l_data["z"])
+                        
+                        # Obstacle physique pour les bâtiments (Plein pour éviter de traverser)
+                        if loc["type"] in ("building", "house", "shop", "tower", "inn"):
+                            self.obstacles.append(StaticObstacle(
+                                l_data["x"], l_data["z"], 
+                                width=l_data["w"], depth=l_data["h"], 
+                                kind="box", hollow=False
+                            ))
+
+                # Charger les NPCs
+                for npc_data in data.get("npcs", []):
+                    sit = npc_data.get("situation", {})
+                    x_val = sit.get("x")
+                    z_val = sit.get("y")
+                    
+                    if x_val is None or z_val is None:
+                        loc_id = sit.get("location")
+                        if loc_id in loc_coords:
+                            x_val, z_val = loc_coords[loc_id]
+                            x_val += random.uniform(-3, 3)
+                            z_val += random.uniform(-3, 3)
+                        else:
+                            x_val, z_val = random.uniform(-20, 20), random.uniform(-20, 20)
+                            
+                    npc = Entity.new_npc(npc_data["name"], float(x_val), float(z_val), npc_id=npc_data.get("id"))
+                    npc.role = npc_data.get("role", "civil")
+                    self.entities[npc.id] = npc
+            except Exception as e:
+                print(f"Erreur chargement seed: {e}")
+                self._seed_npcs()
+        else:
+            self._seed_npcs()
 
     def get_npc_commit_flags(self, npc_id: str) -> dict[str, Any]:
         npc_id = (npc_id or "").strip()
@@ -169,14 +306,17 @@ class GameState:
 
     def _seed_npcs(self) -> None:
         # Identifiants stables : alignement avec `fusion_spec_monde.md` (format `npc:...`)
-        for npc_id, name, xz in (
-            ("npc:merchant", "Marchand civile", (12.0, -5.0)),
-            ("npc:guard", "Garde poste", (-20.0, 8.0)),
-            ("npc:mayor", "Maire", (4.0, 14.0)),
-            ("npc:healer", "Guérisseuse", (-6.0, 10.0)),
-            ("npc:alchemist", "Alchimiste", (18.0, 9.0)),
+        for npc_id, name, xz, scale in (
+            ("npc:merchant", "Marchand civile", (12.0, -5.0), 1.0),
+            ("npc:guard", "Garde poste", (-20.0, 8.0), 1.0),
+            ("npc:mayor", "Maire", (4.0, 14.0), 1.1),
+            ("npc:healer", "Guérisseuse", (-6.0, 10.0), 0.9),
+            ("npc:alchemist", "Alchimiste", (18.0, 9.0), 1.0),
+            ("npc:wizard", "Chef Magicien", (-10.0, 20.0), 1.2),
+            ("npc:celadon", "Guerrier Celadon", (25.0, -10.0), 1.3),
+            ("npc:mushroom", "Champignon Magique", (0.0, -30.0), 2.5),
         ):
-            npc = Entity.new_npc(name, xz[0], xz[1], npc_id=npc_id)
+            npc = Entity.new_npc(name, xz[0], xz[1], npc_id=npc_id, scale=scale)
             self.entities[npc.id] = npc
 
     def get_npc(self, npc_id: str) -> Entity | None:
@@ -244,6 +384,23 @@ class GameState:
             self._npc_commit_flags[npc_id] = cur
         return True, "accepted"
 
+    def freeze_npc_and_face(self, npc_id: str, player_id: str, duration: float = 200.0) -> None:
+        npc = self.get_npc(npc_id)
+        player = self.entities.get(player_id)
+        if not npc or not player:
+            return
+        
+        # Calcul de l'angle vers le joueur
+        dx = player.x - npc.x
+        dz = player.z - npc.z
+        
+        # En Godot/Maths standards, atan2(dx, dz) donne l'angle sur le plan horizontal
+        npc.ry = math.atan2(dx, dz)
+        npc.busy_timer = duration
+        
+        # Stopper net la vitesse pour éviter que l'inertie ne continue
+        npc.vx = npc.vy = npc.vz = 0.0
+
     def export_commit_state(self) -> tuple[set[str], dict[str, dict[str, Any]], dict[str, int], dict[str, dict[str, float]]]:
         return (
             set(self._seen_commit_trace_ids),
@@ -296,7 +453,9 @@ class GameState:
 
     def add_player(self, name: str) -> Entity:
         p = Entity.new_player(name)
-        p.x, p.y, p.z = 0.0, 0.0, 0.0
+        # Spawn au centre de la place (au Sud de l'Hôtel de Ville déplacé)
+        # Altitude 0.0 pour être au niveau du sol
+        p.x, p.y, p.z = 0.0, 0.0, -20.0
         self.entities[p.id] = p
         return p
 
@@ -309,43 +468,176 @@ class GameState:
         ent = self.entities.get(player_id)
         if not ent or ent.kind != "player":
             return
-        dx, dy, dz = x - ent.x, y - ent.y, z - ent.z
+            
+        # Initialisation des stats par défaut pour le joueur
+        if not ent.stats:
+            ent.stats = {
+                "hp": 100, "hp_max": 100,
+                "mp": 50, "mp_max": 50,
+                "stamina": 100, "stamina_max": 100,
+                "level": 1, "exp": 0
+            }
+
+        # Calcul du delta conscient du Wrap-Around (102400m)
+        dx = x - ent.x
+        if dx > 51200: dx -= 102400
+        elif dx < -51200: dx += 102400
+        
+        dx, dy, dz = dx * 20.0, (y - ent.y) * 20.0, (z - ent.z) * 20.0
         dist = math.sqrt(dx * dx + dy * dy + dz * dz)
-        if dist < 1e-6:
+        
+        if dist < 0.01:
             ent.vx = ent.vy = ent.vz = 0.0
             return
-        scale = min(1.0, MAX_SPEED_UNITS_PER_S / dist)
-        ent.vx, ent.vy, ent.vz = dx * scale, dy * scale, dz * scale
+
+        limit = MAX_SPEED_UNITS_PER_S
+        if dist > limit:
+            scale = limit / dist
+            dx, dy, dz = dx * scale, dy * scale, dz * scale
+            
+        ent.vx, ent.vy, ent.vz = dx, dy, dz
+        
+        # Consommation d'endurance
+        if dist > 5.0:
+            ent.stats["stamina"] = max(0, ent.stats["stamina"] - 0.05)
+        else:
+            ent.stats["stamina"] = min(ent.stats["stamina_max"], ent.stats["stamina"] + 0.1)
 
     def tick(self, dt: float) -> None:
         self.time.advance(dt)
         for ent in self.entities.values():
-            if ent.kind == "npc":
+            if ent.busy_timer > 0:
+                ent.busy_timer -= dt
+                if ent.kind == "npc":
+                    ent.vx = ent.vy = ent.vz = 0.0
+            
+            if ent.kind == "npc" and ent.busy_timer <= 0:
                 self._npc_step(ent, dt)
-            ent.x += ent.vx * dt
+            
+            # Gestion des escaliers (Rampes)
+            for ramp in self.vertical_ramps:
+                if (ramp["x"] - ramp["w"]/2 <= ent.x <= ramp["x"] + ramp["w"]/2 and
+                    ramp["z"] - ramp["d"]/2 <= ent.z <= ramp["z"] + ramp["d"]/2):
+                    
+                    # On ajuste Y vers l'étage cible selon le mouvement horizontal
+                    # Si on avance vers l'intérieur de la zone (z décroissant ou croissant selon le sens)
+                    target_y = ramp["y_end"] if (ent.vz > 0.1 or ent.vx > 0.1) else ramp["y_start"]
+                    dy = target_y - ent.y
+                    if abs(dy) > 0.1:
+                        ent.y += (dy / abs(dy)) * 2.0 * dt # Monte à 2m/s
+            
+            # Prédiction de la prochaine position
+            nx = ent.x + ent.vx * dt
+            nz = ent.z + ent.vz * dt
+            
+            # Vérification des obstacles (Joueurs et PNJ)
+            blocked = False
+            for obs in self.obstacles:
+                if obs.is_inside(nx, nz, margin=0.5):
+                    blocked = True
+                    break
+            
+            if not blocked:
+                ent.x = nx
+                ent.z = nz
+            else:
+                # En cas de blocage, on annule la vitesse pour ne pas forcer
+                ent.vx = 0.0
+                ent.vz = 0.0
+
             ent.y += ent.vy * dt
-            ent.z += ent.vz * dt
-            ent.x = max(-BOUNDS_HALF, min(BOUNDS_HALF, ent.x))
+            # World Wrap Horizontal (X) - 102.4km
+            if ent.x > 51200:
+                ent.x -= 102400
+            elif ent.x < -51200:
+                ent.x += 102400
+            
+            # Clamp Vertical (Z) - 51.2km
+            ent.z = max(-25600, min(25600, ent.z))
+            # Clamp Altitude (Y)
             ent.y = max(-50.0, min(50.0, ent.y))
-            ent.z = max(-BOUNDS_HALF, min(BOUNDS_HALF, ent.z))
-            ent.vx *= 0.92
-            ent.vy *= 0.92
-            ent.vz *= 0.92
+            ent.vx *= 0.6
+            ent.vy *= 0.6
+            ent.vz *= 0.6
 
     def _npc_step(self, npc: Entity, dt: float) -> None:
-        # PNJ basiques : lente dérive + rebond symbolique sur les bords
-        seed = sum(ord(c) for c in npc.id) % 314
-        noise = math.sin(self.time.world_time_s * 0.3 + seed) * 2.0
-        npc.vx += noise * dt
-        npc.vz += math.cos(self.time.world_time_s * 0.25) * 1.5 * dt
-        sp = math.sqrt(npc.vx**2 + npc.vz**2)
-        cap = 3.0
-        if sp > cap:
-            npc.vx, npc.vz = npc.vx / sp * cap, npc.vz / sp * cap
-        if abs(npc.x) >= BOUNDS_HALF - 2:
-            npc.vx *= -0.5
-        if abs(npc.z) >= BOUNDS_HALF - 2:
-            npc.vz *= -0.5
+        # Comportements spécialisés par rôle ou nom
+        if "Garde" in npc.name or npc.role == "guard":
+            self._guard_behavior(npc, dt)
+        else:
+            # PNJ basiques : lente dérive + rebond symbolique sur les bords
+            seed = sum(ord(c) for c in npc.id) % 314
+            noise = math.sin(self.time.world_time_s * 0.3 + seed) * 2.0
+            npc.vx += noise * dt
+            npc.vz += math.cos(self.time.world_time_s * 0.25) * 1.5 * dt
+            sp = math.sqrt(npc.vx**2 + npc.vz**2)
+            cap = 2.0
+            if sp > cap:
+                npc.vx, npc.vz = npc.vx / sp * cap, npc.vz / sp * cap
+
+    def _get_location_coords(self, loc_id: str) -> tuple[float, float]:
+        """Retourne les coordonnées (x, z) d'un lieu par son ID."""
+        for loc in self.locations:
+            if loc["id"] == loc_id:
+                return loc["x"], loc["z"]
+        
+        # Fallbacks basés sur world_initial.json si non chargé
+        defaults = {
+            "porte_nord": (0.0, 180.0),
+            "porte_sud": (0.0, -180.0),
+            "muraille_est": (180.0, 0.0),
+            "muraille_ouest": (-180.0, 0.0),
+            "place_d_armes": (0.0, 0.0),
+            "caserne": (-100.0, 100.0),
+            "hotel_de_ville": (0.0, 50.0),
+        }
+        return defaults.get(loc_id, (0.0, 0.0))
+
+    def _guard_behavior(self, npc: Entity, dt: float) -> None:
+        # Configuration des patrouilles (dynamique via IDs de lieux)
+        patrol_points = ["porte_nord", "place_d_armes", "muraille_est", "place_d_armes", "muraille_ouest", "place_d_armes", "porte_sud", "place_d_armes"]
+        
+        # Cas spécial pour le Capitaine (npc:guard_1) : il reste souvent près de l'Hôtel de Ville
+        if npc.id == "npc:guard_1":
+            patrol_points = ["hotel_de_ville", "place_d_armes"]
+
+        if "patrol_idx" not in npc.stats:
+            # Attribution d'un point de départ aléatoire dans la ronde pour éviter les "trains" de gardes
+            npc.stats["patrol_idx"] = sum(ord(c) for c in npc.id) % len(patrol_points)
+            npc.stats["wait_timer"] = (sum(ord(c) for c in npc.id) % 5) * 1.0 
+            npc.stats["path_type"] = "standard"
+
+        if npc.stats["wait_timer"] > 0:
+            npc.stats["wait_timer"] -= dt
+            npc.vx = npc.vz = 0
+            return
+
+        # Cible actuelle
+        loc_id = patrol_points[npc.stats["patrol_idx"]]
+        tx, tz = self._get_location_coords(loc_id)
+        
+        dx, dz = tx - npc.x, tz - npc.z
+        dist = math.sqrt(dx*dx + dz*dz)
+        
+        if dist < 3.0:
+            # Arrivé au point.
+            # Temps d'attente au point
+            wait = 5.0
+            if "porte" in loc_id:
+                wait = 20.0 # Temps de garde à la porte
+            elif "hotel" in loc_id:
+                wait = 60.0 # Le Capitaine reste longtemps à l'Hôtel de Ville
+            
+            npc.stats["wait_timer"] = wait
+            npc.stats["patrol_idx"] = (npc.stats["patrol_idx"] + 1) % len(patrol_points)
+        else:
+            # On avance vers la cible
+            # Vitesse de marche (un peu plus lent pour les gardes pour paraître discipliné)
+            speed = 3.5 
+            npc.vx = (dx / dist) * speed
+            npc.vz = (dz / dist) * speed
+            # Rotation vers la cible
+            npc.ry = math.atan2(dx, dz)
 
     def entity_snapshots(self) -> list[dict]:
         return [e.to_snapshot() for e in self.entities.values()]

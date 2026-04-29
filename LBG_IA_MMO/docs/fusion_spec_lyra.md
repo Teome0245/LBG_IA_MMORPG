@@ -65,6 +65,48 @@ Les composants qui ne comprennent qu’un profil **doivent ignorer** l’autre *
 
 ---
 
+## 6. Propositions “dédoublonnage jauges” (recommandation actuelle)
+
+Objectif : éviter deux “énergies”, deux “stress”, etc. en clarifiant ce qui est **stocké** vs **dérivé** et en gardant une
+lecture simple côté UI et côté agents.
+
+### 6.1 Décisions validées (pour le moment)
+
+- **`energie`** : **jauge dérivée** (pas stockée) qui reflète la **moyenne** de `hunger/thirst/fatigue`.
+- **`confiance`** : **canonique** (on garde le nom “positif”).
+- **`stress`** : **alias de vue** (optionnel en UI), pas un second stockage.
+
+### 6.2 Formules proposées
+
+Pour `kind: npc_world` (0–1) :
+
+- \(needs\_mean = mean(hunger, thirst, fatigue)\) (chaque jauge clamp 0–1)
+- \(energie\_{0..100} = round(100 \\times (1 - needs\\_mean))\)
+- Alias UI possible : \(stress\_{0..100} = 100 - confiance\_{0..100}\)
+
+> Note : si tu veux “stress” en 0–1 au lieu de 0–100 en UI, utiliser \(stress\_{0..1} = 1 - confiance\_{0..1}\) après conversion.
+
+### 6.3 Recharge par consommation — options
+
+**Option A (recommandée)** — “consommer” agit sur les besoins :
+- `eat` : diminue `hunger` (et un peu `fatigue`)
+- `drink` : diminue `thirst`
+- `rest` : diminue `fatigue` (avec éventuellement une légère hausse `hunger/thirst` pour éviter un repos “gratuit”)
+
+L’**énergie remonte mécaniquement** via la formule dérivée (pas de jauge énergie stockée à synchroniser).
+
+**Option B** — conversion inspirée `LyraEngineV2` :
+- si `energie` (dérivée) < 30 : convertir une petite portion du besoin dominant en gain d’énergie “virtuel” (au final, se traduit par une baisse plus forte du besoin).
+
+**Option C** — bonus “mental” :
+- consommation réussie → `confiance += Δ` (clamp) ; contrainte/échec → `confiance -= Δ`
+
+### 6.4 À arbitrer lors du passage “spec → code”
+
+- Où vit `confiance` : `kind: assistant` uniquement, ou aussi `npc_world` (si on veut un mental PNJ) ?
+- Échelles : conserver `npc_world` en 0–1 strict, et `assistant` en 0–100 (et conversions centralisées).
+- Noms finaux côté UI : afficher “stress” comme vue dérivée de “confiance” (ou pas).
+
 ## Voir aussi
 
 - `lyra.md` — contrat actuel monorepo + boucle `mmo_world`

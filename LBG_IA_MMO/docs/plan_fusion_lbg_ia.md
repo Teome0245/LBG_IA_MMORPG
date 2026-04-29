@@ -108,9 +108,24 @@ En cas de divergence entre ce plan et le code, **le code et les ADR adoptés apr
 
 | Concept | LBG_IA | LBG_IA_MMO |
 |---------|--------|------------|
-| Moteur | `LyraEngineV2` (energie, chaleur, patience, confiance, profils) | `lyra_engine.gauges` (faim, soif, fatigue 0–1) + option DB dans LBG_IA |
-| Contrat API | Routes `/lyra`, intégration router | `context.lyra`, `output.lyra`, `meta.source: mmo_world` |
-| **Fusion** | Décider **espaces séparés** (`lyra_assistant` vs `lyra_npc`) **ou** mapping vers un **schéma unique** ; documenter les plages (0–1 vs 0–100). |
+| Moteur | `LyraEngineV2` + état local `LyraState` (jauges 0–100 + profils) | `lyra_engine.gauges` (jauges moteur 0–1) + contrat `context.lyra` / `output.lyra` |
+| Jauges existantes | **`chaleur`**, **`energie`**, **`patience`**, **`confiance`** (0–100) | **`hunger`**, **`thirst`**, **`fatigue`** (0–1) + extensions libres (ex. `stress`, `patience`) dans `context.lyra.gauges` |
+| Mécaniques d’évolution | **Temporel (tick/decay)** : boucle `lyra_tick_loop` appelle `LyraEngineV2.apply_decay()` toutes les **30 s**. Règles v2.3 : énergie **100 → 0 en ~4 h** (≈0,416 %/min) ; si énergie à 0, chaleur/patience/confiance décrochent au même débit ; si énergie < 30, conversion automatique **1 %** de la jauge la plus haute (chaleur/patience/confiance) → **+3 %** énergie (1×/tick) ; si énergie > 90, buff périodique ; profil HAL9000 si chaleur < 20 (hystérésis). **Évènements** : `update_on_success/error/long_conv` (voir `lyra_state.py`) + `modify_gauge` clamp 0–100 + `get_style_modifier()` par seuils | `GaugesState.step(dt_s)` si au moins une jauge moteur (`hunger`/`thirst`/`fatigue`) est présente, clamp 0–1 ; sinon echo (pas de step) ; `meta.source=mmo_world` ou `mmmorpg_ws` évite double-step |
+| Contrat API | Routes `GET /lyra/state`, `POST /lyra/update`, `GET /lyra/snapshot` (v2, events Postgres) | `context.lyra`, `output.lyra`, `meta.source: mmo_world` (ou `mmmorpg_ws`) ; injection possible via backend (`LBG_MMO_SERVER_URL`) |
+| **Fusion** | **Reprendre** les mécaniques LBG_IA (succès/erreur/long_conv + style par seuils) et **ajouter** les jauges LBG_IA (chaleur/energie/patience/confiance) dans le schéma Lyra du monorepo, **sans casser** le flux PNJ (hunger/thirst/fatigue). Ensuite : **ajustement / dédoublonnage** (mapping, renommage, namespaces `lyra_assistant` vs `lyra_npc`, plages 0–1 vs 0–100) pour éviter les doublons. |
+
+**Règles de mapping (constat LBG_IA, à intégrer puis dédoublonner juste après)** :
+
+- **Énergie** : **dérivée** = moyenne de **Faim + Soif + Fatigue** (valide “pour le moment”). Formule proposée dans `fusion_spec_lyra.md` (§6).
+- **Stress ↔ confiance** : même mesure (alias) → **canonique = `confiance`** (valide “pour le moment”) ; `stress` devient une **vue** optionnelle.
+- **Chaleur** : jauge **complémentaire** (pas une résultante directe), utile au style/ton (HAL/normal, empathie, etc.).
+- **Recharge par consommation** : mécanique “consommer X recharge Y” à formaliser dans le schéma unifié (ex. conversions / transferts type `LyraEngineV2` : 1 % d’une jauge → +3 % énergie).
+
+**Notes de portage (source LBG_IA, lecture seule)** :
+
+- Jauges + règles : `LBG_IA/orchestrateur/backend/src/services/lyra_state.py`
+- UX (sliders, presets, historique, style preview) : `LBG_IA/orchestrateur/frontend/src/pages/LyraPage.vue` + composants `components/lyra/*`
+- Contrat API LBG_IA : `LBG_IA/orchestrateur/backend/docs/API_REFERENCE.md` (section Lyra)
 
 ### 3.3 Monde (LBG_IA vs slice IA dans ce monorepo)
 

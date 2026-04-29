@@ -149,3 +149,48 @@ def test_pilot_proxy_pm_forwards_json(monkeypatch: pytest.MonkeyPatch) -> None:
     j = r.json()
     assert j.get("ok") is True
     assert j.get("service") == "pm_http"
+
+
+def test_pilot_proxy_desktop_skipped_when_no_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_AGENT_DESKTOP_URL", raising=False)
+    from backend.main import app
+
+    client = TestClient(app)
+    r = client.get("/v1/pilot/agent-desktop/healthz")
+    assert r.status_code == 200
+    assert r.json().get("skipped") is True
+
+
+def test_pilot_proxy_desktop_forwards_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_AGENT_DESKTOP_URL", "http://127.0.0.1:8060")
+
+    class _OkDesktop:
+        status_code = 200
+
+        def json(self) -> dict[str, object]:
+            return {"status": "ok", "service": "desktop_http"}
+
+    class _ClientDesktop:
+        def __init__(self, *a: object, **k: object) -> None:
+            pass
+
+        async def __aenter__(self) -> "_ClientDesktop":
+            return self
+
+        async def __aexit__(self, *a: object) -> None:
+            return None
+
+        async def get(self, url: str) -> _OkDesktop:
+            assert url.endswith("/healthz")
+            return _OkDesktop()
+
+    monkeypatch.setattr(pilot_mod.httpx, "AsyncClient", lambda **kw: _ClientDesktop())
+
+    from backend.main import app
+
+    client = TestClient(app)
+    r = client.get("/v1/pilot/agent-desktop/healthz")
+    assert r.status_code == 200
+    j = r.json()
+    assert j.get("ok") is True
+    assert j.get("service") == "desktop_http"

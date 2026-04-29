@@ -33,6 +33,7 @@ async def game_loop_broadcast(game: GameState, clients: set[ServerConnection]) -
                     world_time_s=game.time.world_time_s,
                     day_fraction=game.time.day_fraction,
                     entities=game.entity_snapshots(),
+                    locations=game.locations if game.time.world_time_s % 30 < 1 else None # Envoi périodique
                 )
             )
             stale: list[ServerConnection] = []
@@ -100,6 +101,7 @@ async def client_handler(
                             world_time_s=game.time.world_time_s,
                             day_fraction=game.time.day_fraction,
                             entities=game.entity_snapshots(),
+                            locations=game.locations,
                         )
                     )
                 )

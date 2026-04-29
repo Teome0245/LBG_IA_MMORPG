@@ -1,0 +1,150 @@
+Ton objectif : isométrique réaliste → 100% gratuit → pipeline reproductible
+Voici le meilleur combo gratuit possible, classé par efficacité.
+
+🥇 1. Stable Diffusion 1.5 / SDXL + ControlNet + Tiled Diffusion (100% gratuit)
+C’est la meilleure solution gratuite pour produire des assets isométriques réalistes cohérents.
+
+✔️ Ce que tu peux faire gratuitement :
+Générer des personnages isométriques réalistes
+
+Générer 8 directions (en utilisant des poses de référence)
+
+Générer des spritesheets (via batch + scripts)
+
+Maintenir un style cohérent (via LoRA + référence d’images)
+
+Générer des milliers d’assets sans limite
+
+✔️ Ce dont tu as besoin :
+ComfyUI (recommandé) ou Automatic1111
+
+ControlNet (OpenPose + Depth + Canny)
+
+LoRA de style isométrique (gratuit sur CivitAI)
+
+Ton dossier d’images → pour créer un LoRA personnalisé (20–50 images suffisent)
+
+✔️ Pourquoi c’est parfait pour toi :
+Tu peux automatiser tout le pipeline via ton orchestrateur IA
+
+Tu peux générer 30k PNJ sans coût
+
+Tu peux créer ton propre style isométrique réaliste
+
+Tu peux faire du batch rendering (100 images/min sur GPU local)
+
+🥈 2. Blender + Freestyle + Script Python (100% gratuit)
+Si tu veux du vrai isométrique réaliste, Blender est une arme absolue.
+
+✔️ Ce que tu peux faire :
+Générer des personnages 3D réalistes
+
+Les rendre en isométrique automatiquement
+
+Générer toutes les directions
+
+Générer toutes les animations (walk, idle, attack)
+
+Exporter en spritesheets automatiquement
+
+✔️ Pourquoi c’est puissant :
+Cohérence parfaite
+
+Style maîtrisé
+
+Pipeline 100% automatisable
+
+Zéro coût
+
+✔️ Limite :
+Il faut un modèle 3D de base (gratuit sur Mixamo ou MakeHuman)
+
+🥉 3. Mixamo (gratuit) + Blender (gratuit)
+Pipeline simple, efficace, gratuit.
+
+✔️ Tu fais :
+Génération d’un personnage réaliste (MakeHuman / Blender)
+
+Animation gratuite via Mixamo
+
+Rendu isométrique dans Blender
+
+Export spritesheets
+
+✔️ Avantage :
+Ultra cohérent
+
+Très réaliste
+
+Parfait pour un MMO isométrique
+
+✔️ Limite :
+Pas d’IA générative → tu dois créer les variations toi-même
+
+Mais tu peux automatiser la génération de variations via ton orchestrateur IA
+
+🟦 4. Free AI Tools (moins puissants mais utiles)
+✔️ OpenArt Free SDXL
+Génération gratuite
+
+Pas d’isométrique natif
+
+Mais tu peux guider avec des références
+
+✔️ Mage.space (gratuit)
+SDXL + ControlNet
+
+Très bon pour générer des poses isométriques
+
+✔️ Fooocus (gratuit)
+Interface simplifiée
+
+Très bon pour générer des assets cohérents
+
+🟥 Ce qui n’existe PAS en gratuit (pour être clair)
+Génération automatique 8 directions isométriques réalistes
+
+Génération automatique spritesheets animés réalistes
+
+Cohérence massive sans pipeline custom
+
+👉 Mais tu peux recréer tout ça toi-même avec ComfyUI + Blender.
+
+🧠 Le meilleur pipeline 100% gratuit pour toi
+Vu ton niveau technique, voici le pipeline optimal :
+
+🔧 Étape 1 — Générer ton style isométrique réaliste (SDXL + LoRA)
+Tu fournis 20–50 images de ton style
+
+Tu entraînes un LoRA (gratuit)
+
+Tu génères des personnages réalistes cohérents
+
+🔧 Étape 2 — Générer les 8 directions (ControlNet + OpenPose)
+Tu utilises des poses isométriques pré‑définies
+
+ControlNet génère chaque direction
+
+Cohérence parfaite
+
+🔧 Étape 3 — Générer les animations (Blender + Mixamo)
+Tu prends ton personnage généré
+
+Tu le convertis en 3D low-poly réaliste (via Instant Meshes ou Blender)
+
+Tu appliques les animations Mixamo
+
+Tu rends en isométrique
+
+🔧 Étape 4 — Export spritesheets (Blender script + Python)
+Script Python → export automatique
+
+8 directions × animations × variations
+
+100% automatisable
+
+🟩 Résultat final
+👉 Tu obtiens un pipeline 100% gratuit  
+👉 Tu peux produire 30k PNJ réalistes  
+👉 Tu gardes un style cohérent  
+👉 Tu peux tout automatiser via ton orchestrateur IA

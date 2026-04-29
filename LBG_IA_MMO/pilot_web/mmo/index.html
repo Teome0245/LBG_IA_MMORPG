@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LBG IA MMO v1.1.1 - Client Web</title>
+  <script type="module" crossorigin src="/mmo/assets/index-DTmkbWhA.js"></script>
+  <link rel="stylesheet" crossorigin href="/mmo/assets/index-ClrHbfsf.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Écran de Connexion -->
+        <div id="login-screen" class="overlay">
+            <div class="glass-panel login-box">
+                <h1>LBG IA MMO v1.1.1</h1>
+                <p>Bienvenue dans le multivers. Entrez votre nom pour commencer.</p>
+                <div class="input-group">
+                    <input type="text" id="server-url" value="192.168.0.245" placeholder="IP du serveur (ex: 192.168.0.245)">
+                    <input type="text" id="player-name" placeholder="Nom du voyageur..." maxlength="15">
+                    <button id="connect-btn">REJOINDRE</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interface de Jeu -->
+        <div id="game-container" class="hidden">
+            <canvas id="game-canvas"></canvas>
+            
+            <!-- HUD -->
+            <div id="hud">
+                <div class="hud-top-left glass-panel">
+                    <div class="stat">
+                        <span class="label">JOUEUR :</span>
+                        <span id="stat-name">?</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">ID :</span>
+                        <span id="stat-id">?</span>
+                    </div>
+                </div>
+
+                <div class="hud-top-right glass-panel character-sheet">
+                    <div class="char-header">
+                        <span class="char-class">Niveau <span id="char-level">1</span></span>
+                        <div class="exp-container">
+                            <div id="exp-bar" class="exp-bar"></div>
+                        </div>
+                    </div>
+                    <div class="stats-bars">
+                        <div class="bar-group">
+                            <div class="bar-label">SANTÉ <span id="hp-val" class="bar-numeric">100/100</span></div>
+                            <div class="bar-bg"><div id="hp-bar" class="bar-fill hp"></div></div>
+                        </div>
+                        <div class="bar-group">
+                            <div class="bar-label">MANA <span id="mp-val" class="bar-numeric">50/50</span></div>
+                            <div class="bar-bg"><div id="mp-bar" class="bar-fill mp"></div></div>
+                        </div>
+                        <div class="bar-group">
+                            <div class="bar-label">ÉNERGIE <span id="stamina-val" class="bar-numeric">100/100</span></div>
+                            <div class="bar-bg"><div id="stamina-bar" class="bar-fill stamina"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="hud-bottom-left glass-panel">
+                    <div id="console-logs">
+                        <div class="log system">Initialisation du système...</div>
+                    </div>
+                    <div class="chat-input-group">
+                        <input type="text" id="chat-msg" placeholder="Parler aux PNJ...">
+                        <button id="send-chat-btn">ENVOYER</button>
+                    </div>
+                </div>
+
+                <div class="hud-bottom-right glass-panel">
+                    <div class="stat">
+                        <span class="label">POS X :</span>
+                        <span id="pos-x">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">POS Y :</span>
+                        <span id="pos-y">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">TIME :</span>
+                        <span id="world-time">--:--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overlay de Déconnexion -->
+        <div id="disconnect-screen" class="overlay hidden">
+            <div class="glass-panel">
+                <h2 class="error-text">CONNEXION PERDUE</h2>
+                <p>La liaison avec le multivers a été rompue.</p>
+                <button onclick="window.location.reload()">RECONNEXION</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

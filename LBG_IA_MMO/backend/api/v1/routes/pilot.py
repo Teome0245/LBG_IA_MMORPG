@@ -258,6 +258,37 @@ async def pilot_aggregate_status() -> dict[str, object]:
             pm_state = "error"
             pm_detail = str(e)
 
+    desktop_url_raw = os.environ.get("LBG_AGENT_DESKTOP_URL", "").strip()
+    desktop_state: str
+    desktop_detail: str | None = None
+    desktop_probe_url: str | None = None
+    desktop_info: dict[str, object] | None = None
+
+    if not desktop_url_raw:
+        desktop_state = "skipped"
+        desktop_detail = "LBG_AGENT_DESKTOP_URL non défini (desktop_control indisponible)"
+    else:
+        desktop_probe_url = desktop_url_raw.rstrip("/") + "/healthz"
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                r = await client.get(desktop_probe_url)
+            if r.status_code == 200:
+                desktop_state = "ok"
+                try:
+                    raw = r.json()
+                    if isinstance(raw, dict):
+                        desktop_info = raw
+                    else:
+                        desktop_detail = "healthz: JSON attendu (objet), reçu autre type"
+                except Exception:
+                    desktop_detail = "healthz: corps non JSON"
+            else:
+                desktop_state = "error"
+                desktop_detail = f"HTTP {r.status_code}"
+        except Exception as e:
+            desktop_state = "error"
+            desktop_detail = str(e)
+
     mmo_url_raw = os.environ.get("LBG_MMO_SERVER_URL", "").strip()
     mmo_state: str
     mmo_detail: str | None = None
@@ -305,6 +336,11 @@ async def pilot_aggregate_status() -> dict[str, object]:
         "agent_pm_health_url": pm_probe_url,
         "agent_pm_detail": pm_detail,
         "agent_pm_info": pm_info,
+        "agent_desktop": desktop_state,
+        "agent_desktop_url": desktop_url_raw or None,
+        "agent_desktop_health_url": desktop_probe_url,
+        "agent_desktop_detail": desktop_detail,
+        "agent_desktop_info": desktop_info,
         "mmo_server": mmo_state,
         "mmo_server_url": mmo_url_raw or None,
         "mmo_server_health_url": mmo_probe_url,
@@ -360,6 +396,26 @@ async def pilot_proxy_agent_pm_healthz() -> dict[str, object]:
     base = os.environ.get("LBG_AGENT_PM_URL", "").strip().rstrip("/")
     if not base:
         return {"ok": False, "skipped": True, "detail": "LBG_AGENT_PM_URL non défini"}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"{base}/healthz")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"HTTP {r.status_code}", "body": r.text[:500]}
+        try:
+            data = r.json()
+        except ValueError:
+            return {"ok": False, "error": "corps non JSON", "body": r.text[:500]}
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/agent-desktop/healthz", tags=["pilot"])
+async def pilot_proxy_agent_desktop_healthz() -> dict[str, object]:
+    """Proxy same-origin vers l’agent desktop Windows (hybride)."""
+    base = os.environ.get("LBG_AGENT_DESKTOP_URL", "").strip().rstrip("/")
+    if not base:
+        return {"ok": False, "skipped": True, "detail": "LBG_AGENT_DESKTOP_URL non défini"}
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             r = await client.get(f"{base}/healthz")
@@ -458,6 +514,61 @@ async def pilot_capabilities() -> dict[str, object]:
                 "body": r.text[:500],
             }
         return {"ok": True, **r.json()}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/orchestrator/brain/status", tags=["pilot"])
+async def pilot_proxy_orchestrator_brain_status() -> dict[str, object]:
+    """Proxy same-origin vers `GET orchestrator /v1/brain/status` (évite CORS)."""
+    orch_url = os.environ.get("LBG_ORCHESTRATOR_URL", "http://127.0.0.1:8010").rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{orch_url}/v1/brain/status")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/orchestrator/brain/toggle", tags=["pilot"])
+async def pilot_proxy_orchestrator_brain_toggle(payload: dict[str, object]) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/brain/toggle`."""
+    orch_url = os.environ.get("LBG_ORCHESTRATOR_URL", "http://127.0.0.1:8010").rstrip("/")
+    enabled = payload.get("enabled")
+    if not isinstance(enabled, bool):
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "body: {enabled: boolean}"})
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.post(f"{orch_url}/v1/brain/toggle", json={"enabled": enabled})
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/orchestrator/brain/approve", tags=["pilot"])
+async def pilot_proxy_orchestrator_brain_approve(payload: dict[str, object]) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/brain/approve`."""
+    orch_url = os.environ.get("LBG_ORCHESTRATOR_URL", "http://127.0.0.1:8010").rstrip("/")
+    rid = payload.get("request_id")
+    if not isinstance(rid, str) or not rid.strip():
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "body: {request_id: string}"})
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.post(f"{orch_url}/v1/brain/approve", json={"request_id": rid.strip()})
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except HTTPException:
+        raise
     except Exception as e:
         return {"ok": False, "error": str(e)}
 
