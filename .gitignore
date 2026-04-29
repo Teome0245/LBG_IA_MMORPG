@@ -10,3 +10,8 @@ infra/secrets/lbg.env
 **/.venv*/
 **/.venv-ci*/
 
+godot_client/Godot_v4.6.1-stable_win64/
+godot_client/Models/*.fbx
+godot_client/Models/*.blend
+godot_client/Models/*.glb
+web_client/node_modules/
