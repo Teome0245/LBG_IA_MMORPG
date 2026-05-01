@@ -35,6 +35,25 @@ Puis pousser les secrets (et redémarrer services) :
 bash infra/scripts/push_secrets_vm.sh
 ```
 
+### 1bis) Déployer uniquement le client MMO `/mmo/` (anti‑régression)
+
+Pour éviter les grosses régressions “front” :
+
+- `infra/scripts/deploy_web_client.sh` fait un **déploiement atomique** (stage → switch) et refuse le déploiement si `index.html` référence des assets manquants.
+- Il garde automatiquement un **backup** des derniers déploiements dans `mmo_releases/` sur la VM front (110).
+
+Commande :
+
+```bash
+bash infra/scripts/deploy_web_client.sh
+```
+
+Rollback (si un rebuild a régressé le rendu ou la connexion) :
+
+```bash
+bash infra/scripts/rollback_web_client.sh
+```
+
 ---
 
 ## 2) Santé rapide (HTTP)
@@ -148,6 +167,10 @@ Optionnel :
   - vérifier que `MMMORPG_IA_BACKEND_URL` pointe vers `http://192.168.0.140:8000`
   - augmenter `MMMORPG_IA_TIMEOUT_S` si LLM lent
   - regarder les logs : `journalctl -u lbg-mmmorpg-ws -n 100 --no-pager`
+
+- **HUD figé côté client `/mmo/` (HP/MP/Énergie ne bougent pas)** :
+  - vérifier que le serveur WS inclut `stats` dans les snapshots d’entités (`Entity.to_snapshot()`), sinon le client n’a rien à rafraîchir
+  - vérifier côté serveur que `GameState.apply_player_move()` initialise `ent.stats` (hp/mp/stamina/level/exp…)
 
 - **401 sur snapshot HTTP interne (`:8773`)** :
   - fournir `X-LBG-Service-Token` = `MMMORPG_INTERNAL_HTTP_TOKEN`

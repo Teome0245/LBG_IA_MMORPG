@@ -470,7 +470,7 @@ class GameState:
             return
             
         # Initialisation des stats par défaut pour le joueur
-        if not ent.stats:
+        if not getattr(ent, "stats", None):
             ent.stats = {
                 "hp": 100, "hp_max": 100,
                 "mp": 50, "mp_max": 50,
@@ -506,12 +506,13 @@ class GameState:
     def tick(self, dt: float) -> None:
         self.time.advance(dt)
         for ent in self.entities.values():
-            if ent.busy_timer > 0:
-                ent.busy_timer -= dt
+            bt = float(getattr(ent, "busy_timer", 0.0) or 0.0)
+            if bt > 0:
+                ent.busy_timer = bt - float(dt)
                 if ent.kind == "npc":
                     ent.vx = ent.vy = ent.vz = 0.0
             
-            if ent.kind == "npc" and ent.busy_timer <= 0:
+            if ent.kind == "npc" and float(getattr(ent, "busy_timer", 0.0) or 0.0) <= 0.0:
                 self._npc_step(ent, dt)
             
             # Gestion des escaliers (Rampes)

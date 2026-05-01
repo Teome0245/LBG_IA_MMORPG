@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LBG IA MMO v1.1.1 - Client Web</title>
-  <script type="module" crossorigin src="/mmo/assets/index-DTmkbWhA.js"></script>
-  <link rel="stylesheet" crossorigin href="/mmo/assets/index-ClrHbfsf.css">
+    <title>LBG IA MMO - Client Web</title>
+  <script type="module" crossorigin src="/mmo/assets/index-Ceovn-sw.js"></script>
+  <link rel="stylesheet" crossorigin href="/mmo/assets/index-Dp0m9D4H.css">
 </head>
 <body>
     <div id="app">
         <!-- Écran de Connexion -->
         <div id="login-screen" class="overlay">
             <div class="glass-panel login-box">
-                <h1>LBG IA MMO v1.1.1</h1>
+                <h1>LBG IA MMO</h1>
+                <p class="muted" style="margin:-1.2rem 0 1.2rem 0;letter-spacing:1px;">v1.1.1</p>
                 <p>Bienvenue dans le multivers. Entrez votre nom pour commencer.</p>
                 <div class="input-group">
                     <input type="text" id="server-url" value="192.168.0.245" placeholder="IP du serveur (ex: 192.168.0.245)">
@@ -39,29 +40,6 @@
                     </div>
                 </div>
 
-                <div class="hud-top-right glass-panel character-sheet">
-                    <div class="char-header">
-                        <span class="char-class">Niveau <span id="char-level">1</span></span>
-                        <div class="exp-container">
-                            <div id="exp-bar" class="exp-bar"></div>
-                        </div>
-                    </div>
-                    <div class="stats-bars">
-                        <div class="bar-group">
-                            <div class="bar-label">SANTÉ <span id="hp-val" class="bar-numeric">100/100</span></div>
-                            <div class="bar-bg"><div id="hp-bar" class="bar-fill hp"></div></div>
-                        </div>
-                        <div class="bar-group">
-                            <div class="bar-label">MANA <span id="mp-val" class="bar-numeric">50/50</span></div>
-                            <div class="bar-bg"><div id="mp-bar" class="bar-fill mp"></div></div>
-                        </div>
-                        <div class="bar-group">
-                            <div class="bar-label">ÉNERGIE <span id="stamina-val" class="bar-numeric">100/100</span></div>
-                            <div class="bar-bg"><div id="stamina-bar" class="bar-fill stamina"></div></div>
-                        </div>
-                    </div>
-                </div>
-
                 <div class="hud-bottom-left glass-panel">
                     <div id="console-logs">
                         <div class="log system">Initialisation du système...</div>
@@ -78,7 +56,7 @@
                         <span id="pos-x">0</span>
                     </div>
                     <div class="stat">
-                        <span class="label">POS Y :</span>
+                        <span class="label">POS Z :</span>
                         <span id="pos-y">0</span>
                     </div>
                     <div class="stat">
@@ -94,7 +72,7 @@
             <div class="glass-panel">
                 <h2 class="error-text">CONNEXION PERDUE</h2>
                 <p>La liaison avec le multivers a été rompue.</p>
-                <button onclick="window.location.reload()">RECONNEXION</button>
+                <button id="reconnect-btn">RECONNEXION</button>
             </div>
         </div>
     </div>

@@ -1,0 +1,48 @@
+{
+  "kind": "village_render_meta_v1",
+  "seed": 42,
+  "style": "illustrated",
+  "tile_m": 2.0,
+  "tile_px": 32,
+  "px_per_m": 16.0,
+  "grid": {
+    "w": 50,
+    "h": 40
+  },
+  "image_px": {
+    "w": 1600,
+    "h": 1280
+  },
+  "world_m": {
+    "w": 100.0,
+    "h": 80.0
+  },
+  "origin": {
+    "world_m": {
+      "x": 0.0,
+      "z": 0.0
+    },
+    "image_px": {
+      "x": 800.0,
+      "y": 640.0
+    }
+  },
+  "axis": {
+    "world": {
+      "x_right": true,
+      "z_down": true
+    },
+    "image": {
+      "x_right": true,
+      "y_down": true
+    }
+  },
+  "mapping": {
+    "image_px_x": "origin.image_px.x + world_m.x * px_per_m",
+    "image_px_y": "origin.image_px.y + world_m.z * px_per_m"
+  },
+  "output": {
+    "image": "/home/sdesh/projects/LBG_IA_MMORPG/bourg_illustrated.png",
+    "meta": "/home/sdesh/projects/LBG_IA_MMORPG/bourg_illustrated.meta.json"
+  }
+}

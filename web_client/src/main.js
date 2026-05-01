@@ -13,6 +13,7 @@ class App {
         
         this.playerLocalPos = { x: 0, y: 0, z: 0 };
         this.isMoving = false;
+        this._lastConnect = { serverHost: null, name: null };
         
         this.initUI();
     }
@@ -20,6 +21,7 @@ class App {
     initUI() {
         const connectBtn = document.getElementById('connect-btn');
         const playerNameInput = document.getElementById('player-name');
+        const serverHostInput = document.getElementById('server-url');
         const chatInput = document.getElementById('chat-msg');
         const sendChatBtn = document.getElementById('send-chat-btn');
 
@@ -32,6 +34,18 @@ class App {
         playerNameInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') connectBtn.click();
         });
+        serverHostInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') connectBtn.click();
+        });
+
+        // Bouton de reconnexion (overlay)
+        const reconnectBtn = document.getElementById('reconnect-btn');
+        if (reconnectBtn) {
+            reconnectBtn.addEventListener('click', () => {
+                const name = this._lastConnect.name || (playerNameInput.value.trim() || "Voyageur");
+                this.connect(name);
+            });
+        }
 
         // Chat
         sendChatBtn.addEventListener('click', () => {
@@ -53,10 +67,17 @@ class App {
         try {
             const serverHost = document.getElementById('server-url').value.trim() || window.location.hostname;
             document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('disconnect-screen').classList.add('hidden');
             this.addLog("Connexion au multivers...");
             
-            const wsUrl = `ws://${serverHost}:7733`;
-            const welcomeData = await this.network.connect(wsUrl, name);
+            const wsScheme = (window.location && window.location.protocol === "https:") ? "wss" : "ws";
+            const wsUrl = `${wsScheme}://${serverHost}:7733`;
+            this._lastConnect = { serverHost, name };
+            const welcomeData = await this.network.connect(wsUrl, name, {
+                welcomeTimeoutMs: 6000,
+                autoReconnect: true,
+                reconnectMaxDelayMs: 5000,
+            });
             
             this.handleWelcome(welcomeData);
             document.getElementById('game-container').classList.remove('hidden');
@@ -73,6 +94,8 @@ class App {
     handleWelcome(data) {
         this.addLog(`Bienvenue ${data.player_id} !`, 'system');
         this.renderer.setPlayerId(data.player_id);
+        try { this.renderer.updateLocations(data.locations || []); } catch (_) {}
+        try { this.renderer.updateState(data.entities || [], data.world_time_s || 0, data.day_fraction || 0); } catch (_) {}
         
         document.getElementById('stat-name').textContent = data.player_id.split(':')[0];
         document.getElementById('stat-id').textContent = data.player_id;
@@ -87,6 +110,9 @@ class App {
     handleMessage(msg) {
         if (msg.type === "world_tick") {
             this.renderer.updateState(msg.entities, msg.world_time_s, msg.day_fraction);
+            if (msg.locations) {
+                try { this.renderer.updateLocations(msg.locations); } catch (_) {}
+            }
             this.updateHUD(msg);
             
             // Gérer les répliques PNJ (pont IA)
@@ -100,6 +126,8 @@ class App {
 
     handleDisconnect() {
         document.getElementById('disconnect-screen').classList.remove('hidden');
+        // L'auto-reconnect est géré par NetworkManager; ici on affiche juste l'état.
+        this.addLog("Connexion perdue. Tentative de reconnexion...", 'error');
     }
 
     updateHUD(msg) {
@@ -108,7 +136,8 @@ class App {
         const me = msg.entities.find(e => e.id === this.network.playerId);
         if (me) {
             document.getElementById('pos-x').textContent = Math.round(me.x);
-            document.getElementById('pos-y').textContent = Math.round(me.y);
+            // Y (serveur) = altitude. On affiche plutôt Z (plan) dans le HUD.
+            document.getElementById('pos-y').textContent = Math.round(me.z);
             this.playerLocalPos = { x: me.x, y: me.y, z: me.z };
         }
     }
@@ -164,11 +193,11 @@ class App {
         if (move.x !== 0 || move.y !== 0) {
             const speed = 0.2;
             const newX = this.playerLocalPos.x + move.x * speed;
-            const newY = this.playerLocalPos.y + move.y * speed;
+            const newZ = this.playerLocalPos.z + move.y * speed;
             
             // Note: On pourrait faire de la prédiction côté client, 
             // mais ici on envoie juste l'intention au serveur.
-            this.network.sendMove(newX, newY, this.playerLocalPos.z);
+            this.network.sendMove(newX, 0, newZ);
         }
     }
 }

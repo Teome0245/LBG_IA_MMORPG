@@ -109,6 +109,171 @@ Apprentissage contrôlé (optionnel) :
   et **mettre à jour `desktop.env`** (mapping + allowlist).
 - recommandé de garder un `LBG_DESKTOP_APPROVAL_TOKEN` actif pour toute exécution réelle.
 
+## Computer Use (vision + souris/clavier) — MVP contrôlé
+
+En plus des actions MVP, le worker Windows supporte un sous-ensemble “Computer Use” (interaction UI) **sur actions structurées uniquement**.
+
+### Activation (Windows)
+
+- Feature flag : `LBG_DESKTOP_COMPUTER_USE_ENABLED=1` (sinon refus `feature_disabled`)
+- Débuter en `LBG_DESKTOP_DRY_RUN=1` puis basculer en réel
+- Recommandé en prod : `LBG_DESKTOP_APPROVAL_TOKEN=...` + audit JSONL
+
+### Actions unitaires (`context.desktop_action.kind`)
+
+- `observe_screen` : capture écran (retour `path`/`base64`/`none`)
+- `click_xy`, `move_xy`, `drag_xy`
+- `type_text`, `hotkey`, `scroll`, `wait_ms`
+
+Notes sécurité :
+- `observe_screen` peut exiger un token même si c’est “juste” une capture : `LBG_DESKTOP_OBSERVE_REQUIRES_APPROVAL=1`
+- `type_text` est borné : `LBG_DESKTOP_TYPE_MAX_CHARS`
+- les coordonnées sont validées (doivent être dans l’écran)
+
+### Macro `run_steps` (un seul appel = plusieurs actions)
+
+But : côté orchestrateur, envoyer une **séquence bornée** en une requête.
+
+Entrée :
+- `steps` : liste d’objets `{kind: "...", ...}` (mêmes champs que les actions unitaires)
+- `stop_on_fail` (optionnel, défaut `true`) : si `false`, continue malgré une erreur
+
+Limites :
+- `LBG_DESKTOP_RUN_STEPS_MAX` (défaut 12)
+- `LBG_DESKTOP_RUN_STEPS_TIMEOUT_MS` (défaut 30000)
+
+Sortie :
+- `results[]` : statut minimal par étape
+- `step_outputs[]` : sorties détaillées par étape (ex. screenshot `path/mime/bytes`)
+- `errors[]` : erreurs collectées (utile quand `stop_on_fail=false`)
+
+Audit :
+- `agents.desktop.step` : un événement par étape
+- `agents.desktop.audit` : résumé (kind=`run_steps`)
+
+Exemple :
+
+```json
+{
+  "desktop_action": {
+    "kind": "run_steps",
+    "stop_on_fail": false,
+    "steps": [
+      { "kind": "open_url", "url": "https://example.org" },
+      { "kind": "wait_ms", "ms": 800 },
+      { "kind": "observe_screen" }
+    ]
+  }
+}
+```
+
+## Recettes PowerShell (smoke)
+
+Pré-requis :
+- le worker Windows est démarré (par défaut `http://127.0.0.1:5005`)
+- `desktop.env` est configuré (feature flags / allowlists / token)
+
+Astuce : l’approval token n’est requis que si `LBG_DESKTOP_APPROVAL_TOKEN` est défini ; `observe_screen` peut aussi exiger un token selon `LBG_DESKTOP_OBSERVE_REQUIRES_APPROVAL`.
+
+### 1) Healthz (diagnostic rapide)
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:5005/healthz | ConvertTo-Json -Depth 10
+```
+
+### 2) Dry-run (aucune action réelle)
+
+```powershell
+$body = @{
+  actor_id = "test"
+  text = ""
+  context = @{
+    desktop_dry_run = $true
+    desktop_action = @{ kind = "click_xy"; x = 100; y = 100; button = "left"; clicks = 1 }
+  }
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod http://127.0.0.1:5005/invoke -Method Post -ContentType "application/json" -Body $body | ConvertTo-Json -Depth 12
+```
+
+### 3) Réel (click) — avec approval si activé
+
+```powershell
+$body = @{
+  actor_id = "test"
+  text = ""
+  context = @{
+    desktop_dry_run = $false
+    desktop_approval = "CHANGE-MOI"
+    desktop_action = @{ kind = "click_xy"; x = 100; y = 100; button = "left"; clicks = 1 }
+  }
+} | ConvertTo-Json -Depth 10
+
+Invoke-RestMethod http://127.0.0.1:5005/invoke -Method Post -ContentType "application/json" -Body $body | ConvertTo-Json -Depth 12
+```
+
+### 4) `run_steps` (open_url → wait → observe) — récupère le screenshot path
+
+```powershell
+$body = @{
+  actor_id = "test"
+  text = ""
+  context = @{
+    desktop_dry_run = $false
+    desktop_approval = "CHANGE-MOI"
+    desktop_action = @{
+      kind = "run_steps"
+      stop_on_fail = $false
+      steps = @(
+        @{ kind = "open_url"; url = "https://example.org" },
+        @{ kind = "wait_ms"; ms = 800 },
+        @{ kind = "observe_screen" }
+      )
+    }
+  }
+} | ConvertTo-Json -Depth 12
+
+$r = Invoke-RestMethod http://127.0.0.1:5005/invoke -Method Post -ContentType "application/json" -Body $body
+$r.step_outputs[-1].path
+$r.errors | ConvertTo-Json -Depth 8
+```
+
+## ComfyUI (API locale) — câblage par JSON (recommandé)
+
+Si ComfyUI tourne sur le même PC Windows (souvent `http://127.0.0.1:8188`), le worker Windows peut appeler l’API
+localement et “câbler” un workflow **en modifiant le JSON** (export “API”) plutôt que par manipulation UI.
+
+Actions `desktop_action.kind` :
+- `comfyui_queue`
+- `comfyui_patch_and_queue`
+- `comfyui_history`
+- `comfyui_view`
+
+Sécurité :
+- activer `LBG_DESKTOP_COMFYUI_ENABLED=1`
+- approval requis (`context.desktop_approval`)
+
+### Smoke “ComfyUI via worker Windows”
+
+Le repo inclut un smoke PowerShell qui pilote ComfyUI **via** l’agent Windows (API ComfyUI), sans UI automation :
+
+- Script : `infra/scripts/smoke_comfyui.ps1`
+- Il attend un workflow ComfyUI **exporté en JSON “API”** (menu ComfyUI : exporter pour API), puis :
+  - queue (optionnel : patch `seed`)
+  - poll `history`
+  - download du 1er output via `comfyui_view`
+
+Exemple (sur Windows, là où tourne le worker `Agent_IA`) :
+
+```powershell
+.\infra\scripts\smoke_comfyui.ps1 `
+  -BaseUrl "http://127.0.0.1:5005" `
+  -Approval "<TOKEN_SI_ACTIF>" `
+  -WorkflowPath "C:\Agent_IA\workflows\bourg_api.json" `
+  -SeedNode "3" `
+  -Seed 42
+```
+
 ## `desktop.env` (config hot-reload)
 
 Sur Windows, la configuration est lue depuis `C:\Agent_IA\desktop.env` (chemin donné par `LBG_DESKTOP_ENV_PATH`).
@@ -117,6 +282,7 @@ Elle est **rechargée automatiquement** quand le fichier change (pas besoin de r
 - dry-run
 - approval token (si utilisé)
 - choix d’éditeur (Notepad++ / Word / défaut)
+ - paramètres Computer Use (feature flag, screenshots, limites, run_steps)
 
 ## Gardes-fous (sécurité / contrôle)
 
@@ -168,6 +334,20 @@ Le worker écrit un audit (une ligne JSON par action) :
 - `LBG_DESKTOP_APPROVAL_TOKEN` : (optionnel) token d’approbation
 - `LBG_DESKTOP_AUDIT_LOG_PATH` : (optionnel) chemin d’audit JSONL
 - `LBG_DESKTOP_AUDIT_STDOUT` : `0` pour désactiver stdout
+- `LBG_DESKTOP_COMPUTER_USE_ENABLED` : `1` pour activer les actions UI (sinon refus)
+- `LBG_DESKTOP_OBSERVE_REQUIRES_APPROVAL` : `1` pour exiger un token sur `observe_screen`
+- `LBG_DESKTOP_SCREENSHOT_DIR` : ex. `C:\Agent_IA\screenshots`
+- `LBG_DESKTOP_SCREENSHOT_RETURN` : `path|base64|none` (défaut `path`)
+- `LBG_DESKTOP_SCREENSHOT_MAX_WIDTH` : ex. `1280`
+- `LBG_DESKTOP_SCREENSHOT_FORMAT` : `jpeg|png` (défaut `jpeg`)
+- `LBG_DESKTOP_SCREENSHOT_JPEG_QUALITY` : ex. `65`
+- `LBG_DESKTOP_TYPE_MAX_CHARS` : ex. `400`
+- `LBG_DESKTOP_RUN_STEPS_MAX` : ex. `12`
+- `LBG_DESKTOP_RUN_STEPS_TIMEOUT_MS` : ex. `30000`
+ - `LBG_DESKTOP_COMFYUI_ENABLED` : `1` pour activer les actions ComfyUI
+ - `LBG_COMFYUI_BASE_URL` : `http://127.0.0.1:8188`
+ - `LBG_COMFYUI_TIMEOUT_S` : ex. `120`
+ - `LBG_COMFYUI_DOWNLOAD_DIR` : ex. `C:\Agent_IA\comfyui_downloads`
 
 ## Mise en route (MVP)
 

@@ -13,6 +13,19 @@ Construire **un orchestrateur IA autonome** capable de piloter :
 
 En une phrase : **un cerveau central** qui pense, apprend, agit, se maintient, se corrige et interagit aussi dans un monde virtuel.
 
+## Principe transversal — IA curieuse
+
+La curiosité IA est une **orientation générale du projet**, pas uniquement une mécanique MMO. Elle doit pouvoir s'appliquer :
+- **dans le MMORPG** : PNJ, créatures, factions ou agents de simulation capables d'explorer, de réagir aux situations nouvelles, de mémoriser les anomalies utiles et d'adapter leurs routines ;
+- **hors MMORPG** : orchestrateur, assistants et agents autonomes capables de détecter la nouveauté, d'estimer leur incertitude, de tester des hypothèses et d'améliorer progressivement leur comportement.
+
+Les signaux envisagés restent conceptuels à ce stade :
+- **nouveauté** : valoriser un état, une information ou une situation jamais rencontrée ;
+- **erreur de prédiction** : transformer l'écart entre attente et réalité en opportunité d'apprentissage ;
+- **exploration contrôlée** : autoriser l'agent à sortir temporairement des routines connues, dans des limites sûres et observables.
+
+Ce principe sert de repère pour les futurs travaux sur les PNJ, la mémoire, l'orchestration, l'autonomie et Lyra. Il ne constitue pas un plan figé ni une obligation d'implémentation immédiate.
+
 ## Orchestrateur IA — “le cerveau”
 
 Responsabilités attendues :

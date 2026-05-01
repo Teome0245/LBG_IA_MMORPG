@@ -530,6 +530,19 @@ curl -sS "http://192.168.0.140:8010/v1/capabilities"
 curl -sS "http://192.168.0.140:8000/v1/pilot/capabilities"
 ```
 
+#### GitHub sync — cas `GH001` (fichier > 100MB)
+
+Si `git push` est rejeté par GitHub avec `GH001` / `pre-receive hook declined`, ce n’est pas un “budget” : un fichier >100MB est présent dans l’historique poussé.
+
+Procédure recommandée :
+
+1) identifier le commit fautif (`git log --oneline <remote/main>..main`) ;
+2) retirer ce commit de l’historique local (rebase/cherry-pick propre) ;
+3) ajouter des garde-fous dans `.gitignore` (runtime/tooling local, `node_modules`, binaires lourds) ;
+4) retester avec `git push --dry-run` avant push réel.
+
+Note : ignorer un fichier **après** l’avoir commité ne suffit pas ; il faut le retirer de l’historique qui part au remote.
+
 #### Brain (autonomie) — recette opérateur (status / toggle / approve)
 
 Le Brain tourne dans l’orchestrator et expose un état “conscient” (`gauges`, `intent`, `narrative`) + une file `approval_requests[]`.  

@@ -51,3 +51,51 @@ Un village plus organique :
 Ces grilles peuvent être utilisées de deux manières :
 1. **Headless Server** : Pour définir les collisions et les points d'apparition des PNJs.
 2. **Client 2D** : Pour dessiner des tuiles graphiques correspondantes (Tilesets).
+
+## 🎨 Rendu “carte illustrée” (outil de visualisation)
+
+Le script `mmo_server/world/tools/village_visualizer.py` permet de rendre une grille de village en image.
+
+Deux styles sont disponibles :
+
+- **`premium`** : rendu simple et lisible (utile pour calage, debug, collision/positions).
+- **`illustrated`** : rendu plus “peint” (routes organiques, textures, ombres douces) — objectif : se rapprocher d’un fond type “JPG illustré”.
+
+Exemples :
+
+```bash
+cd LBG_IA_MMO/mmo_server/world/tools
+python3 village_visualizer.py --style premium --seed 42 --out bourg_palette_map.png
+python3 village_visualizer.py --style illustrated --seed 42 --out bourg_illustrated.png
+```
+
+Note : ce script dépend de **Pillow** (`PIL`). Si ton `python3` système ne l’a pas, utilise un venv (ex. `.venv-img/bin/python`) ou installe Pillow dans un environnement dédié.
+
+### Export d'échelle / alignement (meta JSON)
+
+Pour verrouiller l'échelle et éviter les dérives lors d'un changement “artistique”, le visualiseur exporte un fichier meta :
+
+- `--meta-out <fichier>` optionnel
+- sinon `<out>.meta.json` par défaut
+
+Ce meta contient :
+- `tile_m` (mètres par tuile), `tile_px` (pixels par tuile) et `px_per_m`
+- dimensions grille, dimensions image
+- convention d'origine (centre image = monde \(0,0\))
+- mapping `world(m) -> image(px)`
+
+### Export “plan de masse” + masques (pour Stable Diffusion / ControlNet)
+
+Le visualiseur peut aussi exporter :
+- un `layout.json` (objets en coordonnées **monde (m)**)
+- un dossier `masks/` (PNG) : `roads.png`, `buildings.png`, `trees.png`
+
+Exemple :
+
+```bash
+python3 village_visualizer.py --style illustrated --seed 42 --out bourg_illustrated.png \
+  --layout-out bourg_illustrated.layout.json \
+  --masks-dir bourg_illustrated.masks
+```
+
+Usage recommandé : ComfyUI/A1111 en **img2img** + ControlNet branché sur ces masques, pour obtenir un rendu “peint” tout en respectant strictement positions/échelle.

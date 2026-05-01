@@ -31,6 +31,20 @@
     .panel-title { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin: 0 0 0.5rem 0; }
     .panel-title h2 { margin: 0; font-size: 1.1rem; }
     .panel-title .muted { margin: 0; }
+    .panel-drag-handle {
+      margin-left: auto;
+      font-size: 0.78rem;
+      color: #456;
+      border: 1px dashed #9bb6cf;
+      border-radius: 999px;
+      padding: 0.08rem 0.45rem;
+      background: #f7fbff;
+      cursor: grab;
+      user-select: none;
+    }
+    .panel-draggable { cursor: grab; }
+    .panel-draggable.panel-dragging { opacity: 0.65; }
+    .panel-dropzone.panel-drop-active { outline: 2px dashed #7aa7d8; outline-offset: 2px; border-radius: 8px; }
 
     .layout-controls {
       display: flex;
@@ -283,6 +297,8 @@
           <div class="lyra-controls">
             <button type="button" id="btn-lyra-step">Step (POST /v1/pilot/route)</button>
             <button type="button" id="btn-lyra-reset">Reset (0)</button>
+            <button type="button" id="btn-lyra-stress">Preset stress-test</button>
+            <button type="button" id="btn-lyra-chaos">Chaos loop x8</button>
             <label class="lyra-small"><input type="checkbox" id="lyra-auto" /> auto (5s)</label>
           </div>
           <div class="lyra-card" style="margin-top:0.85rem;background:#fafcff;border-color:#d8e6f6;">
@@ -312,8 +328,32 @@
           <div id="lyra-out-gauges"></div>
           <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Meta</h3>
           <pre id="lyra-out-meta" class="muted" style="font-size:0.82rem;max-height:10rem;">—</pre>
+          <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Journal régulation</h3>
+          <p style="margin:0.25rem 0 0.5rem 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <button type="button" id="btn-lyra-reg-clear">Clear log</button>
+            <select id="lyra-reg-filter">
+              <option value="all">ALL</option>
+              <option value="warn">WARN</option>
+              <option value="critical">CRITICAL</option>
+            </select>
+            <button type="button" id="btn-lyra-reg-export">Export .txt</button>
+            <span class="muted" id="lyra-reg-hint">—</span>
+          </p>
+          <pre id="lyra-reg-log" class="muted" style="font-size:0.82rem;max-height:10rem;">—</pre>
           <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Brut (JSON)</h3>
           <pre id="lyra-out-raw" class="muted" style="font-size:0.82rem;max-height:14rem;">—</pre>
+
+          <hr style="border:none;border-top:1px solid #ddd;margin:1rem 0" />
+          <h3 style="margin:0 0 0.35rem 0;font-size:1rem">Brain orchestrateur (monitoring)</h3>
+          <p class="lyra-small" style="margin:0 0 0.5rem 0">
+            Lecture seule depuis <code>GET /v1/pilot/orchestrator/brain/status</code> (pas d'impact sur Lyra ici).
+          </p>
+          <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+            <button type="button" id="btn-lyra-brain-refresh">Rafraîchir Brain</button>
+            <span class="muted" id="lyra-brain-summary">—</span>
+          </p>
+          <div id="lyra-brain-gauges" style="margin-top:0.65rem"></div>
+          <pre id="lyra-brain-raw" class="muted" style="font-size:0.82rem;max-height:10rem;">—</pre>
         </div>
       </div>
     </section>
@@ -378,7 +418,7 @@
   <div class="dashboard" id="dashboard">
     <div class="col" id="col-left">
       <div data-pilot-screen="chat">
-      <section>
+      <section data-panel-id="chat-presets">
         <div class="panel-title">
           <h2>Gauche</h2>
           <p class="muted">réservé</p>
@@ -432,13 +472,47 @@
           <span class="muted">via <code>POST /v1/pilot/aid</code> + relecture <code>GET /v1/pilot/mmo-server/world-lyra</code></span>
         </p>
         <p class="muted">Astuce : tes champs, l’historique PNJ, l’état quête et l’état combat sont sauvegardés localement à chaque envoi. Le bloc <b>Lyra (output)</b> après envoi n’apparaît que si l’agent renvoie <code>output.lyra</code> — utilise le preset <b>Lyra (test)</b> (routage <code>agent.fallback</code>). Avec <b>Lyra + monde (MMO)</b>, le backend injecte <code>context.lyra</code> depuis le serveur monde si <code>LBG_MMO_SERVER_URL</code> est défini (voir <code>docs/lyra.md</code>).</p>
+
+        <hr style="border:none;border-top:1px solid #ddd;margin:0.9rem 0" />
+        <h3 style="margin:0 0 0.35rem 0;font-size:1rem">Registre PNJ (dialogue)</h3>
+        <p class="muted" style="margin:0 0 0.5rem 0">
+          Lecture seule via <code>GET /v1/pilot/agent-dialogue/npc-registry</code> (proxy same-origin).
+        </p>
+        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <input type="text" id="npc-reg-id" placeholder="npc:innkeeper (optionnel)" style="max-width:16rem" />
+          <button type="button" id="btn-npc-reg-refresh">Charger</button>
+          <button type="button" id="btn-npc-reg-apply" disabled>Appliquer au context</button>
+          <span class="muted" id="npc-reg-hint">—</span>
+        </p>
+        <pre id="npc-reg-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:14rem;">—</pre>
+      </section>
+      </div>
+
+      <div data-pilot-screen="ops">
+      <section data-panel-id="ops-brain">
+        <div class="panel-title">
+          <h2>Brain (autonomie)</h2>
+          <p class="muted">orchestrator tick 30s</p>
+        </div>
+        <p class="muted" style="margin:0 0 0.5rem 0">
+          Contrôle du scheduler autonomie v0 : <code>selfcheck</code> + pings <code>/healthz</code> (safe).
+          <code>systemd_restart</code> ne peut être tenté qu’en opt-in + jeton côté orchestrator.
+        </p>
+        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" id="btn-brain-refresh">Status</button>
+          <button type="button" id="btn-brain-enable">Activer</button>
+          <button type="button" id="btn-brain-disable">Désactiver</button>
+          <span class="muted" id="brain-hint">—</span>
+        </p>
+        <div id="brain-approvals" class="muted" style="margin-top:0.5rem">—</div>
+        <pre id="brain-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:16rem;">—</pre>
       </section>
       </div>
     </div>
 
     <div class="col" id="col-center">
       <div data-pilot-screen="chat">
-      <section>
+      <section data-panel-id="chat-intent">
         <div class="panel-title">
           <h2>Chat (intention)</h2>
           <p class="muted">backend → orchestrator → agent</p>
@@ -492,7 +566,7 @@
       </div>
 
       <div data-pilot-screen="ops">
-      <section>
+      <section data-panel-id="ops-benchmark">
         <div class="panel-title">
           <h2>Benchmark (latence)</h2>
           <p class="muted">p50 / p95 (VM)</p>
@@ -509,7 +583,7 @@
         <pre id="bench-out">—</pre>
       </section>
 
-      <section>
+      <section data-panel-id="ops-cache">
         <div class="panel-title">
           <h2>Cache (latence)</h2>
           <p class="muted">p50 / p95 (hit vs miss)</p>
@@ -523,7 +597,7 @@
 
     <div class="col" id="col-right">
       <div data-pilot-screen="chat">
-      <section>
+      <section data-panel-id="chat-ws">
         <div class="panel-title">
           <h2>WS (test client minimal)</h2>
           <p class="muted">hello → npc_reply (placeholder remplacé)</p>
@@ -574,26 +648,7 @@
       </div>
 
       <div data-pilot-screen="ops">
-      <section>
-        <div class="panel-title">
-          <h2>Brain (autonomie)</h2>
-          <p class="muted">orchestrator tick 30s</p>
-        </div>
-        <p class="muted" style="margin:0 0 0.5rem 0">
-          Contrôle du scheduler autonomie v0 : <code>selfcheck</code> + pings <code>/healthz</code> (safe).
-          <code>systemd_restart</code> ne peut être tenté qu’en opt-in + jeton côté orchestrator.
-        </p>
-        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-          <button type="button" id="btn-brain-refresh">Status</button>
-          <button type="button" id="btn-brain-enable">Activer</button>
-          <button type="button" id="btn-brain-disable">Désactiver</button>
-          <span class="muted" id="brain-hint">—</span>
-        </p>
-        <div id="brain-approvals" class="muted" style="margin-top:0.5rem">—</div>
-        <pre id="brain-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:16rem;">—</pre>
-      </section>
-
-      <section>
+      <section data-panel-id="ops-monitoring">
         <div class="panel-title">
           <h2>Monitoring</h2>
           <p class="muted">santé agrégée</p>
@@ -622,7 +677,7 @@
         <pre id="health-out">Chargement…</pre>
       </section>
 
-      <section>
+      <section data-panel-id="ops-capabilities">
         <div class="panel-title">
           <h2>Capabilities</h2>
           <p class="muted">via backend</p>
@@ -647,6 +702,9 @@
     const STORAGE_CACHE_LAT_KEY = "lbg_pilot_cache_lat_v1";
     const STORAGE_SERVICE_TOKEN_KEY = "lbg_pilot_service_token_v1";
     const STORAGE_METRICS_BEARER_KEY = "lbg_pilot_metrics_bearer_v1";
+    const STORAGE_LYRA_REG_LOG_KEY = "lbg_pilot_lyra_reg_log_v1";
+    const STORAGE_LYRA_REG_FILTER_KEY = "lbg_pilot_lyra_reg_filter_v1";
+    const STORAGE_PANEL_LAYOUT_KEY = "lbg_pilot_panel_layout_v1";
 
     function getBase() {
       const el = document.getElementById("api-base");
@@ -808,6 +866,143 @@
         localStorage.setItem(STORAGE_CHAT_KEY, JSON.stringify(st));
       } catch (_) {}
       try { refreshLyraContextPreview(); } catch (_) {}
+    }
+
+    function panelLayoutLoad() {
+      try {
+        const raw = localStorage.getItem(STORAGE_PANEL_LAYOUT_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function panelLayoutSave(next) {
+      try { localStorage.setItem(STORAGE_PANEL_LAYOUT_KEY, JSON.stringify(next || {})); } catch (_) {}
+    }
+
+    function panelGetColumnKeyFromEl(el) {
+      const col = el && el.closest ? el.closest(".col") : null;
+      if (!col) return "";
+      if (col.id === "col-left") return "left";
+      if (col.id === "col-center") return "center";
+      if (col.id === "col-right") return "right";
+      return "";
+    }
+
+    function panelSaveScreenLayout(screen) {
+      const layout = panelLayoutLoad();
+      const out = { left: [], center: [], right: [] };
+      const wraps = document.querySelectorAll('#dashboard .col [data-pilot-screen="' + screen + '"]');
+      wraps.forEach(function (w) {
+        const colKey = panelGetColumnKeyFromEl(w);
+        if (!colKey || !out[colKey]) return;
+        out[colKey] = Array.from(w.querySelectorAll("section[data-panel-id]"))
+          .map(function (s) { return s.getAttribute("data-panel-id") || ""; })
+          .filter(Boolean);
+      });
+      layout[screen] = out;
+      panelLayoutSave(layout);
+    }
+
+    function panelApplyScreenLayout(screen) {
+      const layout = panelLayoutLoad();
+      const conf = layout && layout[screen] && typeof layout[screen] === "object" ? layout[screen] : null;
+      if (!conf) return;
+      const wraps = {
+        left: document.querySelector('#col-left [data-pilot-screen="' + screen + '"]'),
+        center: document.querySelector('#col-center [data-pilot-screen="' + screen + '"]'),
+        right: document.querySelector('#col-right [data-pilot-screen="' + screen + '"]'),
+      };
+      ["left", "center", "right"].forEach(function (key) {
+        const wrap = wraps[key];
+        const ids = Array.isArray(conf[key]) ? conf[key] : [];
+        if (!wrap) return;
+        ids.forEach(function (id) {
+          const panel = document.querySelector('section[data-panel-id="' + id + '"]');
+          if (!panel) return;
+          const sc = panel.parentElement && panel.parentElement.getAttribute
+            ? panel.parentElement.getAttribute("data-pilot-screen")
+            : null;
+          if (sc !== screen) return;
+          wrap.appendChild(panel);
+        });
+      });
+    }
+
+    function panelApplyStoredLayout() {
+      panelApplyScreenLayout("chat");
+      panelApplyScreenLayout("ops");
+    }
+
+    function panelInitDnD() {
+      let dragPanelId = null;
+      const panels = document.querySelectorAll("#dashboard section[data-panel-id]");
+      panels.forEach(function (panel) {
+        panel.classList.add("panel-draggable");
+        panel.setAttribute("draggable", "true");
+        const title = panel.querySelector(".panel-title");
+        if (title && !title.querySelector(".panel-drag-handle")) {
+          const h = document.createElement("span");
+          h.className = "panel-drag-handle";
+          h.textContent = "↕ déplacer";
+          title.appendChild(h);
+        }
+        panel.addEventListener("dragstart", function (ev) {
+          dragPanelId = panel.getAttribute("data-panel-id");
+          panel.classList.add("panel-dragging");
+          try {
+            if (ev.dataTransfer) {
+              ev.dataTransfer.setData("text/plain", dragPanelId || "");
+              ev.dataTransfer.effectAllowed = "move";
+            }
+          } catch (_) {}
+        });
+        panel.addEventListener("dragend", function () {
+          panel.classList.remove("panel-dragging");
+          dragPanelId = null;
+          document.querySelectorAll(".panel-dropzone").forEach(function (z) { z.classList.remove("panel-drop-active"); });
+        });
+      });
+
+      const zones = document.querySelectorAll("#dashboard [data-pilot-screen]");
+      zones.forEach(function (zone) {
+        zone.classList.add("panel-dropzone");
+        zone.addEventListener("dragover", function (ev) {
+          const pid = dragPanelId || (ev.dataTransfer ? ev.dataTransfer.getData("text/plain") : "");
+          if (!pid) return;
+          const panel = document.querySelector('section[data-panel-id="' + pid + '"]');
+          if (!panel) return;
+          const panelScreen = panel.parentElement && panel.parentElement.getAttribute
+            ? panel.parentElement.getAttribute("data-pilot-screen")
+            : "";
+          const zoneScreen = zone.getAttribute("data-pilot-screen") || "";
+          if (panelScreen !== zoneScreen) return;
+          ev.preventDefault();
+          zone.classList.add("panel-drop-active");
+          try { if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move"; } catch (_) {}
+        });
+        zone.addEventListener("dragleave", function () {
+          zone.classList.remove("panel-drop-active");
+        });
+        zone.addEventListener("drop", function (ev) {
+          ev.preventDefault();
+          zone.classList.remove("panel-drop-active");
+          const pid = dragPanelId || (ev.dataTransfer ? ev.dataTransfer.getData("text/plain") : "");
+          if (!pid) return;
+          const panel = document.querySelector('section[data-panel-id="' + pid + '"]');
+          if (!panel) return;
+          const panelScreen = panel.parentElement && panel.parentElement.getAttribute
+            ? panel.parentElement.getAttribute("data-pilot-screen")
+            : "";
+          const zoneScreen = zone.getAttribute("data-pilot-screen") || "";
+          if (panelScreen !== zoneScreen) return;
+          zone.appendChild(panel);
+          panelSaveScreenLayout(zoneScreen);
+        });
+      });
     }
 
     function healthStateClass(state) {
@@ -1992,6 +2187,66 @@
       return { status: r.status, json: j, text: t };
     }
 
+    async function npcRegistryRefresh() {
+      const base = getBase();
+      const out = document.getElementById("npc-reg-out");
+      const hint = document.getElementById("npc-reg-hint");
+      const idEl = document.getElementById("npc-reg-id");
+      const applyBtn = document.getElementById("btn-npc-reg-apply");
+      const npcId = idEl ? String(idEl.value || "").trim() : "";
+      if (hint) hint.textContent = "chargement…";
+      try { window.__npc_reg_last_entry = null; } catch (_) {}
+      if (applyBtn) applyBtn.disabled = true;
+      try {
+        const url = base + "/v1/pilot/agent-dialogue/npc-registry" + (npcId ? ("?npc_id=" + encodeURIComponent(npcId)) : "");
+        const r = await fetch(url);
+        const t = await r.text();
+        let j = null;
+        try { j = t ? JSON.parse(t) : null; } catch (_) {}
+        if (out) out.textContent = j ? JSON.stringify(j, null, 2) : (t || "—");
+        if (hint) hint.textContent = r.status === 200 ? "ok" : ("HTTP " + r.status);
+        // Activer "Appliquer" uniquement si une entrée PNJ unique est chargée.
+        try {
+          let entry = null;
+          if (j && typeof j === "object") {
+            if (j.npc && typeof j.npc === "object") entry = j.npc;
+            else if (Array.isArray(j.npcs) && j.npcs.length === 1 && j.npcs[0] && typeof j.npcs[0] === "object") entry = j.npcs[0];
+          }
+          window.__npc_reg_last_entry = entry;
+          if (applyBtn) applyBtn.disabled = !entry;
+        } catch (_) {}
+      } catch (e) {
+        if (out) out.textContent = String(e);
+        if (hint) hint.textContent = "erreur";
+      }
+    }
+
+    function npcRegistryApplyToContext() {
+      const entry = window.__npc_reg_last_entry;
+      if (!entry || typeof entry !== "object") {
+        alert("Aucune fiche PNJ chargée.");
+        return;
+      }
+      const npcId = entry.id ? String(entry.id) : "";
+      if (!npcId.trim()) {
+        alert("Fiche PNJ invalide (id manquant).");
+        return;
+      }
+      const npcName = entry.name ? String(entry.name) : "";
+      const tone = entry.tone ? String(entry.tone) : "";
+
+      let ctx = {};
+      try { ctx = JSON.parse(document.getElementById("context-json").value || "{}"); } catch (_) { ctx = {}; }
+      const next = { ...(ctx || {}), world_npc_id: npcId.trim() };
+      if (npcName.trim()) next.npc_name = npcName.trim();
+      if (tone.trim()) next.dialogue_profile = tone.trim().toLowerCase();
+      if (!Array.isArray(next.history)) next.history = [];
+
+      document.getElementById("context-json").value = JSON.stringify(next, null, 2);
+      saveChatState();
+      try { refreshLyraContextPreview(); } catch (_) {}
+    }
+
     function pilotParseRoute() {
       const raw = (location.hash || "").replace(/^#/, "").replace(/^\//, "");
       const seg = raw.split("/").filter(function (s) { return s; })[0] || "";
@@ -2382,6 +2637,137 @@
       return null;
     }
 
+    function lyraRegLogLoad() {
+      try {
+        const raw = localStorage.getItem(STORAGE_LYRA_REG_LOG_KEY);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function lyraRegLogSave(entries) {
+      try { localStorage.setItem(STORAGE_LYRA_REG_LOG_KEY, JSON.stringify(Array.isArray(entries) ? entries : [])); } catch (_) {}
+    }
+
+    function lyraRegFilterLoad() {
+      try {
+        const v = String(localStorage.getItem(STORAGE_LYRA_REG_FILTER_KEY) || "all").toLowerCase();
+        if (v === "warn" || v === "critical" || v === "all") return v;
+      } catch (_) {}
+      return "all";
+    }
+
+    function lyraRegFilterSave(v) {
+      try {
+        const x = String(v || "all").toLowerCase();
+        localStorage.setItem(STORAGE_LYRA_REG_FILTER_KEY, x);
+      } catch (_) {}
+    }
+
+    function lyraRegMatchesFilter(entry, filter) {
+      const f = String(filter || "all").toLowerCase();
+      if (f === "all") return true;
+      const sev = String((entry && entry.severity) || "info").toLowerCase();
+      if (f === "critical") return sev === "critical";
+      if (f === "warn") return sev === "warn" || sev === "warning";
+      return true;
+    }
+
+    function lyraRegLogLines(entries) {
+      return entries.map(function (e) {
+        const ts = e && e.ts ? String(e.ts) : "-";
+        const sev = e && e.severity ? String(e.severity).toUpperCase() : "INFO";
+        const mode = e && e.mode ? String(e.mode) : "lyra";
+        const action = e && e.action ? String(e.action) : "none";
+        const reason = e && e.reason ? String(e.reason) : "";
+        const applied = e && e.applied === true ? "applique" : "skip";
+        return "[" + ts + "] [" + sev + "] " + mode + " :: " + action + " (" + applied + ")" + (reason ? " - " + reason : "");
+      });
+    }
+
+    function lyraRegLogRender() {
+      const out = document.getElementById("lyra-reg-log");
+      const hint = document.getElementById("lyra-reg-hint");
+      const filterSel = document.getElementById("lyra-reg-filter");
+      if (!out) return;
+      const entries = lyraRegLogLoad();
+      const filter = filterSel ? String(filterSel.value || "all").toLowerCase() : lyraRegFilterLoad();
+      const filtered = entries.filter(function (e) { return lyraRegMatchesFilter(e, filter); });
+      if (!filtered.length) {
+        out.textContent = "—";
+      } else {
+        // Rendu lisible avec badge couleur par sévérité.
+        const htmlLines = filtered.map(function (e) {
+          const ts = e && e.ts ? String(e.ts) : "-";
+          const sevRaw = e && e.severity ? String(e.severity) : "info";
+          const sev = sevRaw.toUpperCase();
+          const sevLower = sevRaw.toLowerCase();
+          const mode = e && e.mode ? String(e.mode) : "lyra";
+          const action = e && e.action ? String(e.action) : "none";
+          const reason = e && e.reason ? String(e.reason) : "";
+          const applied = e && e.applied === true ? "applique" : "skip";
+
+          let color = "#6b7280"; // INFO / défaut
+          if (sevLower === "warn" || sevLower === "warning") color = "#f97316";
+          if (sevLower === "critical") color = "#dc2626";
+
+          const badge =
+            '<span style="display:inline-block;min-width:70px;padding:0 4px;border-radius:3px;font-weight:600;color:white;background:' +
+            color +
+            ';">' +
+            escapeHtmlPm(sev) +
+            "</span>";
+
+          const main =
+            "[" +
+            escapeHtmlPm(ts) +
+            "] " +
+            badge +
+            " " +
+            escapeHtmlPm(mode) +
+            " :: " +
+            escapeHtmlPm(action) +
+            " (" +
+            escapeHtmlPm(applied) +
+            ")" +
+            (reason ? " - " + escapeHtmlPm(reason) : "");
+
+          return main;
+        });
+        out.innerHTML = htmlLines.join("\n");
+      }
+      if (hint) hint.textContent = entries.length ? (filtered.length + "/" + entries.length + " entrées") : "0 entrée";
+    }
+
+    function lyraRegExportTxt() {
+      const entries = lyraRegLogLoad();
+      const filterSel = document.getElementById("lyra-reg-filter");
+      const filter = filterSel ? String(filterSel.value || "all").toLowerCase() : lyraRegFilterLoad();
+      const filtered = entries.filter(function (e) { return lyraRegMatchesFilter(e, filter); });
+      const lines = lyraRegLogLines(filtered);
+      const txt = lines.length ? lines.join("\n") + "\n" : "Journal vide.\n";
+      const stamp = new Date().toISOString().replace(/[:]/g, "-");
+      const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "lyra-regulation-log-" + filter + "-" + stamp + ".txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    }
+
+    function lyraRegLogAppend(entry) {
+      if (!entry || typeof entry !== "object") return;
+      const arr = lyraRegLogLoad();
+      arr.unshift(entry);
+      lyraRegLogSave(arr.slice(0, 30));
+      lyraRegLogRender();
+    }
+
     function lyraRenderIn() {
       const { st, ctx } = lyraBuildContext();
       const mode = lyraGetMode();
@@ -2430,6 +2816,79 @@
       }
       const meta = out.meta && typeof out.meta === "object" ? out.meta : {};
       if (metaEl) metaEl.textContent = JSON.stringify(meta, null, 2);
+      const reg = meta.lyra_regulation && typeof meta.lyra_regulation === "object" ? meta.lyra_regulation : null;
+      if (reg) {
+        lyraRegLogAppend({
+          ts: new Date().toISOString(),
+          mode: out.kind || "npc_world",
+          action: reg.action || null,
+          applied: reg.applied === true,
+          reason: reg.reason || null,
+          severity: reg.severity || null,
+          detail: reg,
+        });
+      }
+    }
+
+    function lyraRenderBrainGauges(gauges) {
+      const el = document.getElementById("lyra-brain-gauges");
+      if (!el) return;
+      const g = gauges && typeof gauges === "object" ? gauges : {};
+      const items = [
+        ["confidence", "Confiance"],
+        ["stress", "Stress"],
+        ["fatigue", "Fatigue"],
+        ["curiosity", "Curiosité"],
+      ];
+      el.innerHTML = items
+        .map(function (it) {
+          const key = it[0];
+          const label = it[1];
+          const v = clamp0100(g[key] != null ? g[key] : 0, 0);
+          const pct = Math.round(v);
+          const bar = "<div class=\"lyra-bar\"><div style=\"width:" + pct + "%;background:" + lyraGaugeColor(v / 100.0) + "\"></div></div>";
+          return (
+            "<div class=\"lyra-gauge\">" +
+            "<div class=\"lyra-gauge-head\"><strong>" + escapeHtmlPm(label) + "</strong><span class=\"muted\">" + escapeHtmlPm(key) + "</span></div>" +
+            bar +
+            "<div class=\"lyra-controls\"><span class=\"muted\">" + pct + "%</span></div>" +
+            "</div>"
+          );
+        })
+        .join("");
+    }
+
+    function lyraRenderBrainStatus(data) {
+      const sum = document.getElementById("lyra-brain-summary");
+      const raw = document.getElementById("lyra-brain-raw");
+      if (raw) raw.textContent = data ? JSON.stringify(data, null, 2) : "—";
+      if (!data || typeof data !== "object") {
+        if (sum) sum.textContent = "—";
+        lyraRenderBrainGauges({});
+        return;
+      }
+      lyraRenderBrainGauges(data.gauges);
+      if (sum) {
+        const on = data.enabled === true ? "actif" : "inactif";
+        const intent = data.intent ? String(data.intent) : "monitor";
+        const nar = data.narrative ? String(data.narrative) : "";
+        sum.innerHTML =
+          "<strong>" + escapeHtmlPm(on) + "</strong>" +
+          " · intent <code>" + escapeHtmlPm(intent) + "</code>" +
+          (nar ? " · " + escapeHtmlPm(nar) : "");
+      }
+    }
+
+    async function lyraRefreshBrain() {
+      const base = getBase();
+      try {
+        const r = await fetch(base + "/v1/pilot/orchestrator/brain/status");
+        const j = await r.json();
+        if (j && j.ok === true) lyraRenderBrainStatus(j);
+        else lyraRenderBrainStatus(j || null);
+      } catch (e) {
+        lyraRenderBrainStatus({ error: String(e) });
+      }
     }
 
     async function lyraStepOnce() {
@@ -2472,6 +2931,45 @@
       const cEl = document.getElementById("lyra-confiance");
       if (cEl) cEl.value = String(st.confiance_100);
       lyraRenderIn();
+    }
+
+    function lyraApplyStressPreset() {
+      const st = lyraLoadState();
+      const mode = lyraGetMode();
+      if (mode === "assistant") {
+        st.assistant_gauges_100 = {
+          ...st.assistant_gauges_100,
+          chaleur: 40,
+          energie: 20,
+          patience: 35,
+          confiance: 30,
+        };
+        st.confiance_100 = clamp0100(st.assistant_gauges_100.confiance, 30);
+      } else {
+        st.gauges = {
+          ...st.gauges,
+          hunger: 85,
+          thirst: 70,
+          fatigue: 90,
+        };
+      }
+      lyraSaveState(st);
+      const cEl = document.getElementById("lyra-confiance");
+      if (cEl) cEl.value = String(st.confiance_100);
+      lyraRenderIn();
+    }
+
+    function lyraSleep(ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    async function lyraRunChaosLoop(steps) {
+      const n = Number(steps) > 0 ? Math.min(20, Math.floor(Number(steps))) : 8;
+      lyraApplyStressPreset();
+      for (let i = 0; i < n; i += 1) {
+        await lyraStepOnce();
+        if (i < n - 1) await lyraSleep(220);
+      }
     }
 
     function lyraBindControls() {
@@ -2990,6 +3488,8 @@
 
     document.getElementById("btn-aid-help").addEventListener("click", () => aidHelp());
     document.getElementById("btn-aid-reset").addEventListener("click", () => aidResetGaugesToZero());
+    try { document.getElementById("btn-npc-reg-refresh").addEventListener("click", npcRegistryRefresh); } catch (_) {}
+    try { document.getElementById("btn-npc-reg-apply").addEventListener("click", npcRegistryApplyToContext); } catch (_) {}
 
     // WS buttons
     try { document.getElementById("btn-ws-connect").addEventListener("click", wsConnect); } catch (_) {}
@@ -3290,12 +3790,16 @@
 
     // Lyra page bindings
     try { lyraBindControls(); } catch (_) {}
+    try { panelApplyStoredLayout(); } catch (_) {}
+    try { panelInitDnD(); } catch (_) {}
     try {
       const st = lyraLoadState();
       const dtEl = document.getElementById("lyra-dt");
       if (dtEl) dtEl.value = String(st.dt_s || 60);
       const cEl = document.getElementById("lyra-confiance");
       if (cEl) cEl.value = String(st.confiance_100 != null ? st.confiance_100 : 70);
+      const fEl = document.getElementById("lyra-reg-filter");
+      if (fEl) fEl.value = lyraRegFilterLoad();
       // restore mode
       try {
         const m = localStorage.getItem(STORAGE_LYRA_MODE_KEY);
@@ -3303,6 +3807,8 @@
       } catch (_) {}
       lyraRenderIn();
       lyraRenderOut(null);
+      lyraRegLogRender();
+      lyraRefreshBrain().catch(function () {});
     } catch (_) {}
     try {
       const cEl = document.getElementById("lyra-confiance");
@@ -3335,7 +3841,47 @@
         });
       });
     } catch (_) {}
+    try { document.getElementById("btn-lyra-stress").addEventListener("click", lyraApplyStressPreset); } catch (_) {}
+    try {
+      document.getElementById("btn-lyra-chaos").addEventListener("click", async function () {
+        const btn = document.getElementById("btn-lyra-chaos");
+        const prev = btn ? btn.textContent : "";
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Chaos en cours…";
+        }
+        try {
+          await lyraRunChaosLoop(8);
+        } catch (e) {
+          alert("Chaos loop: " + e);
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = prev || "Chaos loop x8";
+          }
+        }
+      });
+    } catch (_) {}
+    try {
+      document.getElementById("btn-lyra-brain-refresh").addEventListener("click", function () {
+        lyraRefreshBrain().catch(function () {});
+      });
+    } catch (_) {}
     try { document.getElementById("btn-lyra-reset").addEventListener("click", lyraReset); } catch (_) {}
+    try {
+      document.getElementById("btn-lyra-reg-clear").addEventListener("click", function () {
+        lyraRegLogSave([]);
+        lyraRegLogRender();
+      });
+    } catch (_) {}
+    try {
+      document.getElementById("lyra-reg-filter").addEventListener("change", function (ev) {
+        const v = ev && ev.target ? ev.target.value : "all";
+        lyraRegFilterSave(v);
+        lyraRegLogRender();
+      });
+    } catch (_) {}
+    try { document.getElementById("btn-lyra-reg-export").addEventListener("click", lyraRegExportTxt); } catch (_) {}
     try {
       document.getElementById("lyra-auto").addEventListener("change", function (ev) {
         const on = !!(ev.target && ev.target.checked);

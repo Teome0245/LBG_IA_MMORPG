@@ -12,6 +12,7 @@
         <div id="login-screen" class="overlay">
             <div class="glass-panel login-box">
                 <h1>LBG IA MMO</h1>
+                <p class="muted" style="margin:-1.2rem 0 1.2rem 0;letter-spacing:1px;">v1.1.1</p>
                 <p>Bienvenue dans le multivers. Entrez votre nom pour commencer.</p>
                 <div class="input-group">
                     <input type="text" id="server-url" value="192.168.0.245" placeholder="IP du serveur (ex: 192.168.0.245)">
@@ -54,7 +55,7 @@
                         <span id="pos-x">0</span>
                     </div>
                     <div class="stat">
-                        <span class="label">POS Y :</span>
+                        <span class="label">POS Z :</span>
                         <span id="pos-y">0</span>
                     </div>
                     <div class="stat">
@@ -70,7 +71,7 @@
             <div class="glass-panel">
                 <h2 class="error-text">CONNEXION PERDUE</h2>
                 <p>La liaison avec le multivers a été rompue.</p>
-                <button onclick="window.location.reload()">RECONNEXION</button>
+                <button id="reconnect-btn">RECONNEXION</button>
             </div>
         </div>
     </div>

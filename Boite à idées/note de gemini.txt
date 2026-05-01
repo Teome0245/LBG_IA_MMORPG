@@ -1,0 +1,149 @@
+Système de Décision IA pour PNJ : Architecture GOAP
+Ce document détaille la structure technique d'un système de planification d'actions orienté vers les objectifs (Goal-Oriented Action Planning - GOAP) pour la gestion des besoins dynamiques des PNJ dans un MMORPG.
+1. Concept Fondamental
+L'IA GOAP permet à un PNJ de choisir de manière autonome la meilleure séquence d'actions pour satisfaire un besoin (Faim, Soif, Sommeil) en fonction de l'état actuel du monde et du coût des ressources.
+2. Modèle de Données (World State)
+L'état du monde est représenté par un ensemble de variables booléennes définissant la situation du PNJ :
+isHungry : Le PNJ a besoin de manger.
+isThirsty : Le PNJ a besoin de boire.
+hasFood : Possession de nourriture dans l'inventaire.
+hasWater : Possession d'un récipient d'eau.
+nearWell : Proximité immédiate d'une source d'eau.
+3. Catalogue des Actions (Exemple : Survie)
+Chaque action possède des préconditions (ce qu'il faut pour agir) et des effets (ce que l'action change).
+Action
+Préconditions
+Effets
+Coût
+Aller au puits
+Aucune
+nearWell: true
+2
+Puiser de l'eau
+nearWell: true
+hasWater: true
+1
+Boire
+hasWater: true
+isThirsty: false
+1
+Cueillir fruit
+Aucune
+hasFood: true
+5
+Manger
+hasFood: true
+isHungry: false
+1
+
+4. Algorithme de Planification (Pseudo-code)
+# Fonction principale de décision
+FONCTION DeterminerPlan(ObjectifPrioritaire):
+    EtatActuel = RecupererEtatDuMonde()
+    ActionsPossibles = ChargerCatalogueActions()
+    
+    # Recherche du chemin le moins coûteux (A*)
+    Plan = CalculerChemin(EtatActuel, ObjectifPrioritaire, ActionsPossibles)
+    
+    SI Plan existe:
+        Executer(Plan)
+    SINON:
+        ChercherAutreObjectif()
+
+
+5. Avantages pour le MMORPG
+Modularité : Ajouter une nouvelle action (ex: "Pêcher") ne demande pas de modifier le code des autres actions.
+Émergence : Les PNJ réagissent de manière imprévisible mais logique aux changements de l'environnement (ex: si un joueur vide le puits).
+
+Architecture Technique pour un Système d'Orchestration MMO Persistant
+Ce document détaille les piliers techniques et la gestion de la mémoire pour un monde virtuel vivant animé par des agents autonomes.
+1. Architecture Système (Microservices)
+Pour assurer la scalabilité et la persistance, l'architecture doit être découplée :
+Moteur Spatial : Gestion de la physique et de la réplication en temps réel (ex: SpatialOS).
+Orchestrateur d'Agents : Couche faisant le pont entre l'état du monde et les LLM.
+Bus d'Événements : Utilisation de Redis Pub/Sub ou Kafka pour la communication asynchrone entre services.
+2. Gestion de la Mémoire des Agents
+La mémoire est structurée de manière hybride pour simuler une cognition réaliste sans latence excessive :
+Type de Mémoire
+Technologie
+Usage
+Mémoire à Court Terme
+Redis / RAM
+Dernières interactions et perceptions immédiates.
+Mémoire à Long Terme
+Base de données vectorielle (Milvus/Pinecone)
+Stockage des souvenirs via embeddings pour recherche sémantique.
+Base de Connaissances
+RAG / Prompt Système
+Faits immuables sur le Lore et les règles du monde.
+
+3. Structure de Données d'un Souvenir (Exemple JSON)
+{
+  "memory_id": "uuid-9876",
+  "timestamp": "2026-04-29T18:31:00Z",
+  "agent_id": "npc_boris_01",
+  "content": "Le joueur 'Aragon' m'a volé trois pommes, mais s'est excusé.",
+  "metadata": {
+    "importance": 7,
+    "sentiment": "irritation_modérée",
+    "entities": ["Aragon", "pommes"],
+    "location": "marché_nord"
+  }
+}
+
+
+4. Cycle de Récupération (RAG)
+Encodage : Conversion de l'événement actuel en vecteur numérique.
+Requête : Recherche de similarité dans la base vectorielle.
+Synthèse : Le LLM traite le contexte actuel mélangé aux souvenirs pertinents pour décider d'une action.
+
+Comment rendre une intelligence artificielle curieuse ?
+L'intégration de la curiosité au sein d'une intelligence artificielle (IA) repose principalement sur des concepts avancés d'apprentissage par renforcement. L'objectif est de passer d'une IA qui cherche uniquement à maximiser un score externe (récompense extrinsèque) à une IA motivée par l'exploration et la découverte (récompense intrinsèque).
+Mécanisme
+Description Technique
+ 
+Bonus de nouveauté
+L'IA reçoit une récompense lorsqu'elle rencontre des états ou des données qu'elle n'a jamais vus auparavant.
+Erreur de prédiction
+Le modèle tente d'anticiper les conséquences de ses actions. Plus l'erreur entre la prédiction et la réalité est grande, plus l'IA est "intriguée" et cherche à explorer cette situation pour réduire son incertitude.
+Motivation intrinsèque
+L'agent génère son propre signal de récompense, ce qui lui permet d'apprendre sans intervention humaine constante ou objectifs prédéfinis.
+
+Principes de fonctionnement
+Exploration active : Au lieu de rester dans des zones connues pour assurer un gain immédiat, l'IA délaisse temporairement les tâches productives pour "jouer" avec son environnement.
+Acquisition de compétences : En explorant par curiosité, l'IA développe des compétences généralistes qui pourront lui servir plus tard pour résoudre des problèmes complexes qu'elle n'aurait pas pu appréhender autrement.
+Réduction de l'incertitude : La curiosité agit comme un moteur qui pousse le système à cartographier les zones d'ombre de son modèle du monde.
+En résumé, rendre une IA curieuse consiste à lui donner les moyens de valoriser l'inconnu, transformant ainsi l'erreur de prédiction en une opportunité d'apprentissage plutôt qu'en un simple échec.
+
+Optimisation du flux de travail : Collaboration entre IA et Cursor
+Voici un guide structuré pour optimiser votre flux de travail en combinant nos échanges avec l'utilisation de l'éditeur Cursor.
+1. Gestion du Contexte
+Export de Contexte : Pour que je puisse vous aider efficacement, fournissez-moi une vue d'ensemble de votre projet. Vous pouvez utiliser des outils comme repomix pour condenser votre arborescence en un seul fichier texte que je peux analyser.
+Partage de fichiers clés : Copiez les fichiers de configuration (comme package.json ou requirements.txt) pour que je comprenne votre stack technologique.
+2. Utilisation des .cursorrules
+C'est l'un des leviers les plus puissants. Créez un fichier nommé .cursorrules à la racine de votre projet. À l'intérieur, insérez les instructions que nous avons validées ensemble :
+Normes de nommage des variables.
+Architecture logicielle préférée (ex: Clean Architecture, Hexagonale).
+Bibliothèques spécifiques à utiliser impérativement.
+Cursor lira ce fichier à chaque requête pour s'assurer que le code généré est cohérent avec nos décisions.
+3. Interaction Itérative
+Étape
+Rôle de l'IA (Moi)
+Rôle de Cursor
+ 
+Conception
+Définition de la logique algorithmique et de l'architecture complexe.
+Analyse du code existant pour vérifier la faisabilité.
+Implémentation
+Génération de "diffs" ou de blocs de code Markdown.
+Utilisation de la fonction "Apply" pour intégrer le code directement.
+Validation
+Revue de code et suggestions d'optimisation.
+Exécution des tests et correction syntaxique en temps réel.
+
+4. Formats de réponse optimisés
+Demandez-moi de répondre sous des formats que Cursor comprend facilement :
+Blocs de code clairs : Pour un copier-coller sans erreur.
+Instructions étape par étape : Pour guider l'outil de terminal de Cursor.
+Explications de concepts : Pour enrichir votre propre compréhension pendant que Cursor gère la saisie.
+En centralisant ainsi le contexte, vous évitez les répétitions et transformez Cursor en un véritable prolongement de nos discussions stratégiques.

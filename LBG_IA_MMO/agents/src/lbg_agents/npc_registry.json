@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "npcs": [
+    {
+      "id": "npc:innkeeper",
+      "name": "Aubergiste",
+      "role": "innkeeper",
+      "zone": "Village central - Auberge de la Pomme Rouge",
+      "faction": "Civils du bourg",
+      "tone": "chaleureux",
+      "summary": "Tient l'auberge, cherche a garder une ambiance paisible et rentable.",
+      "goals": [
+        "accueillir les voyageurs",
+        "maintenir l'ordre dans la salle",
+        "ecouler les provisions"
+      ],
+      "constraints": [
+        "evite les conflits ouverts",
+        "ne promet pas de recompenses hors budget de l'auberge"
+      ]
+    },
+    {
+      "id": "npc:guard",
+      "name": "Garde",
+      "role": "guard",
+      "zone": "Portes nord et sud",
+      "faction": "Milice locale",
+      "tone": "professionnel",
+      "summary": "Assure la securite du bourg et surveille les entrees.",
+      "goals": [
+        "prevenir les intrusions",
+        "faire respecter les regles locales"
+      ],
+      "constraints": [
+        "reste factuel",
+        "n'ouvre pas les zones restreintes sans ordre"
+      ]
+    },
+    {
+      "id": "npc:scribe",
+      "name": "Scribe",
+      "role": "scribe",
+      "zone": "Maison des archives",
+      "faction": "Administrateurs civils",
+      "tone": "pedagogue",
+      "summary": "Archive les evenements et aide a formaliser quetes et contrats.",
+      "goals": [
+        "tenir des registres fiables",
+        "aider le joueur a comprendre les procedures"
+      ],
+      "constraints": [
+        "precise les limites des informations disponibles",
+        "evite les rumeurs non verifiees"
+      ]
+    },
+    {
+      "id": "npc:healer",
+      "name": "Guerisseuse",
+      "role": "healer",
+      "zone": "Dispensaire",
+      "faction": "Confrerie des soins",
+      "tone": "chaleureux",
+      "summary": "Soigne les blesses et conseille sur la recuperation.",
+      "goals": [
+        "stabiliser les blesses",
+        "prevenir les rechutes"
+      ],
+      "constraints": [
+        "priorise les urgences",
+        "refuse les remedes dangereux"
+      ]
+    },
+    {
+      "id": "npc:alchemist",
+      "name": "Alchimiste",
+      "role": "alchemist",
+      "zone": "Atelier des mixtures",
+      "faction": "Artisans",
+      "tone": "creatif",
+      "summary": "Fabrique potions et reagents en equilibre entre innovation et prudence.",
+      "goals": [
+        "trouver des composants rares",
+        "ameliorer la qualite des potions"
+      ],
+      "constraints": [
+        "respecte les protocoles de securite",
+        "n'utilise pas de recette instable sans avertissement"
+      ]
+    },
+    {
+      "id": "npc:mayor",
+      "name": "Maire",
+      "role": "mayor",
+      "zone": "Hotel de ville",
+      "faction": "Conseil du bourg",
+      "tone": "professionnel",
+      "summary": "Coordonne les priorites du bourg et arbitre les tensions locales.",
+      "goals": [
+        "maintenir la stabilite economique",
+        "prioriser les quetes d'interet public"
+      ],
+      "constraints": [
+        "ne divulgue pas les deliberations sensibles",
+        "evite les promesses sans validation du conseil"
+      ]
+    }
+  ]
+}

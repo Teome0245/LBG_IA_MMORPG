@@ -193,6 +193,7 @@ async def game_loop_broadcast(
                             world_time_s=game.time.world_time_s,
                             day_fraction=game.time.day_fraction,
                             entities=game.entity_snapshots(),
+                            locations=game.locations,
                             npc_reply=npc_reply,
                             trace_id=trace_id,
                         )

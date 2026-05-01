@@ -1,0 +1,290 @@
+{
+  "196": {
+    "inputs": {
+      "ckpt_name": "DreamShaper_8_pruned.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Charger Point de Contrôle"
+    }
+  },
+  "199": {
+    "inputs": {
+      "images": [
+        "206",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Aperçu Image"
+    }
+  },
+  "204": {
+    "inputs": {
+      "pixels": [
+        "208",
+        0
+      ],
+      "vae": [
+        "196",
+        2
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "205": {
+    "inputs": {
+      "seed": 246207409360292,
+      "steps": 20,
+      "cfg": 8,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.48,
+      "model": [
+        "222",
+        0
+      ],
+      "positive": [
+        "215",
+        0
+      ],
+      "negative": [
+        "215",
+        1
+      ],
+      "latent_image": [
+        "204",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "206": {
+    "inputs": {
+      "samples": [
+        "205",
+        0
+      ],
+      "vae": [
+        "196",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "207": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Image Latente Vide"
+    }
+  },
+  "208": {
+    "inputs": {
+      "image": "bourg.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Charger Image"
+    }
+  },
+  "209": {
+    "inputs": {
+      "strength": 0.9,
+      "start_percent": 0,
+      "end_percent": 0.9,
+      "positive": [
+        "213",
+        0
+      ],
+      "negative": [
+        "214",
+        0
+      ],
+      "control_net": [
+        "211",
+        0
+      ],
+      "image": [
+        "212",
+        0
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Appliquer ControlNet"
+    }
+  },
+  "211": {
+    "inputs": {
+      "control_net_name": "control_v11p_sd15_canny.pth"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Charger le modèle ControlNet"
+    }
+  },
+  "212": {
+    "inputs": {
+      "image": "buildings.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Charger Image"
+    }
+  },
+  "213": {
+    "inputs": {
+      "text": "top-down orthographic medieval village map, hand-painted fantasy rpg map illustration, watercolor gouache, textured paper, painterly but clean, roofs and houses clearly visible from above, cobblestone roads and paths, village square, a few trees and bushes (not dense forest), warm daylight, soft ambient occlusion, coherent layout, no characters, detailed grass variation, dirt path texture, roof tiles detailed, subtle shadows, IMPORTANT: do not add buildings, keep exactly the buildings from the layout/mask, no new houses, no extra structures",
+      "clip": [
+        "196",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt) P"
+    }
+  },
+  "214": {
+    "inputs": {
+      "text": "portrait, face, people, person, character, human, body, naked, nsfw, anime, close-up, cinematic scene, interior, room, foggy, abstract, text, watermark, logo, blurry, deformed, extra limbs, distorted perspective, photorealistic, satellite, aerial photo, 3d render, noisy, grainy, messy outlines, dense forest, too many buildings, extra buildings, additional houses, new structures, city, town, cluttered",
+      "clip": [
+        "196",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt) N"
+    }
+  },
+  "215": {
+    "inputs": {
+      "strength": 0.6,
+      "start_percent": 0,
+      "end_percent": 0.6,
+      "positive": [
+        "209",
+        0
+      ],
+      "negative": [
+        "209",
+        1
+      ],
+      "control_net": [
+        "211",
+        0
+      ],
+      "image": [
+        "216",
+        0
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Appliquer ControlNet"
+    }
+  },
+  "216": {
+    "inputs": {
+      "image": "roads.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Charger Image"
+    }
+  },
+  "218": {
+    "inputs": {
+      "crop": "center",
+      "clip_vision": [
+        "221",
+        0
+      ],
+      "image": [
+        "220",
+        0
+      ]
+    },
+    "class_type": "CLIPVisionEncode",
+    "_meta": {
+      "title": "CLIP Vision Encode"
+    }
+  },
+  "219": {
+    "inputs": {
+      "preset": "LIGHT - SD1.5 only (low strength)",
+      "model": [
+        "196",
+        0
+      ]
+    },
+    "class_type": "IPAdapterUnifiedLoader",
+    "_meta": {
+      "title": "IPAdapter Unified Loader"
+    }
+  },
+  "220": {
+    "inputs": {
+      "image": "5c23b70a2777c0a4e04122ff75e61499.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Charger Image"
+    }
+  },
+  "221": {
+    "inputs": {
+      "clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+    },
+    "class_type": "CLIPVisionLoader",
+    "_meta": {
+      "title": "Charger CLIP Vision"
+    }
+  },
+  "222": {
+    "inputs": {
+      "weight": 0.75,
+      "weight_type": "linear",
+      "combine_embeds": "concat",
+      "start_at": 0,
+      "end_at": 1,
+      "embeds_scaling": "V only",
+      "model": [
+        "219",
+        0
+      ],
+      "ipadapter": [
+        "219",
+        1
+      ],
+      "image": [
+        "220",
+        0
+      ],
+      "clip_vision": [
+        "221",
+        0
+      ]
+    },
+    "class_type": "IPAdapterAdvanced",
+    "_meta": {
+      "title": "IPAdapter Advanced"
+    }
+  }
+}

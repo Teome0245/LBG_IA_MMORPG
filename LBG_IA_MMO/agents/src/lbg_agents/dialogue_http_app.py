@@ -94,6 +94,30 @@ def healthz() -> dict[str, object]:
     return out
 
 
+@app.get("/npc-registry")
+def npc_registry(npc_id: str | None = None) -> dict[str, object]:
+    """
+    Expose le registre PNJ (debug/ops) : utile pour vérifier le contexte injecté dans les prompts.
+    - sans param : renvoie la liste
+    - avec ?npc_id=npc:... : renvoie l’entrée (ou 404)
+    """
+    reg = dialogue_llm._load_npc_registry()
+    if npc_id:
+        rid = npc_id.strip()
+        if not rid:
+            raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "npc_id vide"})
+        entry = reg.get(rid)
+        if not isinstance(entry, dict):
+            raise HTTPException(status_code=404, detail={"error": "not_found", "npc_id": rid})
+        return {"ok": True, "npc": entry}
+    rows = list(reg.values())
+    try:
+        rows.sort(key=lambda x: str(x.get("id", "")))
+    except Exception:
+        pass
+    return {"ok": True, "count": len(rows), "npcs": rows}
+
+
 @app.post("/invoke")
 def invoke(p: InvokeIn) -> dict[str, object]:
     player = _truncate(p.text, _MAX_PLAYER_CHARS) or "(…)"
@@ -148,6 +172,7 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                     "agent_version": app.version,
                     "cache_hit": cache_hit,
                     "world_action": world_action if isinstance(world_action, dict) else None,
+                    "trace": p.context.get("_dialogue_trace") if isinstance(p.context, dict) else None,
                 },
             }
         except Exception as e:

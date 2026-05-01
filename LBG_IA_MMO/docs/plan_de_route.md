@@ -49,6 +49,7 @@ La numérotation **0** = toujours actif en parallèle des autres priorités. La 
    - **monitorer** : état des services, métriques ou health checks, journaux agrégés ou liens opérationnels.
 5. **Architecture Événementielle (Cible)** : Transition vers un modèle piloté par événements (EDA) via un bus de messages (RabbitMQ/Kafka) pour découpler l'orchestrateur des agents et gérer les latences LLM via des **Circuit Breakers**.
 6. **État du Monde (In-Memory)** : Utilisation de Redis pour un accès ultra-rapide à l'état transactionnel du multivers.
+7. **Forge de prototypes OpenGame (expérimental)** : intégrer éventuellement OpenGame comme capability orchestrée (`agent.opengame`) pour générer des prototypes gameplay/UX dans une sandbox, sans donner à OpenGame l'autorité sur le projet ni modifier automatiquement le coeur MMO. Décision : `docs/adr/0003-opengame-forge-prototypes.md`.
 
 Référence réseau : environnement **privé** ; toute exposition publique future = autre brique (voir `architecture.md`).
 
@@ -99,6 +100,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-01 | **ADR 0003 OpenGame** : décision d'intégrer OpenGame uniquement comme forge de prototypes orchestrée (`agent.opengame` cible), sandboxée, auditée, avec promotion manuelle vers le MMO ; l'orchestrateur reste le maître d'orchestre du projet. |
 | 2026-04-09 | Création du plan de route ; squelette backend / orchestrateur / mmo_server en place ; déploiement systemd sur VM privée documenté ; règle réseau inscrite dans `architecture.md`. |
 | 2026-04-09 | Procédure **dev → prod** formalisée (`deploy_vm.sh`, contrôles, doc) dans `bootstrap.md`, `architecture.md` et Priorité 0 de ce plan. |
 | 2026-04-09 | Finalité **déploiement global reproductible** (serveur vierge, sources de vérité, pistes d’industrialisation) dans `architecture.md` + checklist dans `bootstrap.md`. |
@@ -243,6 +245,9 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 | 2026-04-27 | **Régénération PNG Village v1.4** : Passage au buffer XXL (7x5) dans `area_gen.py` pour garantir l'absence totale de chevauchements de bâtiments. Arbres repoussés davantage des toits. PNG déployé. |
 | 2026-04-28 | **Alignement Bâtiments v1.5** : Synchronisation des coordonnées (x, z) et dimensions (w, h) des bâtiments dans `world_initial.json` pour correspondre parfaitement aux rectangles rouges générés dans `bourg_palette_map.png`. Correction du décalage d'axes (y/z) et application de tailles variées (ex: Auberge plus grande que la Mairie). |
 | 2026-04-28 | **Pilot web — Lyra (standalone) visuel** : page `#/lyra` branchée sur `POST /v1/pilot/route` (`context.lyra` → `result.output.lyra`) sans dépendre du WS ; affichage **Énergie dérivée** (moyenne faim/soif/fatigue) + **Confiance** canonique (0–100) + **Stress** (vue `100 - confiance`) ; déploiement **front 110** (`deploy_vm.sh` rôle `front`). Doc fusion mise à jour : `fusion_spec_lyra.md` (§6) + `plan_fusion_lbg_ia.md` (§3.2). |
+| 2026-04-29 | **Sync GitHub corrigée** : résolution du blocage `GH001` (fichier >100MB dans l’historique : runtime Godot `.exe`) ; nettoyage/rebase de l’historique local, ajout des garde-fous `.gitignore` (runtime Godot + `node_modules`), push `main` validé puis push `chore/sync-cleanup` validé. |
+| 2026-04-29 | **Cadrage dialogue orchestré (backlog)** : besoin formalisé pour orienter les requêtes de dialogue vers plusieurs LLM (locaux + distants) avec garde-fous coût ; ajout du chantier “profils de style”, “registre PNJ contextualisé” et “base de suivi dialogue/coût/latence”. |
+| 2026-04-29 | **Client MMO — stabilisation après régression** : restauration d’un bundle “stable” servi sous `/mmo/` (Nginx VM 110) après un build qui cassait le rendu ; **le build Vite peut écraser** `pilot_web/mmo/` et provoquer un mismatch *HTML → assets*. Correctif côté WS : `Entity.to_snapshot()` inclut désormais `stats` (et `role/ry/scale`) afin que le HUD (barres HP/MP/Énergie) se mette à jour sur chaque `world_tick`. Déploiement : redémarrage `lbg-mmmorpg-ws` sur VM 245. |
 
 ---
 
@@ -256,6 +261,12 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 **Étape actuelle** : Intégration des bulles de dialogue riches sur le client MMO et liaison avec l'orchestrateur.
 
 **File d’attente (intention produit)** : **Développement de l'univers MMO** — implémentation des niveaux de détails de simulation PNJ (LOD), Ticks sociaux, événements dynamiques (voir `plan_mmorpg.md`).
+
+**Parking validé (à reprendre)** :
+- **Dialogue multi‑LLM** : router le dialogue entre modèles locaux et distants selon coût/latence/qualité (avec fallback budget).
+- **Profils conversationnels** : base `guardrails` + profils côté assistant (`chaleureux`, `professionnel`, `pedagogue`, `creatif`, `mini-moi`, `hal`, `test`) et variante MMO PNJ (`pnj_name` + style).
+- **Registre PNJ exhaustif** : liste des PNJ avec contexte minimal (rôle, zone, faction, ton, objectifs, contraintes).
+- **Base de suivi** : journal structuré par échange (trace_id, modèle choisi, profil, tokens, coût estimé, latence, issue).
 
 **Historique** : CI `pytest` fait (entrée 2026-04-17 ci‑dessus).
 

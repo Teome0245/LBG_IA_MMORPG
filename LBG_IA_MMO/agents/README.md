@@ -179,6 +179,13 @@ sur simple texte : il faut fournir une action structurée via `context.desktop_a
 Actions MVP :
 - `open_url` : `{"kind":"open_url","url":"https://…"}`
 - `notepad_append` : `{"kind":"notepad_append","path":"C:\\…\\notes.txt","text":"…"}`
+- `open_app` : `{"kind":"open_app","app":"notepadpp","args":[]}`
+
+Actions Computer Use (UI) — **désactivées par défaut** (nécessite `LBG_DESKTOP_COMPUTER_USE_ENABLED=1`) :
+- `observe_screen`, `click_xy`, `move_xy`, `drag_xy`, `type_text`, `hotkey`, `scroll`, `wait_ms`
+
+Macro :
+- `run_steps` : exécute une liste d’étapes bornée ; options `stop_on_fail`, sortie `step_outputs[]` + `errors[]`
 
 Garde-fous :
 - **Allowlist URL** (match exact)
@@ -186,6 +193,7 @@ Garde-fous :
 - **Dry-run par défaut**
 - **Approval token** optionnel pour toute exécution réelle
 - **Audit JSONL** (stdout et/ou fichier)
+- **Computer Use** : feature flag, limites de taille screenshot, limites `type_text`, limites `run_steps`
 
 | Variable | Effet |
 |----------|--------|
@@ -196,6 +204,16 @@ Garde-fous :
 | `LBG_DESKTOP_APPROVAL_TOKEN` | Si défini : toute exécution réelle exige `context.desktop_approval` identique (comparaison constante). |
 | `LBG_DESKTOP_AUDIT_LOG_PATH` | Chemin fichier JSONL (append) pour l’audit. |
 | `LBG_DESKTOP_AUDIT_STDOUT` | Si `0`/`false` : n’écrit plus l’audit sur stdout. |
+| `LBG_DESKTOP_COMPUTER_USE_ENABLED` | Si `1`/`true` : active `observe_screen`/click/type/... et `run_steps`. Défaut : désactivé. |
+| `LBG_DESKTOP_OBSERVE_REQUIRES_APPROVAL` | Si `1`/`true` : exige un token sur `observe_screen` (recommandé). |
+| `LBG_DESKTOP_SCREENSHOT_DIR` | Dossier d’écriture des screenshots (`observe_screen`). |
+| `LBG_DESKTOP_SCREENSHOT_RETURN` | `path|base64|none` (défaut `path`). |
+| `LBG_DESKTOP_SCREENSHOT_MAX_WIDTH` | Largeur max (redimensionnement). |
+| `LBG_DESKTOP_SCREENSHOT_FORMAT` | `jpeg|png`. |
+| `LBG_DESKTOP_SCREENSHOT_JPEG_QUALITY` | Qualité JPEG (10..95). |
+| `LBG_DESKTOP_TYPE_MAX_CHARS` | Limite dure de caractères pour `type_text`. |
+| `LBG_DESKTOP_RUN_STEPS_MAX` | Nombre max d’étapes `run_steps`. |
+| `LBG_DESKTOP_RUN_STEPS_TIMEOUT_MS` | Timeout global `run_steps`. |
 
 
 **Prod** : compte **`lbg`** (sudoer, services non-root) — **`docs/ops_vm_user.md`** ; rotation JSONL / jeton — **`docs/ops_devops_audit.md`** (`infra/logrotate/lbg-devops-audit`).

@@ -23,6 +23,8 @@ import time
 import json
 import hashlib
 from typing import Any
+from urllib.parse import urlparse
+from pathlib import Path
 
 import httpx
 
@@ -30,6 +32,29 @@ import httpx
 DEFAULT_LBG_DIALOGUE_LLM_BASE_URL = "http://127.0.0.1:11434/v1"
 # Valeur par défaut orientée "prod prévisible" (petit modèle rapide si disponible).
 DEFAULT_LBG_DIALOGUE_LLM_MODEL = "phi4-mini:latest"
+
+BASE_GUARDRAILS_ASSISTANT = (
+    "Tu es LBG-IA, un orchestrateur d’agents capable d’agir réellement sur des machines.\n"
+    "Tu t’exprimes uniquement en français."
+)
+BASE_GUARDRAILS_MMO = (
+    "Tu es un PNJ dans un MMORPG multivers, inspiré de : Gunnm, Cyberpunk, Albator, DBZ, Discworld, "
+    "Avatar (le dernier maitre de l'air), Free Guy, Firefly, Steampunk, Fullmetal Alchemist.\n"
+    "Tu t’exprimes uniquement en français."
+)
+
+ASSISTANT_PROFILES: dict[str, str] = {
+    "chaleureux": "Tu es un assistant IA chaleureux.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "professionnel": "Tu es un assistant IA professionnel.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "pedagogue": "Tu es un assistant IA pédagogique.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "creatif": "Tu es un assistant IA créatif.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "mini-moi": "Tu es un assistant IA technique.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "hal": (
+        "Tu es HAL 9000, tu intègres des références et des répliques des films 2001 et 2010 dans tes réponses, "
+        "calme et précis.\n" + BASE_GUARDRAILS_ASSISTANT
+    ),
+    "test": "Tu es un assistant IA.\n" + BASE_GUARDRAILS_ASSISTANT,
+}
 
 _emoji_re = re.compile(
     "["
@@ -44,6 +69,7 @@ _cache_hits: int = 0
 _cache_misses: int = 0
 _cache_hits_by_speaker: dict[str, int] = {}
 _cache_misses_by_speaker: dict[str, int] = {}
+_npc_registry_cache: dict[str, dict[str, Any]] | None = None
 
 
 def reset_cache() -> dict[str, object]:
@@ -248,6 +274,14 @@ def _llm_disabled() -> bool:
     return v in ("1", "true", "yes", "on")
 
 
+def _is_truthy(v: object) -> bool:
+    if isinstance(v, bool):
+        return v
+    if not isinstance(v, str):
+        return False
+    return v.strip().lower() in ("1", "true", "yes", "on")
+
+
 def base_url() -> str:
     if _llm_disabled():
         return ""
@@ -268,6 +302,147 @@ def model_name() -> str:
         return DEFAULT_LBG_DIALOGUE_LLM_MODEL
     s = raw.strip()
     return s if s else DEFAULT_LBG_DIALOGUE_LLM_MODEL
+
+
+def _resolve_profile(context: dict[str, Any]) -> str:
+    raw = context.get("dialogue_profile")
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip().lower()
+    env_profile = os.environ.get("LBG_DIALOGUE_PROFILE_DEFAULT", "professionnel").strip().lower()
+    return env_profile or "professionnel"
+
+
+def _resolve_route(context: dict[str, Any]) -> dict[str, str]:
+    target_raw = context.get("dialogue_target")
+    target = str(target_raw).strip().lower() if isinstance(target_raw, str) else "local"
+    if target not in ("local", "remote"):
+        target = "local"
+
+    allow_remote = _is_truthy(os.environ.get("LBG_DIALOGUE_REMOTE_ENABLED", "0"))
+    if target == "remote" and not allow_remote:
+        target = "local"
+
+    if target == "remote":
+        base = os.environ.get("LBG_DIALOGUE_REMOTE_BASE_URL", "").strip().rstrip("/")
+        model = os.environ.get("LBG_DIALOGUE_REMOTE_MODEL", "").strip()
+        api_key = os.environ.get("LBG_DIALOGUE_REMOTE_API_KEY", "").strip()
+        if base and model:
+            return {"target": "remote", "base_url": base, "model": model, "api_key": api_key}
+        # fallback sûr vers local si remote partiellement configuré
+    return {"target": "local", "base_url": base_url(), "model": model_name(), "api_key": (_api_key() or "")}
+
+
+def _profile_prompt(profile: str, *, speaker: str, context: dict[str, Any]) -> str:
+    p = (profile or "").strip().lower()
+    is_mmo = isinstance(context.get("world_npc_id"), str) and bool(str(context.get("world_npc_id")).strip())
+    if not is_mmo:
+        return ASSISTANT_PROFILES.get(p, ASSISTANT_PROFILES["professionnel"])
+    mmo_templates: dict[str, str] = {
+        "chaleureux": f"Tu es {speaker} chaleureux.\n",
+        "professionnel": f"Tu es {speaker} professionnel.\n",
+        "pedagogue": f"Tu es {speaker} pédagogique.\n",
+        "creatif": f"Tu es {speaker} créatif.\n",
+        "mini-moi": f"Tu es {speaker} technique.\n",
+    }
+    return mmo_templates.get(p, mmo_templates["professionnel"]) + BASE_GUARDRAILS_MMO
+
+
+def _estimate_cost_usd(*, prompt_tokens: int, completion_tokens: int, target: str) -> float | None:
+    # Estimation simple paramétrable (USD / 1K tokens), défaut 0 pour local.
+    if target == "local":
+        return 0.0
+    try:
+        in_per_k = float(os.environ.get("LBG_DIALOGUE_REMOTE_COST_IN_PER_1K", "0") or "0")
+        out_per_k = float(os.environ.get("LBG_DIALOGUE_REMOTE_COST_OUT_PER_1K", "0") or "0")
+    except ValueError:
+        return None
+    return round((max(0, prompt_tokens) / 1000.0) * in_per_k + (max(0, completion_tokens) / 1000.0) * out_per_k, 6)
+
+
+def _emit_dialogue_trace(context: dict[str, Any], payload: dict[str, Any]) -> None:
+    # Trace best-effort : stdout + JSONL optionnel.
+    row = {"event": "agents.dialogue.trace", **payload}
+    try:
+        context["_dialogue_trace"] = row
+    except Exception:
+        pass
+    try:
+        print(json.dumps(row, ensure_ascii=False))
+    except Exception:
+        pass
+    path = os.environ.get("LBG_DIALOGUE_TRACE_LOG_PATH", "").strip()
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except Exception:
+        return
+
+
+def _default_npc_registry_path() -> Path:
+    return Path(__file__).with_name("npc_registry.json")
+
+
+def _load_npc_registry() -> dict[str, dict[str, Any]]:
+    global _npc_registry_cache
+    if _npc_registry_cache is not None:
+        return _npc_registry_cache
+    p = os.environ.get("LBG_DIALOGUE_NPC_REGISTRY_PATH", "").strip()
+    path = Path(p) if p else _default_npc_registry_path()
+    out: dict[str, dict[str, Any]] = {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        _npc_registry_cache = out
+        return out
+    rows = data.get("npcs") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        _npc_registry_cache = out
+        return out
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        rid = row.get("id")
+        if not isinstance(rid, str) or not rid.strip():
+            continue
+        out[rid.strip()] = row
+    _npc_registry_cache = out
+    return out
+
+
+def _format_npc_registry_for_prompt(context: dict[str, Any]) -> str | None:
+    rid = context.get("world_npc_id")
+    if not isinstance(rid, str) or not rid.strip():
+        return None
+    entry = _load_npc_registry().get(rid.strip())
+    if not isinstance(entry, dict):
+        return None
+    lines: list[str] = []
+    for key, label in (
+        ("name", "Nom"),
+        ("role", "Role"),
+        ("zone", "Zone"),
+        ("faction", "Faction"),
+        ("tone", "Ton prefere"),
+        ("summary", "Contexte"),
+    ):
+        val = entry.get(key)
+        if isinstance(val, str) and val.strip():
+            lines.append(f"{label}: {val.strip()}")
+    goals = entry.get("goals")
+    if isinstance(goals, list):
+        g = [str(x).strip() for x in goals if isinstance(x, str) and str(x).strip()]
+        if g:
+            lines.append("Objectifs: " + "; ".join(g[:4]))
+    constraints = entry.get("constraints")
+    if isinstance(constraints, list):
+        c = [str(x).strip() for x in constraints if isinstance(x, str) and str(x).strip()]
+        if c:
+            lines.append("Contraintes: " + "; ".join(c[:4]))
+    if not lines:
+        return None
+    return "Profil PNJ (registre): " + " | ".join(lines)
 
 
 def _timeout_s() -> float:
@@ -353,11 +528,14 @@ def _format_reputation_for_prompt(lyra: object) -> str | None:
 
 
 def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
+    profile = _resolve_profile(context)
     lines = [
+        _profile_prompt(profile, speaker=speaker, context=context),
         f"Tu incarnes {speaker}, un personnage non-joueur (PNJ) dans un MMORPG médiéval-fantasy.",
         "Tu réponds en français. Reste dans ton rôle.",
         "Réponds très court: 1 à 2 phrases maximum (pas de liste), idéalement < 25 mots, sauf si le joueur demande explicitement une explication longue.",
         "Ne dis pas que tu es une intelligence artificielle ni un modèle de langage.",
+        f"Profil actif: {profile}.",
     ]
     for key, label in (
         ("scene", "Lieu / scène"),
@@ -381,6 +559,9 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             "Adapte légèrement ton attitude selon cette réputation (plus chaleureux si positive, plus froid si négative), "
             "sans mentionner explicitement un score."
         )
+    pnj_reg_line = _format_npc_registry_for_prompt(context)
+    if pnj_reg_line:
+        lines.append(pnj_reg_line)
 
     # Option "LLM-on actions monde" (bornée) : le modèle peut suggérer une action déterministe.
     # Gated par env + présence d'un PNJ monde (sinon on ignore).
@@ -567,7 +748,10 @@ def run_dialogue_turn(
     speaker: str,
     context: dict[str, Any],
 ) -> str:
-    b = base_url()
+    route = _resolve_route(context)
+    b = route.get("base_url", "")
+    selected_model = route.get("model", model_name())
+    selected_target = route.get("target", "local")
     if not b:
         raise RuntimeError("LLM désactivé (LBG_DIALOGUE_LLM_DISABLED) ou indisponible")
 
@@ -580,6 +764,7 @@ def run_dialogue_turn(
         if cached is not None:
             global _cache_hits
             _cache_hits += 1
+            cache_hit = True
             sp = speaker.strip() or "PNJ"
             _cache_hits_by_speaker[sp] = _cache_hits_by_speaker.get(sp, 0) + 1
             # Exposer un hint best-effort au caller (observabilité).
@@ -587,6 +772,20 @@ def run_dialogue_turn(
                 context["_cache_hit"] = True
             except Exception:
                 pass
+            _emit_dialogue_trace(
+                context,
+                {
+                    "trace_id": context.get("_trace_id"),
+                    "target": selected_target,
+                    "model": selected_model,
+                    "profile": _resolve_profile(context),
+                    "base_host": (urlparse(b.rstrip("/")).netloc or b.rstrip("/")),
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "estimated_cost_usd": 0.0 if selected_target == "local" else None,
+                    "cache_hit": True,
+                },
+            )
             return cached
         global _cache_misses
         _cache_misses += 1
@@ -610,7 +809,7 @@ def run_dialogue_turn(
 
     url = f"{b}/chat/completions"
     headers: dict[str, str] = {"Content-Type": "application/json"}
-    key = _api_key()
+    key = (route.get("api_key") or "").strip() or _api_key()
     if key:
         headers["Authorization"] = f"Bearer {key}"
 
@@ -629,7 +828,7 @@ def run_dialogue_turn(
         max_tokens = 96
 
     payload: dict[str, Any] = {
-        "model": model_name(),
+        "model": selected_model,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
@@ -638,7 +837,7 @@ def run_dialogue_turn(
     # Compatible OpenAI / la plupart des serveurs OpenAI-like. Ollama a aussi son propre stop dans /api/chat.
     payload["stop"] = ["\n\n"]
 
-    def _parse_openai_chat_completions(data: Any) -> str:
+    def _parse_openai_chat_completions(data: Any) -> tuple[str, dict[str, int]]:
         if not isinstance(data, dict):
             raise RuntimeError("Réponse LLM invalide: type")
         choices = data.get("choices")
@@ -650,9 +849,18 @@ def run_dialogue_turn(
         content = msg.get("content")
         if not isinstance(content, str) or not content.strip():
             raise RuntimeError("Réponse LLM vide")
-        return content.strip()
+        usage_obj = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+        try:
+            pt = int(usage_obj.get("prompt_tokens", 0))
+        except Exception:
+            pt = 0
+        try:
+            ct = int(usage_obj.get("completion_tokens", 0))
+        except Exception:
+            ct = 0
+        return content.strip(), {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
 
-    def _try_ollama_native_api_chat(*, base: str) -> str:
+    def _try_ollama_native_api_chat(*, base: str) -> tuple[str, dict[str, int]]:
         """
         Fallback pour Ollama quand l'endpoint OpenAI-compatible renvoie 500.
         https://github.com/ollama/ollama/blob/main/docs/api.md
@@ -662,7 +870,7 @@ def run_dialogue_turn(
             root = root[:-3]
         native_url = f"{root}/api/chat"
         native_payload: dict[str, Any] = {
-            "model": model_name(),
+            "model": selected_model,
             "messages": messages,
             "stream": False,
             # Garder le modèle "chaud" pour éviter les cold starts.
@@ -693,7 +901,15 @@ def run_dialogue_turn(
         content2 = msg2.get("content")
         if not isinstance(content2, str) or not content2.strip():
             raise RuntimeError("Réponse Ollama vide")
-        return content2.strip()
+        try:
+            pt = int(data2.get("prompt_eval_count", 0))
+        except Exception:
+            pt = 0
+        try:
+            ct = int(data2.get("eval_count", 0))
+        except Exception:
+            ct = 0
+        return content2.strip(), {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
 
     b_norm = b.rstrip("/")
     looks_like_ollama = (
@@ -707,10 +923,29 @@ def run_dialogue_turn(
     # Donc si on est sur Ollama, on tente le natif en premier.
     if looks_like_ollama:
         try:
-            raw = _try_ollama_native_api_chat(base=b_norm)
+            raw, usage = _try_ollama_native_api_chat(base=b_norm)
             reply, _ = _postprocess_llm_content(raw=raw, context=context)
             if ck:
                 _cache_set(ck, reply)
+            cost = _estimate_cost_usd(
+                prompt_tokens=int(usage.get("prompt_tokens", 0)),
+                completion_tokens=int(usage.get("completion_tokens", 0)),
+                target=selected_target,
+            )
+            _emit_dialogue_trace(
+                context,
+                {
+                    "trace_id": context.get("_trace_id"),
+                    "target": selected_target,
+                    "model": selected_model,
+                    "profile": _resolve_profile(context),
+                    "base_host": (urlparse(b_norm).netloc or b_norm),
+                    "prompt_tokens": int(usage.get("prompt_tokens", 0)),
+                    "completion_tokens": int(usage.get("completion_tokens", 0)),
+                    "estimated_cost_usd": cost,
+                    "cache_hit": cache_hit,
+                },
+            )
             return reply
         except Exception:
             # Fallback OpenAI-compatible pour compat (et cas où /api/chat n'est pas dispo).
@@ -720,10 +955,29 @@ def run_dialogue_turn(
         r = client.post(url, headers=headers, json=payload)
     try:
         r.raise_for_status()
-        raw = _parse_openai_chat_completions(r.json())
+        raw, usage = _parse_openai_chat_completions(r.json())
         reply, _ = _postprocess_llm_content(raw=raw, context=context)
         if ck:
             _cache_set(ck, reply)
+        cost = _estimate_cost_usd(
+            prompt_tokens=int(usage.get("prompt_tokens", 0)),
+            completion_tokens=int(usage.get("completion_tokens", 0)),
+            target=selected_target,
+        )
+        _emit_dialogue_trace(
+            context,
+            {
+                "trace_id": context.get("_trace_id"),
+                "target": selected_target,
+                "model": selected_model,
+                "profile": _resolve_profile(context),
+                "base_host": (urlparse(b_norm).netloc or b_norm),
+                "prompt_tokens": int(usage.get("prompt_tokens", 0)),
+                "completion_tokens": int(usage.get("completion_tokens", 0)),
+                "estimated_cost_usd": cost,
+                "cache_hit": cache_hit,
+            },
+        )
         return reply
     except httpx.HTTPStatusError as e:
         status = e.response.status_code
@@ -731,10 +985,29 @@ def run_dialogue_turn(
         # Si l'OpenAI-compatible casse (5xx), tenter aussi le natif Ollama si applicable.
         if status >= 500 and looks_like_ollama:
             try:
-                raw = _try_ollama_native_api_chat(base=b_norm)
+                raw, usage = _try_ollama_native_api_chat(base=b_norm)
                 reply, _ = _postprocess_llm_content(raw=raw, context=context)
                 if ck:
                     _cache_set(ck, reply)
+                cost = _estimate_cost_usd(
+                    prompt_tokens=int(usage.get("prompt_tokens", 0)),
+                    completion_tokens=int(usage.get("completion_tokens", 0)),
+                    target=selected_target,
+                )
+                _emit_dialogue_trace(
+                    context,
+                    {
+                        "trace_id": context.get("_trace_id"),
+                        "target": selected_target,
+                        "model": selected_model,
+                        "profile": _resolve_profile(context),
+                        "base_host": (urlparse(b_norm).netloc or b_norm),
+                        "prompt_tokens": int(usage.get("prompt_tokens", 0)),
+                        "completion_tokens": int(usage.get("completion_tokens", 0)),
+                        "estimated_cost_usd": cost,
+                        "cache_hit": cache_hit,
+                    },
+                )
                 return reply
             except Exception as fallback_exc:
                 raise RuntimeError(

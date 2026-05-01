@@ -8,6 +8,8 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
 from models.intents import IntentRequest, IntentResponse
+from services.brain_lyra_sync import merge_brain_lyra_if_configured
+from services.lyra_regulator import regulate_lyra_if_configured
 from services import metrics as svc_metrics
 from services.mmo_lyra_sync import merge_mmo_lyra_if_configured
 from services.mmmorpg_commit import try_commit_dialogue
@@ -74,6 +76,8 @@ async def _pilot_route_impl(*, payload: IntentRequest, trace_id: str) -> dict[st
     svc_metrics.inc("pilot_route_requests_total")
     payload.context.setdefault("_trace_id", trace_id)
     await merge_mmo_lyra_if_configured(payload.context)
+    await merge_brain_lyra_if_configured(payload.context)
+    await regulate_lyra_if_configured(payload.context)
     lyra_after_merge = payload.context.get("lyra") if isinstance(payload.context, dict) else None
     try:
         client = OrchestratorClient.from_env()
@@ -365,6 +369,29 @@ async def pilot_proxy_agent_dialogue_healthz() -> dict[str, object]:
             data = r.json()
         except ValueError:
             return {"ok": False, "error": "corps non JSON", "body": r.text[:500]}
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/agent-dialogue/npc-registry", tags=["pilot"])
+async def pilot_proxy_agent_dialogue_npc_registry(npc_id: str | None = None) -> dict[str, object]:
+    """
+    Proxy same-origin vers `GET agent-dialogue /npc-registry`.
+    Option : `?npc_id=npc:...` pour filtrer une entrée.
+    """
+    base = os.environ.get("LBG_AGENT_DIALOGUE_URL", "").strip().rstrip("/")
+    if not base:
+        return {"ok": False, "skipped": True, "detail": "LBG_AGENT_DIALOGUE_URL non défini"}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"{base}/npc-registry", params={"npc_id": npc_id} if npc_id else None)
+        if r.status_code != 200:
+            return {"ok": False, "error": f"HTTP {r.status_code}", "body": r.text[:800]}
+        try:
+            data = r.json()
+        except ValueError:
+            return {"ok": False, "error": "corps non JSON", "body": r.text[:800]}
         return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
     except Exception as e:
         return {"ok": False, "error": str(e)}
