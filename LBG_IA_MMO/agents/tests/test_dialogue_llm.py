@@ -130,6 +130,22 @@ def test_build_system_prompt_uses_mmo_profile_when_world_npc() -> None:
     assert "MMORPG multivers" in s
 
 
+def test_build_system_prompt_honors_requested_world_action_kind(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_WORLD_ACTIONS", "1")
+
+    s = build_system_prompt(
+        "Aerin",
+        {
+            "world_npc_id": "npc:innkeeper",
+            "_require_action_json": True,
+            "_world_action_kind": "quest",
+        },
+    )
+
+    assert "kind='quest'" in s
+    assert "obligatoirement" in s
+
+
 def test_build_system_prompt_includes_npc_registry_context(
     monkeypatch: pytest.MonkeyPatch, tmp_path
 ) -> None:

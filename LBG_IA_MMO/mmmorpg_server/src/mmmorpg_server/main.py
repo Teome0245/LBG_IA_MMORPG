@@ -170,6 +170,9 @@ def _queue_ia_bridge(
             if k in ("_require_action_json", "_no_cache"):
                 if isinstance(v, bool):
                     ctx[k] = v
+            elif k == "_world_action_kind":
+                if isinstance(v, str) and v.strip().lower() in ("aid", "quest"):
+                    ctx[k] = v.strip().lower()
     payload = {"actor_id": actor_id, "text": text0.strip(), "context": ctx}
 
     async def _fetch_and_queue() -> None:

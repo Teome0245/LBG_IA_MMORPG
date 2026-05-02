@@ -67,6 +67,14 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
     # Gameplay monde (v1) : commit aid déterministe
     elif isinstance(ctx.get("world_action"), dict):
         intent, confidence = ("world_aid", 1.0)
+    # Action monde demandée via dialogue PNJ : garder le flux LLM dialogue même si le texte parle de quête.
+    elif (
+        isinstance(ctx.get("world_npc_id"), str)
+        and str(ctx.get("world_npc_id")).strip()
+        and isinstance(ctx.get("_world_action_kind"), str)
+        and str(ctx.get("_world_action_kind")).strip().lower() in ("aid", "quest")
+    ):
+        intent, confidence = ("npc_dialogue", 1.0)
     else:
         # Priorité : si le texte exprime clairement une quête/mission/etc., respecter le classifieur
         # même si un PNJ est ciblé (ex: une quête donnée par un PNJ).

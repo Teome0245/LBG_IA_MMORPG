@@ -15,7 +15,8 @@
       "description": "Mini contexte whitelisté côté serveur (voir docs).",
       "properties": {
         "_require_action_json": { "type": "boolean" },
-        "_no_cache": { "type": "boolean" }
+        "_no_cache": { "type": "boolean" },
+        "_world_action_kind": { "type": "string", "enum": ["aid", "quest"] }
       },
       "additionalProperties": true
     }

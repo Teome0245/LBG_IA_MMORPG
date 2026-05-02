@@ -19,6 +19,7 @@ class App {
         this.dialogueTargetByTrace = new Map();
         this.worldEvents = [];
         this.seenWorldEventTraceIds = new Set();
+        this.questLogById = new Map();
         
         this.initUI();
     }
@@ -29,6 +30,8 @@ class App {
         const serverHostInput = document.getElementById('server-url');
         const chatInput = document.getElementById('chat-msg');
         const sendChatBtn = document.getElementById('send-chat-btn');
+        const quickAidBtn = document.getElementById('quick-aid-btn');
+        const quickQuestBtn = document.getElementById('quick-quest-btn');
 
         connectBtn.addEventListener('click', () => {
             const name = playerNameInput.value.trim() || "Voyageur";
@@ -56,24 +59,48 @@ class App {
         sendChatBtn.addEventListener('click', () => {
             const text = chatInput.value.trim();
             if (text) {
-                const target = this.getDialogueTarget();
-                this.lastDialogueTarget = target;
-                this.network.sendChat(text, target.id, target.name, this.playerLocalPos);
-                this.renderer.setDialogueBubble(target.id, "...", {
-                    speaker: target.name,
-                    kind: "pending",
-                    ttlMs: 120000,
-                });
-                this.addLog(`À ${target.name}: ${text}`, 'player');
+                this.sendDialogueToTarget(text);
                 chatInput.value = "";
             }
         });
+
+        if (quickAidBtn) {
+            quickAidBtn.addEventListener('click', () => {
+                this.sendDialogueToTarget(
+                    "J'ai besoin d'aide maintenant. Agis concrètement pour réduire faim, soif ou fatigue, et indique l'action appliquée.",
+                    { _require_action_json: true, _world_action_kind: "aid" }
+                );
+            });
+        }
+
+        if (quickQuestBtn) {
+            quickQuestBtn.addEventListener('click', () => {
+                this.sendDialogueToTarget(
+                    "Propose-moi une quête simple liée à ce lieu et enregistre-la comme action de quête.",
+                    { _require_action_json: true, _world_action_kind: "quest" }
+                );
+            });
+        }
 
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendChatBtn.click();
         });
 
         this.renderer.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+    }
+
+    sendDialogueToTarget(text, iaContext = null) {
+        const clean = typeof text === "string" ? text.trim() : "";
+        if (!clean) return;
+        const target = this.getDialogueTarget();
+        this.lastDialogueTarget = target;
+        this.network.sendChat(clean, target.id, target.name, this.playerLocalPos, iaContext);
+        this.renderer.setDialogueBubble(target.id, "...", {
+            speaker: target.name,
+            kind: "pending",
+            ttlMs: 120000,
+        });
+        this.addLog(`À ${target.name}: ${clean}`, 'player');
     }
 
     async connect(name) {
@@ -108,7 +135,9 @@ class App {
         this.addLog(`Bienvenue ${data.player_id} !`, 'system');
         this.worldEvents = [];
         this.seenWorldEventTraceIds.clear();
+        this.questLogById.clear();
         this.renderWorldEvents();
+        this.renderQuestLog();
         this.renderer.setPlayerId(data.player_id);
         try { this.renderer.updateLocations(data.locations || []); } catch (_) {}
         try { this.renderer.updateState(data.entities || [], data.world_time_s || 0, data.day_fraction || 0); } catch (_) {}
@@ -188,7 +217,25 @@ class App {
         if (this.worldEvents.length > 6) {
             this.worldEvents.length = 6;
         }
+        if (kind === "quest") {
+            this.recordQuest(flags, target);
+        }
         this.renderWorldEvents();
+    }
+
+    recordQuest(flags, target) {
+        const questId = typeof flags.quest_id === "string" ? flags.quest_id.trim() : "";
+        if (!questId) return;
+        const step = Number.isFinite(Number(flags.quest_step)) ? Number(flags.quest_step) : 0;
+        const accepted = typeof flags.quest_accepted === "boolean" ? flags.quest_accepted : true;
+        this.questLogById.set(questId, {
+            questId,
+            step,
+            accepted,
+            npcName: target && target.name ? target.name : "PNJ",
+            time: new Date(),
+        });
+        this.renderQuestLog();
     }
 
     renderWorldEvents() {
@@ -212,6 +259,34 @@ class App {
             const hhmmss = item.time.toLocaleTimeString();
             const quest = item.questId ? ` · ${item.questId}` : "";
             meta.textContent = `${item.npcName} · ${hhmmss}${quest}`;
+            row.appendChild(meta);
+            feed.appendChild(row);
+        }
+    }
+
+    renderQuestLog() {
+        const feed = document.getElementById('quest-log-feed');
+        if (!feed) return;
+        feed.innerHTML = "";
+        const quests = Array.from(this.questLogById.values())
+            .sort((a, b) => b.time.getTime() - a.time.getTime())
+            .slice(0, 5);
+        if (!quests.length) {
+            const empty = document.createElement('div');
+            empty.className = 'world-event empty';
+            empty.textContent = 'Aucune quête active.';
+            feed.appendChild(empty);
+            return;
+        }
+        for (const quest of quests) {
+            const row = document.createElement('div');
+            row.className = 'world-event quest';
+            row.textContent = quest.accepted
+                ? `Acceptée: ${quest.questId}`
+                : `Mise à jour: ${quest.questId}`;
+            const meta = document.createElement('span');
+            meta.className = 'meta';
+            meta.textContent = `${quest.npcName} · étape ${quest.step} · ${quest.time.toLocaleTimeString()}`;
             row.appendChild(meta);
             feed.appendChild(row);
         }

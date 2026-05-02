@@ -209,13 +209,18 @@ button:hover {
   margin-bottom: 0.6rem;
 }
 
-#world-event-feed {
+#world-event-feed,
+#quest-log-feed {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  max-height: 180px;
+  max-height: 150px;
   overflow-y: auto;
   padding-right: 0.25rem;
+}
+
+.quest-title {
+  margin-top: 0.9rem;
 }
 
 .world-event {
@@ -267,6 +272,18 @@ button:hover {
 
 .npc-world-state .warn {
   color: #ffea00;
+}
+
+.npc-actions {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.npc-actions button {
+  font-size: 0.7rem !important;
+  letter-spacing: 1px;
+  padding: 0.55rem 0.65rem !important;
 }
 
 /* Console/Chat */

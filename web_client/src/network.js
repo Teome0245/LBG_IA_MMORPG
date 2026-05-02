@@ -109,11 +109,11 @@ export class NetworkManager {
         });
     }
 
-    sendChat(text, targetNpcId, npcName, position = null) {
+    sendChat(text, targetNpcId, npcName, position = null, iaContext = null) {
         // Le protocole supporte l'envoi de texte via le message 'move' (pont IA)
         // ou d'autres extensions selon docs/mmmorpg_PROTOCOL.md
         const pos = position || {};
-        this.send({
+        const payload = {
             type: "move",
             x: Number.isFinite(pos.x) ? pos.x : 0,
             y: Number.isFinite(pos.y) ? pos.y : 0,
@@ -121,7 +121,11 @@ export class NetworkManager {
             world_npc_id: targetNpcId,
             npc_name: npcName,
             text: text
-        });
+        };
+        if (iaContext && typeof iaContext === "object") {
+            payload.ia_context = iaContext;
+        }
+        this.send(payload);
     }
 
     disconnect() {

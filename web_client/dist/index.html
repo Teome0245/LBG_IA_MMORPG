@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LBG IA MMO - Client Web</title>
-  <script type="module" crossorigin src="/mmo/assets/index-_wzgeCkP.js"></script>
-  <link rel="stylesheet" crossorigin href="/mmo/assets/index-CLP5EST7.css">
+  <script type="module" crossorigin src="/mmo/assets/index-BR-AyP-J.js"></script>
+  <link rel="stylesheet" crossorigin href="/mmo/assets/index-R29bH4jd.css">
 </head>
 <body>
     <div id="app">
@@ -38,12 +38,28 @@
                         <span class="label">ID :</span>
                         <span id="stat-id">?</span>
                     </div>
+                    <div class="stat">
+                        <span class="label">POS X :</span>
+                        <span id="pos-x">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">POS Z :</span>
+                        <span id="pos-y">0</span>
+                    </div>
+                    <div class="stat">
+                        <span class="label">TIME :</span>
+                        <span id="world-time">--:--</span>
+                    </div>
                 </div>
 
                 <div class="hud-top-right glass-panel">
                     <div class="panel-title">ACTIONS IA</div>
                     <div id="world-event-feed">
                         <div class="world-event empty">Aucune action monde.</div>
+                    </div>
+                    <div class="panel-title quest-title">QUÊTES</div>
+                    <div id="quest-log-feed">
+                        <div class="world-event empty">Aucune quête active.</div>
                     </div>
                 </div>
 
@@ -60,23 +76,15 @@
                 <div class="hud-bottom-right glass-panel">
                     <div class="panel-title">PNJ</div>
                     <div class="stat">
-                        <span class="label">POS X :</span>
-                        <span id="pos-x">0</span>
-                    </div>
-                    <div class="stat">
-                        <span class="label">POS Z :</span>
-                        <span id="pos-y">0</span>
-                    </div>
-                    <div class="stat">
-                        <span class="label">TIME :</span>
-                        <span id="world-time">--:--</span>
-                    </div>
-                    <div class="stat">
                         <span class="label">CIBLE :</span>
                         <span id="dialogue-target">?</span>
                     </div>
                     <div id="npc-world-state" class="npc-world-state">
                         Sélectionnez un PNJ.
+                    </div>
+                    <div class="npc-actions">
+                        <button id="quick-aid-btn" type="button">DEMANDER AIDE</button>
+                        <button id="quick-quest-btn" type="button">PROPOSER QUÊTE</button>
                     </div>
                 </div>
             </div>

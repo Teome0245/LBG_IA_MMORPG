@@ -588,6 +588,10 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
     v = os.environ.get("LBG_DIALOGUE_WORLD_ACTIONS", "0").strip().lower()
     if v in ("1", "true", "yes", "on") and isinstance(context.get("world_npc_id"), str) and context.get("world_npc_id"):
         require_action = bool(context.get("_require_action_json") is True)
+        requested_kind = context.get("_world_action_kind")
+        requested_kind = requested_kind.strip().lower() if isinstance(requested_kind, str) else ""
+        if requested_kind not in ("aid", "quest"):
+            requested_kind = ""
         lines.append(
             (
                 "Actions monde (REQUIS) : commence ta réponse par UNE ligne :"
@@ -597,6 +601,11 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
         )
         lines.append('ACTION_JSON: {"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}')
         lines.append('ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":0,"quest_accepted":true}')
+        if requested_kind:
+            lines.append(
+                f"Action demandée par l'interface: utilise obligatoirement kind='{requested_kind}' "
+                "dans ACTION_JSON pour cette réponse."
+            )
         lines.append(
             "Quand le joueur demande explicitement une aide immédiate (nourriture, boisson, repos, compassion), "
             "tu peux utiliser ACTION_JSON pour déclencher l'aide."

@@ -52,6 +52,28 @@ def test_route_intent_prefers_quest_even_with_npc_name() -> None:
     assert data["output"]["capability"] == "quest_request"
 
 
+def test_route_intent_world_action_kind_forces_dialogue_even_for_quest_text() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/route",
+        json={
+            "actor_id": "player:1",
+            "text": "Propose-moi une quête simple.",
+            "context": {
+                "npc_name": "Mara l’aubergiste",
+                "world_npc_id": "npc:innkeeper",
+                "_require_action_json": True,
+                "_world_action_kind": "quest",
+            },
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["intent"] == "npc_dialogue"
+    assert data["routed_to"] == "agent.dialogue"
+    assert data["output"]["capability"] == "npc_dialogue"
+
+
 def test_route_intent_project_pm_classifier() -> None:
     client = TestClient(app)
     r = client.post(
