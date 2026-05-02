@@ -3,6 +3,7 @@ import { Renderer } from './renderer.js';
 import { InputManager } from './input.js';
 
 const QUEST_LOG_STORAGE_KEY = "lbg-mmo.questLog.v1";
+const ACTIVE_QUEST_STORAGE_KEY = "lbg-mmo.activeQuest.v1";
 
 class App {
     constructor() {
@@ -22,6 +23,7 @@ class App {
         this.worldEvents = [];
         this.seenWorldEventTraceIds = new Set();
         this.questLogById = new Map();
+        this.activeQuestId = "";
         
         this.initUI();
     }
@@ -88,6 +90,7 @@ class App {
         if (clearQuestsBtn) {
             clearQuestsBtn.addEventListener('click', () => {
                 this.questLogById.clear();
+                this.setActiveQuest("", { silent: true });
                 this.persistQuestLog();
                 this.renderQuestLog();
                 this.addLog("Journal de quêtes local vidé.", "system");
@@ -101,6 +104,7 @@ class App {
         this.renderer.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
         this.restoreQuestLog();
         this.renderQuestLog();
+        this.updateActiveQuestHUD();
     }
 
     sendDialogueToTarget(text, iaContext = null) {
@@ -248,6 +252,9 @@ class App {
             npcName: target && target.name ? target.name : "PNJ",
             time: new Date(),
         });
+        if (!this.activeQuestId || !this.questLogById.has(this.activeQuestId)) {
+            this.setActiveQuest(questId, { silent: true });
+        }
         this.persistQuestLog();
         this.renderQuestLog();
     }
@@ -268,8 +275,13 @@ class App {
                     time: row.time ? new Date(row.time) : new Date(),
                 });
             }
+            const activeQuestId = window.localStorage.getItem(ACTIVE_QUEST_STORAGE_KEY) || "";
+            if (activeQuestId && this.questLogById.has(activeQuestId)) {
+                this.activeQuestId = activeQuestId;
+            }
         } catch (_) {
             this.questLogById.clear();
+            this.activeQuestId = "";
         }
     }
 
@@ -284,6 +296,36 @@ class App {
                 }));
             window.localStorage.setItem(QUEST_LOG_STORAGE_KEY, JSON.stringify(rows));
         } catch (_) {}
+    }
+
+    setActiveQuest(questId, options = {}) {
+        const id = typeof questId === "string" ? questId.trim() : "";
+        this.activeQuestId = id && this.questLogById.has(id) ? id : "";
+        try {
+            if (this.activeQuestId) {
+                window.localStorage.setItem(ACTIVE_QUEST_STORAGE_KEY, this.activeQuestId);
+            } else {
+                window.localStorage.removeItem(ACTIVE_QUEST_STORAGE_KEY);
+            }
+        } catch (_) {}
+        this.renderQuestLog();
+        this.updateActiveQuestHUD();
+        if (!options.silent && this.activeQuestId) {
+            this.addLog(`Quête suivie: ${this.activeQuestId}`, "system");
+        }
+    }
+
+    updateActiveQuestHUD() {
+        const el = document.getElementById('active-quest-summary');
+        if (!el) return;
+        const quest = this.activeQuestId ? this.questLogById.get(this.activeQuestId) : null;
+        if (!quest) {
+            el.textContent = "Quête suivie : aucune";
+            el.classList.add("empty");
+            return;
+        }
+        el.classList.remove("empty");
+        el.textContent = `Quête suivie : ${quest.questId} · étape ${quest.step} · ${quest.npcName}`;
     }
 
     renderWorldEvents() {
@@ -324,20 +366,32 @@ class App {
             empty.className = 'world-event empty';
             empty.textContent = 'Aucune quête active.';
             feed.appendChild(empty);
+            this.updateActiveQuestHUD();
             return;
         }
         for (const quest of quests) {
             const row = document.createElement('div');
-            row.className = 'world-event quest';
+            row.className = `world-event quest quest-row ${quest.questId === this.activeQuestId ? "active" : ""}`;
+            row.setAttribute("role", "button");
+            row.tabIndex = 0;
             row.textContent = quest.accepted
                 ? `Acceptée: ${quest.questId}`
                 : `Mise à jour: ${quest.questId}`;
+            const followQuest = () => this.setActiveQuest(quest.questId);
+            row.addEventListener('click', followQuest);
+            row.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    followQuest();
+                }
+            });
             const meta = document.createElement('span');
             meta.className = 'meta';
             meta.textContent = `${quest.npcName} · étape ${quest.step} · ${quest.time.toLocaleTimeString()}`;
             row.appendChild(meta);
             feed.appendChild(row);
         }
+        this.updateActiveQuestHUD();
     }
 
     handleDisconnect() {

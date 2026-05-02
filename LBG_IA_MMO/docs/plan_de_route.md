@@ -100,6 +100,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-02 | **Client MMO — quête suivie locale** : le journal de quêtes devient actionnable côté HUD : clic/clavier sur une quête pour la suivre, résumé “Quête suivie” dans le panneau joueur, persistance `localStorage`, et reset lors du vidage du journal. Build + déploiement `/mmo/` validés. |
 | 2026-05-02 | **Client MMO — état PNJ ciblé** : les snapshots PNJ exposent `world_state` (`reputation`, jauges faim/soif/fatigue, flags monde) et le HUD affiche l’état de la cible courante, pour rendre les effets des dialogues persistants visibles au joueur. |
 | 2026-05-02 | **Client MMO — journal Actions IA** : les `world_event.dialogue_commit` alimentent désormais un panneau HUD “Actions IA” côté client, avec déduplication par `trace_id`, distinction aide/quêtes, et bulle d’action temporaire au-dessus du PNJ. |
 | 2026-05-02 | **Dialogue PNJ → action monde v1** : le pont WS applique désormais les `commit` bornés renvoyés par l’agent dialogue (`aid`/`quest`) via `GameState.commit_dialogue`, avec garde-fou d’autorité serveur : l’action ne peut viser que le PNJ ciblé par la conversation. Le `world_tick` peut exposer `world_event` pour feedback client. Tests ciblés `mmmorpg_server` OK. |
