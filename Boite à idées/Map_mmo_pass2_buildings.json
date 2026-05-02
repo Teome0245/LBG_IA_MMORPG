@@ -1,0 +1,292 @@
+{
+  "196": {
+    "inputs": {
+      "ckpt_name": "DreamShaper_8_pruned.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Charger Point de Contrôle"
+    }
+  },
+  "199": {
+    "inputs": {
+      "images": [
+        "206",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Aperçu Image"
+    }
+  },
+  "204": {
+    "inputs": {
+      "pixels": [
+        "208",
+        0
+      ],
+      "vae": [
+        "196",
+        2
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "205": {
+    "inputs": {
+      "seed": 246207409360292,
+      "steps": 16,
+      "cfg": 7,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 0.35,
+      "model": [
+        "222",
+        0
+      ],
+      "positive": [
+        "215",
+        0
+      ],
+      "negative": [
+        "215",
+        1
+      ],
+      "latent_image": [
+        "225",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "206": {
+    "inputs": {
+      "samples": [
+        "205",
+        0
+      ],
+      "vae": [
+        "196",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "208": {
+    "inputs": {
+      "image": "bourg.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Charger Image"
+    }
+  },
+  "209": {
+    "inputs": {
+      "strength": 0.9,
+      "start_percent": 0,
+      "end_percent": 0.9,
+      "positive": [
+        "213",
+        0
+      ],
+      "negative": [
+        "214",
+        0
+      ],
+      "control_net": [
+        "211",
+        0
+      ],
+      "image": [
+        "212",
+        0
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Appliquer ControlNet (buildings)"
+    }
+  },
+  "211": {
+    "inputs": {
+      "control_net_name": "control_v11p_sd15_canny.pth"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Charger le modèle ControlNet"
+    }
+  },
+  "212": {
+    "inputs": {
+      "image": "buildings.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Charger Image (buildings mask)"
+    }
+  },
+  "213": {
+    "inputs": {
+      "text": "top-down orthographic medieval village buildings, hand-painted map illustration, inked outline, crisp roof tiles, subtle watercolor shading, soft ambient occlusion, consistent light direction, keep exact building shapes and positions, no extra buildings",
+      "clip": [
+        "196",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (buildings) P"
+    }
+  },
+  "214": {
+    "inputs": {
+      "text": "extra buildings, additional houses, new structures, messy lines, warped roofs, distorted perspective, photorealistic, 3d render, blurry",
+      "clip": [
+        "196",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (buildings) N"
+    }
+  },
+  "215": {
+    "inputs": {
+      "strength": 0.0,
+      "start_percent": 0,
+      "end_percent": 1.0,
+      "positive": [
+        "209",
+        0
+      ],
+      "negative": [
+        "209",
+        1
+      ],
+      "control_net": [
+        "211",
+        0
+      ],
+      "image": [
+        "216",
+        0
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Appliquer ControlNet (roads disabled)"
+    }
+  },
+  "216": {
+    "inputs": {
+      "image": "roads.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Charger Image (roads)"
+    }
+  },
+  "219": {
+    "inputs": {
+      "preset": "STANDARD (medium strength)",
+      "model": [
+        "196",
+        0
+      ]
+    },
+    "class_type": "IPAdapterUnifiedLoader",
+    "_meta": {
+      "title": "IPAdapter Unified Loader"
+    }
+  },
+  "220": {
+    "inputs": {
+      "image": "3a96fba1-1742-4d44-9a9f-27f8da8e46e0.jpg"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Charger Image (style)"
+    }
+  },
+  "221": {
+    "inputs": {
+      "clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+    },
+    "class_type": "CLIPVisionLoader",
+    "_meta": {
+      "title": "Charger CLIP Vision"
+    }
+  },
+  "222": {
+    "inputs": {
+      "weight": 0.7,
+      "weight_type": "linear",
+      "combine_embeds": "concat",
+      "start_at": 0,
+      "end_at": 1,
+      "embeds_scaling": "V only",
+      "model": [
+        "219",
+        0
+      ],
+      "ipadapter": [
+        "219",
+        1
+      ],
+      "image": [
+        "220",
+        0
+      ],
+      "clip_vision": [
+        "221",
+        0
+      ]
+    },
+    "class_type": "IPAdapterAdvanced",
+    "_meta": {
+      "title": "IPAdapter Advanced"
+    }
+  },
+  "223": {
+    "inputs": {
+      "channel": "red",
+      "image": [
+        "212",
+        0
+      ]
+    },
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Image → Mask (buildings)"
+    }
+  },
+  "225": {
+    "inputs": {
+      "samples": [
+        "204",
+        0
+      ],
+      "mask": [
+        "223",
+        0
+      ]
+    },
+    "class_type": "SetLatentNoiseMask",
+    "_meta": {
+      "title": "Set Latent Noise Mask (buildings only)"
+    }
+  }
+}
+

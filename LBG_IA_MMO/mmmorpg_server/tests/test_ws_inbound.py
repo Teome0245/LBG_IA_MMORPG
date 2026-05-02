@@ -5,7 +5,7 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from mmmorpg_server.main import _inbound_to_utf8
+from mmmorpg_server.main import _format_ia_placeholder, _inbound_to_utf8
 
 
 class TestWsInbound(unittest.TestCase):
@@ -25,6 +25,14 @@ class TestWsInbound(unittest.TestCase):
             text, err = _inbound_to_utf8(b"\xff\xfe")
             self.assertIsNone(text)
             self.assertIn("UTF-8", err or "")
+
+    def test_placeholder_uses_npc_name(self):
+        out = _format_ia_placeholder(
+            "…un instant. (Le PNJ vous regarde, comme s’il réfléchissait.)",
+            "Garde",
+        )
+        self.assertIn("Garde vous regarde", out)
+        self.assertNotIn("Le PNJ", out)
 
 
 if __name__ == "__main__":

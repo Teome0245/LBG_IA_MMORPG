@@ -52,6 +52,32 @@ if [[ "${missing}" -ne 0 ]]; then
   exit 1
 fi
 
+echo "Vérification anti-régression du bundle MMO…"
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+idx = Path("dist/index.html").read_text(encoding="utf-8", errors="replace")
+match = re.search(r'''src=["'](?:/mmo/)?assets/([^"']+\.js)["']''', idx)
+if not match:
+    raise SystemExit("ERREUR: bundle JS introuvable dans dist/index.html")
+bundle = Path("dist/assets") / match.group(1)
+text = bundle.read_text(encoding="utf-8", errors="replace")
+required = [
+    "cameraX",
+    "screenToWorld",
+    "drawWorldMap",
+    "drawVillageMap",
+    "bourg_palette_map",
+]
+missing = [needle for needle in required if needle not in text]
+if missing:
+    raise SystemExit(f"ERREUR: bundle MMO sans marqueurs top-down stables: {missing}")
+if "x / 2 - y / 2" in text:
+    raise SystemExit("ERREUR: bundle MMO contient l'ancien rendu isométrique régressif")
+print(f"ok ({bundle.name})")
+PY
+
 echo "Déploiement du client MMO vers ${VM_USER}@${VM_HOST}:${REMOTE_DIR}..."
 
 SSH_OPTS=(
@@ -106,7 +132,7 @@ print('ok')
 PY"
 
 echo "Backup + switch atomique…"
-ssh "${SSH_OPTS[@]}" "${VM_USER}@${VM_HOST}" "set -euo pipefail
+ssh "${SSH_OPTS[@]}" "${VM_USER}@${VM_HOST}" "set -eu
   if [ -d '${REMOTE_DIR}' ] && [ -f '${REMOTE_DIR}/index.html' ]; then
     rm -rf '${REMOTE_BACKUP}' || true
     cp -a '${REMOTE_DIR}' '${REMOTE_BACKUP}'

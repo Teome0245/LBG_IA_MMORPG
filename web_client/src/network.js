@@ -109,12 +109,15 @@ export class NetworkManager {
         });
     }
 
-    sendChat(text, targetNpcId, npcName) {
+    sendChat(text, targetNpcId, npcName, position = null) {
         // Le protocole supporte l'envoi de texte via le message 'move' (pont IA)
         // ou d'autres extensions selon docs/mmmorpg_PROTOCOL.md
+        const pos = position || {};
         this.send({
             type: "move",
-            x: 0, y: 0, z: 0, // Placeholder position si on veut juste parler
+            x: Number.isFinite(pos.x) ? pos.x : 0,
+            y: Number.isFinite(pos.y) ? pos.y : 0,
+            z: Number.isFinite(pos.z) ? pos.z : 0,
             world_npc_id: targetNpcId,
             npc_name: npcName,
             text: text

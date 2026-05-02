@@ -14,6 +14,9 @@ class App {
         this.playerLocalPos = { x: 0, y: 0, z: 0 };
         this.isMoving = false;
         this._lastConnect = { serverHost: null, name: null };
+        this.selectedDialogueTarget = null;
+        this.lastDialogueTarget = null;
+        this.dialogueTargetByTrace = new Map();
         
         this.initUI();
     }
@@ -51,9 +54,15 @@ class App {
         sendChatBtn.addEventListener('click', () => {
             const text = chatInput.value.trim();
             if (text) {
-                // Pour simplifier, on envoie le chat au dernier PNJ vu ou un PNJ par défaut
-                this.network.sendChat(text, "npc:merchant", "Marchand");
-                this.addLog(`To Merchant: ${text}`, 'player');
+                const target = this.getDialogueTarget();
+                this.lastDialogueTarget = target;
+                this.network.sendChat(text, target.id, target.name, this.playerLocalPos);
+                this.renderer.setDialogueBubble(target.id, "...", {
+                    speaker: target.name,
+                    kind: "pending",
+                    ttlMs: 120000,
+                });
+                this.addLog(`À ${target.name}: ${text}`, 'player');
                 chatInput.value = "";
             }
         });
@@ -61,6 +70,8 @@ class App {
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendChatBtn.click();
         });
+
+        this.renderer.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
     }
 
     async connect(name) {
@@ -117,7 +128,13 @@ class App {
             
             // Gérer les répliques PNJ (pont IA)
             if (msg.npc_reply) {
-                this.addLog(`Marchand: ${msg.npc_reply}`, 'npc');
+                const target = this.resolveDialogueTarget(msg.trace_id);
+                this.renderer.setDialogueBubble(target.id, msg.npc_reply, {
+                    speaker: target.name,
+                    traceId: msg.trace_id || "",
+                    kind: "npc",
+                });
+                this.addLog(`${target.name}: ${msg.npc_reply}`, 'npc');
             }
         } else if (msg.type === "error") {
             this.addLog(`Erreur: ${msg.message}`, 'error');
@@ -140,6 +157,74 @@ class App {
             document.getElementById('pos-y').textContent = Math.round(me.z);
             this.playerLocalPos = { x: me.x, y: me.y, z: me.z };
         }
+        this.updateDialogueTargetHUD();
+    }
+
+    getDialogueTarget() {
+        if (this.selectedDialogueTarget && this.entityExists(this.selectedDialogueTarget.id)) {
+            return this.selectedDialogueTarget;
+        }
+
+        const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
+        const npcs = entities.filter((ent) => ent && ent.kind === "npc" && typeof ent.id === "string");
+        if (!npcs.length) {
+            return { id: "npc:merchant", name: "Marchand" };
+        }
+
+        const nearest = npcs
+            .map((ent) => {
+                const dx = Number(ent.x || 0) - Number(this.playerLocalPos.x || 0);
+                const dz = Number(ent.z || 0) - Number(this.playerLocalPos.z || 0);
+                return { ent, dist2: dx * dx + dz * dz };
+            })
+            .sort((a, b) => a.dist2 - b.dist2)[0].ent;
+
+        return { id: nearest.id, name: nearest.name || nearest.id };
+    }
+
+    entityExists(entityId) {
+        const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
+        return entities.some((ent) => ent && ent.id === entityId);
+    }
+
+    handleCanvasClick(event) {
+        const rect = this.renderer.canvas.getBoundingClientRect();
+        const scaleX = this.renderer.canvas.width / rect.width;
+        const scaleY = this.renderer.canvas.height / rect.height;
+        const x = (event.clientX - rect.left) * scaleX;
+        const y = (event.clientY - rect.top) * scaleY;
+        const npc = this.renderer.getNpcAtScreen(x, y);
+
+        if (!npc) {
+            return;
+        }
+
+        this.selectedDialogueTarget = { id: npc.id, name: npc.name || npc.id };
+        this.lastDialogueTarget = this.selectedDialogueTarget;
+        this.renderer.setSelectedEntityId(npc.id);
+        this.updateDialogueTargetHUD();
+        this.addLog(`Cible sélectionnée: ${this.selectedDialogueTarget.name}`, 'system');
+    }
+
+    resolveDialogueTarget(traceId) {
+        const tid = typeof traceId === "string" ? traceId.trim() : "";
+        if (tid && this.dialogueTargetByTrace.has(tid)) {
+            return this.dialogueTargetByTrace.get(tid);
+        }
+
+        const target = this.lastDialogueTarget || this.getDialogueTarget();
+        if (tid) {
+            this.dialogueTargetByTrace.set(tid, target);
+        }
+        return target;
+    }
+
+    updateDialogueTargetHUD() {
+        const targetEl = document.getElementById('dialogue-target');
+        if (!targetEl) return;
+        const target = this.getDialogueTarget();
+        const selected = this.selectedDialogueTarget && this.selectedDialogueTarget.id === target.id;
+        targetEl.textContent = selected ? `${target.name} (sélectionné)` : target.name;
     }
 
     formatTime(seconds) {

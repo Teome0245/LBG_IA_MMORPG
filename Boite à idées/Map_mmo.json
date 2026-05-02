@@ -43,7 +43,7 @@
       "cfg": 8,
       "sampler_name": "euler",
       "scheduler": "simple",
-      "denoise": 0.48,
+      "denoise": 0.58,
       "model": [
         "222",
         0
@@ -57,7 +57,7 @@
         1
       ],
       "latent_image": [
-        "204",
+        "225",
         0
       ]
     },
@@ -149,7 +149,7 @@
   },
   "213": {
     "inputs": {
-      "text": "top-down orthographic medieval village map, hand-painted fantasy rpg map illustration, watercolor gouache, textured paper, painterly but clean, roofs and houses clearly visible from above, cobblestone roads and paths, village square, a few trees and bushes (not dense forest), warm daylight, soft ambient occlusion, coherent layout, no characters, detailed grass variation, dirt path texture, roof tiles detailed, subtle shadows, IMPORTANT: do not add buildings, keep exactly the buildings from the layout/mask, no new houses, no extra structures",
+      "text": "top-down orthographic medieval village map, hand-painted fantasy rpg map illustration, watercolor gouache, textured paper, painterly brush strokes, warm cohesive palette, soft painterly shading, subtle paper grain, clean readable shapes, coherent layout, no characters, focus on terrain: detailed grass variation, subtle soil patches, dirt path texture, cobblestone roads and paths, soft ambient occlusion, warm daylight, sparse settlement, IMPORTANT: keep EXACT building layout, do not add buildings, no new houses, no extra structures",
       "clip": [
         "196",
         1
@@ -162,7 +162,7 @@
   },
   "214": {
     "inputs": {
-      "text": "portrait, face, people, person, character, human, body, naked, nsfw, anime, close-up, cinematic scene, interior, room, foggy, abstract, text, watermark, logo, blurry, deformed, extra limbs, distorted perspective, photorealistic, satellite, aerial photo, 3d render, noisy, grainy, messy outlines, dense forest, too many buildings, extra buildings, additional houses, new structures, city, town, cluttered",
+      "text": "portrait, face, people, person, character, human, body, naked, nsfw, anime, close-up, cinematic scene, interior, room, foggy, abstract, text, watermark, logo, blurry, deformed, extra limbs, distorted perspective, photorealistic, satellite, aerial photo, 3d render, noisy, grainy, messy outlines, cluttered, dense forest, city, town, village, hamlet, settlement, neighborhood, suburb, many houses, too many buildings, extra buildings, additional houses, new structures, houses, house, buildings, building, hut, huts, cabin, cabins, shack, shacks, cottage, cottages, gazebo, tents, carts, fences, ruins, small houses everywhere",
       "clip": [
         "196",
         1
@@ -175,9 +175,9 @@
   },
   "215": {
     "inputs": {
-      "strength": 0.6,
+      "strength": 0.75,
       "start_percent": 0,
-      "end_percent": 0.6,
+      "end_percent": 0.8,
       "positive": [
         "209",
         0
@@ -228,7 +228,7 @@
   },
   "219": {
     "inputs": {
-      "preset": "LIGHT - SD1.5 only (low strength)",
+      "preset": "STANDARD (medium strength)",
       "model": [
         "196",
         0
@@ -259,7 +259,7 @@
   },
   "222": {
     "inputs": {
-      "weight": 0.75,
+      "weight": 0.9,
       "weight_type": "linear",
       "combine_embeds": "concat",
       "start_at": 0,
@@ -285,6 +285,47 @@
     "class_type": "IPAdapterAdvanced",
     "_meta": {
       "title": "IPAdapter Advanced"
+    }
+  },
+  "223": {
+    "inputs": {
+      "channel": "red",
+      "image": [
+        "212",
+        0
+      ]
+    },
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Image → Mask (buildings)"
+    }
+  },
+  "224": {
+    "inputs": {
+      "mask": [
+        "223",
+        0
+      ]
+    },
+    "class_type": "InvertMask",
+    "_meta": {
+      "title": "Invert Mask (paint only outside buildings)"
+    }
+  },
+  "225": {
+    "inputs": {
+      "samples": [
+        "204",
+        0
+      ],
+      "mask": [
+        "224",
+        0
+      ]
+    },
+    "class_type": "SetLatentNoiseMask",
+    "_meta": {
+      "title": "Set Latent Noise Mask"
     }
   }
 }

@@ -15,7 +15,7 @@ import httpx
 from websockets.asyncio.server import ServerConnection, serve
 
 from mmmorpg_server import config
-from mmmorpg_server.game_state import GameState
+from mmmorpg_server.game_state import GameState, NPC_CONVERSATION_RESUME_DELAY_S
 from mmmorpg_server.internal_http import start_internal_http
 from mmmorpg_server.persistence import load_state, save_state
 from mmmorpg_server.protocol import (
@@ -25,6 +25,15 @@ from mmmorpg_server.protocol import (
 )
 
 LOG = logging.getLogger("mmmorpg")
+
+
+def _format_ia_placeholder(template: str, npc_name: str | None) -> str:
+    """Rend le placeholder IA plus incarné sans attendre le LLM."""
+    raw = (template or "").strip()
+    if not raw:
+        return ""
+    name = npc_name.strip() if isinstance(npc_name, str) and npc_name.strip() else "Le PNJ"
+    return raw.replace("{npc_name}", name).replace("Le PNJ", name)
 
 
 def _parse_move_world_commit(data: dict[str, Any]) -> dict[str, Any] | None | str:
@@ -56,9 +65,11 @@ def _parse_move_world_commit(data: dict[str, Any]) -> dict[str, Any] | None | st
 
 def _queue_ia_bridge(
     *,
+    game: GameState,
     ws: ServerConnection,
     pending_replies: dict[ServerConnection, tuple[str, str] | None],
     actor_id: str,
+    player_id: str,
     text0: str,
     world_npc_id: str,
     npc_name: str | None,
@@ -75,13 +86,16 @@ def _queue_ia_bridge(
     # On génère un trace_id une fois, on le réutilise pour l'appel backend, et on met le même trace_id
     # sur le placeholder pour que le client puisse le remplacer.
     trace_id = uuid.uuid4().hex
+    npc_id = world_npc_id.strip()
+    game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
 
-    if config.IA_PLACEHOLDER_ENABLED and config.IA_PLACEHOLDER_REPLY:
-        pending_replies[ws] = (config.IA_PLACEHOLDER_REPLY, trace_id)
-
-    ctx: dict[str, Any] = {"world_npc_id": world_npc_id.strip(), "history": []}
+    ctx: dict[str, Any] = {"world_npc_id": npc_id, "history": []}
     if isinstance(npc_name, str) and npc_name.strip():
         ctx["npc_name"] = npc_name.strip()
+    if config.IA_PLACEHOLDER_ENABLED and config.IA_PLACEHOLDER_REPLY:
+        placeholder = _format_ia_placeholder(config.IA_PLACEHOLDER_REPLY, ctx.get("npc_name") if isinstance(ctx.get("npc_name"), str) else None)
+        if placeholder:
+            pending_replies[ws] = (placeholder, trace_id)
     # Permet aux clients/outils d'injecter un mini contexte vers l'IA (borné).
     # Important: ne pas permettre d'écraser `world_npc_id` ni d'injecter des structures arbitraires.
     if isinstance(ia_context, dict) and ia_context:
@@ -111,7 +125,7 @@ def _queue_ia_bridge(
                 "Pont IA: appel backend (source=%s actor_id=%s npc_id=%s trace_id=%s)",
                 source,
                 actor_id,
-                world_npc_id.strip(),
+                npc_id,
                 tid,
             )
             async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
@@ -131,6 +145,7 @@ def _queue_ia_bridge(
                 )
                 # UX: remplacer le placeholder par une fin explicite (sinon le joueur reste bloqué).
                 pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
+                game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
                 return
             j = r.json()
             if not isinstance(j, dict):
@@ -141,6 +156,7 @@ def _queue_ia_bridge(
                     source,
                 )
                 pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
+                game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
                 return
             tid = j.get("trace_id") or tid
             res = j.get("result")
@@ -149,6 +165,7 @@ def _queue_ia_bridge(
             rep = remote.get("reply") if isinstance(remote, dict) else None
             if isinstance(rep, str) and rep.strip() and isinstance(tid, str) and tid.strip():
                 pending_replies[ws] = (rep.strip(), tid.strip())
+                game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
                 elapsed_ms = int((time.perf_counter() - t0) * 1000)
                 LOG.info(
                     "Pont IA: reply en file (trace_id=%s elapsed_ms=%s source=%s)",
@@ -163,9 +180,11 @@ def _queue_ia_bridge(
                     isinstance(tid, str) and bool(tid.strip()),
                 )
                 pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
+                game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
         except Exception:
             LOG.exception("Pont IA: exception pendant l'appel backend (source=%s)", source)
             pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
+            game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
             return
 
     asyncio.create_task(_fetch_and_queue())
@@ -282,9 +301,11 @@ async def client_handler(
                     npc_name = data.get("npc_name")
                     ia_context = data.get("ia_context")
                     _queue_ia_bridge(
+                        game=game,
                         ws=ws,
                         pending_replies=pending_replies,
                         actor_id=f"player:{ent.id}",
+                        player_id=ent.id,
                         text0=text0 if isinstance(text0, str) else "",
                         world_npc_id=world_npc_id if isinstance(world_npc_id, str) else "",
                         npc_name=npc_name if isinstance(npc_name, str) else None,
@@ -323,9 +344,11 @@ async def client_handler(
                 if has_ia:
                     # Pont IA via `move` (sans nouveau type) : ne pas être bloqué par l'anti-spam `move`.
                     _queue_ia_bridge(
+                        game=game,
                         ws=ws,
                         pending_replies=pending_replies,
                         actor_id=f"player:{player_id}",
+                        player_id=player_id,
                         text0=text_ia,
                         world_npc_id=world_npc_id,
                         npc_name=npc_name if isinstance(npc_name, str) else None,

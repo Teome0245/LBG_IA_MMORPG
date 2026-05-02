@@ -23,6 +23,8 @@ class DeterministicIntentClassifier:
             t,
         ):
             return ("project_pm", 0.74)
+        if re.search(r"\b(opengame|prototype\s+jeu|prototype\s+game|mini-jeu|mini\s+jeu)\b", t):
+            return ("prototype_game", 0.7)
         if re.search(r"\b(quest|quête|mission|tâche|tache|travail|travaux)\b", t):
             return ("quest_request", 0.75)
         if re.search(r"\b(parler|dialogue|discuter)\b", t):

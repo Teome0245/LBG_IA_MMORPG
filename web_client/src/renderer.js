@@ -1,5 +1,9 @@
 /**
- * Moteur de rendu isométrique 2D sur Canvas.
+ * Moteur de rendu top-down sur Canvas.
+ *
+ * Attention: le client MMO stable repose sur une caméra monde 2D, le zoom molette
+ * et les cartes illustrées. Ne pas le remplacer par un rendu isométrique sans
+ * revalider le front `/mmo/`.
  */
 export class Renderer {
     constructor(canvasId) {
@@ -7,12 +11,18 @@ export class Renderer {
         this.ctx = this.canvas.getContext('2d');
         this.entities = [];
         this.interpolatedEntities = new Map(); // id -> {x, y, z}
+        this.dialogueBubbles = new Map(); // entity id -> {text, speaker, traceId, expiresAt}
+        this.selectedEntityId = null;
+        this.selectedId = null; // compat historique du client stable
         this.locations = [];
         this.playerId = null;
         this.worldTime = 0;
         this.dayFraction = 0;
+        this.cameraX = 0;
+        this.cameraY = 0;
+        this.cameraZ = 0;
         
-        // Paramètres isométriques
+        // Échelle top-down : pixels par mètre = 8 * zoom.
         this.tileW = 64;
         this.tileH = 32;
         this.zoom = 1.0;
@@ -22,14 +32,21 @@ export class Renderer {
             floor: new Image(),
             player: new Image(),
             npc: new Image(),
-            planetMap: new Image(),
+            worldMap: new Image(),
             villageMap: new Image(),
+            tavern: new Image(),
+            forge: new Image(),
         };
         this.assetsLoaded = false;
         this.loadAssets();
 
         window.addEventListener('resize', () => this.resize());
         this.resize();
+        this.canvas.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            const factor = event.deltaY < 0 ? 1.1 : 0.9;
+            this.zoom = Math.min(Math.max(this.zoom * factor, 0.001), 10);
+        }, { passive: false });
     }
 
     async loadAssets() {
@@ -53,8 +70,10 @@ export class Renderer {
             loadImg(this.assets.floor, asset('assets/tile_floor.png')),
             loadImg(this.assets.player, asset('assets/char_player.png')),
             loadImg(this.assets.npc, asset('assets/char_npc.png')),
-            loadImg(this.assets.planetMap, asset('assets/planet_map.png')),
+            loadImg(this.assets.worldMap, asset('assets/planet_map.png')),
             loadImg(this.assets.villageMap, asset('assets/bourg_palette_map.png')),
+            loadImg(this.assets.tavern, asset('assets/tavern_floor.png')),
+            loadImg(this.assets.forge, asset('assets/forge_floor.png')),
         ]);
         this.assetsLoaded = true;
         console.log("Assets graphiques chargés ou ignorés en cas d'erreur");
@@ -73,9 +92,7 @@ export class Renderer {
         // Initialiser l'interpolation pour les nouvelles entités
         for (const ent of entities) {
             if (!this.interpolatedEntities.has(ent.id)) {
-                // Convention monde (serveur WS) : x,z = plan horizontal ; y = altitude.
-                // Convention renderer : x,y = plan horizontal ; z = altitude.
-                this.interpolatedEntities.set(ent.id, { x: ent.x, y: (ent.z || 0), z: (ent.y || 0) });
+                this.interpolatedEntities.set(ent.id, { x: ent.x, y: ent.y, z: ent.z || 0 });
             }
         }
     }
@@ -84,127 +101,256 @@ export class Renderer {
         this.locations = Array.isArray(locations) ? locations : [];
     }
 
+    setLocations(locations) {
+        this.updateLocations(locations);
+    }
+
     setPlayerId(id) {
         this.playerId = id;
     }
 
-    worldToScreen(x, y, z = 0) {
-        const screenX = (x / 2 - y / 2) * this.tileW;
-        const screenY = (x / 4 + y / 4 - z / 2) * this.tileH;
-        
+    setSelectedEntityId(entityId) {
+        this.selectedEntityId = entityId || null;
+        this.selectedId = entityId || null;
+    }
+
+    getEntityScreenInfo(ent) {
+        if (!ent || !ent.id) return null;
+        const interp = this.interpolatedEntities.get(ent.id) || {
+            x: Number(ent.x || 0),
+            y: Number(ent.y || 0),
+            z: Number(ent.z || 0),
+        };
+        const pos = this.worldToScreen(interp.x, interp.z, interp.y);
+        const scale = Math.max(this.zoom, 0.1);
+        const drawY = pos.y - 10 * 0.25 * scale;
+        return { pos, drawY, depth: interp.x + interp.z };
+    }
+
+    getNpcAtScreen(screenX, screenY) {
+        const world = this.screenToWorld(screenX, screenY);
+        let best = null;
+        let bestDist = 3.0;
+        for (const ent of Array.isArray(this.entities) ? this.entities : []) {
+            if (!ent || ent.kind !== "npc") continue;
+            const dx = Number(ent.x || 0) - world.x;
+            const dz = Number(ent.z || 0) - world.z;
+            const dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist < bestDist) {
+                best = ent;
+                bestDist = dist;
+            }
+        }
+        return best;
+    }
+
+    setDialogueBubble(entityId, text, opts = {}) {
+        if (!entityId || typeof text !== "string" || !text.trim()) return;
+        const ttlMs = Number.isFinite(opts.ttlMs) ? opts.ttlMs : 9000;
+        this.dialogueBubbles.set(entityId, {
+            text: text.trim(),
+            speaker: typeof opts.speaker === "string" ? opts.speaker.trim() : "",
+            traceId: typeof opts.traceId === "string" ? opts.traceId.trim() : "",
+            kind: typeof opts.kind === "string" ? opts.kind.trim() : "npc",
+            expiresAt: Date.now() + ttlMs,
+        });
+    }
+
+    pruneDialogueBubbles(now = Date.now()) {
+        for (const [entityId, bubble] of this.dialogueBubbles.entries()) {
+            if (!bubble || bubble.expiresAt <= now) {
+                this.dialogueBubbles.delete(entityId);
+            }
+        }
+    }
+
+    wrapText(text, maxChars = 32, maxLines = 4) {
+        const words = String(text || "").replace(/\s+/g, " ").trim().split(" ");
+        const lines = [];
+        let line = "";
+        for (const word of words) {
+            const candidate = line ? `${line} ${word}` : word;
+            if (candidate.length > maxChars && line) {
+                lines.push(line);
+                line = word;
+            } else {
+                line = candidate;
+            }
+            if (lines.length >= maxLines) break;
+        }
+        if (line && lines.length < maxLines) lines.push(line);
+        if (lines.length === maxLines && words.join(" ").length > lines.join(" ").length) {
+            lines[maxLines - 1] = `${lines[maxLines - 1].replace(/[.…]+$/, "")}...`;
+        }
+        return lines;
+    }
+
+    drawDialogueBubble(ent, pos, drawY) {
+        const bubble = this.dialogueBubbles.get(ent.id);
+        if (!bubble) return;
+
+        const ctx = this.ctx;
+        const lines = this.wrapText(bubble.text);
+        if (!lines.length) return;
+
+        const title = bubble.speaker || ent.name || "PNJ";
+        ctx.save();
+        ctx.font = '600 12px "Inter", sans-serif';
+        const maxTextWidth = Math.max(
+            ctx.measureText(title).width,
+            ...lines.map((line) => ctx.measureText(line).width),
+        );
+        const padX = 12;
+        const padY = 8;
+        const lineH = 15;
+        const titleH = 13;
+        const width = Math.min(300, Math.max(120, maxTextWidth + padX * 2));
+        const height = padY * 2 + titleH + lines.length * lineH + 4;
+        const x = Math.max(12, Math.min(this.canvas.width - width - 12, pos.x - width / 2));
+        const y = Math.max(12, drawY - 86 - height);
+        const accent = bubble.kind === "pending" ? "#ffea00" : "#00f2ff";
+
+        ctx.shadowBlur = 18;
+        ctx.shadowColor = "rgba(0, 242, 255, 0.35)";
+        ctx.fillStyle = "rgba(8, 10, 22, 0.88)";
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 1.5;
+
+        const radius = 12;
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + width / 2 + 10, y + height);
+        ctx.lineTo(pos.x, y + height + 10);
+        ctx.lineTo(x + width / 2 - 10, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.shadowBlur = 0;
+        ctx.textAlign = "left";
+        ctx.fillStyle = accent;
+        ctx.font = '800 11px "Inter", sans-serif';
+        ctx.fillText(title.toUpperCase(), x + padX, y + padY + 10);
+
+        ctx.fillStyle = "#f4f7ff";
+        ctx.font = '600 12px "Inter", sans-serif';
+        lines.forEach((line, i) => {
+            ctx.fillText(line, x + padX, y + padY + titleH + 8 + i * lineH);
+        });
+        ctx.restore();
+    }
+
+    worldToScreen(x, z, y = 0) {
+        const scale = 8 * this.zoom;
+        const dx = x - this.cameraX;
+        const dz = z - this.cameraZ;
         return {
-            x: this.canvas.width / 2 + screenX,
-            y: this.canvas.height / 2 + screenY
+            x: this.canvas.width / 2 + dx * scale,
+            y: this.canvas.height / 2 + dz * scale - (y - this.cameraY) * scale,
+        };
+    }
+
+    screenToWorld(screenX, screenY) {
+        const scale = 8 * this.zoom;
+        return {
+            x: this.cameraX + (screenX - this.canvas.width / 2) / scale,
+            y: 0,
+            z: this.cameraZ + (screenY - this.canvas.height / 2) / scale,
         };
     }
 
     interpolate() {
-        const smoothing = 0.15; // Facteur d'interpolation
+        const smoothing = 0.15;
         for (const ent of this.entities) {
-            const interpolated = this.interpolatedEntities.get(ent.id);
-            if (interpolated) {
-                interpolated.x += (ent.x - interpolated.x) * smoothing;
-                interpolated.y += (((ent.z || 0) - interpolated.y) * smoothing);
-                interpolated.z += (((ent.y || 0) - interpolated.z) * smoothing);
+            let interpolated = this.interpolatedEntities.get(ent.id);
+            if (!interpolated) {
+                interpolated = { x: ent.x, y: ent.y, z: ent.z || 0 };
+                this.interpolatedEntities.set(ent.id, interpolated);
+                continue;
             }
+            let dx = ent.x - interpolated.x;
+            if (dx > 102400 / 2) dx -= 102400;
+            if (dx < -102400 / 2) dx += 102400;
+            interpolated.x += dx * smoothing;
+            interpolated.y += (ent.y - interpolated.y) * smoothing;
+            interpolated.z += ((ent.z || 0) - interpolated.z) * smoothing;
+            if (interpolated.x > 102400 / 2) interpolated.x -= 102400;
+            if (interpolated.x < -102400 / 2) interpolated.x += 102400;
         }
     }
 
-    drawMaps() {
-        const ctx = this.ctx;
-        const w = this.canvas.width;
-        const h = this.canvas.height;
-        const img = this.assets.planetMap;
-        if (!img || !img.width || !img.height) return;
-
-        // Fond carte monde (semi transparent)
-        const scale = Math.min(w / img.width, h / img.height) * 0.85;
-        const dw = img.width * scale;
-        const dh = img.height * scale;
-        const dx = (w - dw) / 2;
-        const dy = (h - dh) / 2;
-        ctx.save();
-        ctx.globalAlpha = 0.22;
-        ctx.drawImage(img, dx, dy, dw, dh);
-        ctx.restore();
+    updateCamera() {
+        if (!this.playerId) return;
+        const player = this.interpolatedEntities.get(this.playerId);
+        if (!player) return;
+        this.cameraX += (player.x - this.cameraX) * 0.2;
+        this.cameraY += (player.y - this.cameraY) * 0.2;
+        this.cameraZ += (player.z - this.cameraZ) * 0.2;
     }
 
-    drawLocations() {
+    drawFloor(floorY = 0) {
         const ctx = this.ctx;
-        const locs = Array.isArray(this.locations) ? this.locations : [];
-        if (!locs.length) return;
-        ctx.save();
-        ctx.lineWidth = 1.0;
-        ctx.strokeStyle = "rgba(255, 60, 180, 0.35)";
-        ctx.fillStyle = "rgba(255, 60, 180, 0.08)";
-        for (const loc of locs) {
-            if (!loc || typeof loc !== "object") continue;
-            const x = Number(loc.x);
-            const z = Number(loc.z);
-            const w = Number(loc.w || loc.width || 0);
-            const d = Number(loc.h || loc.height || 0);
-            if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(w) || !Number.isFinite(d) || w <= 0 || d <= 0) continue;
-
-            const hw = w / 2.0;
-            const hd = d / 2.0;
-            const p1 = this.worldToScreen(x - hw, z - hd, 0);
-            const p2 = this.worldToScreen(x + hw, z - hd, 0);
-            const p3 = this.worldToScreen(x + hw, z + hd, 0);
-            const p4 = this.worldToScreen(x - hw, z + hd, 0);
-
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.lineTo(p3.x, p3.y);
-            ctx.lineTo(p4.x, p4.y);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-        }
-        ctx.restore();
-    }
-
-    drawFloor() {
-        const ctx = this.ctx;
-        const range = 15; // Vue plus large
-        const tw = this.tileW;
-        const th = this.tileH;
-
-        // Rendu volontairement plus contrasté pour debug/visibilité.
-        ctx.lineWidth = 1.5;
-        ctx.strokeStyle = 'rgba(0, 242, 255, 0.35)'; // Cyan néon
-
-        // Dessiner une grille isométrique stylisée
-        for (let x = -range; x <= range; x++) {
-            for (let y = -range; y <= range; y++) {
-                const pos = this.worldToScreen(x, y, 0);
-                
+        const range = 20;
+        const cell = 10 * (8 * this.zoom);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "rgba(0, 242, 255, 0.1)";
+        for (let x = -range; x <= range; x += 2) {
+            for (let z = -range; z <= range; z += 2) {
+                const pos = this.worldToScreen(x * 10, z * 10, floorY);
                 ctx.beginPath();
-                ctx.moveTo(pos.x, pos.y - th/2);
-                ctx.lineTo(pos.x + tw/2, pos.y);
-                ctx.lineTo(pos.x, pos.y + th/2);
-                ctx.lineTo(pos.x - tw/2, pos.y);
-                ctx.closePath();
-                
-                // Remplissage avec un léger dégradé pour la profondeur
-                const dist = Math.sqrt(x*x + y*y);
-                const alpha = Math.max(0, 0.12 - dist * 0.004);
-                ctx.fillStyle = `rgba(0, 242, 255, ${alpha})`;
+                ctx.rect(pos.x - cell / 2, pos.y - cell / 2, cell, cell);
+                ctx.fillStyle = "rgba(0, 242, 255, 0.02)";
                 ctx.fill();
-                
-                // Ne dessiner les lignes que si on est proche du centre pour un effet de fondu
-                if (dist < range - 2) {
-                    ctx.stroke();
-                }
+                ctx.stroke();
             }
         }
+    }
 
-        // Marqueur centre (debug)
-        const c = this.worldToScreen(0, 0, 0);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, 2.5, 0, Math.PI * 2);
-        ctx.fill();
+    drawLocations(floorY = 0) {
+        const ctx = this.ctx;
+        const scale = 8 * this.zoom;
+        for (const loc of this.locations) {
+            if (!loc || loc.type === "planet" || Math.abs((loc.y || 0) - floorY) > 2) continue;
+            const pos = this.worldToScreen(loc.x, loc.z, loc.y || 0);
+            const w = (loc.w || 2) * scale;
+            const h = (loc.h || 2) * scale;
+            const color = loc.type === "room" ? "255, 150, 0" : "0, 242, 255";
+            if (loc.id === "auberge_salle_commune" && this.assets.tavern.complete) {
+                ctx.drawImage(this.assets.tavern, pos.x - w / 2, pos.y - h / 2, w, h);
+            } else if (loc.id === "forge" && this.assets.forge.complete) {
+                ctx.drawImage(this.assets.forge, pos.x - w / 2, pos.y - h / 2, w, h);
+                ctx.strokeStyle = `rgba(${color}, 0.3)`;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(pos.x - w / 2, pos.y - h / 2, w, h);
+            }
+            if (this.zoom > 0.01) {
+                ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+                ctx.font = `600 ${Math.max(10, 14 * this.zoom)}px "Inter", sans-serif`;
+                ctx.textAlign = "center";
+                ctx.fillText(loc.name || "", pos.x, pos.y - h / 2 - 5);
+            }
+        }
+    }
+
+    drawPlanetLabel() {
+        const ctx = this.ctx;
+        const scale = 8 * this.zoom;
+        for (const loc of this.locations) {
+            if (!loc || loc.type !== "planet" || this.zoom >= 0.05) continue;
+            const pos = this.worldToScreen(loc.x || 0, loc.z || 0);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+            ctx.font = `italic 600 ${Math.round(24 * this.zoom * 20)}px "Inter", sans-serif`;
+            ctx.textAlign = "center";
+            ctx.fillText(loc.name || "", pos.x, pos.y - 500 * scale);
+        }
     }
 
     drawEntity(ent, bobbing = 0) {
@@ -212,76 +358,106 @@ export class Renderer {
         const interp = this.interpolatedEntities.get(ent.id);
         if (!interp) return;
 
-        const pos = this.worldToScreen(interp.x, interp.y, interp.z);
+        const isMoving = Math.sqrt((ent.vx || 0) ** 2 + (ent.vz || 0) ** 2) > 0.5;
+        const bob = isMoving ? bobbing : 0;
+        const pos = this.worldToScreen(interp.x, interp.z, interp.y + bob);
         const isMe = ent.id === this.playerId;
         const isNpc = ent.kind === "npc";
+        const isSelected = isNpc && (ent.id === this.selectedEntityId || ent.id === this.selectedId);
+        const scale = Math.max(this.zoom, 0.1);
+        const spriteScale = 0.25;
 
-        // Ombre
+        if (isSelected) {
+            ctx.save();
+            ctx.strokeStyle = "#ffffff";
+            ctx.shadowColor = "rgba(255, 255, 255, 0.9)";
+            ctx.shadowBlur = 14 * scale;
+            ctx.lineWidth = 2 * scale;
+            ctx.setLineDash([2 * scale, 2 * scale]);
+            ctx.beginPath();
+            ctx.ellipse(pos.x, pos.y, 20 * spriteScale * scale, 10 * spriteScale * scale, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+        }
+
         ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
         ctx.beginPath();
-        ctx.ellipse(pos.x, pos.y, 14, 7, 0, 0, Math.PI * 2);
+        ctx.ellipse(pos.x, pos.y, 12 * spriteScale * scale, 6 * spriteScale * scale, 0, 0, Math.PI * 2);
         ctx.fill();
-
-        // Animation de flottement
-        const yOffset = (ent.x + ent.y) % 1 > 0.5 ? bobbing : -bobbing;
-        const drawY = pos.y - 20 + yOffset;
         
-        // Couleurs Néon
         const color = isMe ? '#00f2ff' : (isNpc ? '#ffea00' : '#ff0055');
         const glowColor = isMe ? 'rgba(0, 242, 255, 0.8)' : (isNpc ? 'rgba(255, 234, 0, 0.8)' : 'rgba(255, 0, 85, 0.8)');
+        const yOffset = (ent.x + ent.y) % 1 > 0.5 ? 2 * scale : -2 * scale;
+        const drawY = pos.y - 10 * spriteScale * scale + yOffset;
 
-        // Forme géométrique premium (Losange allongé)
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 10 * scale;
         ctx.shadowColor = glowColor;
         ctx.fillStyle = 'rgba(10, 10, 20, 0.8)';
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1.5 * scale;
 
         ctx.beginPath();
-        ctx.moveTo(pos.x, drawY - 25); // Top
-        ctx.lineTo(pos.x + 12, drawY);   // Right
-        ctx.lineTo(pos.x, drawY + 10);   // Bottom
-        ctx.lineTo(pos.x - 12, drawY);   // Left
+        ctx.moveTo(pos.x, drawY - 25 * spriteScale * scale);
+        ctx.lineTo(pos.x + 10 * spriteScale * scale, drawY);
+        ctx.lineTo(pos.x, drawY + 10 * spriteScale * scale);
+        ctx.lineTo(pos.x - 10 * spriteScale * scale, drawY);
         ctx.closePath();
         ctx.fill();
         ctx.stroke();
         
-        // Cœur lumineux
         ctx.fillStyle = color;
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 15 * scale;
         ctx.beginPath();
-        ctx.moveTo(pos.x, drawY - 10);
-        ctx.lineTo(pos.x + 4, drawY);
-        ctx.lineTo(pos.x, drawY + 5);
-        ctx.lineTo(pos.x - 4, drawY);
+        ctx.moveTo(pos.x, drawY - 10 * spriteScale * scale);
+        ctx.lineTo(pos.x + 4 * spriteScale * scale, drawY);
+        ctx.lineTo(pos.x, drawY + 5 * spriteScale * scale);
+        ctx.lineTo(pos.x - 4 * spriteScale * scale, drawY);
         ctx.closePath();
         ctx.fill();
         
         ctx.shadowBlur = 0;
-
-        // Nom de l'entité
-        ctx.fillStyle = 'white';
-        ctx.font = '600 11px "Inter", sans-serif';
-        ctx.textAlign = 'center';
+        ctx.fillStyle = isMe ? '#00f2ff' : 'white';
+        ctx.font = `${isMe ? 800 : 600} ${Math.max(6, 11 * scale)}px "Inter", sans-serif`;
+        ctx.textAlign = "center";
         
-        // Si c'est le joueur, on le met en évidence
-        if (isMe) {
-            ctx.fillStyle = '#00f2ff';
-            ctx.font = '800 12px "Inter", sans-serif';
-        }
-        
-        // Ombre sous le texte pour la lisibilité
         ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 4;
-        ctx.shadowOffsetX = 1;
-        ctx.shadowOffsetY = 1;
-        ctx.fillText(ent.name || "Inconnu", pos.x, drawY - 35);
+        ctx.shadowBlur = 4 * scale;
+        ctx.shadowOffsetX = 1 * scale;
+        ctx.shadowOffsetY = 1 * scale;
+        ctx.fillText(ent.name || "Inconnu", pos.x, drawY - 35 * spriteScale * scale - 5 * scale);
         
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
+
+        this.drawDialogueBubble(ent, pos, drawY);
     }
 
+    drawWorldMap() {
+        if (!this.assets.worldMap.complete) return;
+        const ctx = this.ctx;
+        const scale = 8 * this.zoom;
+        const pos = this.worldToScreen(0, 0);
+        const w = 102400 * scale;
+        const h = 51200 * scale;
+        ctx.save();
+        ctx.drawImage(this.assets.worldMap, pos.x - w / 2, pos.y - h / 2, w, h);
+        ctx.restore();
+    }
+
+    drawVillageMap() {
+        if (!this.assets.villageMap.complete || this.zoom < 0.005) return;
+        const ctx = this.ctx;
+        const scale = 8 * this.zoom;
+        const pos = this.worldToScreen(0, 0);
+        const w = 100 * scale;
+        const h = 80 * scale;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, (this.zoom - 0.005) * 20);
+        ctx.drawImage(this.assets.villageMap, pos.x - w / 2, pos.y - h / 2, w, h);
+        ctx.restore();
+    }
 
     render(bobbing = 0) {
         try {
@@ -297,18 +473,29 @@ export class Renderer {
 
             // Interpolation des positions
             this.interpolate();
+            this.updateCamera();
+            this.pruneDialogueBubbles();
 
-            this.drawMaps();
-            this.drawFloor();
-            this.drawLocations();
+            this.drawWorldMap();
+            this.drawVillageMap();
+            this.drawPlanetLabel();
+            const player = this.interpolatedEntities.get(this.playerId);
+            const floorY = Math.floor(((player && player.y) || 0) / 4) * 4;
+            this.drawFloor(floorY);
+            this.drawLocations(floorY);
 
             // Trier les entités par profondeur
-            const sortedEntities = [...this.entities].sort((a, b) => {
-                const posA = this.interpolatedEntities.get(a.id);
-                const posB = this.interpolatedEntities.get(b.id);
-                if (!posA || !posB) return 0;
-                return (posA.x + posA.y) - (posB.x + posB.y);
-            });
+            const sortedEntities = [...this.entities]
+                .filter((ent) => {
+                    const pos = this.interpolatedEntities.get(ent.id);
+                    return pos && Math.abs(pos.y - floorY) < 2.5;
+                })
+                .sort((a, b) => {
+                    const posA = this.interpolatedEntities.get(a.id);
+                    const posB = this.interpolatedEntities.get(b.id);
+                    if (!posA || !posB) return 0;
+                    return (posA.x + posA.z) - (posB.x + posB.z);
+                });
 
             for (const ent of sortedEntities) {
                 this.drawEntity(ent, bobbing);

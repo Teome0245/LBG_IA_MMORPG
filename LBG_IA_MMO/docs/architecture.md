@@ -169,6 +169,7 @@ Recommandation pour **cette** machine : **déploiement via systemd** (voir `../.
 - `fusion_spec_monde.md` / `fusion_pont_jeu_ia.md` : sources de vérité monde et pont IA
 - `vision_projet.md` : vision globale / agents / auto‑évolution
 - `lyra.md` : jauges & IA incarnée
+- `opengame.md` : forge de prototypes OpenGame orchestrée (`prototype_game` / `agent.opengame`)
 - `plan_mmorpg.md` : plan serveur MMO (modules cibles)
 - `ops_devops_audit.md` : VM — audit DevOps JSONL (logrotate), rotation du jeton d’approbation
 - `ops_vm_user.md` : compte **`lbg`** (sudoer, SSH, `User=` systemd, `/opt`, secrets `640 root:lbg`)

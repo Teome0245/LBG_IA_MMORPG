@@ -315,17 +315,27 @@ def _resolve_profile(context: dict[str, Any]) -> str:
 def _resolve_route(context: dict[str, Any]) -> dict[str, str]:
     target_raw = context.get("dialogue_target")
     target = str(target_raw).strip().lower() if isinstance(target_raw, str) else "local"
-    if target not in ("local", "remote"):
+    if target not in ("local", "remote", "fast"):
         target = "local"
 
     allow_remote = _is_truthy(os.environ.get("LBG_DIALOGUE_REMOTE_ENABLED", "0"))
+    allow_fast = _is_truthy(os.environ.get("LBG_DIALOGUE_FAST_ENABLED", "0"))
+    if target == "fast":
+        fast_base = os.environ.get("LBG_DIALOGUE_FAST_BASE_URL", "").strip().rstrip("/")
+        fast_model = os.environ.get("LBG_DIALOGUE_FAST_MODEL", "").strip()
+        fast_api_key = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_FAST_API_KEY", ""))
+        if allow_fast and fast_base and fast_model:
+            return {"target": "fast", "base_url": fast_base, "model": fast_model, "api_key": fast_api_key}
+        # Fallback coût/latence contrôlé : si le remote standard est activé, il peut servir de voie rapide.
+        target = "remote" if allow_remote else "local"
+
     if target == "remote" and not allow_remote:
         target = "local"
 
     if target == "remote":
         base = os.environ.get("LBG_DIALOGUE_REMOTE_BASE_URL", "").strip().rstrip("/")
         model = os.environ.get("LBG_DIALOGUE_REMOTE_MODEL", "").strip()
-        api_key = os.environ.get("LBG_DIALOGUE_REMOTE_API_KEY", "").strip()
+        api_key = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_REMOTE_API_KEY", ""))
         if base and model:
             return {"target": "remote", "base_url": base, "model": model, "api_key": api_key}
         # fallback sûr vers local si remote partiellement configuré
@@ -454,8 +464,18 @@ def _timeout_s() -> float:
 
 
 def _api_key() -> str | None:
-    k = os.environ.get("LBG_DIALOGUE_LLM_API_KEY", "").strip()
+    k = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_LLM_API_KEY", ""))
     return k or None
+
+
+def _resolve_secret_ref(raw: str | None) -> str:
+    """Autorise `FOO="${BAR}"` dans EnvironmentFile systemd sans dupliquer le secret."""
+    s = (raw or "").strip()
+    if len(s) >= 4 and s.startswith("${") and s.endswith("}"):
+        key = s[2:-1].strip()
+        if key:
+            return os.environ.get(key, "").strip()
+    return s
 
 
 def _truncate(s: str, max_len: int) -> str:

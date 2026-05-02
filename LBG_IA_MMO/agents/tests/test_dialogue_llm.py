@@ -35,6 +35,46 @@ def test_default_ollama_when_llm_not_disabled(monkeypatch: pytest.MonkeyPatch) -
     assert is_configured() is True
 
 
+def test_resolve_route_fast_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_ENABLED", "1")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_BASE_URL", "https://api.groq.com/openai/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_MODEL", "llama-3.1-8b-instant")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_API_KEY", "secret")
+
+    route = mod._resolve_route({"dialogue_target": "fast"})
+    assert route["target"] == "fast"
+    assert route["base_url"] == "https://api.groq.com/openai/v1"
+    assert route["model"] == "llama-3.1-8b-instant"
+
+
+def test_resolve_route_fast_provider_resolves_api_key_reference(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    monkeypatch.setenv("GROQ_API_KEY", "secret-from-env")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_ENABLED", "1")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_BASE_URL", "https://api.groq.com/openai/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_MODEL", "llama-3.1-8b-instant")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_API_KEY", "${GROQ_API_KEY}")
+
+    route = mod._resolve_route({"dialogue_target": "fast"})
+    assert route["api_key"] == "secret-from-env"
+
+
+def test_resolve_route_fast_falls_back_to_local(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    monkeypatch.delenv("LBG_DIALOGUE_FAST_ENABLED", raising=False)
+    monkeypatch.delenv("LBG_DIALOGUE_FAST_BASE_URL", raising=False)
+    monkeypatch.delenv("LBG_DIALOGUE_FAST_MODEL", raising=False)
+    monkeypatch.setenv("LBG_DIALOGUE_REMOTE_ENABLED", "0")
+
+    route = mod._resolve_route({"dialogue_target": "fast"})
+    assert route["target"] == "local"
+    assert route["base_url"] == base_url()
+
+
 def test_build_system_prompt_includes_scene() -> None:
     s = build_system_prompt(
         "Marc",

@@ -133,6 +133,9 @@ def invoke(p: InvokeIn) -> dict[str, object]:
             lines = _split_reply_lines(reply_text)
             cache_hit = p.context.get("_cache_hit") is True
             world_action = p.context.get("_world_action") if isinstance(p.context, dict) else None
+            trace = p.context.get("_dialogue_trace") if isinstance(p.context, dict) else None
+            trace_model = trace.get("model") if isinstance(trace, dict) else None
+            trace_target = trace.get("target") if isinstance(trace, dict) else None
             commit = None
             if isinstance(world_action, dict):
                 npc_id = (p.context.get("world_npc_id") if isinstance(p.context, dict) else None)
@@ -168,11 +171,12 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                 "meta": {
                     "stub": False,
                     "llm": True,
-                    "model": dialogue_llm.model_name(),
+                    "model": trace_model if isinstance(trace_model, str) and trace_model.strip() else dialogue_llm.model_name(),
+                    "target": trace_target if isinstance(trace_target, str) and trace_target.strip() else None,
                     "agent_version": app.version,
                     "cache_hit": cache_hit,
                     "world_action": world_action if isinstance(world_action, dict) else None,
-                    "trace": p.context.get("_dialogue_trace") if isinstance(p.context, dict) else None,
+                    "trace": trace,
                 },
             }
         except Exception as e:

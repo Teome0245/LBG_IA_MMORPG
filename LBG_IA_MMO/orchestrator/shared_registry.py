@@ -28,6 +28,11 @@ capability_registry = InMemoryCapabilityRegistry(
             routed_to="agent.desktop",
             description="Desktop tools (hybride) — exécution via agent Windows allowlist (UI/web/mail) derrière approval",
         ),
+        CapabilitySpec(
+            name="prototype_game",
+            routed_to="agent.opengame",
+            description="Forge OpenGame expérimentale — génération de prototypes gameplay/UX en sandbox",
+        ),
         CapabilitySpec(name="unknown", routed_to="agent.fallback", description="Fallback handler"),
     ]
 )

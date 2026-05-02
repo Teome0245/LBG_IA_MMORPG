@@ -32,6 +32,7 @@ def test_route_intent_forces_dialogue_when_npc_name_present() -> None:
     assert data["intent"] == "npc_dialogue"
     assert data["routed_to"] == "agent.dialogue"
     assert data["output"]["capability"] == "npc_dialogue"
+    assert "dialogue_target" in data["output"].get("context_keys", [])
 
 
 def test_route_intent_prefers_quest_even_with_npc_name() -> None:
@@ -103,6 +104,32 @@ def test_route_intent_desktop_action_forces_desktop_control() -> None:
     assert data["routed_to"] == "agent.desktop"
     out = data["output"]
     assert out["capability"] == "desktop_control"
+
+
+def test_route_intent_opengame_action_forces_prototype_game() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/route",
+        json={
+            "actor_id": "svc:opengame",
+            "text": "Ignoré si opengame_action présent",
+            "context": {
+                "opengame_action": {
+                    "kind": "generate_prototype",
+                    "project_name": "snake",
+                    "prompt": "Build a Snake prototype",
+                }
+            },
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["intent"] == "prototype_game"
+    assert data["routed_to"] == "agent.opengame"
+    out = data["output"]
+    assert out["capability"] == "prototype_game"
+    assert out.get("agent") == "opengame_executor"
+    assert out.get("outcome") == "dry_run"
 
 
 def test_route_intent_world_action_forces_world_aid() -> None:

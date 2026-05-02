@@ -62,6 +62,7 @@ class StaticObstacle:
 
 MAX_SPEED_UNITS_PER_S = 15.0
 BOUNDS_HALF = 60000.0 # Augmenté pour le continent (102km)
+NPC_CONVERSATION_RESUME_DELAY_S = 120.0
 
 
 class GameState:
@@ -384,7 +385,7 @@ class GameState:
             self._npc_commit_flags[npc_id] = cur
         return True, "accepted"
 
-    def freeze_npc_and_face(self, npc_id: str, player_id: str, duration: float = 200.0) -> None:
+    def freeze_npc_and_face(self, npc_id: str, player_id: str, duration: float = NPC_CONVERSATION_RESUME_DELAY_S) -> None:
         npc = self.get_npc(npc_id)
         player = self.entities.get(player_id)
         if not npc or not player:

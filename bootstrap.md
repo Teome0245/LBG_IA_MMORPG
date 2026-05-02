@@ -93,6 +93,12 @@ Depuis `LBG_IA_MMO/` :
 bash infra/ci/test_pytest.sh
 ```
 
+### Forge OpenGame (prototypes)
+
+La capability `prototype_game` / `agent.opengame` est documentée dans `LBG_IA_MMO/docs/opengame.md`.
+
+Par défaut, elle reste en dry-run. Pour générer réellement un prototype, il faut installer la CLI OpenGame hors monorepo, configurer `LBG_OPENGAME_*`, puis activer explicitement `LBG_OPENGAME_DRY_RUN=0` et `LBG_OPENGAME_EXECUTION_ENABLED=1`.
+
 **Prod LAN (trois VM)** — après déploiement et secrets : smoke SSH + systemd + Ollama sur **110** :
 
 ```bash

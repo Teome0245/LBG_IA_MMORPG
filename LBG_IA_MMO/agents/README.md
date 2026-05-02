@@ -128,6 +128,15 @@ Le backend applique une **whitelist** et des **limites** avant d’appeler l’H
 | `LBG_AGENT_PM_URL` | Si définie (ex. `http://127.0.0.1:8055`), le handler **`agent.pm`** envoie un `POST {url}/invoke`. Sinon : stub local **`pm_stub`** (brief jalons/risques déterministe). |
 | `LBG_AGENT_PM_TIMEOUT` | Secondes pour la réponse HTTP (défaut **45**). |
 | `LBG_AGENT_DESKTOP_URL` | Si définie (ex. `http://192.168.0.50:8060`), le handler **`agent.desktop`** envoie un `POST {url}/invoke`. Sinon : exécution locale **uniquement** (utile dev), mais en prod on vise un worker Windows. |
+| `LBG_OPENGAME_SANDBOX_DIR` | Racine des prototypes OpenGame (défaut `generated_games/opengame`). Toutes les cibles sont résolues sous ce dossier. |
+| `LBG_OPENGAME_DRY_RUN` | Dry-run OpenGame (`1` par défaut si non défini). Mettre `0` pour autoriser une tentative réelle. |
+| `LBG_OPENGAME_EXECUTION_ENABLED` | Garde supplémentaire pour l’exécution réelle (`0` par défaut). Doit valoir `1` en plus du dry-run désactivé. |
+| `LBG_OPENGAME_BIN` | Binaire CLI à lancer (défaut `opengame`, résolu via `PATH`). |
+| `LBG_OPENGAME_TIMEOUT_S` | Timeout d’exécution CLI, en secondes (défaut **900**, borné 30..7200). |
+| `LBG_OPENGAME_MAX_OUTPUT_CHARS` | Taille max capturée pour stdout/stderr dans la réponse (défaut **12000**). |
+| `LBG_OPENGAME_APPROVAL_TOKEN` | Si défini, une exécution réelle exige `context.opengame_approval`. |
+| `LBG_OPENGAME_AUDIT_LOG_PATH` | Fichier JSONL optionnel pour l’audit `agents.opengame.audit`. |
+| `LBG_OPENGAME_AUDIT_STDOUT` | Si `0` / `false`, coupe l’audit stdout OpenGame. |
 | `LBG_PM_PLAN_PATH` | Chemin absolu ou relatif vers le markdown du plan (prioritaire sur les chemins par défaut VM/dev). |
 | `LBG_PM_MILESTONES_MAX` | Nombre max de lignes datées conservées dans `brief.milestones` (défaut **8**, plafonné à 30). |
 | `LBG_PM_TASKS_MAX` | Nombre max d’entrées dans `brief.tasks` (défaut **12**, plafonné à 40). |
@@ -140,6 +149,43 @@ Le backend applique une **whitelist** et des **limites** avant d’appeler l’H
 - **Contexte** : `context.agent_site` (ex. `"core"`, `"mmo"`, `"dev"`) peut être propagé pour **étiqueter** la réponse (stub PM, futures métriques) ; le routage reste **déterministe** côté orchestrateur (`project_pm`, `devops_probe`, etc.).
 
 Unité systemd core : **`lbg-agent-pm.service`** (port **8055**), installée par **`deploy_vm.sh`** rôle **core** avec les autres agents HTTP.
+
+### OpenGame — forge de prototypes (`agent.opengame`)
+
+Capability orchestrateur : **`prototype_game`** → handler **`agent.opengame`**. Par design, on exige une action structurée via `context.opengame_action` ; un texte seul ne déclenche pas de génération.
+
+Action MVP :
+- `generate_prototype` : `{"kind":"generate_prototype","project_name":"snake","prompt":"Build a Snake clone"}`
+
+Garde-fous :
+- **Sandbox obligatoire** : cible sous `LBG_OPENGAME_SANDBOX_DIR`.
+- **Dry-run par défaut** : aucun appel CLI OpenGame tant que `LBG_OPENGAME_DRY_RUN` n’est pas à `0`.
+- **Double verrou d’exécution** : exécution réelle seulement si `LBG_OPENGAME_DRY_RUN=0` et `LBG_OPENGAME_EXECUTION_ENABLED=1`.
+- **Dossier cible vide** : l’agent refuse un `project_name` dont le dossier existe déjà avec du contenu.
+- **Pas de `--yolo`** : la commande utilise `--approval-mode auto-edit`, sans shell libre OpenGame.
+- **Pas de modification automatique du cœur MMO** : les prototypes restent isolés et sont promus manuellement.
+- **Audit JSONL/stdout** : événement `agents.opengame.audit` avec `trace_id`, `outcome`, `dry_run`, `sandbox_dir`, `target_dir`.
+- **Approval optionnelle** : si `LBG_OPENGAME_APPROVAL_TOKEN` est défini, fournir `context.opengame_approval`.
+
+Contrat de sortie minimal :
+
+```json
+{
+  "capability": "prototype_game",
+  "agent": "opengame_executor",
+  "handler": "opengame",
+  "ok": true,
+  "outcome": "dry_run",
+  "project_name": "snake",
+  "sandbox_dir": "generated_games/opengame",
+  "target_dir": "generated_games/opengame/snake",
+  "planned": {
+    "tool": "opengame",
+    "command": ["opengame", "-p", "<prompt>", "--approval-mode", "auto-edit"],
+    "timeout_s": 900
+  }
+}
+```
 
 ### DevOps — exécuteur à liste blanche (`agent.devops`)
 
@@ -255,6 +301,10 @@ En prod/LAN, ces valeurs sont en général définies via `/etc/lbg-ia-mmo.env` (
 | `LBG_DIALOGUE_LLM_TIMEOUT` | Secondes (défaut 120). |
 | `LBG_DIALOGUE_LLM_TEMPERATURE` | Défaut 0.7. |
 | `LBG_DIALOGUE_LLM_MAX_TOKENS` | Défaut 512. |
+| `LBG_ORCHESTRATOR_DIALOGUE_TARGET_DEFAULT` | Décision orchestrateur pour les dialogues PNJ sans choix explicite (`fast` par défaut recommandé). |
+| `context.dialogue_target` | `local`, `remote` ou `fast`. Si absent, l’orchestrateur l’injecte pour `agent.dialogue`. |
+| `LBG_DIALOGUE_FAST_ENABLED` | Active le provider rapide explicite pour `dialogue_target=fast`. Si désactivé/incomplet, fallback vers `remote` si activé, sinon `local`. |
+| `LBG_DIALOGUE_FAST_BASE_URL` / `LBG_DIALOGUE_FAST_MODEL` / `LBG_DIALOGUE_FAST_API_KEY` | Provider rapide OpenAI-compatible, typiquement Groq (`https://api.groq.com/openai/v1`, `llama-3.1-8b-instant`). |
 
 **Ollama (machine locale)** : `ollama serve` puis `ollama pull llama3.2`, puis (les exports sont optionnels grâce aux défauts) :
 

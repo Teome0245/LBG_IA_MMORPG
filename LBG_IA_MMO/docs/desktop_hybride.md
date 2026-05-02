@@ -274,6 +274,63 @@ Exemple (sur Windows, là où tourne le worker `Agent_IA`) :
   -Seed 42
 ```
 
+### Smoke “ComfyUI 2-pass” (terrain puis bâtiments)
+
+Pour un rendu plus contrôlé (style fort sans inventer de bâtiments), exécuter 2 passes :
+- **Pass 1** : stylise terrain/route/végétation (bâtiments gelés via noise mask)
+- **Pass 2** : stylise uniquement les bâtiments (noise mask bâtiments, denoise bas)
+
+Script : `infra/scripts/smoke_comfyui_2pass.ps1`
+
+Exemple :
+
+```powershell
+.\infra\scripts\smoke_comfyui_2pass.ps1 `
+  -BaseUrl "http://127.0.0.1:5005" `
+  -Approval "<TOKEN_SI_ACTIF>" `
+  -WorkflowPass1Path "C:\Agent_IA\workflows\Map_mmo.json" `
+  -WorkflowPass2Path "C:\Agent_IA\workflows\Map_mmo_pass2_buildings.json" `
+  -ComfyInputDir "C:\Users\sdesh\ComfyUI\input" `
+  -Pass1OutputAsInputName "bourg.png" `
+  -SeedPass1 42 `
+  -SeedPass2 43
+```
+
+#### État (2026-05-01) — pipeline “fond de village” + exécution repo
+
+Objectif :
+- Approcher un rendu “carte peinte” (référence visuelle) **sans casser l’échelle** ni inventer des bâtiments.
+- Orchestrer l’exécution **depuis WSL/repo** via le worker Windows (`Agent_IA`) et les actions ComfyUI :
+  `comfyui_queue`, `comfyui_patch_and_queue`, `comfyui_history`, `comfyui_view`.
+
+Ce qui est prêt côté repo :
+- `infra/scripts/smoke_comfyui.ps1` : 1 passe (queue → poll history → download).
+- `infra/scripts/smoke_comfyui_2pass.ps1` : 2 passes (pass1 → download → copie vers `ComfyUI\input\bourg.png` → pass2 → download final).
+- Workflows API JSON (exemples utilisés) :
+  - `Boite à idées/Map_mmo.json` (pass 1 : styliser terrain/route/végétation, bâtiments gelés via noise mask)
+  - `Boite à idées/Map_mmo_pass2_buildings.json` (pass 2 : styliser les bâtiments uniquement, denoise bas)
+
+Contraintes importantes découvertes :
+- **PowerShell depuis WSL** : utiliser `\` (bash) et pas les backticks (PowerShell). Exemple correct :
+  - `/mnt/c/.../powershell.exe ... -File "C:\Agent_IA\smoke_comfyui_2pass.ps1" -BaseUrl "http://192.168.0.10:5005" ...`
+- **Approval token** : `healthz` montre `approval_gate_active: true` → il faut fournir `-Approval` égal à `LBG_DESKTOP_APPROVAL_TOKEN`.
+- **Encodage JSON** : FastAPI peut refuser un body encodé “odd” par PowerShell → les scripts envoient maintenant le body en bytes UTF‑8.
+- **IP-Adapter preset** : la valeur doit être exactement une entrée du dropdown (ex. `STANDARD (medium strength)`), sinon ComfyUI refuse (`value_not_in_list`).
+- **LoadImage** : ComfyUI refuse si un fichier référencé n’existe pas dans `ComfyUI\input` (ex. `roads_edit.png`) → valider présence ou retomber sur `roads.png`.
+- **ImageToMask** : ComfyUI demande l’input `channel` (ex. `red`) sinon `required_input_missing`.
+
+État d’exécution (dernier test) :
+- `comfyui_patch_and_queue` fonctionne : on obtient un `prompt_id(pass1)`.
+- Blocage restant : le script 2-pass plante lors de l’extraction du résultat `history` (“La propriété `Name` est introuvable…”).
+  - Le rendu ComfyUI continue côté Windows (progress 5%…10%…), donc le bug est dans le parsing PowerShell, pas dans ComfyUI.
+
+Prochaine action (à faire au prochain créneau) :
+- Finir le durcissement du parsing `comfyui_history` dans `smoke_comfyui_2pass.ps1` :
+  - dumper la réponse brute (shape `history`)
+  - extraction robuste du premier `images[0]` sans accès `.Name` fragile
+  - relancer la 2‑pass jusqu’au téléchargement final.
+
+
 ## `desktop.env` (config hot-reload)
 
 Sur Windows, la configuration est lue depuis `C:\Agent_IA\desktop.env` (chemin donné par `LBG_DESKTOP_ENV_PATH`).

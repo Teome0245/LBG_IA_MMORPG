@@ -28,6 +28,7 @@ from lbg_agents.pm_stub import run_pm_stub
 from lbg_agents.quests_stub import run_quests_stub
 from lbg_agents.world_stub import run_world_stub
 from lbg_agents.desktop_executor import run_desktop_action
+from lbg_agents.opengame_executor import run_opengame_action
 
 
 def _dialogue_http_timeout() -> httpx.Timeout:
@@ -346,6 +347,27 @@ def _desktop(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any
     return run_desktop_action(actor_id=actor_id, text=text, action=raw, context=context)
 
 
+def _opengame(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
+    """
+    Forge OpenGame : action structurée obligatoire.
+
+    Cela évite qu'une phrase ambiguë déclenche une génération de code.
+    """
+    raw = context.get("opengame_action")
+    if not isinstance(raw, dict):
+        return {
+            "agent": "opengame_dispatch",
+            "handler": "opengame",
+            "actor_id": actor_id,
+            "request_text": text,
+            "ok": False,
+            "outcome": "bad_request",
+            "error": "Aucune opengame_action dans context.",
+            "hint": 'Ex. {"opengame_action":{"kind":"generate_prototype","project_name":"snake","prompt":"Build a Snake clone"}}',
+        }
+    return run_opengame_action(actor_id=actor_id, text=text, action=raw, context=context)
+
+
 def _fallback(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
     return _echo("fallback", actor_id, text, context)
 
@@ -361,6 +383,7 @@ _HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
     "agent.pm": _pm,
     "agent.devops": _devops,
     "agent.desktop": _desktop,
+    "agent.opengame": _opengame,
     "agent.world": _world,
     "agent.fallback": _fallback,
 }

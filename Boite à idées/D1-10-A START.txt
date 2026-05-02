@@ -1,0 +1,2473 @@
+/* D1-10-A START */
+[
+  {
+    "race": "Pykrels",
+    "size_cm": { "min": 20, "max": 30 },
+    "body_type": "léger",
+    "biomes": ["forêts", "clairières"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Petits humanoïdes sylvestres à fourrure douce, mouvements silencieux.",
+    "abilities": ["furtivité", "agilité", "communication animale"],
+    "weaknesses": ["feu", "fragilité"],
+    "mmo_role": "éclaireur",
+    "ai": {
+      "behavior": "curieux",
+      "goals": ["protéger la forêt", "observer les intrus"],
+      "routines": ["patrouille silencieuse", "interaction animale"]
+    }
+  },
+  {
+    "race": "K'Miri",
+    "size_cm": { "min": 25, "max": 40 },
+    "body_type": "léger",
+    "biomes": ["désert"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Insectoïdes miniatures à carapace sableuse réfléchissante.",
+    "abilities": ["camouflage", "vision thermique", "creusage"],
+    "weaknesses": ["froid"],
+    "mmo_role": "espion",
+    "ai": {
+      "behavior": "furtif",
+      "goals": ["observer", "rapporter"],
+      "routines": ["camouflage", "surveillance de dunes"]
+    }
+  },
+  {
+    "race": "Tinklings",
+    "size_cm": { "min": 30, "max": 50 },
+    "body_type": "léger",
+    "biomes": ["usines", "villes"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Petits gobelins ingénieurs hyperactifs.",
+    "abilities": ["ingénierie", "réparation", "bricolage"],
+    "weaknesses": ["distraction"],
+    "mmo_role": "artisan",
+    "ai": {
+      "behavior": "hyperactif",
+      "goals": ["réparer", "inventer"],
+      "routines": ["assemblage", "collecte de pièces"]
+    }
+  },
+  {
+    "race": "Fae-Lumes",
+    "size_cm": { "min": 35, "max": 45 },
+    "body_type": "léger",
+    "biomes": ["clairières", "cieux"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Petites créatures lumineuses flottant légèrement.",
+    "abilities": ["lumière", "soin", "lévitation"],
+    "weaknesses": ["obscurité totale"],
+    "mmo_role": "guérisseur",
+    "ai": {
+      "behavior": "bienveillant",
+      "goals": ["soigner", "protéger"],
+      "routines": ["illumination", "soin de blessés"]
+    }
+  },
+  {
+    "race": "Murriks",
+    "size_cm": { "min": 40, "max": 60 },
+    "body_type": "léger",
+    "biomes": ["forêts", "ruines"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Rongeurs bipèdes intelligents organisés en clans.",
+    "abilities": ["creusage", "pièges", "agilité"],
+    "weaknesses": ["faible force"],
+    "mmo_role": "saboteur",
+    "ai": {
+      "behavior": "nerveux",
+      "goals": ["protéger le clan"],
+      "routines": ["pose de pièges", "tunnels"]
+    }
+  },
+  {
+    "race": "Skreel",
+    "size_cm": { "min": 20, "max": 25 },
+    "body_type": "léger",
+    "biomes": ["grottes", "ruines"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Mini-chauves-souris humanoïdes utilisant un sonar précis.",
+    "abilities": ["sonar", "furtivité", "vol court"],
+    "weaknesses": ["lumière forte"],
+    "mmo_role": "espion nocturne",
+    "ai": {
+      "behavior": "furtif",
+      "goals": ["surveiller", "guider les ombres"],
+      "routines": ["écholocation", "vol silencieux"]
+    }
+  },
+  {
+    "race": "Pebblys",
+    "size_cm": { "min": 30, "max": 40 },
+    "body_type": "compact",
+    "biomes": ["montagnes"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Golems miniatures de pierre, lourds et résistants.",
+    "abilities": ["résistance", "stabilité"],
+    "weaknesses": ["eau"],
+    "mmo_role": "tank miniature",
+    "ai": {
+      "behavior": "lent",
+      "goals": ["protéger les sentiers"],
+      "routines": ["patrouille lente", "blocage de passages"]
+    }
+  },
+  {
+    "race": "Nymphelis",
+    "size_cm": { "min": 40, "max": 55 },
+    "body_type": "léger",
+    "biomes": ["forêts"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Fées humanoïdes végétales contrôlant fleurs et spores.",
+    "abilities": ["magie végétale", "soin"],
+    "weaknesses": ["feu"],
+    "mmo_role": "support",
+    "ai": {
+      "behavior": "harmonieux",
+      "goals": ["protéger la flore"],
+      "routines": ["croissance végétale", "soin"]
+    }
+  },
+  {
+    "race": "Zik'Tar",
+    "size_cm": { "min": 50, "max": 60 },
+    "body_type": "léger",
+    "biomes": ["désert", "ruche"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Mini-guerriers insectoïdes disciplinés.",
+    "abilities": ["combat rapide", "coordination"],
+    "weaknesses": ["froid"],
+    "mmo_role": "guerrier léger",
+    "ai": {
+      "behavior": "discipliné",
+      "goals": ["défendre la ruche"],
+      "routines": ["patrouille", "entraînement"]
+    }
+  },
+  {
+    "race": "Plimps",
+    "size_cm": { "min": 25, "max": 35 },
+    "body_type": "léger",
+    "biomes": ["marécages", "rivières"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Petits amphibiens bondissants.",
+    "abilities": ["saut", "nage", "camouflage"],
+    "weaknesses": ["sécheresse"],
+    "mmo_role": "éclaireur amphibie",
+    "ai": {
+      "behavior": "vif",
+      "goals": ["explorer", "guider"],
+      "routines": ["sauts", "plongées rapides"]
+    }
+  },
+
+  /* … Races 11 → 33 continues … */
+  {
+    "race": "Brumelins",
+    "size_cm": { "min": 60, "max": 80 },
+    "body_type": "léger",
+    "biomes": ["marais"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Humanoïdes brumeux glissant silencieusement.",
+    "abilities": ["dissimulation", "lévitation faible"],
+    "weaknesses": ["vent"],
+    "mmo_role": "espion spectral",
+    "ai": {
+      "behavior": "furtif",
+      "goals": ["surveiller les intrus"],
+      "routines": ["errance brumeuse", "observation"]
+    }
+  },
+  {
+    "race": "Korr'Dens",
+    "size_cm": { "min": 70, "max": 100 },
+    "body_type": "moyen",
+    "biomes": ["désert"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Reptiliens agressifs à peau écailleuse rouge.",
+    "abilities": ["résistance chaleur", "morsure venimeuse"],
+    "weaknesses": ["froid"],
+    "mmo_role": "guerrier léger",
+    "ai": {
+      "behavior": "agressif",
+      "goals": ["défendre le territoire"],
+      "routines": ["embuscades", "patrouilles"]
+    }
+  },
+  {
+    "race": "Flitwings",
+    "size_cm": { "min": 80, "max": 110 },
+    "body_type": "léger",
+    "biomes": ["falaises"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Humanoïdes ailés aux plumes colorées.",
+    "abilities": ["vol court", "vision perçante"],
+    "weaknesses": ["fragilité osseuse"],
+    "mmo_role": "éclaireur aérien",
+    "ai": {
+      "behavior": "vigilant",
+      "goals": ["surveiller les hauteurs"],
+      "routines": ["vols courts", "observation"]
+    }
+  },
+  {
+    "race": "Mogruls",
+    "size_cm": { "min": 90, "max": 120 },
+    "body_type": "robuste",
+    "biomes": ["montagnes"],
+    "planet": "Aetherion",
+    "faction": "Indépendants",
+    "morphology": "Humanoïdes trapus et robustes, mineurs infatigables.",
+    "abilities": ["force", "minage"],
+    "weaknesses": ["lenteur"],
+    "mmo_role": "artisan / mineur",
+    "ai": {
+      "behavior": "travailleur",
+      "goals": ["extraire des minerais"],
+      "routines": ["minage", "transport de roches"]
+    }
+  },
+  {
+    "race": "Sélénites",
+    "size_cm": { "min": 60, "max": 90 },
+    "body_type": "léger",
+    "biomes": ["clairières nocturnes"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Humanoïdes lunaires à peau pâle luminescente.",
+    "abilities": ["magie lunaire", "furtivité"],
+    "weaknesses": ["soleil"],
+    "mmo_role": "mage nocturne",
+    "ai": {
+      "behavior": "calme",
+      "goals": ["protéger la nuit"],
+      "routines": ["rituels lunaires", "patrouilles nocturnes"]
+    }
+  },
+  {
+    "race": "Glim'Feys",
+    "size_cm": { "min": 70, "max": 90 },
+    "body_type": "léger",
+    "biomes": ["clairières"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Esprits lumineux translucides flottant légèrement au-dessus du sol.",
+    "abilities": ["lumière", "apaisement émotionnel"],
+    "weaknesses": ["obscurité"],
+    "mmo_role": "support magique",
+    "ai": {
+      "behavior": "pacifique",
+      "goals": ["apaiser les conflits", "protéger les clairières"],
+      "routines": ["flottaison", "rituels lumineux"]
+    }
+  },
+  {
+    "race": "Thornlings",
+    "size_cm": { "min": 60, "max": 80 },
+    "body_type": "léger",
+    "biomes": ["forêts"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Humanoïdes végétaux couverts d'épines flexibles.",
+    "abilities": ["épines", "camouflage végétal"],
+    "weaknesses": ["feu"],
+    "mmo_role": "défenseur naturel",
+    "ai": {
+      "behavior": "protecteur",
+      "goals": ["défendre les jeunes pousses"],
+      "routines": ["camouflage", "patrouille forestière"]
+    }
+  },
+  {
+    "race": "Mire'Crawlers",
+    "size_cm": { "min": 50, "max": 70 },
+    "body_type": "léger",
+    "biomes": ["marécages"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Créatures amphibies rampantes à peau visqueuse.",
+    "abilities": ["camouflage", "nage rapide"],
+    "weaknesses": ["sécheresse"],
+    "mmo_role": "éclaireur",
+    "ai": {
+      "behavior": "furtif",
+      "goals": ["surveiller les marais"],
+      "routines": ["immersion", "embuscades silencieuses"]
+    }
+  },
+  {
+    "race": "Shardlings",
+    "size_cm": { "min": 40, "max": 60 },
+    "body_type": "cristallin",
+    "biomes": ["glace", "grottes"],
+    "planet": "Cryostell",
+    "faction": "Indépendants",
+    "morphology": "Humanoïdes cristallins réfractant la lumière.",
+    "abilities": ["lumière", "résistance physique"],
+    "weaknesses": ["vibrations"],
+    "mmo_role": "mage cristallin",
+    "ai": {
+      "behavior": "stoïque",
+      "goals": ["protéger les cavernes"],
+      "routines": ["résonance lumineuse", "patrouille lente"]
+    }
+  },
+  {
+    "race": "Emberlings",
+    "size_cm": { "min": 30, "max": 50 },
+    "body_type": "léger",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Petits êtres de braise vivante.",
+    "abilities": ["feu", "chaleur"],
+    "weaknesses": ["eau"],
+    "mmo_role": "mage du feu",
+    "ai": {
+      "behavior": "ardent",
+      "goals": ["entretenir les flammes"],
+      "routines": ["danse de braises", "chauffage de fissures"]
+    }
+  },
+  {
+    "race": "Virelians",
+    "size_cm": { "min": 100, "max": 120 },
+    "body_type": "souple",
+    "biomes": ["forêts", "jungles"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Humanoïdes végétaux souples et rapides.",
+    "abilities": ["camouflage", "photosynthèse"],
+    "weaknesses": ["feu"],
+    "mmo_role": "éclaireur / guérisseur",
+    "ai": {
+      "behavior": "harmonieux",
+      "goals": ["maintenir l'équilibre végétal"],
+      "routines": ["soin des plantes", "patrouilles silencieuses"]
+    }
+  },
+  {
+    "race": "Krel'Noks",
+    "size_cm": { "min": 110, "max": 130 },
+    "body_type": "moyen",
+    "biomes": ["marécages"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Reptiliens amphibies agressifs.",
+    "abilities": ["nage", "morsure puissante"],
+    "weaknesses": ["lenteur sur terre"],
+    "mmo_role": "guerrier amphibie",
+    "ai": {
+      "behavior": "territorial",
+      "goals": ["défendre les marais"],
+      "routines": ["embuscades aquatiques", "patrouilles"]
+    }
+  },
+  {
+    "race": "Lumisprites",
+    "size_cm": { "min": 90, "max": 110 },
+    "body_type": "léger",
+    "biomes": ["clairières", "cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Petits humanoïdes lumineux aux ailes éthérées.",
+    "abilities": ["lumière", "lévitation"],
+    "weaknesses": ["obscurité totale"],
+    "mmo_role": "mage de lumière",
+    "ai": {
+      "behavior": "joyeux",
+      "goals": ["illuminer les sanctuaires"],
+      "routines": ["danses lumineuses", "patrouilles aériennes"]
+    }
+  },
+  {
+    "race": "Rask'Mogs",
+    "size_cm": { "min": 110, "max": 140 },
+    "body_type": "robuste",
+    "biomes": ["montagnes"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Humanoïdes massifs à peau rocheuse.",
+    "abilities": ["force", "résistance"],
+    "weaknesses": ["lenteur"],
+    "mmo_role": "tank",
+    "ai": {
+      "behavior": "stoïque",
+      "goals": ["protéger les mines"],
+      "routines": ["garde statique", "surveillance"]
+    }
+  },
+  {
+    "race": "Aer'Lins",
+    "size_cm": { "min": 120, "max": 150 },
+    "body_type": "léger",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes ailés gracieux.",
+    "abilities": ["vol", "vision longue"],
+    "weaknesses": ["fragilité osseuse"],
+    "mmo_role": "archer aérien",
+    "ai": {
+      "behavior": "vigilant",
+      "goals": ["protéger les îles flottantes"],
+      "routines": ["patrouilles aériennes", "surveillance"]
+    }
+  },
+  {
+    "race": "Myr'Gols",
+    "size_cm": { "min": 130, "max": 160 },
+    "body_type": "moyen",
+    "biomes": ["déserts", "ruches"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Insectoïdes travailleurs organisés en castes.",
+    "abilities": ["construction", "force"],
+    "weaknesses": ["dépendance à la ruche"],
+    "mmo_role": "ouvrier",
+    "ai": {
+      "behavior": "discipliné",
+      "goals": ["bâtir", "renforcer la ruche"],
+      "routines": ["transport", "construction"]
+    }
+  },
+  {
+    "race": "Sylphari",
+    "size_cm": { "min": 140, "max": 170 },
+    "body_type": "éthéré",
+    "biomes": ["cieux", "clairières"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes semi-éthérés liés au vent.",
+    "abilities": ["vent", "vitesse"],
+    "weaknesses": ["métal lourd"],
+    "mmo_role": "mage du vent",
+    "ai": {
+      "behavior": "gracieux",
+      "goals": ["harmoniser les vents"],
+      "routines": ["danses aériennes", "rituels du vent"]
+    }
+  },
+  {
+    "race": "Dro'Karrs",
+    "size_cm": { "min": 150, "max": 180 },
+    "body_type": "agile",
+    "biomes": ["jungles"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Reptiliens chasseurs rapides et silencieux.",
+    "abilities": ["traque", "agilité"],
+    "weaknesses": ["froid"],
+    "mmo_role": "chasseur",
+    "ai": {
+      "behavior": "prédateur",
+      "goals": ["traquer les intrus"],
+      "routines": ["embuscades", "patrouilles"]
+    }
+  },
+  {
+    "race": "Arkenites",
+    "size_cm": { "min": 160, "max": 180 },
+    "body_type": "cristallin",
+    "biomes": ["glace", "montagnes"],
+    "planet": "Cryostell",
+    "faction": "Indépendants",
+    "morphology": "Humanoïdes cristallins irradiant une lumière interne.",
+    "abilities": ["résonance", "résistance"],
+    "weaknesses": ["vibrations"],
+    "mmo_role": "mage cristallin",
+    "ai": {
+      "behavior": "solennel",
+      "goals": ["protéger les cavernes"],
+      "routines": ["résonance magique", "méditation"]
+    }
+  },
+  {
+    "race": "Ferrox",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "métallique",
+    "biomes": ["usines", "métropoles"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Humanoïdes métalliques lourds et puissants.",
+    "abilities": ["force", "intégration technologique"],
+    "weaknesses": ["lenteur"],
+    "mmo_role": "tank / garde",
+    "ai": {
+      "behavior": "logique",
+      "goals": ["protéger les installations"],
+      "routines": ["patrouilles", "diagnostics"]
+    }
+  },
+  {
+    "race": "Varkoons",
+    "size_cm": { "min": 150, "max": 190 },
+    "body_type": "robuste",
+    "biomes": ["forêts froides", "toundra"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Caninoïdes bipèdes organisés en meutes, dotés d'un odorat exceptionnel.",
+    "abilities": ["odorat", "endurance", "traque"],
+    "weaknesses": ["chaleur"],
+    "mmo_role": "chasseur / garde",
+    "ai": {
+      "behavior": "loyal",
+      "goals": ["protéger la meute", "surveiller le territoire"],
+      "routines": ["patrouilles", "traque d'intrus"]
+    }
+  },
+  {
+    "race": "Fel'Ranis",
+    "size_cm": { "min": 140, "max": 180 },
+    "body_type": "agile",
+    "biomes": ["jungles"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Félins humanoïdes agiles et silencieux.",
+    "abilities": ["furtivité", "agilité", "vision nocturne"],
+    "weaknesses": ["faible endurance"],
+    "mmo_role": "assassin / éclaireur",
+    "ai": {
+      "behavior": "prédateur",
+      "goals": ["traquer", "protéger la jungle"],
+      "routines": ["embuscades", "déplacements silencieux"]
+    }
+  },
+  {
+    "race": "Drav'Korr",
+    "size_cm": { "min": 160, "max": 200 },
+    "body_type": "robuste",
+    "biomes": ["volcans", "déserts"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Reptiliens cuirassés résistants à la chaleur extrême.",
+    "abilities": ["force", "résistance thermique"],
+    "weaknesses": ["eau"],
+    "mmo_role": "soldat lourd",
+    "ai": {
+      "behavior": "martial",
+      "goals": ["défendre les volcans"],
+      "routines": ["patrouilles", "entraînement"]
+    }
+  },
+  {
+    "race": "Aer'Thyls",
+    "size_cm": { "min": 150, "max": 180 },
+    "body_type": "léger",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes ailés nobles et gracieux.",
+    "abilities": ["vol", "magie céleste"],
+    "weaknesses": ["fragilité"],
+    "mmo_role": "mage céleste",
+    "ai": {
+      "behavior": "noble",
+      "goals": ["protéger les sanctuaires célestes"],
+      "routines": ["vols rituels", "méditation"]
+    }
+  },
+  {
+    "race": "Thal'Morans",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "aquatique",
+    "biomes": ["océans"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Humanoïdes aquatiques élégants dotés d'un sonar naturel.",
+    "abilities": ["nage rapide", "sonar"],
+    "weaknesses": ["faibles sur terre"],
+    "mmo_role": "mage aquatique",
+    "ai": {
+      "behavior": "calme",
+      "goals": ["protéger les récifs"],
+      "routines": ["patrouilles sous-marines", "communication sonar"]
+    }
+  },
+  {
+    "race": "Noctari",
+    "size_cm": { "min": 150, "max": 180 },
+    "body_type": "léger",
+    "biomes": ["ténèbres", "ruines"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Humanoïdes nocturnes aux yeux luminescents.",
+    "abilities": ["magie d'ombre", "furtivité"],
+    "weaknesses": ["lumière"],
+    "mmo_role": "mage d'ombre",
+    "ai": {
+      "behavior": "furtif",
+      "goals": ["étendre l'obscurité"],
+      "routines": ["rituels d'ombre", "patrouilles nocturnes"]
+    }
+  },
+  {
+    "race": "Kryll'Gans",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "massif",
+    "biomes": ["déserts", "ruches"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Insectoïdes massifs à quatre bras.",
+    "abilities": ["force", "multi-armes"],
+    "weaknesses": ["faible intelligence individuelle"],
+    "mmo_role": "soldat d'élite",
+    "ai": {
+      "behavior": "discipliné",
+      "goals": ["protéger la ruche"],
+      "routines": ["entraînement", "patrouilles"]
+    }
+  },
+  {
+    "race": "Solariens",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "lumineux",
+    "biomes": ["clairières", "cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes irradiants nourris par la lumière.",
+    "abilities": ["magie solaire", "régénération lumière"],
+    "weaknesses": ["nuit"],
+    "mmo_role": "paladin solaire",
+    "ai": {
+      "behavior": "vertueux",
+      "goals": ["purifier les ténèbres"],
+      "routines": ["rituels solaires", "patrouilles lumineuses"]
+    }
+  },
+  {
+    "race": "Ferro'Kyns",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "métallique",
+    "biomes": ["usines", "métropoles"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Cyborgs lourds intégrés au réseau tactique.",
+    "abilities": ["analyse", "force"],
+    "weaknesses": ["énergie"],
+    "mmo_role": "soldat lourd",
+    "ai": {
+      "behavior": "calculateur",
+      "goals": ["optimiser la défense"],
+      "routines": ["diagnostics", "patrouilles"]
+    }
+  },
+  {
+    "race": "Glacioris",
+    "size_cm": { "min": 180, "max": 200 },
+    "body_type": "massif",
+    "biomes": ["glace", "toundra"],
+    "planet": "Cryostell",
+    "faction": "Indépendants",
+    "morphology": "Humanoïdes de glace massifs au souffle glacial.",
+    "abilities": ["froid", "force"],
+    "weaknesses": ["chaleur"],
+    "mmo_role": "tank élémentaire",
+    "ai": {
+      "behavior": "stoïque",
+      "goals": ["protéger les terres gelées"],
+      "routines": ["patrouilles lentes", "souffle glacial"]
+    }
+  },
+  {
+    "race": "Runekins",
+    "size_cm": { "min": 150, "max": 180 },
+    "body_type": "moyen",
+    "biomes": ["forêts anciennes"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Humanoïdes gravés de runes vivantes.",
+    "abilities": ["runes", "résistance magique"],
+    "weaknesses": ["anti-magie"],
+    "mmo_role": "mage runique",
+    "ai": {
+      "behavior": "sage",
+      "goals": ["préserver les savoirs anciens"],
+      "routines": ["méditation", "gravure de runes"]
+    }
+  },
+  {
+    "race": "Brakk'Thors",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "massif",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Géants volcaniques à peau de basalte.",
+    "abilities": ["feu", "force"],
+    "weaknesses": ["froid"],
+    "mmo_role": "tank volcanique",
+    "ai": {
+      "behavior": "implacable",
+      "goals": ["protéger les volcans"],
+      "routines": ["marche lente", "projection de chaleur"]
+    }
+  },
+  {
+    "race": "Aqualiths",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "amorphe",
+    "biomes": ["océans", "marais"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Humanoïdes semi-liquides capables de changer légèrement de forme.",
+    "abilities": ["amorphie", "résistance"],
+    "weaknesses": ["électricité"],
+    "mmo_role": "tank aquatique",
+    "ai": {
+      "behavior": "fluide",
+      "goals": ["protéger les eaux"],
+      "routines": ["déplacements ondulants", "absorption de chocs"]
+    }
+  },
+  {
+    "race": "Umbrali",
+    "size_cm": { "min": 150, "max": 180 },
+    "body_type": "éthéré",
+    "biomes": ["ténèbres"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Humanoïdes d’ombre presque intangibles.",
+    "abilities": ["ombre", "furtivité"],
+    "weaknesses": ["lumière"],
+    "mmo_role": "assassin spectral",
+    "ai": {
+      "behavior": "silencieux",
+      "goals": ["étendre l'obscurité"],
+      "routines": ["glissement d'ombre", "embuscades"]
+    }
+  },
+  {
+    "race": "Aer'Calyths",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "léger",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Guerriers ailés rapides, caste martiale céleste.",
+    "abilities": ["vol rapide", "vent"],
+    "weaknesses": ["projectiles lourds"],
+    "mmo_role": "guerrier aérien",
+    "ai": {
+      "behavior": "martial",
+      "goals": ["défendre les sanctuaires célestes"],
+      "routines": ["patrouilles aériennes", "entraînement martial"]
+    }
+  }
+  /* END OF RACE 33 */
+  {
+    "race": "Aer'Thyls",
+    "size_cm": { "min": 150, "max": 180 },
+    "body_type": "léger",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes ailés nobles et gracieux.",
+    "abilities": ["vol", "magie céleste"],
+    "weaknesses": ["fragilité"],
+    "mmo_role": "mage céleste",
+    "ai": {
+      "behavior": "noble",
+      "goals": ["protéger les sanctuaires célestes"],
+      "routines": ["vols rituels", "méditation"]
+    }
+  },
+  {
+    "race": "Thal'Morans",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "aquatique",
+    "biomes": ["océans"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Humanoïdes aquatiques élégants dotés d'un sonar naturel.",
+    "abilities": ["nage rapide", "sonar"],
+    "weaknesses": ["faibles sur terre"],
+    "mmo_role": "mage aquatique",
+    "ai": {
+      "behavior": "calme",
+      "goals": ["protéger les récifs"],
+      "routines": ["patrouilles sous-marines", "communication sonar"]
+    }
+  },
+  {
+    "race": "Noctari",
+    "size_cm": { "min": 150, "max": 180 },
+    "body_type": "léger",
+    "biomes": ["ténèbres", "ruines"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Humanoïdes nocturnes aux yeux luminescents.",
+    "abilities": ["magie d'ombre", "furtivité"],
+    "weaknesses": ["lumière"],
+    "mmo_role": "mage d'ombre",
+    "ai": {
+      "behavior": "furtif",
+      "goals": ["étendre l'obscurité"],
+      "routines": ["rituels d'ombre", "patrouilles nocturnes"]
+    }
+  },
+  {
+    "race": "Kryll'Gans",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "massif",
+    "biomes": ["déserts", "ruches"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Insectoïdes massifs à quatre bras.",
+    "abilities": ["force", "multi-armes"],
+    "weaknesses": ["faible intelligence individuelle"],
+    "mmo_role": "soldat d'élite",
+    "ai": {
+      "behavior": "discipliné",
+      "goals": ["protéger la ruche"],
+      "routines": ["entraînement", "patrouilles"]
+    }
+  },
+  {
+    "race": "Solariens",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "lumineux",
+    "biomes": ["clairières", "cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes irradiants nourris par la lumière.",
+    "abilities": ["magie solaire", "régénération lumière"],
+    "weaknesses": ["nuit"],
+    "mmo_role": "paladin solaire",
+    "ai": {
+      "behavior": "vertueux",
+      "goals": ["purifier les ténèbres"],
+      "routines": ["rituels solaires", "patrouilles lumineuses"]
+    }
+  },
+  {
+    "race": "Ferro'Kyns",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "métallique",
+    "biomes": ["usines", "métropoles"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Cyborgs lourds intégrés au réseau tactique.",
+    "abilities": ["analyse", "force"],
+    "weaknesses": ["énergie"],
+    "mmo_role": "soldat lourd",
+    "ai": {
+      "behavior": "calculateur",
+      "goals": ["optimiser la défense"],
+      "routines": ["diagnostics", "patrouilles"]
+    }
+  },
+  {
+    "race": "Glacioris",
+    "size_cm": { "min": 180, "max": 200 },
+    "body_type": "massif",
+    "biomes": ["glace", "toundra"],
+    "planet": "Cryostell",
+    "faction": "Indépendants",
+    "morphology": "Humanoïdes de glace massifs au souffle glacial.",
+    "abilities": ["froid", "force"],
+    "weaknesses": ["chaleur"],
+    "mmo_role": "tank élémentaire",
+    "ai": {
+      "behavior": "stoïque",
+      "goals": ["protéger les terres gelées"],
+      "routines": ["patrouilles lentes", "souffle glacial"]
+    }
+  },
+  {
+    "race": "Runekins",
+    "size_cm": { "min": 150, "max": 180 },
+    "body_type": "moyen",
+    "biomes": ["forêts anciennes"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Humanoïdes gravés de runes vivantes.",
+    "abilities": ["runes", "résistance magique"],
+    "weaknesses": ["anti-magie"],
+    "mmo_role": "mage runique",
+    "ai": {
+      "behavior": "sage",
+      "goals": ["préserver les savoirs anciens"],
+      "routines": ["méditation", "gravure de runes"]
+    }
+  },
+  {
+    "race": "Brakk'Thors",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "massif",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Géants volcaniques à peau de basalte.",
+    "abilities": ["feu", "force"],
+    "weaknesses": ["froid"],
+    "mmo_role": "tank volcanique",
+    "ai": {
+      "behavior": "implacable",
+      "goals": ["protéger les volcans"],
+      "routines": ["marche lente", "projection de chaleur"]
+    }
+  },
+  {
+    "race": "Aqualiths",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "amorphe",
+    "biomes": ["océans", "marais"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Humanoïdes semi-liquides capables de changer légèrement de forme.",
+    "abilities": ["amorphie", "résistance"],
+    "weaknesses": ["électricité"],
+    "mmo_role": "tank aquatique",
+    "ai": {
+      "behavior": "fluide",
+      "goals": ["protéger les eaux"],
+      "routines": ["déplacements ondulants", "absorption de chocs"]
+    }
+  },
+  {
+    "race": "Umbrali",
+    "size_cm": { "min": 150, "max": 180 },
+    "body_type": "éthéré",
+    "biomes": ["ténèbres"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Humanoïdes d’ombre presque intangibles.",
+    "abilities": ["ombre", "furtivité"],
+    "weaknesses": ["lumière"],
+    "mmo_role": "assassin spectral",
+    "ai": {
+      "behavior": "silencieux",
+      "goals": ["étendre l'obscurité"],
+      "routines": ["glissement d'ombre", "embuscades"]
+    }
+  },
+  {
+    "race": "Aer'Calyths",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "léger",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Guerriers ailés rapides, caste martiale céleste.",
+    "abilities": ["vol rapide", "vent"],
+    "weaknesses": ["projectiles lourds"],
+    "mmo_role": "guerrier aérien",
+    "ai": {
+      "behavior": "martial",
+      "goals": ["défendre les sanctuaires célestes"],
+      "routines": ["patrouilles aériennes", "entraînement martial"]
+    }
+  },
+
+  /* --- RACES 46 → 66 --- */
+
+  {
+    "race": "Cryo'Drells",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "cristallin",
+    "biomes": ["glace", "toundra"],
+    "planet": "Cryostell",
+    "faction": "Indépendants",
+    "morphology": "Humanoïdes de glace sculptés dans un givre éternel.",
+    "abilities": ["magie de glace", "résistance au froid"],
+    "weaknesses": ["chaleur"],
+    "mmo_role": "mage de glace",
+    "ai": {
+      "behavior": "discipliné",
+      "goals": ["stabiliser les tempêtes glaciales"],
+      "routines": ["rituels de givre", "patrouilles lentes"]
+    }
+  },
+  {
+    "race": "Mechari",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "métallique",
+    "biomes": ["métropoles", "usines"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Synthétiques humanoïdes optimisés pour l'analyse et la précision.",
+    "abilities": ["analyse tactique", "précision"],
+    "weaknesses": ["dépendance énergétique"],
+    "mmo_role": "soldat / technicien",
+    "ai": {
+      "behavior": "logique",
+      "goals": ["optimiser les systèmes"],
+      "routines": ["diagnostics", "maintenance"]
+    }
+  },
+  {
+    "race": "Grav'Thors",
+    "size_cm": { "min": 180, "max": 200 },
+    "body_type": "ultra-dense",
+    "biomes": ["montagnes", "canyons"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Humanoïdes denses comme la pierre, presque impossibles à renverser.",
+    "abilities": ["gravité interne", "force"],
+    "weaknesses": ["ne nagent pas"],
+    "mmo_role": "tank lourd",
+    "ai": {
+      "behavior": "imperturbable",
+      "goals": ["protéger les passages montagneux"],
+      "routines": ["garde statique", "barrages"]
+    }
+  },
+  {
+    "race": "Luminari",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "lumineux",
+    "biomes": ["cieux", "clairières"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes lumineux irradiant une énergie douce.",
+    "abilities": ["lumière", "soin"],
+    "weaknesses": ["obscurité totale"],
+    "mmo_role": "prêtre stellaire",
+    "ai": {
+      "behavior": "bienveillant",
+      "goals": ["purifier les zones corrompues"],
+      "routines": ["rituels lumineux", "soins"]
+    }
+  },
+  {
+    "race": "Abyssari",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "aquatique",
+    "biomes": ["abysses"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Humanoïdes abyssaux aux yeux bioluminescents.",
+    "abilities": ["vision abyssale", "camouflage"],
+    "weaknesses": ["lumière forte"],
+    "mmo_role": "éclaireur abyssal",
+    "ai": {
+      "behavior": "silencieux",
+      "goals": ["surveiller les profondeurs"],
+      "routines": ["patrouilles abyssales", "immobilité totale"]
+    }
+  },
+  {
+    "race": "Storm'Ryders",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "énergétique",
+    "biomes": ["orages", "cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes électriques parcourus d'arcs instables.",
+    "abilities": ["électrokinésie", "vitesse"],
+    "weaknesses": ["eau salée"],
+    "mmo_role": "mage électrique",
+    "ai": {
+      "behavior": "instable",
+      "goals": ["canaliser les tempêtes"],
+      "routines": ["sauts électriques", "absorption d'énergie"]
+    }
+  },
+  {
+    "race": "Duskborns",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "léger",
+    "biomes": ["ténèbres", "clairières nocturnes"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Êtres crépusculaires maîtrisant la magie du clair-obscur.",
+    "abilities": ["ombre-lumière", "charme"],
+    "weaknesses": ["soleil"],
+    "mmo_role": "mage crépusculaire",
+    "ai": {
+      "behavior": "hypnotique",
+      "goals": ["étendre le crépuscule"],
+      "routines": ["rituels nocturnes", "illusions"]
+    }
+  },
+  {
+    "race": "Ironjaws",
+    "size_cm": { "min": 180, "max": 200 },
+    "body_type": "massif",
+    "biomes": ["montagnes", "mines"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Humanoïdes massifs dotés d'une mâchoire métallique naturelle.",
+    "abilities": ["force", "morsure"],
+    "weaknesses": ["lenteur"],
+    "mmo_role": "tank / mineur",
+    "ai": {
+      "behavior": "endurant",
+      "goals": ["extraire des minerais"],
+      "routines": ["minage", "transport de blocs"]
+    }
+  },
+  {
+    "race": "Silt'Haras",
+    "size_cm": { "min": 170, "max": 200 },
+    "body_type": "amphibie",
+    "biomes": ["marécages"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Amphibiens à peau visqueuse et doigts palmés.",
+    "abilities": ["camouflage", "respiration aquatique"],
+    "weaknesses": ["feu"],
+    "mmo_role": "chasseur des marais",
+    "ai": {
+      "behavior": "patient",
+      "goals": ["protéger les marais"],
+      "routines": ["immersion totale", "embuscades"]
+    }
+  },
+  {
+    "race": "Voidwalkers",
+    "size_cm": { "min": 160, "max": 190 },
+    "body_type": "éthéré",
+    "biomes": ["ténèbres", "ruines"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Humanoïdes du vide semi-éthérés.",
+    "abilities": ["téléportation", "absorption d'énergie"],
+    "weaknesses": ["instabilité"],
+    "mmo_role": "assassin magique",
+    "ai": {
+      "behavior": "imprévisible",
+      "goals": ["étendre le vide"],
+      "routines": ["sauts dimensionnels", "embuscades"]
+    }
+  },
+  {
+    "race": "Aer'Vantyrs",
+    "size_cm": { "min": 180, "max": 210 },
+    "body_type": "léger",
+    "biomes": ["cieux", "falaises"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Guerriers ailés robustes, caste supérieure des combattants célestes.",
+    "abilities": ["vol prolongé", "combat aérien"],
+    "weaknesses": ["projectiles perforants"],
+    "mmo_role": "chevalier aérien",
+    "ai": {
+      "behavior": "martial",
+      "goals": ["dominer les cieux"],
+      "routines": ["patrouilles aériennes", "entraînement"]
+    }
+  },
+  {
+    "race": "Pyroclasts",
+    "size_cm": { "min": 190, "max": 220 },
+    "body_type": "volcanique",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Humanoïdes de magma fissuré laissant apparaître la lave.",
+    "abilities": ["feu", "projection de lave"],
+    "weaknesses": ["eau"],
+    "mmo_role": "tank volcanique / boss",
+    "ai": {
+      "behavior": "destructeur",
+      "goals": ["déchaîner la lave"],
+      "routines": ["marche lourde", "éruptions mineures"]
+    }
+  },
+  {
+    "race": "Frostborns",
+    "size_cm": { "min": 180, "max": 210 },
+    "body_type": "massif",
+    "biomes": ["glace"],
+    "planet": "Cryostell",
+    "faction": "Indépendants",
+    "morphology": "Guerriers de glace massifs forgés dans les tempêtes.",
+    "abilities": ["force", "souffle gelant"],
+    "weaknesses": ["chaleur"],
+    "mmo_role": "tank de glace",
+    "ai": {
+      "behavior": "stoïque",
+      "goals": ["protéger les terres gelées"],
+      "routines": ["patrouilles", "souffle glacial"]
+    }
+  },
+  {
+    "race": "Mecha'Lords",
+    "size_cm": { "min": 190, "max": 220 },
+    "body_type": "métallique",
+    "biomes": ["métropoles"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Synthétiques lourds, caste dirigeante de Mecha-Prime.",
+    "abilities": ["commandement", "analyse tactique"],
+    "weaknesses": ["énergie"],
+    "mmo_role": "commandant / boss",
+    "ai": {
+      "behavior": "autoritaire",
+      "goals": ["contrôler les systèmes"],
+      "routines": ["supervision", "analyse stratégique"]
+    }
+  },
+  {
+    "race": "Leviathrans",
+    "size_cm": { "min": 200, "max": 240 },
+    "body_type": "colossal",
+    "biomes": ["océans profonds"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Humanoïdes marins colossaux aux nageoires massives.",
+    "abilities": ["force immense", "nage rapide"],
+    "weaknesses": ["lents sur terre"],
+    "mmo_role": "tank marin / boss",
+    "ai": {
+      "behavior": "protecteur",
+      "goals": ["défendre les profondeurs"],
+      "routines": ["patrouilles abyssales", "charges aquatiques"]
+    }
+  },
+
+  /* --- RACES 61 → 66 --- */
+
+  {
+    "race": "Thorn'Goliaths",
+    "size_cm": { "min": 200, "max": 240 },
+    "body_type": "colossal végétal",
+    "biomes": ["forêts anciennes"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Géants sylvestres massifs faits d'écorce vivante et d'épines.",
+    "abilities": ["régénération", "camouflage forestier", "force"],
+    "weaknesses": ["feu"],
+    "mmo_role": "tank naturel",
+    "ai": {
+      "behavior": "protecteur",
+      "goals": ["défendre les forêts anciennes"],
+      "routines": ["veille immobile", "activation lors d'intrusions"]
+    }
+  },
+  {
+    "race": "Sand'Colossi",
+    "size_cm": { "min": 210, "max": 250 },
+    "body_type": "colossal granuleux",
+    "biomes": ["déserts"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Titans de sable compacté capables de se désagréger partiellement.",
+    "abilities": ["amorphie", "résistance chaleur"],
+    "weaknesses": ["eau"],
+    "mmo_role": "tank du désert",
+    "ai": {
+      "behavior": "lent mais vigilant",
+      "goals": ["protéger les dunes sacrées"],
+      "routines": ["immobilité prolongée", "émergence soudaine"]
+    }
+  },
+  {
+    "race": "Abyss'Gards",
+    "size_cm": { "min": 220, "max": 260 },
+    "body_type": "colossal chitineux",
+    "biomes": ["abysses"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Gardiens abyssaux massifs dotés d'une chitine épaisse et d'yeux multiples.",
+    "abilities": ["vision abyssale", "résistance pression"],
+    "weaknesses": ["surface"],
+    "mmo_role": "boss abyssal",
+    "ai": {
+      "behavior": "implacable",
+      "goals": ["protéger les profondeurs sacrées"],
+      "routines": ["patrouilles lentes", "immobilité totale"]
+    }
+  },
+  {
+    "race": "Shade'Titans",
+    "size_cm": { "min": 200, "max": 240 },
+    "body_type": "colossal ombreux",
+    "biomes": ["ténèbres", "ruines corrompues"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Titans d’ombre semi-intangibles absorbant la lumière.",
+    "abilities": ["ombre", "intangibilité partielle"],
+    "weaknesses": ["lumière"],
+    "mmo_role": "boss d'ombre",
+    "ai": {
+      "behavior": "sinistre",
+      "goals": ["étendre la corruption"],
+      "routines": ["errance silencieuse", "absorption de lumière"]
+    }
+  },
+  {
+    "race": "Sky'Wardens",
+    "size_cm": { "min": 200, "max": 230 },
+    "body_type": "colossal ailé",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Gardiens ailés géants dotés d'une vision extrême.",
+    "abilities": ["vol prolongé", "vision extrême"],
+    "weaknesses": ["projectiles lourds"],
+    "mmo_role": "garde aérien élite",
+    "ai": {
+      "behavior": "sentinelle",
+      "goals": ["protéger les sanctuaires célestes"],
+      "routines": ["patrouilles aériennes", "surveillance des îles flottantes"]
+    }
+  },
+  {
+    "race": "Cryo'Goliaths",
+    "size_cm": { "min": 220, "max": 250 },
+    "body_type": "colossal glacé",
+    "biomes": ["glace"],
+    "planet": "Cryostell",
+    "faction": "Indépendants",
+    "morphology": "Géants de glace cristallisée, véritables montagnes vivantes.",
+    "abilities": ["froid extrême", "force"],
+    "weaknesses": ["chaleur"],
+    "mmo_role": "boss de glace",
+    "ai": {
+      "behavior": "lent mais puissant",
+      "goals": ["maintenir les tempêtes glaciales"],
+      "routines": ["marche lente", "souffle glacial"]
+    }
+  }
+  /* END OF RACE 66 */
+  {
+    "race": "Iron'Sentinels",
+    "size_cm": { "min": 210, "max": 240 },
+    "body_type": "colossal métallique",
+    "biomes": ["métropoles", "usines"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Gardiens métalliques autonomes programmés pour la défense.",
+    "abilities": ["analyse", "résistance extrême"],
+    "weaknesses": ["surcharge énergétique"],
+    "mmo_role": "garde élite",
+    "ai": {
+      "behavior": "strict",
+      "goals": ["protéger les zones industrielles"],
+      "routines": ["patrouilles mécaniques", "scans réguliers"]
+    }
+  },
+  {
+    "race": "Terra'Gards",
+    "size_cm": { "min": 200, "max": 230 },
+    "body_type": "colossal minéral",
+    "biomes": ["montagnes", "forêts anciennes"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Statues vivantes de pierre éveillées pour défendre les temples anciens.",
+    "abilities": ["force titanesque", "résistance"],
+    "weaknesses": ["vibrations"],
+    "mmo_role": "gardien de sanctuaire",
+    "ai": {
+      "behavior": "immobile jusqu'à provocation",
+      "goals": ["protéger les temples"],
+      "routines": ["veille totale", "activation lors d'intrusions"]
+    }
+  },
+  {
+    "race": "Ember'Raks",
+    "size_cm": { "min": 210, "max": 250 },
+    "body_type": "volcanique",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Guerriers incandescents dont le corps laisse apparaître la lave.",
+    "abilities": ["feu", "projection de flammes"],
+    "weaknesses": ["eau"],
+    "mmo_role": "guerrier du feu",
+    "ai": {
+      "behavior": "agressif",
+      "goals": ["défendre les volcans"],
+      "routines": ["charges brûlantes", "éruptions mineures"]
+    }
+  },
+  {
+    "race": "Abyss'Titans",
+    "size_cm": { "min": 230, "max": 260 },
+    "body_type": "colossal marin",
+    "biomes": ["abysses"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Titans marins dotés de nageoires géantes et d'une peau épaisse.",
+    "abilities": ["force colossale", "vision abyssale"],
+    "weaknesses": ["surface"],
+    "mmo_role": "boss abyssal",
+    "ai": {
+      "behavior": "territorial",
+      "goals": ["protéger les abysses profondes"],
+      "routines": ["patrouilles lentes", "charges aquatiques"]
+    }
+  },
+  {
+    "race": "Verdant'Wardens",
+    "size_cm": { "min": 210, "max": 250 },
+    "body_type": "colossal végétal",
+    "biomes": ["forêts anciennes"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Gardiens sylvestres fusion d'arbre et d'humanoïde.",
+    "abilities": ["régénération", "contrôle végétal"],
+    "weaknesses": ["feu"],
+    "mmo_role": "tank naturel",
+    "ai": {
+      "behavior": "sage",
+      "goals": ["protéger les clairières sacrées"],
+      "routines": ["veille immobile", "activation lors d'intrusions"]
+    }
+  },
+  {
+    "race": "Obsidian'Gards",
+    "size_cm": { "min": 220, "max": 260 },
+    "body_type": "colossal tranchant",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Géants d’obsidienne noire à la peau tranchante.",
+    "abilities": ["résistance chaleur", "peau tranchante"],
+    "weaknesses": ["froid"],
+    "mmo_role": "boss volcanique",
+    "ai": {
+      "behavior": "implacable",
+      "goals": ["protéger les cratères sacrés"],
+      "routines": ["marche lente", "frappes tranchantes"]
+    }
+  },
+  {
+    "race": "Tidal'Goliaths",
+    "size_cm": { "min": 210, "max": 250 },
+    "body_type": "colossal marin",
+    "biomes": ["océans"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Géants marins écailleux protecteurs des récifs.",
+    "abilities": ["nage puissante", "résistance pression"],
+    "weaknesses": ["terre ferme"],
+    "mmo_role": "tank marin",
+    "ai": {
+      "behavior": "protecteur",
+      "goals": ["défendre les récifs"],
+      "routines": ["patrouilles aquatiques", "charges sous-marines"]
+    }
+  },
+  {
+    "race": "Night'Colossi",
+    "size_cm": { "min": 220, "max": 260 },
+    "body_type": "colossal ombreux",
+    "biomes": ["ténèbres"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Colosses nocturnes faits d’ombre dense.",
+    "abilities": ["ombre", "magie noire"],
+    "weaknesses": ["lumière"],
+    "mmo_role": "boss d'ombre",
+    "ai": {
+      "behavior": "sinistre",
+      "goals": ["étendre la nuit éternelle"],
+      "routines": ["errance silencieuse", "absorption de lumière"]
+    }
+  },
+  {
+    "race": "Sky'Colossi",
+    "size_cm": { "min": 230, "max": 260 },
+    "body_type": "colossal ailé",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Géants ailés majestueux, seigneurs des îles flottantes.",
+    "abilities": ["vol prolongé", "magie céleste"],
+    "weaknesses": ["projectiles lourds"],
+    "mmo_role": "boss aérien",
+    "ai": {
+      "behavior": "noble",
+      "goals": ["protéger les cieux"],
+      "routines": ["patrouilles aériennes", "rituels célestes"]
+    }
+  },
+
+  /* --- RACES 76 → 90 --- */
+
+  {
+    "race": "Frost'Colossi",
+    "size_cm": { "min": 230, "max": 260 },
+    "body_type": "colossal glacé",
+    "biomes": ["glace", "toundra"],
+    "planet": "Cryostell",
+    "faction": "Indépendants",
+    "morphology": "Colosses de glace cristallisée avançant lentement mais inexorablement.",
+    "abilities": ["souffle gelant", "résistance au froid", "force massive"],
+    "weaknesses": ["chaleur"],
+    "mmo_role": "boss de glace",
+    "ai": {
+      "behavior": "implacable",
+      "goals": ["geler les intrus", "protéger les terres glacées"],
+      "routines": ["marche lente", "souffle glacial cyclique"]
+    }
+  },
+  {
+    "race": "Iron'Goliaths",
+    "size_cm": { "min": 220, "max": 260 },
+    "body_type": "colossal métallique",
+    "biomes": ["métropoles", "usines"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Géants métalliques forgés dans les usines, sentinelles lourdes.",
+    "abilities": ["résistance extrême", "analyse tactique"],
+    "weaknesses": ["surcharge énergétique"],
+    "mmo_role": "boss mécanique",
+    "ai": {
+      "behavior": "calculateur",
+      "goals": ["défendre les complexes industriels"],
+      "routines": ["patrouilles mécaniques", "scans structurels"]
+    }
+  },
+  {
+    "race": "Ember'Colossi",
+    "size_cm": { "min": 230, "max": 260 },
+    "body_type": "colossal volcanique",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Colosses de feu, volcans ambulants aux fissures incandescentes.",
+    "abilities": ["projection de lave", "chaleur extrême"],
+    "weaknesses": ["eau"],
+    "mmo_role": "boss volcanique",
+    "ai": {
+      "behavior": "destructeur",
+      "goals": ["déchaîner la lave", "protéger les cratères"],
+      "routines": ["éruptions mineures", "marche lourde"]
+    }
+  },
+  {
+    "race": "Abyss'Colossi",
+    "size_cm": { "min": 240, "max": 260 },
+    "body_type": "colossal marin",
+    "biomes": ["abysses"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Titans marins chitineux adaptés aux pressions extrêmes.",
+    "abilities": ["résistance pression", "vision abyssale"],
+    "weaknesses": ["surface"],
+    "mmo_role": "boss abyssal",
+    "ai": {
+      "behavior": "territorial",
+      "goals": ["protéger les abysses profondes"],
+      "routines": ["patrouilles lentes", "immobilité totale"]
+    }
+  },
+  {
+    "race": "Void'Colossi",
+    "size_cm": { "min": 230, "max": 260 },
+    "body_type": "colossal éthéré",
+    "biomes": ["ténèbres", "zones corrompues"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Colosses du vide parcourus de fissures d’énergie noire.",
+    "abilities": ["téléportation", "absorption d'énergie"],
+    "weaknesses": ["lumière pure"],
+    "mmo_role": "boss du vide",
+    "ai": {
+      "behavior": "instable",
+      "goals": ["étendre le vide"],
+      "routines": ["sauts dimensionnels", "absorption d'énergie"]
+    }
+  },
+  {
+    "race": "Worldroots",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "colossal végétal ancien",
+    "biomes": ["forêts anciennes"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Titans sylvestres millénaires incarnant les arbres anciens.",
+    "abilities": ["régénération extrême", "racines massives"],
+    "weaknesses": ["feu"],
+    "mmo_role": "boss de forêt",
+    "ai": {
+      "behavior": "sage et lent",
+      "goals": ["préserver l'équilibre sylvestre"],
+      "routines": ["veille immobile", "activation lors d'intrusions"]
+    }
+  },
+  {
+    "race": "Magma'Titans",
+    "size_cm": { "min": 280, "max": 340 },
+    "body_type": "colossal volcanique",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Volcans vivants, entités colossales de roche et de magma.",
+    "abilities": ["lave", "ondes de choc"],
+    "weaknesses": ["eau"],
+    "mmo_role": "boss volcanique majeur",
+    "ai": {
+      "behavior": "cataclysmique",
+      "goals": ["déchaîner les éruptions"],
+      "routines": ["tremblements", "jets de lave"]
+    }
+  },
+  {
+    "race": "Abyss'Leviathans",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "colossal marin suprême",
+    "biomes": ["abysses"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Seigneurs absolus des abysses, dotés de tentacules dorsaux.",
+    "abilities": ["force colossale", "pression extrême"],
+    "weaknesses": ["surface"],
+    "mmo_role": "boss abyssal suprême",
+    "ai": {
+      "behavior": "implacable",
+      "goals": ["dominer les abysses"],
+      "routines": ["patrouilles profondes", "attaques tentaculaires"]
+    }
+  },
+  {
+    "race": "Void'Titans",
+    "size_cm": { "min": 280, "max": 330 },
+    "body_type": "colossal éthéré",
+    "biomes": ["ténèbres"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Titans du vide dont la présence déforme la réalité.",
+    "abilities": ["téléportation", "magie du vide"],
+    "weaknesses": ["lumière pure"],
+    "mmo_role": "boss du vide suprême",
+    "ai": {
+      "behavior": "cosmique",
+      "goals": ["étendre le néant"],
+      "routines": ["distorsions", "absorption"]
+    }
+  },
+  {
+    "race": "Sky'Titans",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "colossal ailé",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Seigneurs ailés des cieux dotés d’une magie céleste éclatante.",
+    "abilities": ["vol prolongé", "magie céleste"],
+    "weaknesses": ["projectiles lourds"],
+    "mmo_role": "boss aérien suprême",
+    "ai": {
+      "behavior": "noble",
+      "goals": ["protéger les îles flottantes"],
+      "routines": ["vols rituels", "décharges célestes"]
+    }
+  },
+  {
+    "race": "Frost'Titans",
+    "size_cm": { "min": 280, "max": 340 },
+    "body_type": "colossal glacé",
+    "biomes": ["glace"],
+    "planet": "Cryostell",
+    "faction": "Indépendants",
+    "morphology": "Montagnes vivantes de glace forgées dans les tempêtes éternelles.",
+    "abilities": ["froid extrême", "force colossale"],
+    "weaknesses": ["chaleur"],
+    "mmo_role": "boss de glace suprême",
+    "ai": {
+      "behavior": "glacial",
+      "goals": ["geler les intrus"],
+      "routines": ["souffle glacial", "marche lente"]
+    }
+  },
+  {
+    "race": "Iron'Titans",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "colossal métallique",
+    "biomes": ["métropoles"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Titans métalliques alimentés par des cœurs énergétiques massifs.",
+    "abilities": ["analyse tactique", "résistance totale"],
+    "weaknesses": ["surcharge énergétique"],
+    "mmo_role": "boss mécanique suprême",
+    "ai": {
+      "behavior": "stratégique",
+      "goals": ["protéger Mecha-Prime"],
+      "routines": ["scans massifs", "déploiement de drones"]
+    }
+  },
+  {
+    "race": "Ember'Titans",
+    "size_cm": { "min": 280, "max": 340 },
+    "body_type": "colossal volcanique",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Titans de feu dont la chaleur peut faire fondre la pierre.",
+    "abilities": ["lave", "ondes de choc"],
+    "weaknesses": ["eau"],
+    "mmo_role": "boss volcanique suprême",
+    "ai": {
+      "behavior": "cataclysmique",
+      "goals": ["déchaîner les volcans"],
+      "routines": ["tremblements", "jets de lave"]
+    }
+  },
+  {
+    "race": "Abyss'Behemoths",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "colossal marin ultime",
+    "biomes": ["abysses"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Behemoths marins monstrueux dotés de tentacules et d’une force inimaginable.",
+    "abilities": ["force colossale", "vision abyssale"],
+    "weaknesses": ["surface"],
+    "mmo_role": "boss abyssal ultime",
+    "ai": {
+      "behavior": "prédateur absolu",
+      "goals": ["dominer les abysses"],
+      "routines": ["embuscades profondes", "charges massives"]
+    }
+  },
+  {
+    "race": "Void'Behemoths",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "colossal éthéré ultime",
+    "biomes": ["ténèbres"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Entités d’ombre colossales incarnant le vide cosmique.",
+    "abilities": ["absorption d'énergie", "téléportation"],
+    "weaknesses": ["lumière pure"],
+    "mmo_role": "boss du vide ultime",
+    "ai": {
+      "behavior": "cosmique et prédateur",
+      "goals": ["dévorer la lumière"],
+      "routines": ["distorsions massives", "absorption"]
+    }
+  },
+
+  /* --- RACES 91 → 99 --- */
+
+  {
+    "race": "Etherians",
+    "size_cm": { "min": 260, "max": 300 },
+    "body_type": "éthéré aérien",
+    "biomes": ["cieux", "orages"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Esprits humanoïdes d’air condensé, flottant plus qu'ils ne marchent.",
+    "abilities": ["lévitation", "vent", "vitesse"],
+    "weaknesses": ["attaques physiques lourdes"],
+    "mmo_role": "mage céleste / boss aérien",
+    "ai": {
+      "behavior": "imprévisible",
+      "goals": ["stabiliser les courants célestes"],
+      "routines": ["flottaison", "déplacements rapides entre les vents"]
+    }
+  },
+  {
+    "race": "Pyro'Seraphs",
+    "size_cm": { "min": 270, "max": 320 },
+    "body_type": "incandescent",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Séraphins de feu pur aux ailes flamboyantes.",
+    "abilities": ["pyrokinésie", "vol thermique"],
+    "weaknesses": ["eau", "froid"],
+    "mmo_role": "boss élémentaire du feu",
+    "ai": {
+      "behavior": "ardent",
+      "goals": ["entretenir la flamme originelle"],
+      "routines": ["vols brûlants", "décharges de feu"]
+    }
+  },
+  {
+    "race": "Hydro'Seraphs",
+    "size_cm": { "min": 260, "max": 310 },
+    "body_type": "liquide",
+    "biomes": ["océans"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Entités liquides humanoïdes incarnant l’eau pure.",
+    "abilities": ["hydrokinésie", "amorphie"],
+    "weaknesses": ["électricité"],
+    "mmo_role": "boss élémentaire de l'eau",
+    "ai": {
+      "behavior": "fluide",
+      "goals": ["maintenir l'équilibre aquatique"],
+      "routines": ["flux ondulants", "vagues contrôlées"]
+    }
+  },
+  {
+    "race": "Umbra'Seraphs",
+    "size_cm": { "min": 270, "max": 330 },
+    "body_type": "ombre",
+    "biomes": ["ténèbres"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Séraphins d’ombre aux silhouettes mouvantes et yeux rouges.",
+    "abilities": ["intangibilité", "magie noire"],
+    "weaknesses": ["lumière pure"],
+    "mmo_role": "boss élémentaire d'ombre",
+    "ai": {
+      "behavior": "sinistre",
+      "goals": ["étendre l'obscurité primordiale"],
+      "routines": ["glissements d'ombre", "absorption de lumière"]
+    }
+  },
+  {
+    "race": "Luma'Seraphs",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "lumineux",
+    "biomes": ["cieux", "clairières"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Entités de lumière pure rayonnant une aura sacrée.",
+    "abilities": ["lumière", "purification"],
+    "weaknesses": ["obscurité totale"],
+    "mmo_role": "boss élémentaire de lumière",
+    "ai": {
+      "behavior": "vertueux",
+      "goals": ["purifier les zones corrompues"],
+      "routines": ["rituels lumineux", "décharges sacrées"]
+    }
+  },
+  {
+    "race": "Chrono'Gards",
+    "size_cm": { "min": 280, "max": 330 },
+    "body_type": "fractalo-temporel",
+    "biomes": ["zones instables"],
+    "planet": "Aetherion",
+    "faction": "Indépendants",
+    "morphology": "Gardiens temporels existant sur plusieurs instants simultanément.",
+    "abilities": ["ralentissement", "accélération", "duplication temporelle"],
+    "weaknesses": ["paradoxes"],
+    "mmo_role": "boss temporel",
+    "ai": {
+      "behavior": "non-linéaire",
+      "goals": ["préserver le flux temporel"],
+      "routines": ["sauts temporels", "superposition d'états"]
+    }
+  },
+  {
+    "race": "Nano'Overlords",
+    "size_cm": { "min": 260, "max": 300 },
+    "body_type": "nanite",
+    "biomes": ["métropoles", "usines"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Entités synthétiques composées de milliards de nanites.",
+    "abilities": ["reconstruction", "morphing", "analyse"],
+    "weaknesses": ["EMP"],
+    "mmo_role": "boss synthétique suprême",
+    "ai": {
+      "behavior": "adaptatif",
+      "goals": ["optimiser la forme parfaite"],
+      "routines": ["reconfiguration", "analyse d'ennemis"]
+    }
+  },
+  {
+    "race": "Stellar'Avatars",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "énergie stellaire",
+    "biomes": ["zones stellaires"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes d’énergie stellaire incarnant la puissance des étoiles.",
+    "abilities": ["magie stellaire", "projection cosmique"],
+    "weaknesses": ["instabilité énergétique"],
+    "mmo_role": "boss stellaire",
+    "ai": {
+      "behavior": "cosmique",
+      "goals": ["maintenir l'équilibre stellaire"],
+      "routines": ["pulsations stellaires", "décharges cosmiques"]
+    }
+  },
+  {
+    "race": "Quantum'Phantoms",
+    "size_cm": { "min": 280, "max": 330 },
+    "body_type": "quantique",
+    "biomes": ["zones instables"],
+    "planet": "Aetherion",
+    "faction": "Indépendants",
+    "morphology": "Entités quantiques superposées apparaissant sous plusieurs formes simultanées.",
+    "abilities": ["téléportation", "duplication", "intangibilité"],
+    "weaknesses": ["ondes stabilisatrices"],
+    "mmo_role": "boss quantique",
+    "ai": {
+      "behavior": "aléatoire mais précis",
+      "goals": ["défier la réalité"],
+      "routines": ["superpositions", "sauts quantiques"]
+    }
+  }
+  /* END OF RACE 99 */
+  {
+    "race": "Omni'Wardens",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "poly-élémentaire",
+    "biomes": ["zones sacrées"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Gardiens multi-élémentaires incarnant l’équilibre ultime.",
+    "abilities": ["poly-élémentalisme", "résistance totale"],
+    "weaknesses": ["instabilité élémentaire"],
+    "mmo_role": "boss suprême",
+    "ai": {
+      "behavior": "équilibré",
+      "goals": ["maintenir l'harmonie élémentaire"],
+      "routines": ["alternance élémentaire", "défense sacrée"]
+    }
+  },
+  {
+    "race": "Gene'Spliced",
+    "size_cm": { "min": 180, "max": 220 },
+    "body_type": "mutant",
+    "biomes": ["laboratoires"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Hybrides génétiques instables mélangeant traits animaux et humanoïdes.",
+    "abilities": ["adaptation", "régénération"],
+    "weaknesses": ["instabilité génétique"],
+    "mmo_role": "soldat mutant",
+    "ai": {
+      "behavior": "instable",
+      "goals": ["survivre", "évoluer"],
+      "routines": ["mutations aléatoires", "patrouilles erratiques"]
+    }
+  },
+  {
+    "race": "Chimera'Born",
+    "size_cm": { "min": 200, "max": 260 },
+    "body_type": "hybride monstrueux",
+    "biomes": ["forêts", "ruines"],
+    "planet": "Arvandor",
+    "faction": "Indépendants",
+    "morphology": "Créatures hybrides issues de fusions magiques incontrôlées.",
+    "abilities": ["poly-attaque", "résistance magique"],
+    "weaknesses": ["instabilité mentale"],
+    "mmo_role": "boss sauvage",
+    "ai": {
+      "behavior": "chaotique",
+      "goals": ["dominer leur territoire"],
+      "routines": ["errance agressive", "mutations spontanées"]
+    }
+  },
+  {
+    "race": "Bio'Grafts",
+    "size_cm": { "min": 170, "max": 210 },
+    "body_type": "augmenté organique",
+    "biomes": ["laboratoires"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Humanoïdes augmentés par greffes organiques expérimentales.",
+    "abilities": ["vision améliorée", "force accrue"],
+    "weaknesses": ["rejet organique"],
+    "mmo_role": "soldat expérimental",
+    "ai": {
+      "behavior": "instable",
+      "goals": ["tester leurs limites"],
+      "routines": ["patrouilles", "tests de force"]
+    }
+  },
+  {
+    "race": "Warp'Mutants",
+    "size_cm": { "min": 200, "max": 260 },
+    "body_type": "déphasé",
+    "biomes": ["zones instables"],
+    "planet": "Aetherion",
+    "faction": "Indépendants",
+    "morphology": "Mutants temporels instables dont les membres se déphasent.",
+    "abilities": ["distorsion temporelle", "téléportation erratique"],
+    "weaknesses": ["instabilité corporelle"],
+    "mmo_role": "boss temporel sauvage",
+    "ai": {
+      "behavior": "chaotique",
+      "goals": ["survivre au flux temporel"],
+      "routines": ["sauts temporels erratiques", "distorsions involontaires"]
+    }
+  },
+  {
+    "race": "Plague'Hosts",
+    "size_cm": { "min": 180, "max": 220 },
+    "body_type": "infecté",
+    "biomes": ["marécages", "ruines"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Humanoïdes infectés par une symbiose parasitaire.",
+    "abilities": ["infection", "nuage toxique"],
+    "weaknesses": ["feu", "purification"],
+    "mmo_role": "boss parasitaire",
+    "ai": {
+      "behavior": "agressif",
+      "goals": ["propager la peste"],
+      "routines": ["émission de spores", "embuscades toxiques"]
+    }
+  },
+  {
+    "race": "Symbio'Twins",
+    "size_cm": { "min": 160, "max": 200 },
+    "body_type": "duo fusionné",
+    "biomes": ["laboratoires", "ruines"],
+    "planet": "Mecha-Prime",
+    "faction": "Indépendants",
+    "morphology": "Deux humanoïdes fusionnés partageant un seul esprit.",
+    "abilities": ["double attaque", "coordination parfaite"],
+    "weaknesses": ["désorientation si séparés"],
+    "mmo_role": "mini-boss",
+    "ai": {
+      "behavior": "synchronisé",
+      "goals": ["protéger leur lien symbiotique"],
+      "routines": ["attaques coordonnées", "déplacements en miroir"]
+    }
+  },
+  {
+    "race": "Flux'Morphs",
+    "size_cm": { "min": 200, "max": 260 },
+    "body_type": "liquide instable",
+    "biomes": ["zones instables"],
+    "planet": "Mecha-Prime",
+    "faction": "Indépendants",
+    "morphology": "Humanoïdes liquides en mutation constante.",
+    "abilities": ["morphing", "absorption"],
+    "weaknesses": ["températures extrêmes"],
+    "mmo_role": "boss mutant",
+    "ai": {
+      "behavior": "émotionnel",
+      "goals": ["stabiliser leur forme"],
+      "routines": ["mutations spontanées", "absorption d'énergie"]
+    }
+  },
+  {
+    "race": "Arcane'Hybrids",
+    "size_cm": { "min": 180, "max": 230 },
+    "body_type": "magique instable",
+    "biomes": ["forêts anciennes"],
+    "planet": "Arvandor",
+    "faction": "Indépendants",
+    "morphology": "Humanoïdes fusionnés avec des entités magiques.",
+    "abilities": ["magie brute", "résistance magique"],
+    "weaknesses": ["instabilité magique"],
+    "mmo_role": "mage sauvage",
+    "ai": {
+      "behavior": "instable",
+      "goals": ["canaliser leur énergie"],
+      "routines": ["pulsations magiques", "décharges incontrôlées"]
+    }
+  },
+  {
+    "race": "Bio'Titans",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "colossal organique",
+    "biomes": ["laboratoires"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Titans organiques créés artificiellement.",
+    "abilities": ["force colossale", "régénération", "rugissement sonique"],
+    "weaknesses": ["toxines"],
+    "mmo_role": "boss biologique suprême",
+    "ai": {
+      "behavior": "agressif",
+      "goals": ["éliminer les intrus"],
+      "routines": ["charges massives", "rugissements destructeurs"]
+    }
+  },
+  {
+    "race": "Warp'Colossi",
+    "size_cm": { "min": 280, "max": 350 },
+    "body_type": "fractalo-temporel",
+    "biomes": ["zones instables"],
+    "planet": "Aetherion",
+    "faction": "Indépendants",
+    "morphology": "Colosses temporels existant à plusieurs instants simultanément.",
+    "abilities": ["distorsion temporelle", "duplication", "ralentissement"],
+    "weaknesses": ["instabilité extrême"],
+    "mmo_role": "boss temporel ultime",
+    "ai": {
+      "behavior": "non-linéaire",
+      "goals": ["préserver ou briser le flux temporel"],
+      "routines": ["superpositions", "sauts temporels massifs"]
+    }
+  },
+  {
+    "race": "Starborns",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "énergie stellaire",
+    "biomes": ["zones stellaires"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Humanoïdes nés dans le cœur des étoiles.",
+    "abilities": ["magie stellaire", "résistance extrême"],
+    "weaknesses": ["instabilité énergétique"],
+    "mmo_role": "boss stellaire",
+    "ai": {
+      "behavior": "cosmique",
+      "goals": ["stabiliser les flux stellaires"],
+      "routines": ["pulsations lumineuses", "décharges cosmiques"]
+    }
+  },
+  {
+    "race": "Nebula'Wraiths",
+    "size_cm": { "min": 280, "max": 330 },
+    "body_type": "gazeux astral",
+    "biomes": ["zones stellaires"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Entités nébuleuses faites de gaz coloré.",
+    "abilities": ["intangibilité", "magie nébulaire"],
+    "weaknesses": ["vents violents"],
+    "mmo_role": "boss cosmique",
+    "ai": {
+      "behavior": "vaporeux",
+      "goals": ["protéger les nébuleuses sacrées"],
+      "routines": ["flottaison", "déformations astrales"]
+    }
+  },
+  {
+    "race": "Solar'Archons",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "lumineux solaire",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Archanges solaires irradiant une lumière brûlante.",
+    "abilities": ["magie solaire", "purification"],
+    "weaknesses": ["obscurité totale"],
+    "mmo_role": "boss solaire",
+    "ai": {
+      "behavior": "vertueux",
+      "goals": ["purifier les cieux"],
+      "routines": ["rituels solaires", "décharges brûlantes"]
+    }
+  },
+  {
+    "race": "Lunar'Archons",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "lumineux lunaire",
+    "biomes": ["clairières nocturnes"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Archanges lunaires à l’aura argentée.",
+    "abilities": ["magie lunaire", "illusions"],
+    "weaknesses": ["soleil"],
+    "mmo_role": "boss lunaire",
+    "ai": {
+      "behavior": "mystique",
+      "goals": ["protéger la nuit sacrée"],
+      "routines": ["rituels lunaires", "voiles d'illusion"]
+    }
+  },
+  {
+    "race": "Cosmic'Harbingers",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "énergie cosmique",
+    "biomes": ["zones stellaires"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Messagers cosmiques apparaissant lors d’événements stellaires.",
+    "abilities": ["projection cosmique", "téléportation"],
+    "weaknesses": ["instabilité énergétique"],
+    "mmo_role": "boss cosmique suprême",
+    "ai": {
+      "behavior": "prophétique",
+      "goals": ["annoncer les grands changements"],
+      "routines": ["manifestations soudaines", "décharges astrales"]
+    }
+  },
+  {
+    "race": "Void'Seraphs",
+    "size_cm": { "min": 280, "max": 330 },
+    "body_type": "ombre cosmique",
+    "biomes": ["ténèbres"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Séraphins du vide, incarnations d’ombre cosmique.",
+    "abilities": ["absorption d'énergie", "téléportation"],
+    "weaknesses": ["lumière pure"],
+    "mmo_role": "boss du vide céleste",
+    "ai": {
+      "behavior": "cosmique et sinistre",
+      "goals": ["dévorer la lumière"],
+      "routines": ["distorsions", "absorption massive"]
+    }
+  },
+  {
+    "race": "Starforged",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "métallique stellaire",
+    "biomes": ["zones stellaires"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Humanoïdes métalliques forgés dans le cœur des étoiles.",
+    "abilities": ["résistance extrême", "projection d'énergie"],
+    "weaknesses": ["surchauffe"],
+    "mmo_role": "boss mécanique stellaire",
+    "ai": {
+      "behavior": "calculateur",
+      "goals": ["protéger les forges stellaires"],
+      "routines": ["scans stellaires", "décharges d'énergie"]
+    }
+  },
+  {
+    "race": "Celestial'Wardens",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "divin céleste",
+    "biomes": ["cieux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Gardiens célestes suprêmes incarnant l’ordre cosmique.",
+    "abilities": ["poly-élémentalisme", "purification"],
+    "weaknesses": ["instabilité sacrée"],
+    "mmo_role": "boss divin suprême",
+    "ai": {
+      "behavior": "solennel",
+      "goals": ["maintenir l'ordre cosmique"],
+      "routines": ["rituels sacrés", "défense céleste"]
+    }
+  },
+  {
+    "race": "Astral'Phantoms",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "astral éthéré",
+    "biomes": ["plans astraux"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Entités astrales glissant entre les plans.",
+    "abilities": ["projection astrale", "téléportation"],
+    "weaknesses": ["ancrages physiques"],
+    "mmo_role": "boss astral",
+    "ai": {
+      "behavior": "énigmatique",
+      "goals": ["protéger les plans astraux"],
+      "routines": ["glissements interplans", "perturbations mentales"]
+    }
+  },
+  {
+    "race": "Cosmic'Titans",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "cosmique suprême",
+    "biomes": ["zones stellaires"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Titans cosmiques incarnant l’énergie universelle.",
+    "abilities": ["poly-élémentalisme cosmique", "distorsion d'espace"],
+    "weaknesses": ["instabilité cosmique"],
+    "mmo_role": "boss cosmique final",
+    "ai": {
+      "behavior": "transcendant",
+      "goals": ["maintenir l'équilibre universel"],
+      "routines": ["distorsions massives", "pulsations cosmiques"]
+    }
+  },
+  {
+    "race": "Aether'Avatars",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "éthéré céleste",
+    "biomes": ["cieux", "orages"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Incarnations vivantes du vent et du ciel.",
+    "abilities": ["contrôle du vent", "vol absolu", "magie céleste"],
+    "weaknesses": ["ancrages terrestres"],
+    "mmo_role": "avatar céleste",
+    "ai": {
+      "behavior": "majestueux",
+      "goals": ["maintenir l'équilibre des cieux"],
+      "routines": ["vols rituels", "déchaînement de tempêtes"]
+    }
+  },
+  {
+    "race": "Pyra'Avatars",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "incandescent primordial",
+    "biomes": ["volcans"],
+    "planet": "Khar'Zuun",
+    "faction": "Pacte de Khar'Zuun",
+    "morphology": "Entités de feu primordial, incarnations de la flamme originelle.",
+    "abilities": ["pyrokinésie totale", "chaleur extrême"],
+    "weaknesses": ["eau", "froid"],
+    "mmo_role": "avatar du feu",
+    "ai": {
+      "behavior": "ardent",
+      "goals": ["entretenir la flamme primordiale"],
+      "routines": ["éruptions massives", "ondes de chaleur"]
+    }
+  },
+  {
+    "race": "Aqua'Avatars",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "liquide primordial",
+    "biomes": ["océans", "abysses"],
+    "planet": "Thalassia",
+    "faction": "Nations Aquatiques",
+    "morphology": "Avatars de l’eau primordiale, silhouettes liquides parfaites.",
+    "abilities": ["hydrokinésie totale", "amorphie"],
+    "weaknesses": ["électricité"],
+    "mmo_role": "avatar de l'eau",
+    "ai": {
+      "behavior": "fluide",
+      "goals": ["protéger les courants primordiaux"],
+      "routines": ["marées contrôlées", "vagues massives"]
+    }
+  },
+  {
+    "race": "Umbra'Avatars",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "ombre primordiale",
+    "biomes": ["ténèbres"],
+    "planet": "Nox'Vhar",
+    "faction": "Voile de Nox'Vhar",
+    "morphology": "Incarnations de l’ombre primordiale absorbant la lumière.",
+    "abilities": ["intangibilité totale", "magie noire absolue"],
+    "weaknesses": ["lumière pure"],
+    "mmo_role": "avatar d'ombre",
+    "ai": {
+      "behavior": "sinistre",
+      "goals": ["étendre la nuit éternelle"],
+      "routines": ["absorption de lumière", "distorsions d'ombre"]
+    }
+  },
+  {
+    "race": "Terra'Avatars",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "minéral primordial",
+    "biomes": ["montagnes", "forêts anciennes"],
+    "planet": "Arvandor",
+    "faction": "Peuples Libres",
+    "morphology": "Avatars de la terre vivante, statues colossales de pierre et de racines.",
+    "abilities": ["géokinésie", "force colossale"],
+    "weaknesses": ["vibrations", "acide"],
+    "mmo_role": "avatar terrestre",
+    "ai": {
+      "behavior": "implacable",
+      "goals": ["protéger les fondations du monde"],
+      "routines": ["tremblements", "barrières minérales"]
+    }
+  },
+  {
+    "race": "Chrono'Avatars",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "fractalo-temporel",
+    "biomes": ["zones instables"],
+    "planet": "Aetherion",
+    "faction": "Indépendants",
+    "morphology": "Incarnations du temps existant simultanément dans plusieurs instants.",
+    "abilities": ["ralentissement", "accélération", "duplication temporelle"],
+    "weaknesses": ["paradoxes"],
+    "mmo_role": "avatar temporel",
+    "ai": {
+      "behavior": "non-linéaire",
+      "goals": ["préserver le flux temporel"],
+      "routines": ["superpositions", "sauts temporels massifs"]
+    }
+  },
+  {
+    "race": "Quantum'Avatars",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "quantique suprême",
+    "biomes": ["zones instables", "laboratoires"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Entités quantiques suprêmes superposées en multiples états.",
+    "abilities": ["téléportation", "duplication", "intangibilité"],
+    "weaknesses": ["ondes stabilisatrices"],
+    "mmo_role": "avatar quantique",
+    "ai": {
+      "behavior": "aléatoire mais optimal",
+      "goals": ["défier la logique classique"],
+      "routines": ["superpositions", "sauts quantiques"]
+    }
+  },
+  {
+    "race": "Omni'Avatars",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "poly-élémentaire suprême",
+    "biomes": ["zones sacrées"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Fusion ultime de lumière, vent, pierre, eau et ombre.",
+    "abilities": ["poly-élémentalisme total", "résistance absolue"],
+    "weaknesses": ["instabilité élémentaire"],
+    "mmo_role": "avatar suprême",
+    "ai": {
+      "behavior": "équilibré",
+      "goals": ["maintenir l'harmonie cosmique"],
+      "routines": ["alternance élémentaire", "décharges massives"]
+    }
+  },
+  {
+    "race": "Rift'Walkers",
+    "size_cm": { "min": 260, "max": 320 },
+    "body_type": "interdimensionnel fracturé",
+    "biomes": ["failles", "zones instables"],
+    "planet": "Aetherion",
+    "faction": "Indépendants",
+    "morphology": "Humanoïdes marchant entre les dimensions.",
+    "abilities": ["marche interdimensionnelle", "distorsion spatiale"],
+    "weaknesses": ["ancrages dimensionnels"],
+    "mmo_role": "boss interdimensionnel",
+    "ai": {
+      "behavior": "erratique",
+      "goals": ["ouvrir ou stabiliser les failles"],
+      "routines": ["sauts dimensionnels", "distorsions"]
+    }
+  },
+  {
+    "race": "Nexus'Guardians",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "cosmique stabilisateur",
+    "biomes": ["zones sacrées", "failles"],
+    "planet": "Aetherion",
+    "faction": "Alliance Aetherienne",
+    "morphology": "Gardiens du Nexus, protecteurs du cœur du multivers.",
+    "abilities": ["poly-élémentalisme", "stabilisation dimensionnelle"],
+    "weaknesses": ["instabilité du Nexus"],
+    "mmo_role": "boss final du Nexus",
+    "ai": {
+      "behavior": "solennel",
+      "goals": ["protéger le Nexus"],
+      "routines": ["scellement de failles", "défense cosmique"]
+    }
+  },
+  {
+    "race": "Omega'Sentinels",
+    "size_cm": { "min": 300, "max": 350 },
+    "body_type": "techno-cosmique",
+    "biomes": ["métropoles", "zones stellaires"],
+    "planet": "Mecha-Prime",
+    "faction": "Coalition de Mecha-Prime",
+    "morphology": "Sentinelles ultimes fusionnant technologie avancée et énergie cosmique.",
+    "abilities": ["analyse totale", "projection cosmique"],
+    "weaknesses": ["EMP cosmique"],
+    "mmo_role": "boss technocosmique",
+    "ai": {
+      "behavior": "stratégique",
+      "goals": ["protéger Mecha-Prime et ses secrets"],
+      "routines": ["scans massifs", "déploiement de drones stellaires"]
+    }
+  },
+  {
+    "race": "Primordials",
+    "size_cm": { "min": 350, "max": 350 },
+    "body_type": "énergie pure",
+    "biomes": ["tous biomes"],
+    "planet": "Aetherion",
+    "faction": "Indépendants",
+    "morphology": "Premiers êtres, créateurs du multivers.",
+    "abilities": ["création", "destruction", "altération de réalité"],
+    "weaknesses": ["instabilité cosmique"],
+    "mmo_role": "boss final absolu",
+    "ai": {
+      "behavior": "incompréhensible",
+      "goals": ["maintenir ou remodeler la réalité"],
+      "routines": ["manifestations cosmiques", "altérations massives"]
+    }
+  }
+]
+/* D1-10 END */
+
+
+
+

@@ -23,7 +23,8 @@ $ErrorActionPreference = "Stop"
 
 function Invoke-DesktopAgent([hashtable]$payload) {
   $body = $payload | ConvertTo-Json -Depth 30
-  return Invoke-RestMethod "$BaseUrl/invoke" -Method Post -ContentType "application/json" -Body $body
+  $bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+  return Invoke-RestMethod "$BaseUrl/invoke" -Method Post -ContentType "application/json" -Body $bytes
 }
 
 if (-not (Test-Path -LiteralPath $WorkflowPath)) {

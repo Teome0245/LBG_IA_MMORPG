@@ -100,6 +100,12 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-01 | **Dialogue PNJ — placeholder nommé + route rapide** : le placeholder WS remplace `Le PNJ` par le nom réel (`{npc_name}`), l’orchestrateur injecte `dialogue_target=fast` par défaut sur `agent.dialogue`, et `dialogue_llm` résout `fast` vers un provider rapide OpenAI-compatible (`LBG_DIALOGUE_FAST_*`) avec fallback remote/local. |
+| 2026-05-01 | **Client MMO — régression corrigée** : le build Vite avait réintroduit l’ancien rendu isométrique ; `web_client/src/renderer.js` est réaligné sur le rendu top-down stable (caméra joueur, zoom, `planet_map`, `bourg_palette_map`) avec bulles/sélection PNJ intégrées. Déploiement front `/mmo/` validé sur `index-C_pLjWcn.js` + garde-fou anti-régression dans `deploy_web_client.sh`. |
+| 2026-05-01 | **MMO — pause conversation PNJ** : quand le pont WS→IA démarre une conversation, le PNJ visé s’arrête et se tourne vers le joueur ; à la réponse finale ou en cas d’échec IA, son `busy_timer` est remis à **120s** avant reprise de sa routine. Tests `mmmorpg_server` OK. |
+| 2026-05-01 | **Client MMO — bulles de dialogue v1** : le chat cible désormais le PNJ sélectionné au clic ou, à défaut, le PNJ le plus proche ; conserve la position courante lors de l’envoi WS ; affiche une bulle “en attente” puis remplace par la réponse `npc_reply` du pont IA ; HUD enrichi avec la cible de dialogue courante. |
+| 2026-05-01 | **OpenGame — exécution contrôlée** : `agent.opengame` peut lancer la CLI **uniquement** si `LBG_OPENGAME_DRY_RUN=0` + `LBG_OPENGAME_EXECUTION_ENABLED=1` (+ approval optionnelle) ; exécution sans `--yolo`, dossier cible vide obligatoire, timeout/capture stdout-stderr, audit JSONL. |
+| 2026-05-01 | **OpenGame — squelette agent** : ajout de la capability **`prototype_game`** → **`agent.opengame`** ; action structurée `context.opengame_action.kind=generate_prototype`, dry-run par défaut, sandbox `LBG_OPENGAME_SANDBOX_DIR`, audit `agents.opengame.audit`, tests dispatch/routage/classifieur. |
 | 2026-05-01 | **ADR 0003 OpenGame** : décision d'intégrer OpenGame uniquement comme forge de prototypes orchestrée (`agent.opengame` cible), sandboxée, auditée, avec promotion manuelle vers le MMO ; l'orchestrateur reste le maître d'orchestre du projet. |
 | 2026-04-09 | Création du plan de route ; squelette backend / orchestrateur / mmo_server en place ; déploiement systemd sur VM privée documenté ; règle réseau inscrite dans `architecture.md`. |
 | 2026-04-09 | Procédure **dev → prod** formalisée (`deploy_vm.sh`, contrôles, doc) dans `bootstrap.md`, `architecture.md` et Priorité 0 de ce plan. |
@@ -256,7 +262,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 **Règle** : une **seule** phrase actionnable à la fois ; quand elle est **faite**, la remplacer par la suivante et, si utile, ajouter une ligne dans **État courant** ci‑dessus.
 
 - [x] **Jalon #5 : Physique & Collisions (Priorité 3)** : Bloquer les murs du village (`hollow=False`), ajuster les marges et régénérer le PNG sans chevauchements (v1.4).
-- [/] **Jalon #6 : Interactions & Dialogue (Priorité 2/3)** : Intégration des bulles de dialogue riches, gestion des inventaires basiques ou interaction avec des objets (portes, coffres).
+- [/] **Jalon #6 : Interactions & Dialogue (Priorité 2/3)** : Intégration des bulles de dialogue riches, gestion des inventaires basiques ou interaction avec des objets (portes, coffres). Première tranche client livrée : bulles PNJ + sélection de cible au clic + ciblage automatique du PNJ le plus proche.
 
 **Étape actuelle** : Intégration des bulles de dialogue riches sur le client MMO et liaison avec l'orchestrateur.
 
