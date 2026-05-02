@@ -133,8 +133,11 @@ export class Renderer {
         let bestDist = 3.0;
         for (const ent of Array.isArray(this.entities) ? this.entities : []) {
             if (!ent || ent.kind !== "npc") continue;
-            const dx = Number(ent.x || 0) - world.x;
-            const dz = Number(ent.z || 0) - world.z;
+            const interp = this.interpolatedEntities.get(ent.id);
+            const ex = interp ? Number(interp.x || 0) : Number(ent.x || 0);
+            const ez = interp ? Number(interp.z || 0) : Number(ent.z || 0);
+            const dx = ex - world.x;
+            const dz = ez - world.z;
             const dist = Math.sqrt(dx * dx + dz * dz);
             if (dist < bestDist) {
                 best = ent;
@@ -272,7 +275,7 @@ export class Renderer {
     }
 
     interpolate() {
-        const smoothing = 0.15;
+        const smoothing = 0.24;
         for (const ent of this.entities) {
             let interpolated = this.interpolatedEntities.get(ent.id);
             if (!interpolated) {
@@ -295,9 +298,9 @@ export class Renderer {
         if (!this.playerId) return;
         const player = this.interpolatedEntities.get(this.playerId);
         if (!player) return;
-        this.cameraX += (player.x - this.cameraX) * 0.2;
-        this.cameraY += (player.y - this.cameraY) * 0.2;
-        this.cameraZ += (player.z - this.cameraZ) * 0.2;
+        this.cameraX += (player.x - this.cameraX) * 0.18;
+        this.cameraY += (player.y - this.cameraY) * 0.18;
+        this.cameraZ += (player.z - this.cameraZ) * 0.18;
     }
 
     drawFloor(floorY = 0) {
@@ -362,7 +365,7 @@ export class Renderer {
         const interp = this.interpolatedEntities.get(ent.id);
         if (!interp) return;
 
-        const isMoving = Math.sqrt((ent.vx || 0) ** 2 + (ent.vz || 0) ** 2) > 0.5;
+        const isMoving = Math.sqrt((ent.vx || 0) ** 2 + (ent.vz || 0) ** 2) > 0.35;
         const bob = isMoving ? bobbing : 0;
         const pos = this.worldToScreen(interp.x, interp.z, interp.y + bob);
         const isMe = ent.id === this.playerId;
@@ -392,7 +395,12 @@ export class Renderer {
         
         const color = isMe ? '#00f2ff' : (isNpc ? '#ffea00' : '#ff0055');
         const glowColor = isMe ? 'rgba(0, 242, 255, 0.8)' : (isNpc ? 'rgba(255, 234, 0, 0.8)' : 'rgba(255, 0, 85, 0.8)');
-        const yOffset = (ent.x + ent.y) % 1 > 0.5 ? 2 * scale : -2 * scale;
+        let yOffset = 0;
+        if (ent.id) {
+            let h = 0;
+            for (let i = 0; i < ent.id.length; i++) h = (h + ent.id.charCodeAt(i)) | 0;
+            yOffset = ((h % 5) - 2) * 0.35 * scale;
+        }
         const drawY = pos.y - 10 * spriteScale * scale + yOffset;
 
         ctx.shadowBlur = 10 * scale;

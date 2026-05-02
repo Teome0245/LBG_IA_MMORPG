@@ -9,6 +9,7 @@ from lbg_agents.dialogue_llm import (
     is_configured,
     model_name,
     normalize_history,
+    _sanitize_world_action,
 )
 
 
@@ -187,3 +188,20 @@ def test_cache_key_changes_when_reputation_changes(monkeypatch: pytest.MonkeyPat
     k1 = mod._cache_key(speaker="PNJ", player_text="Salut", context=c1)
     k2 = mod._cache_key(speaker="PNJ", player_text="Salut", context=c2)
     assert k1 != k2
+
+
+def test_sanitize_world_action_quest_completed() -> None:
+    out = _sanitize_world_action(
+        {"kind": "quest", "quest_id": "q:done", "quest_step": 2, "quest_accepted": True, "quest_completed": True}
+    )
+    assert out is not None
+    assert out["quest_completed"] is True
+
+
+def test_sanitize_world_action_quest_completed_invalid_type() -> None:
+    assert (
+        _sanitize_world_action(
+            {"kind": "quest", "quest_id": "q:x", "quest_step": 0, "quest_accepted": True, "quest_completed": "yes"}
+        )
+        is None
+    )

@@ -152,13 +152,16 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                     }
                 elif world_action.get("kind") == "quest":
                     # Quête : stocker un état minimal côté monde (whitelist côté serveur WS).
+                    flags_q: dict[str, object] = {
+                        "quest_id": world_action.get("quest_id"),
+                        "quest_step": world_action.get("quest_step", 0),
+                        "quest_accepted": world_action.get("quest_accepted", True),
+                    }
+                    if world_action.get("quest_completed") is True:
+                        flags_q["quest_completed"] = True
                     commit = {
                         "npc_id": npc_id,
-                        "flags": {
-                            "quest_id": world_action.get("quest_id"),
-                            "quest_step": world_action.get("quest_step", 0),
-                            "quest_accepted": world_action.get("quest_accepted", True),
-                        },
+                        "flags": flags_q,
                     }
             return {
                 "agent": "http_dialogue",

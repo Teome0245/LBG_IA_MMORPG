@@ -36,6 +36,7 @@ class App {
         const sendChatBtn = document.getElementById('send-chat-btn');
         const quickAidBtn = document.getElementById('quick-aid-btn');
         const quickQuestBtn = document.getElementById('quick-quest-btn');
+        const quickQuestCompleteBtn = document.getElementById('quick-quest-complete-btn');
         const clearQuestsBtn = document.getElementById('clear-quests-btn');
 
         connectBtn.addEventListener('click', () => {
@@ -83,6 +84,21 @@ class App {
                 this.sendDialogueToTarget(
                     "Propose-moi une quête simple liée à ce lieu et enregistre-la comme action de quête.",
                     { _require_action_json: true, _world_action_kind: "quest" }
+                );
+            });
+        }
+
+        if (quickQuestCompleteBtn) {
+            quickQuestCompleteBtn.addEventListener('click', () => {
+                const qid = (this.activeQuestId || "").trim();
+                const ctx = {
+                    _require_action_json: true,
+                    _world_action_kind: "quest",
+                };
+                if (qid) ctx._active_quest_id = qid;
+                this.sendDialogueToTarget(
+                    "Je confirme avoir accompli les objectifs : enregistre la clôture (ACTION_JSON quest avec quest_completed=true et le quest_id correct).",
+                    ctx
                 );
             });
         }
@@ -245,14 +261,21 @@ class App {
         if (!questId) return;
         const step = Number.isFinite(Number(flags.quest_step)) ? Number(flags.quest_step) : 0;
         const accepted = typeof flags.quest_accepted === "boolean" ? flags.quest_accepted : true;
+        const completed = flags.quest_completed === true;
         this.questLogById.set(questId, {
             questId,
             step,
             accepted,
+            completed,
             npcName: target && target.name ? target.name : "PNJ",
             time: new Date(),
         });
-        if (!this.activeQuestId || !this.questLogById.has(this.activeQuestId)) {
+        if (completed && this.activeQuestId === questId) {
+            this.setActiveQuest("", { silent: true });
+        } else if (
+            !completed
+            && (!this.activeQuestId || !this.questLogById.has(this.activeQuestId))
+        ) {
             this.setActiveQuest(questId, { silent: true });
         }
         this.persistQuestLog();
@@ -271,6 +294,7 @@ class App {
                     questId: row.questId.trim(),
                     step: Number.isFinite(Number(row.step)) ? Number(row.step) : 0,
                     accepted: typeof row.accepted === "boolean" ? row.accepted : true,
+                    completed: typeof row.completed === "boolean" ? row.completed : false,
                     npcName: typeof row.npcName === "string" && row.npcName.trim() ? row.npcName.trim() : "PNJ",
                     time: row.time ? new Date(row.time) : new Date(),
                 });
@@ -325,7 +349,10 @@ class App {
             return;
         }
         el.classList.remove("empty");
-        el.textContent = `Quête suivie : ${quest.questId} · étape ${quest.step} · ${quest.npcName}`;
+        const done = Boolean(quest.completed);
+        el.textContent = done
+            ? `Quête suivie : ${quest.questId} · terminée · ${quest.npcName}`
+            : `Quête suivie : ${quest.questId} · étape ${quest.step} · ${quest.npcName}`;
     }
 
     renderWorldEvents() {
@@ -371,12 +398,14 @@ class App {
         }
         for (const quest of quests) {
             const row = document.createElement('div');
-            row.className = `world-event quest quest-row ${quest.questId === this.activeQuestId ? "active" : ""}`;
+            row.className = `world-event quest quest-row ${quest.questId === this.activeQuestId ? "active" : ""} ${quest.completed ? "quest-done" : ""}`;
             row.setAttribute("role", "button");
             row.tabIndex = 0;
-            row.textContent = quest.accepted
-                ? `Acceptée: ${quest.questId}`
-                : `Mise à jour: ${quest.questId}`;
+            let headline;
+            if (quest.completed) headline = `Terminée: ${quest.questId}`;
+            else if (quest.accepted) headline = `Acceptée: ${quest.questId}`;
+            else headline = `Mise à jour: ${quest.questId}`;
+            row.textContent = headline;
             const followQuest = () => this.setActiveQuest(quest.questId);
             row.addEventListener('click', followQuest);
             row.addEventListener('keypress', (e) => {
@@ -497,8 +526,11 @@ class App {
         const pct = (value) => `${Math.round(Math.max(0, Math.min(1, Number(value || 0))) * 100)}%`;
         const rep = Number.isFinite(Number(state.reputation)) ? Number(state.reputation) : 0;
         const repClass = rep > 0 ? "good" : rep < 0 ? "warn" : "muted";
+        const qdone = flags.quest_completed === true;
         const quest = typeof flags.quest_id === "string" && flags.quest_id.trim()
-            ? `<br>Quête: <span class="warn">${flags.quest_id.trim()}</span>`
+            ? `<br>Quête: <span class="warn">${flags.quest_id.trim()}</span>${
+                qdone ? ' <span class="good">(terminée)</span>' : ""
+            }`
             : "";
         el.innerHTML = [
             `Réputation: <span class="${repClass}">${rep}</span>`,
@@ -536,7 +568,7 @@ class App {
                 }
                 
                 // Rendu à 60fps avec facteur d'animation
-                const bobbing = Math.sin((time || now) / 150) * 2;
+                const bobbing = Math.sin((time || now) / 220) * 0.85;
                 this.renderer.render(bobbing);
             } catch(e) {
                 const consoleLogs = document.getElementById('console-logs');

@@ -582,6 +582,11 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
     pnj_reg_line = _format_npc_registry_for_prompt(context)
     if pnj_reg_line:
         lines.append(pnj_reg_line)
+    aq = context.get("_active_quest_id")
+    if isinstance(aq, str) and aq.strip():
+        lines.append(
+            f"Quête suivie côté client (référence) : {aq.strip()} — utilise ce quest_id si le joueur résout ou clôt cette quête."
+        )
 
     # Option "LLM-on actions monde" (bornée) : le modèle peut suggérer une action déterministe.
     # Gated par env + présence d'un PNJ monde (sinon on ignore).
@@ -601,6 +606,9 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
         )
         lines.append('ACTION_JSON: {"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}')
         lines.append('ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":0,"quest_accepted":true}')
+        lines.append(
+            'ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":3,"quest_accepted":true,"quest_completed":true}'
+        )
         if requested_kind:
             lines.append(
                 f"Action demandée par l'interface: utilise obligatoirement kind='{requested_kind}' "
@@ -615,13 +623,18 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             "tu peux utiliser ACTION_JSON kind='quest'."
         )
         lines.append(
+            "Quand le joueur a terminé les objectifs et que la quête doit se clôturer, utilise kind='quest' avec "
+            "quest_completed=true (et garde quest_id cohérent). Tu peux augmenter quest_step en même temps si utile."
+        )
+        lines.append(
             "Si tu déclenches une aide, mets en général un petit reputation_delta positif (ex: 1 à 10) "
             "car l'aide améliore la confiance, sauf raison RP contraire."
         )
         lines.append(
             "Contraintes: kind='aid' ou kind='quest'. "
             "Pour aid: deltas hunger/thirst/fatigue dans [-1,1]; reputation_delta dans [-100,100]. "
-            "Pour quest: quest_id string non vide; quest_step int [0,10000]; quest_accepted bool. "
+            "Pour quest: quest_id string non vide; quest_step int [0,10000]; quest_accepted bool; "
+            "quest_completed bool optionnel (false par défaut). "
             + ("Tu DOIS écrire ACTION_JSON car il est requis." if require_action else "Si aucune action n'est nécessaire, n'écris pas ACTION_JSON.")
         )
     return "\n".join(lines)
@@ -707,11 +720,19 @@ def _sanitize_world_action(action: dict[str, Any] | None) -> dict[str, Any] | No
     if accepted is None:
         # type invalide => rejeter
         return None
+    if "quest_completed" in action:
+        qc_raw = action.get("quest_completed")
+        if not isinstance(qc_raw, bool):
+            return None
+        quest_completed = bool(qc_raw)
+    else:
+        quest_completed = False
     return {
         "kind": "quest",
         "quest_id": qid2,
         "quest_step": int(step),
         "quest_accepted": bool(accepted),
+        "quest_completed": quest_completed,
     }
 
 

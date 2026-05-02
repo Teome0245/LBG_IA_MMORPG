@@ -157,6 +157,26 @@ class TestWsInbound(unittest.TestCase):
         self.assertEqual(msg["world_event"]["trace_id"], "trace-aid-1")
         self.assertIn("Aide", msg["world_event"]["summary"])
 
+    def test_dialogue_commit_world_event_quest_completed_summary(self):
+        commit = {
+            "npc_id": "npc:merchant",
+            "flags": {"quest_id": "q:fin", "quest_step": 2, "quest_accepted": True, "quest_completed": True},
+        }
+        event = _dialogue_commit_world_event(commit=commit, trace_id="t1", reason="accepted")
+        self.assertIn("accomplie", event["summary"].lower())
+        self.assertIn("q:fin", event["summary"])
+
+    def test_npc_snapshot_exposes_quest_completed(self):
+        game = GameState()
+        ok, reason = game.commit_dialogue(
+            npc_id="npc:merchant",
+            trace_id="quest-done-1",
+            flags={"quest_id": "q:fin", "quest_step": 1, "quest_completed": True},
+        )
+        self.assertTrue(ok, reason)
+        snap = next(e for e in game.entity_snapshots() if e["id"] == "npc:merchant")
+        self.assertTrue(snap["world_state"]["flags"].get("quest_completed"))
+
 
 if __name__ == "__main__":
     unittest.main()

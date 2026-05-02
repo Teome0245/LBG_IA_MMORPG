@@ -246,6 +246,7 @@ class GameState:
         allowed: dict[str, tuple[type, ...]] = {
             # Quêtes / RP
             "quest_accepted": (bool,),
+            "quest_completed": (bool,),
             "quest_id": (str,),
             "quest_step": (int,),
             # Dialogue / état RP

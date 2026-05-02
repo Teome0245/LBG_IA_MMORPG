@@ -271,6 +271,15 @@ button:hover {
   box-shadow: inset 0 0 0 1px rgba(255, 234, 0, 0.45);
 }
 
+.quest-row.quest-done {
+  border-left-color: #7cff6b;
+  background: rgba(124, 255, 107, 0.06);
+}
+
+.quest-row.quest-done.active {
+  box-shadow: inset 0 0 0 1px rgba(124, 255, 107, 0.45);
+}
+
 .world-event.empty {
   border-left-color: rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.04);

@@ -52,7 +52,7 @@ Schéma : `docs/schemas/ws/client.hello.schema.json`
 Champs notables :
 
 - `world_npc_id` + `text` (optionnels) : si fournis, déclenchent le pont IA
-- `ia_context` (optionnel) : **mini contexte borné** (whitelist) transmis à l’IA (ex: `_require_action_json`, `_world_action_kind: "aid"|"quest"`).
+- `ia_context` (optionnel) : **mini contexte borné** (whitelist) transmis à l’IA (ex: `_require_action_json`, `_world_action_kind: "aid"|"quest"`, `_active_quest_id` pour indiquer la quête suivie côté client).
   Les clés inconnues sont ignorées par le serveur WS.
 
 ### 3.2 `move`

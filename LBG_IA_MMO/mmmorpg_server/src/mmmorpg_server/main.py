@@ -136,6 +136,13 @@ def _dialogue_commit_world_event(
     summary = "État PNJ mis à jour."
     if any(str(k).startswith("aid_") for k in flags_out):
         summary = "Aide appliquée."
+    elif flags_out.get("quest_completed") is True:
+        qid = flags_out.get("quest_id")
+        summary = (
+            f"Quête accomplie: {qid.strip()}"
+            if isinstance(qid, str) and qid.strip()
+            else "Quête accomplie."
+        )
     elif isinstance(flags_out.get("quest_id"), str):
         summary = f"Quête mise à jour: {flags_out['quest_id']}"
     elif "reputation_delta" in flags_out:
@@ -194,6 +201,10 @@ def _queue_ia_bridge(
             elif k == "_world_action_kind":
                 if isinstance(v, str) and v.strip().lower() in ("aid", "quest"):
                     ctx[k] = v.strip().lower()
+            elif k == "_active_quest_id":
+                vid = v.strip() if isinstance(v, str) else ""
+                if vid and len(vid) <= 80:
+                    ctx[k] = vid
     payload = {"actor_id": actor_id, "text": text0.strip(), "context": ctx}
 
     async def _fetch_and_queue() -> None:
