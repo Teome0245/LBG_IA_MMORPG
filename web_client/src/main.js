@@ -128,7 +128,16 @@ class App {
         if (!clean) return;
         const target = this.getDialogueTarget();
         this.lastDialogueTarget = target;
-        this.network.sendChat(clean, target.id, target.name, this.playerLocalPos, iaContext);
+        const merged = {};
+        if (iaContext && typeof iaContext === "object") {
+            Object.assign(merged, iaContext);
+        }
+        const qid = (this.activeQuestId || "").trim();
+        if (qid && !Object.prototype.hasOwnProperty.call(merged, "_active_quest_id")) {
+            merged._active_quest_id = qid;
+        }
+        const outCtx = Object.keys(merged).length ? merged : null;
+        this.network.sendChat(clean, target.id, target.name, this.playerLocalPos, outCtx);
         this.renderer.setDialogueBubble(target.id, "...", {
             speaker: target.name,
             kind: "pending",
