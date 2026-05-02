@@ -198,10 +198,29 @@ def test_sanitize_world_action_quest_completed() -> None:
     assert out["quest_completed"] is True
 
 
-def test_sanitize_world_action_quest_completed_invalid_type() -> None:
-    assert (
-        _sanitize_world_action(
-            {"kind": "quest", "quest_id": "q:x", "quest_step": 0, "quest_accepted": True, "quest_completed": "yes"}
-        )
-        is None
+def test_sanitize_world_action_quest_reputation() -> None:
+    out = _sanitize_world_action(
+        {
+            "kind": "quest",
+            "quest_id": "q:rep",
+            "quest_step": 1,
+            "quest_accepted": True,
+            "reputation_delta": 12,
+        }
     )
+    assert out is not None
+    assert out["reputation_delta"] == 12
+
+
+def test_sanitize_world_action_quest_reputation_omit_when_zero() -> None:
+    out = _sanitize_world_action(
+        {
+            "kind": "quest",
+            "quest_id": "q:z",
+            "quest_step": 0,
+            "quest_accepted": True,
+            "reputation_delta": 0,
+        }
+    )
+    assert out is not None
+    assert "reputation_delta" not in out

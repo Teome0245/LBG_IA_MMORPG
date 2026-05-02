@@ -162,6 +162,61 @@ def test_invoke_llm_action_json_quest_to_commit(monkeypatch: pytest.MonkeyPatch)
     assert flags["quest_accepted"] is True
 
 
+def test_invoke_llm_action_json_quest_reputation_to_commit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_DIALOGUE_LLM_DISABLED", raising=False)
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_MODEL", "test-model")
+
+    import lbg_agents.dialogue_llm as llm_mod
+
+    class _Resp:
+        status_code = 200
+
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": (
+                                'ACTION_JSON: {"kind":"quest","quest_id":"q:pay","quest_step":2,'
+                                '"quest_accepted":true,"quest_completed":true,"reputation_delta":15}\nMerci.'
+                            )
+                        }
+                    }
+                ]
+            }
+
+    class _Client:
+        def __init__(self, *a: object, **k: object) -> None:
+            pass
+
+        def __enter__(self) -> "_Client":
+            return self
+
+        def __exit__(self, *a: object) -> None:
+            return None
+
+        def post(self, *a: object, **k: object) -> _Resp:
+            return _Resp()
+
+    monkeypatch.setattr(llm_mod.httpx, "Client", lambda **kw: _Client())
+    monkeypatch.setenv("LBG_DIALOGUE_WORLD_ACTIONS", "1")
+
+    client = TestClient(app)
+    r = client.post(
+        "/invoke",
+        json={"actor_id": "p:1", "text": "Voilà", "context": {"npc_name": "Mara", "world_npc_id": "npc:guard"}},
+    )
+    assert r.status_code == 200
+    j = r.json()
+    flags = j["commit"]["flags"]
+    assert flags["reputation_delta"] == 15
+    assert flags["quest_completed"] is True
+
+
 def test_invoke_llm_action_json_quest_completed_to_commit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LBG_DIALOGUE_LLM_DISABLED", raising=False)
     monkeypatch.setenv("LBG_DIALOGUE_LLM_BASE_URL", "http://127.0.0.1:11434/v1")

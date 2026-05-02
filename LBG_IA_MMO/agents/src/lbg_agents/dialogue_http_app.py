@@ -159,6 +159,14 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                     }
                     if world_action.get("quest_completed") is True:
                         flags_q["quest_completed"] = True
+                    rep_raw = world_action.get("reputation_delta", 0)
+                    try:
+                        rep_i = int(rep_raw)
+                    except (TypeError, ValueError):
+                        rep_i = 0
+                    if rep_i != 0:
+                        rep_i = max(-100, min(100, rep_i))
+                        flags_q["reputation_delta"] = rep_i
                     commit = {
                         "npc_id": npc_id,
                         "flags": flags_q,

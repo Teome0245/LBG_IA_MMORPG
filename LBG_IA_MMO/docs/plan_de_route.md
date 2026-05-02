@@ -100,6 +100,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-02 | **Quêtes — réputation sur ACTION_JSON quest** : `reputation_delta` optionnel (entier ±100) dans la même ligne `kind:"quest"` ; sanitisation agent, commit HTTP, application serveur existante (`reputation_delta` dans les flags). |
 | 2026-05-02 | **Client MMO — quête suivie dans tout le chat** : si une quête est suivie dans le HUD, `_active_quest_id` est fusionné automatiquement dans `ia_context` pour chaque message PNJ (sans écraser une valeur déjà fournie), pour aligner dialogue libre et boutons rapides. |
 | 2026-05-02 | **Quêtes — clôture monde (`quest_completed`)** : whitelist serveur + ACTION_JSON dialogue + commit agent + `world_event` « Quête accomplie » ; contexte `_active_quest_id` vers l’IA ; HUD « TERMINER QUÊTE » ; journal local et état PNJ affichent la clôture. **Mouvement client** : offset sprite stable (plus de flip selon position), bobbing et lissage positions/caméra adoucis. |
 | 2026-05-02 | **MMO — persistance immédiate des actions monde** : les commits dialogue acceptés (`world_commit` direct ou action IA PNJ) déclenchent désormais une sauvegarde JSON immédiate de l’état serveur persistant (`seen_trace_ids`, flags PNJ, réputation, jauges), en plus de la sauvegarde à l’arrêt propre. Test ciblé `test_persistence` ajouté. |

@@ -607,7 +607,7 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
         lines.append('ACTION_JSON: {"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}')
         lines.append('ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":0,"quest_accepted":true}')
         lines.append(
-            'ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":3,"quest_accepted":true,"quest_completed":true}'
+            'ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":3,"quest_accepted":true,"quest_completed":true,"reputation_delta":8}'
         )
         if requested_kind:
             lines.append(
@@ -627,6 +627,10 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             "quest_completed=true (et garde quest_id cohérent). Tu peux augmenter quest_step en même temps si utile."
         )
         lines.append(
+            "Sur une quête (surtout à la clôture), tu peux ajouter reputation_delta entier dans [-100,100] "
+            "comme petite récompense ou pénalité RP ; 0 ou absent = aucun effet réputation."
+        )
+        lines.append(
             "Si tu déclenches une aide, mets en général un petit reputation_delta positif (ex: 1 à 10) "
             "car l'aide améliore la confiance, sauf raison RP contraire."
         )
@@ -634,7 +638,7 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             "Contraintes: kind='aid' ou kind='quest'. "
             "Pour aid: deltas hunger/thirst/fatigue dans [-1,1]; reputation_delta dans [-100,100]. "
             "Pour quest: quest_id string non vide; quest_step int [0,10000]; quest_accepted bool; "
-            "quest_completed bool optionnel (false par défaut). "
+            "quest_completed bool optionnel (false par défaut); reputation_delta int optionnel [-100,100]. "
             + ("Tu DOIS écrire ACTION_JSON car il est requis." if require_action else "Si aucune action n'est nécessaire, n'écris pas ACTION_JSON.")
         )
     return "\n".join(lines)
@@ -727,13 +731,17 @@ def _sanitize_world_action(action: dict[str, Any] | None) -> dict[str, Any] | No
         quest_completed = bool(qc_raw)
     else:
         quest_completed = False
-    return {
+    rep_d = max(-100, min(100, i("reputation_delta")))
+    out: dict[str, Any] = {
         "kind": "quest",
         "quest_id": qid2,
         "quest_step": int(step),
         "quest_accepted": bool(accepted),
         "quest_completed": quest_completed,
     }
+    if rep_d != 0:
+        out["reputation_delta"] = int(rep_d)
+    return out
 
 
 def _world_actions_enabled(*, context: dict[str, Any]) -> bool:

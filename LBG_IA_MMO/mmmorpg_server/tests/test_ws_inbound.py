@@ -177,6 +177,22 @@ class TestWsInbound(unittest.TestCase):
         snap = next(e for e in game.entity_snapshots() if e["id"] == "npc:merchant")
         self.assertTrue(snap["world_state"]["flags"].get("quest_completed"))
 
+    def test_quest_commit_with_reputation_delta_updates_npc(self):
+        game = GameState()
+        self.assertEqual(game.get_npc_reputation("npc:merchant"), 0)
+        ok, reason = game.commit_dialogue(
+            npc_id="npc:merchant",
+            trace_id="quest-rep-1",
+            flags={
+                "quest_id": "q:pay",
+                "quest_step": 2,
+                "quest_completed": True,
+                "reputation_delta": 9,
+            },
+        )
+        self.assertTrue(ok, reason)
+        self.assertEqual(game.get_npc_reputation("npc:merchant"), 9)
+
 
 if __name__ == "__main__":
     unittest.main()
