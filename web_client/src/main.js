@@ -2,6 +2,8 @@ import { NetworkManager } from './network.js';
 import { Renderer } from './renderer.js';
 import { InputManager } from './input.js';
 
+const QUEST_LOG_STORAGE_KEY = "lbg-mmo.questLog.v1";
+
 class App {
     constructor() {
         this.network = new NetworkManager(
@@ -32,6 +34,7 @@ class App {
         const sendChatBtn = document.getElementById('send-chat-btn');
         const quickAidBtn = document.getElementById('quick-aid-btn');
         const quickQuestBtn = document.getElementById('quick-quest-btn');
+        const clearQuestsBtn = document.getElementById('clear-quests-btn');
 
         connectBtn.addEventListener('click', () => {
             const name = playerNameInput.value.trim() || "Voyageur";
@@ -82,11 +85,22 @@ class App {
             });
         }
 
+        if (clearQuestsBtn) {
+            clearQuestsBtn.addEventListener('click', () => {
+                this.questLogById.clear();
+                this.persistQuestLog();
+                this.renderQuestLog();
+                this.addLog("Journal de quêtes local vidé.", "system");
+            });
+        }
+
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') sendChatBtn.click();
         });
 
         this.renderer.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+        this.restoreQuestLog();
+        this.renderQuestLog();
     }
 
     sendDialogueToTarget(text, iaContext = null) {
@@ -135,7 +149,6 @@ class App {
         this.addLog(`Bienvenue ${data.player_id} !`, 'system');
         this.worldEvents = [];
         this.seenWorldEventTraceIds.clear();
-        this.questLogById.clear();
         this.renderWorldEvents();
         this.renderQuestLog();
         this.renderer.setPlayerId(data.player_id);
@@ -235,7 +248,42 @@ class App {
             npcName: target && target.name ? target.name : "PNJ",
             time: new Date(),
         });
+        this.persistQuestLog();
         this.renderQuestLog();
+    }
+
+    restoreQuestLog() {
+        try {
+            const raw = window.localStorage.getItem(QUEST_LOG_STORAGE_KEY);
+            if (!raw) return;
+            const rows = JSON.parse(raw);
+            if (!Array.isArray(rows)) return;
+            for (const row of rows) {
+                if (!row || typeof row.questId !== "string" || !row.questId.trim()) continue;
+                this.questLogById.set(row.questId.trim(), {
+                    questId: row.questId.trim(),
+                    step: Number.isFinite(Number(row.step)) ? Number(row.step) : 0,
+                    accepted: typeof row.accepted === "boolean" ? row.accepted : true,
+                    npcName: typeof row.npcName === "string" && row.npcName.trim() ? row.npcName.trim() : "PNJ",
+                    time: row.time ? new Date(row.time) : new Date(),
+                });
+            }
+        } catch (_) {
+            this.questLogById.clear();
+        }
+    }
+
+    persistQuestLog() {
+        try {
+            const rows = Array.from(this.questLogById.values())
+                .sort((a, b) => b.time.getTime() - a.time.getTime())
+                .slice(0, 20)
+                .map((row) => ({
+                    ...row,
+                    time: row.time.toISOString(),
+                }));
+            window.localStorage.setItem(QUEST_LOG_STORAGE_KEY, JSON.stringify(rows));
+        } catch (_) {}
     }
 
     renderWorldEvents() {

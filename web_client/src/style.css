@@ -223,6 +223,16 @@ button:hover {
   margin-top: 0.9rem;
 }
 
+.mini-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  font-size: 0.65rem !important;
+  letter-spacing: 1px;
+  margin: -0.2rem 0 0.45rem 0;
+  padding: 0.35rem 0.5rem !important;
+}
+
 .world-event {
   border-left: 3px solid #7cff6b;
   background: rgba(124, 255, 107, 0.08);
