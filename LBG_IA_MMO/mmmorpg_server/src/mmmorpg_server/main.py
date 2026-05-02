@@ -274,6 +274,7 @@ def _queue_ia_bridge(
                     npc_id=commit["npc_id"],
                     trace_id=tid.strip(),
                     flags=commit.get("flags"),
+                    player_id=player_id,
                 )
                 if ok:
                     if not config.PERSIST_DISABLE:
@@ -473,6 +474,7 @@ async def client_handler(
                         npc_id=wc_payload["npc_id"],
                         trace_id=wc_payload["trace_id"],
                         flags=wc_payload.get("flags"),
+                        player_id=player_id,
                     )
                     if not ok:
                         await ws.send(json.dumps(msg_error(f"world_commit refusé: {reason}")))

@@ -89,6 +89,8 @@ Champs :
 - `world_commit.trace_id` (string, requis) : idempotence (même sémantique que le commit HTTP).
 - `world_commit.flags` (objet, optionnel) : ex. `reputation_delta`, `aid_hunger_delta`, etc. (voir serveur / tests).
 
+**Effet joueur (session)** : lorsque le commit est appliqué depuis une session WS authentifiée (`hello` puis `move` avec le même joueur), le serveur copie les champs quête reconnus (`quest_id`, `quest_step`, `quest_accepted`, `quest_completed`) dans `entities[].stats.quest_state` pour l’entité joueur — visible dans les snapshots `welcome` / `world_tick`. Donnée **volatile** (disparaît à la déconnexion ; pas de persistance disque pour l’instant).
+
 Recette LAN : `infra/scripts/smoke_ws_move_commit_snapshot_lan.sh`.
 
 ## Serveur → client
@@ -154,6 +156,8 @@ Une entité : joueur ou PNJ.
 ```
 
 `kind` : `"player"` | `"npc"`.
+
+Champs additionnels selon l’implémentation : `stats` (ex. joueur : HP/MP ; **`stats.quest_state`** après commit quête sur la session courante), `world_state` pour les PNJ, etc.
 
 ### `error`
 

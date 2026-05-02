@@ -332,18 +332,47 @@ class GameState:
             return ent
         return None
 
+    def _apply_player_quest_snapshot(self, player_id: str, cleaned: dict[str, Any]) -> None:
+        """Copie les champs quête validés sur l'entité joueur (stats.quest_state), session WS uniquement."""
+        pid = (player_id or "").strip()
+        if not pid:
+            return
+        if not any(k in cleaned for k in ("quest_id", "quest_step", "quest_accepted", "quest_completed")):
+            return
+        ent = self.entities.get(pid)
+        if not ent or ent.kind != "player":
+            return
+        if ent.stats is None:
+            ent.stats = {}
+        qprev = ent.stats.get("quest_state") if isinstance(ent.stats.get("quest_state"), dict) else {}
+        qin: dict[str, Any] = dict(qprev)
+        if "quest_id" in cleaned:
+            qin["quest_id"] = cleaned["quest_id"]
+        if "quest_step" in cleaned:
+            qin["quest_step"] = cleaned["quest_step"]
+        if "quest_accepted" in cleaned:
+            qin["quest_accepted"] = cleaned["quest_accepted"]
+        if "quest_completed" in cleaned:
+            qin["quest_completed"] = cleaned["quest_completed"]
+        ent.stats["quest_state"] = qin
+
     def commit_dialogue(
         self,
         *,
         npc_id: str,
         trace_id: str,
         flags: dict[str, Any] | None,
+        player_id: str | None = None,
     ) -> tuple[bool, str]:
         """
         Réconciliation minimaliste (phase 2) : accepte un commit "dialogue" pour un PNJ si :
         - npc_id existe
         - trace_id est non vide
         - idempotence : trace_id déjà vu => accepté (noop)
+
+        Si ``player_id`` est un joueur connecté et ``flags`` contient des clés quête, une copie
+        est écrite dans ``entity.stats["quest_state"]`` (vue client via snapshot ; non persistée
+        sur disque tant qu'il n'y a pas de compte joueur stable).
         """
         npc_id = npc_id.strip()
         trace_id = trace_id.strip()
@@ -389,6 +418,8 @@ class GameState:
                     continue
                 cur[k] = v
             self._npc_commit_flags[npc_id] = cur
+            if player_id:
+                self._apply_player_quest_snapshot(player_id, cleaned)
         return True, "accepted"
 
     def freeze_npc_and_face(self, npc_id: str, player_id: str, duration: float = NPC_CONVERSATION_RESUME_DELAY_S) -> None:

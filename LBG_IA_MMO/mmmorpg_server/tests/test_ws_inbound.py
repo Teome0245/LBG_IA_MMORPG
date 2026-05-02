@@ -193,6 +193,25 @@ class TestWsInbound(unittest.TestCase):
         self.assertTrue(ok, reason)
         self.assertEqual(game.get_npc_reputation("npc:merchant"), 9)
 
+    def test_commit_dialogue_updates_player_quest_state_when_player_id_given(self):
+        game = GameState()
+        pid = game.add_player("Hero").id
+        ok, reason = game.commit_dialogue(
+            npc_id="npc:merchant",
+            trace_id="player-quest-1",
+            flags={"quest_id": "q:portrait", "quest_step": 2, "quest_accepted": True},
+            player_id=pid,
+        )
+        self.assertTrue(ok, reason)
+        ent = game.entities[pid]
+        self.assertIsNotNone(ent.stats)
+        qs = (ent.stats or {}).get("quest_state")
+        self.assertIsInstance(qs, dict)
+        assert isinstance(qs, dict)
+        self.assertEqual(qs.get("quest_id"), "q:portrait")
+        self.assertEqual(qs.get("quest_step"), 2)
+        self.assertTrue(qs.get("quest_accepted"))
+
 
 if __name__ == "__main__":
     unittest.main()
