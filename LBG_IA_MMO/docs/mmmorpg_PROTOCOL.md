@@ -91,6 +91,8 @@ Champs :
 
 **Effet joueur (session)** : lorsque le commit est appliqué depuis une session WS authentifiée (`hello` puis `move` avec le même joueur), le serveur copie les champs quête reconnus (`quest_id`, `quest_step`, `quest_accepted`, `quest_completed`) dans `entities[].stats.quest_state` pour l’entité joueur — visible dans les snapshots `welcome` / `world_tick`. Donnée **volatile** (disparaît à la déconnexion ; pas de persistance disque pour l’instant).
 
+**Client MMO web (`web_client`)** : après réception de `welcome` et à chaque `world_tick`, le client lit l’entité joueur (`kind: "player"`, `id` = `player_id` / id session) et fusionne `stats.quest_state` dans le journal de quêtes local (HUD + `localStorage`), sans remplacer un `npcName` déjà connu si le serveur ne l’expose pas. Les événements `world_event` de type quête enrichissent toujours le journal (ex. nom PNJ).
+
 Recette LAN : `infra/scripts/smoke_ws_move_commit_snapshot_lan.sh`.
 
 ## Serveur → client
@@ -157,7 +159,16 @@ Une entité : joueur ou PNJ.
 
 `kind` : `"player"` | `"npc"`.
 
-Champs additionnels selon l’implémentation : `stats` (ex. joueur : HP/MP ; **`stats.quest_state`** après commit quête sur la session courante), `world_state` pour les PNJ, etc.
+Champs additionnels selon l’implémentation : `stats` (ex. joueur : HP/MP ; **`stats.quest_state`** après commit quête sur la session courante), `world_state` pour les PNJ, `race_id` si renseigné côté serveur, etc.
+
+### HUD client MMO (`web_client`) — fiches personnage
+
+Le client web affiche deux blocs **lecture seule** alimentés par les snapshots `welcome` / `world_tick` :
+
+- **Fiche voyageur** : entité `kind: "player"` dont `id` correspond au joueur courant — nom, rôle, `race_id`, identifiant (affichage tronqué, id complet en infobulle), **`stats.quest_state`** (quête session serveur), et autre contenu de `stats` (hors `quest_state`) si présent.
+- **Fiche PNJ** : entité `kind: "npc"` correspondant à la cible dialogue (sélection carte ou PNJ le plus proche) — identité, **`world_state`** (réputation, jauges, flags quête PNJ), et **`stats`** éventuels. Rafraîchissement au tick **et** au clic sur un PNJ.
+
+Les chaînes réseau sont échappées à l’affichage. Les `race_id` restent des identifiants techniques (pas de résolution catalogue côté client pour l’instant).
 
 ### `error`
 
