@@ -17,6 +17,8 @@ class App {
         this.selectedDialogueTarget = null;
         this.lastDialogueTarget = null;
         this.dialogueTargetByTrace = new Map();
+        this.worldEvents = [];
+        this.seenWorldEventTraceIds = new Set();
         
         this.initUI();
     }
@@ -104,6 +106,9 @@ class App {
 
     handleWelcome(data) {
         this.addLog(`Bienvenue ${data.player_id} !`, 'system');
+        this.worldEvents = [];
+        this.seenWorldEventTraceIds.clear();
+        this.renderWorldEvents();
         this.renderer.setPlayerId(data.player_id);
         try { this.renderer.updateLocations(data.locations || []); } catch (_) {}
         try { this.renderer.updateState(data.entities || [], data.world_time_s || 0, data.day_fraction || 0); } catch (_) {}
@@ -158,7 +163,58 @@ class App {
             kind: "world_event",
             ttlMs: 7000,
         });
+        this.recordWorldEvent(event, target, summary);
         this.addLog(`Action monde (${target.name}): ${summary}`, 'system');
+    }
+
+    recordWorldEvent(event, target, summary) {
+        const tid = typeof event.trace_id === "string" ? event.trace_id.trim() : "";
+        if (tid && this.seenWorldEventTraceIds.has(tid)) {
+            return;
+        }
+        if (tid) {
+            this.seenWorldEventTraceIds.add(tid);
+        }
+        const flags = event && typeof event.flags === "object" && event.flags ? event.flags : {};
+        const kind = typeof flags.quest_id === "string" && flags.quest_id.trim() ? "quest" : "aid";
+        this.worldEvents.unshift({
+            traceId: tid,
+            npcName: target && target.name ? target.name : "PNJ",
+            summary,
+            kind,
+            questId: kind === "quest" ? flags.quest_id.trim() : "",
+            time: new Date(),
+        });
+        if (this.worldEvents.length > 6) {
+            this.worldEvents.length = 6;
+        }
+        this.renderWorldEvents();
+    }
+
+    renderWorldEvents() {
+        const feed = document.getElementById('world-event-feed');
+        if (!feed) return;
+        feed.innerHTML = "";
+        if (!this.worldEvents.length) {
+            const empty = document.createElement('div');
+            empty.className = 'world-event empty';
+            empty.textContent = 'Aucune action monde.';
+            feed.appendChild(empty);
+            return;
+        }
+        for (const item of this.worldEvents) {
+            const row = document.createElement('div');
+            row.className = `world-event ${item.kind === "quest" ? "quest" : "aid"}`;
+            const label = item.kind === "quest" ? "Quête" : "Aide";
+            row.textContent = `${label}: ${item.summary}`;
+            const meta = document.createElement('span');
+            meta.className = 'meta';
+            const hhmmss = item.time.toLocaleTimeString();
+            const quest = item.questId ? ` · ${item.questId}` : "";
+            meta.textContent = `${item.npcName} · ${hhmmss}${quest}`;
+            row.appendChild(meta);
+            feed.appendChild(row);
+        }
     }
 
     handleDisconnect() {
