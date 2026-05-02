@@ -80,7 +80,7 @@ Schéma : `docs/schemas/ws/server.welcome.schema.json`
 
 ### 4.2 `world_tick`
 
-But : tick monde (20 Hz par défaut), snapshot d’entités, et éventuellement une réplique PNJ.
+But : tick monde (20 Hz par défaut), snapshot d’entités, et éventuellement une réplique PNJ ou un événement monde.
 
 Schéma : `docs/schemas/ws/server.world_tick.schema.json`
 
@@ -107,6 +107,16 @@ Règle client recommandée :
   le client devrait proposer une action (bouton “réessayer”, “annuler”, etc.) plutôt que de rester bloqué.
 - si le serveur envoie une fin explicite (ex. `"Désolé, je ne peux pas t'aider maintenant."`) avec le même `trace_id`,
   cela doit aussi **remplacer** le placeholder.
+
+#### Événement monde (`world_event`)
+
+Quand la réponse IA déclenche et valide un commit monde, le même `world_tick` peut inclure :
+
+- `world_event.type: "dialogue_commit"`
+- `world_event.npc_id`: PNJ effectivement modifié
+- `world_event.trace_id`: même corrélation que `npc_reply`
+- `world_event.flags`: flags bornés appliqués (`aid_*`, `quest_*`, etc.)
+- `world_event.summary`: texte court pour log client / feedback joueur
 
 ### 4.3 `error`
 

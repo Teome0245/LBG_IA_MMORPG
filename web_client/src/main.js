@@ -136,9 +136,23 @@ class App {
                 });
                 this.addLog(`${target.name}: ${msg.npc_reply}`, 'npc');
             }
+            if (msg.world_event) {
+                this.handleWorldEvent(msg.world_event, msg.trace_id);
+            }
         } else if (msg.type === "error") {
             this.addLog(`Erreur: ${msg.message}`, 'error');
         }
+    }
+
+    handleWorldEvent(event, traceId) {
+        if (!event || event.type !== "dialogue_commit") {
+            return;
+        }
+        const target = this.resolveDialogueTarget(event.trace_id || traceId);
+        const summary = typeof event.summary === "string" && event.summary.trim()
+            ? event.summary.trim()
+            : "Action monde appliquée.";
+        this.addLog(`Action monde (${target.name}): ${summary}`, 'system');
     }
 
     handleDisconnect() {

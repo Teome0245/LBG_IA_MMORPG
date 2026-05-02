@@ -6,7 +6,13 @@ import unittest
 from unittest.mock import patch
 
 from mmmorpg_server.game_state import GameState
-from mmmorpg_server.main import _extract_ia_dialogue_commit, _format_ia_placeholder, _inbound_to_utf8
+from mmmorpg_server.main import (
+    _dialogue_commit_world_event,
+    _extract_ia_dialogue_commit,
+    _format_ia_placeholder,
+    _inbound_to_utf8,
+)
+from mmmorpg_server.protocol import msg_world_tick
 
 
 class TestWsInbound(unittest.TestCase):
@@ -111,6 +117,27 @@ class TestWsInbound(unittest.TestCase):
         self.assertGreater(after["thirst"], before["thirst"])
         self.assertGreater(after["fatigue"], before["fatigue"])
         self.assertEqual(game.get_npc_reputation("npc:merchant"), 7)
+
+    def test_dialogue_commit_world_event_is_sent_on_world_tick(self):
+        commit = {
+            "npc_id": "npc:merchant",
+            "flags": {"aid_hunger_delta": -0.2, "aid_reputation_delta": 5},
+        }
+        event = _dialogue_commit_world_event(commit=commit, trace_id="trace-aid-1", reason="accepted")
+
+        msg = msg_world_tick(
+            world_time_s=12.0,
+            day_fraction=0.5,
+            entities=[],
+            npc_reply="D'accord.",
+            trace_id="trace-aid-1",
+            world_event=event,
+        )
+
+        self.assertEqual(msg["world_event"]["type"], "dialogue_commit")
+        self.assertEqual(msg["world_event"]["npc_id"], "npc:merchant")
+        self.assertEqual(msg["world_event"]["trace_id"], "trace-aid-1")
+        self.assertIn("Aide", msg["world_event"]["summary"])
 
 
 if __name__ == "__main__":
