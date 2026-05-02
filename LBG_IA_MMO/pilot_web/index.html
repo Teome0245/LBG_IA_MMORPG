@@ -476,7 +476,8 @@
         <hr style="border:none;border-top:1px solid #ddd;margin:0.9rem 0" />
         <h3 style="margin:0 0 0.35rem 0;font-size:1rem">Registre PNJ (dialogue)</h3>
         <p class="muted" style="margin:0 0 0.5rem 0">
-          Lecture seule via <code>GET /v1/pilot/agent-dialogue/npc-registry</code> (proxy same-origin).
+          Lecture seule via <code>GET /v1/pilot/agent-dialogue/npc-registry</code> et
+          <code>GET /v1/pilot/agent-dialogue/world-content</code> (proxy same-origin).
         </p>
         <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
           <input type="text" id="npc-reg-id" placeholder="npc:innkeeper (optionnel)" style="max-width:16rem" />
@@ -485,6 +486,13 @@
           <span class="muted" id="npc-reg-hint">—</span>
         </p>
         <pre id="npc-reg-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:14rem;">—</pre>
+
+        <h3 style="margin:0.75rem 0 0.35rem 0;font-size:1rem">Catalogue monde (races + bestiaire)</h3>
+        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" id="btn-world-content-refresh">Charger world-content</button>
+          <span class="muted" id="world-content-hint">—</span>
+        </p>
+        <pre id="world-content-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:12rem;">—</pre>
       </section>
       </div>
 
@@ -2187,6 +2195,25 @@
       return { status: r.status, json: j, text: t };
     }
 
+    async function worldContentRefresh() {
+      const base = getBase();
+      const out = document.getElementById("world-content-out");
+      const hint = document.getElementById("world-content-hint");
+      if (hint) hint.textContent = "chargement…";
+      try {
+        const url = base + "/v1/pilot/agent-dialogue/world-content";
+        const r = await fetch(url);
+        const t = await r.text();
+        let j = null;
+        try { j = t ? JSON.parse(t) : null; } catch (_) {}
+        if (out) out.textContent = j ? JSON.stringify(j, null, 2) : (t || "—");
+        if (hint) hint.textContent = r.status === 200 ? "ok" : ("HTTP " + r.status);
+      } catch (e) {
+        if (out) out.textContent = String(e);
+        if (hint) hint.textContent = "erreur";
+      }
+    }
+
     async function npcRegistryRefresh() {
       const base = getBase();
       const out = document.getElementById("npc-reg-out");
@@ -3489,6 +3516,7 @@
     document.getElementById("btn-aid-help").addEventListener("click", () => aidHelp());
     document.getElementById("btn-aid-reset").addEventListener("click", () => aidResetGaugesToZero());
     try { document.getElementById("btn-npc-reg-refresh").addEventListener("click", npcRegistryRefresh); } catch (_) {}
+    try { document.getElementById("btn-world-content-refresh").addEventListener("click", worldContentRefresh); } catch (_) {}
     try { document.getElementById("btn-npc-reg-apply").addEventListener("click", npcRegistryApplyToContext); } catch (_) {}
 
     // WS buttons

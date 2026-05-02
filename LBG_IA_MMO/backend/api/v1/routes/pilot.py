@@ -397,6 +397,28 @@ async def pilot_proxy_agent_dialogue_npc_registry(npc_id: str | None = None) -> 
         return {"ok": False, "error": str(e)}
 
 
+@router.get("/agent-dialogue/world-content", tags=["pilot"])
+async def pilot_proxy_agent_dialogue_world_content() -> dict[str, object]:
+    """
+    Proxy same-origin vers `GET agent-dialogue /world-content` (inventaire races + bestiaire).
+    """
+    base = os.environ.get("LBG_AGENT_DIALOGUE_URL", "").strip().rstrip("/")
+    if not base:
+        return {"ok": False, "skipped": True, "detail": "LBG_AGENT_DIALOGUE_URL non défini"}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"{base}/world-content")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"HTTP {r.status_code}", "body": r.text[:800]}
+        try:
+            data = r.json()
+        except ValueError:
+            return {"ok": False, "error": "corps non JSON", "body": r.text[:800]}
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @router.get("/agent-quests/healthz", tags=["pilot"])
 async def pilot_proxy_agent_quests_healthz() -> dict[str, object]:
     """Proxy same-origin vers l’agent quests (port 8030 typiquement)."""

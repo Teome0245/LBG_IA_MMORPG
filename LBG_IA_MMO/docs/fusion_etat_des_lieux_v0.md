@@ -35,6 +35,8 @@ Regénérer la liste des chemins (depuis la racine `LBG_IA_MMO/`, venv : `.venv/
 | GET | `/v1/pilot/capabilities` |
 | POST | `/v1/pilot/route` |
 | GET | `/v1/pilot/agent-dialogue/healthz` |
+| GET | `/v1/pilot/agent-dialogue/npc-registry` |
+| GET | `/v1/pilot/agent-dialogue/world-content` |
 | GET | `/v1/pilot/agent-quests/healthz` |
 | GET | `/v1/pilot/agent-combat/healthz` |
 | GET | `/v1/pilot/mmo-server/healthz` |

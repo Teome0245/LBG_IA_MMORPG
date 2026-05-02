@@ -1,0 +1,713 @@
+{
+  "schema_version": 1,
+  "creatures": [
+    {
+      "id": "creature:luporeve",
+      "legacy_numeric_id": 1,
+      "name": "Luporêve",
+      "biome": "Foret",
+      "size": "Moyen",
+      "behavior": "Meute, harcèlement",
+      "ai_goals": "Chasser, protéger la meute",
+      "danger_level": 2,
+      "loot_table": [
+        "peau",
+        "viande",
+        "crocs"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:cerf_ecorce",
+      "legacy_numeric_id": 2,
+      "name": "Cerf-Écorce",
+      "biome": "Foret",
+      "size": "Grand",
+      "behavior": "Pacifique, fuite rapide",
+      "ai_goals": "Chercher clairières, éviter prédateurs",
+      "danger_level": 1,
+      "loot_table": [
+        "bois_vivant",
+        "cuir_noble"
+      ],
+      "mmo_role": "ressource"
+    },
+    {
+      "id": "creature:dryade_sylvestre",
+      "legacy_numeric_id": 3,
+      "name": "Dryade Sylvestre",
+      "biome": "Foret",
+      "size": "Humanoïde",
+      "behavior": "Territoriale, embuscade",
+      "ai_goals": "Protéger arbres anciens",
+      "danger_level": 3,
+      "loot_table": [
+        "essence_sylvestre",
+        "graines_magiques"
+      ],
+      "mmo_role": "elite"
+    },
+    {
+      "id": "creature:griffe_sombre",
+      "legacy_numeric_id": 4,
+      "name": "Griffe-Sombre",
+      "biome": "Foret",
+      "size": "Moyen",
+      "behavior": "Furtif, nocturne",
+      "ai_goals": "Traquer petites proies",
+      "danger_level": 2,
+      "loot_table": [
+        "fourrure_noire"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:hibou_sage",
+      "legacy_numeric_id": 5,
+      "name": "Hibou-Sage",
+      "biome": "Foret",
+      "size": "Petit",
+      "behavior": "Observateur, neutre",
+      "ai_goals": "Surveiller territoire",
+      "danger_level": 1,
+      "loot_table": [
+        "plume_magique"
+      ],
+      "mmo_role": "neutre"
+    },
+    {
+      "id": "creature:sanglier_roche",
+      "legacy_numeric_id": 6,
+      "name": "Sanglier-Roche",
+      "biome": "Foret",
+      "size": "Grand",
+      "behavior": "Charge brutale",
+      "ai_goals": "Défendre zone",
+      "danger_level": 3,
+      "loot_table": [
+        "cuir_epais"
+      ],
+      "mmo_role": "tank"
+    },
+    {
+      "id": "creature:liane_vive",
+      "legacy_numeric_id": 7,
+      "name": "Liane-Vive",
+      "biome": "Foret",
+      "size": "Variable",
+      "behavior": "Piège, immobilisation",
+      "ai_goals": "Capturer proies",
+      "danger_level": 2,
+      "loot_table": [
+        "fibres_vivantes"
+      ],
+      "mmo_role": "controle"
+    },
+    {
+      "id": "creature:gardien_de_clairiere",
+      "legacy_numeric_id": 8,
+      "name": "Gardien de Clairière",
+      "biome": "Foret",
+      "size": "Très grand",
+      "behavior": "Lent, protecteur",
+      "ai_goals": "Garder clairière",
+      "danger_level": 4,
+      "loot_table": [
+        "bois_ancien"
+      ],
+      "mmo_role": "elite"
+    },
+    {
+      "id": "creature:ours_givre",
+      "legacy_numeric_id": 9,
+      "name": "Ours-Givre",
+      "biome": "Neige",
+      "size": "Très grand",
+      "behavior": "Charge, territorial",
+      "ai_goals": "Protéger tanière",
+      "danger_level": 4,
+      "loot_table": [
+        "fourrure_glace",
+        "graisse"
+      ],
+      "mmo_role": "mini_boss"
+    },
+    {
+      "id": "creature:renard_spectral",
+      "legacy_numeric_id": 10,
+      "name": "Renard Spectral",
+      "biome": "Neige",
+      "size": "Petit",
+      "behavior": "Invisibilité intermittente",
+      "ai_goals": "Errer, jouer des tours",
+      "danger_level": 2,
+      "loot_table": [
+        "essence_spectrale"
+      ],
+      "mmo_role": "rare"
+    },
+    {
+      "id": "creature:yeti_errant",
+      "legacy_numeric_id": 11,
+      "name": "Yéti Errant",
+      "biome": "Neige",
+      "size": "Très grand",
+      "behavior": "Solitaire, puissant",
+      "ai_goals": "Chercher nourriture",
+      "danger_level": 4,
+      "loot_table": [
+        "poils_epais"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:harfang_geant",
+      "legacy_numeric_id": 12,
+      "name": "Harfang Géant",
+      "biome": "Neige",
+      "size": "Grand",
+      "behavior": "Attaque aérienne",
+      "ai_goals": "Surveiller territoire",
+      "danger_level": 3,
+      "loot_table": [
+        "plumes_blanches"
+      ],
+      "mmo_role": "ranged"
+    },
+    {
+      "id": "creature:loup_hivernal",
+      "legacy_numeric_id": 13,
+      "name": "Loup-Hivernal",
+      "biome": "Neige",
+      "size": "Moyen",
+      "behavior": "Meute rapide",
+      "ai_goals": "Chasser en groupe",
+      "danger_level": 3,
+      "loot_table": [
+        "crocs_givre"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:golem_de_glace",
+      "legacy_numeric_id": 14,
+      "name": "Golem de Glace",
+      "biome": "Neige",
+      "size": "Très grand",
+      "behavior": "Lent, résistant",
+      "ai_goals": "Garder ruines gelées",
+      "danger_level": 4,
+      "loot_table": [
+        "noyau_glace"
+      ],
+      "mmo_role": "elite"
+    },
+    {
+      "id": "creature:esprit_du_blizzard",
+      "legacy_numeric_id": 15,
+      "name": "Esprit du Blizzard",
+      "biome": "Neige",
+      "size": "Variable",
+      "behavior": "Magique, tourbillonnant",
+      "ai_goals": "Maintenir tempête",
+      "danger_level": 5,
+      "loot_table": [
+        "ether_froid"
+      ],
+      "mmo_role": "boss"
+    },
+    {
+      "id": "creature:salamandre_magmatique",
+      "legacy_numeric_id": 16,
+      "name": "Salamandre Magmatique",
+      "biome": "Volcan",
+      "size": "Moyen",
+      "behavior": "Projectiles de magma",
+      "ai_goals": "Absorber chaleur",
+      "danger_level": 3,
+      "loot_table": [
+        "coeur_magma"
+      ],
+      "mmo_role": "ranged"
+    },
+    {
+      "id": "creature:golem_de_basalte",
+      "legacy_numeric_id": 17,
+      "name": "Golem de Basalte",
+      "biome": "Volcan",
+      "size": "Très grand",
+      "behavior": "Lent, destructeur",
+      "ai_goals": "Garder forges anciennes",
+      "danger_level": 5,
+      "loot_table": [
+        "basalte_pur"
+      ],
+      "mmo_role": "boss"
+    },
+    {
+      "id": "creature:ver_de_cendres",
+      "legacy_numeric_id": 18,
+      "name": "Ver de Cendres",
+      "biome": "Volcan",
+      "size": "Très grand",
+      "behavior": "Souterrain",
+      "ai_goals": "Avaler proies",
+      "danger_level": 4,
+      "loot_table": [
+        "ecaille_cendre"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:chauve_feu",
+      "legacy_numeric_id": 19,
+      "name": "Chauve-Feu",
+      "biome": "Volcan",
+      "size": "Petit",
+      "behavior": "Volant incendiaire",
+      "ai_goals": "Chercher chaleur",
+      "danger_level": 2,
+      "loot_table": [
+        "poussiere_ardente"
+      ],
+      "mmo_role": "harceleur"
+    },
+    {
+      "id": "creature:gargouille_de_lave",
+      "legacy_numeric_id": 20,
+      "name": "Gargouille de Lave",
+      "biome": "Volcan",
+      "size": "Moyen",
+      "behavior": "Patrouille aérienne",
+      "ai_goals": "Garder falaises",
+      "danger_level": 3,
+      "loot_table": [
+        "fragment_lave"
+      ],
+      "mmo_role": "elite"
+    },
+    {
+      "id": "creature:titan_pyrique",
+      "legacy_numeric_id": 21,
+      "name": "Titan Pyrique",
+      "biome": "Volcan",
+      "size": "Énorme",
+      "behavior": "Colère explosive",
+      "ai_goals": "Dominer zone volcanique",
+      "danger_level": 5,
+      "loot_table": [
+        "coeur_pyrique"
+      ],
+      "mmo_role": "boss"
+    },
+    {
+      "id": "creature:crache_scories",
+      "legacy_numeric_id": 22,
+      "name": "Crache-Scories",
+      "biome": "Volcan",
+      "size": "Moyen",
+      "behavior": "Artilleur naturel",
+      "ai_goals": "Repousser intrus",
+      "danger_level": 3,
+      "loot_table": [
+        "scories"
+      ],
+      "mmo_role": "ranged"
+    },
+    {
+      "id": "creature:scorpion_titan",
+      "legacy_numeric_id": 23,
+      "name": "Scorpion-Titan",
+      "biome": "Desert",
+      "size": "Grand",
+      "behavior": "Embuscade",
+      "ai_goals": "Protéger nids",
+      "danger_level": 4,
+      "loot_table": [
+        "venin",
+        "carapace"
+      ],
+      "mmo_role": "elite"
+    },
+    {
+      "id": "creature:serpent_de_sable",
+      "legacy_numeric_id": 24,
+      "name": "Serpent de Sable",
+      "biome": "Desert",
+      "size": "Très grand",
+      "behavior": "Déplacement sous sable",
+      "ai_goals": "Patrouiller dunes",
+      "danger_level": 5,
+      "loot_table": [
+        "ecailles_dorees"
+      ],
+      "mmo_role": "boss"
+    },
+    {
+      "id": "creature:chacal_dore",
+      "legacy_numeric_id": 25,
+      "name": "Chacal Doré",
+      "biome": "Desert",
+      "size": "Petit",
+      "behavior": "Meute opportuniste",
+      "ai_goals": "Voler nourriture",
+      "danger_level": 2,
+      "loot_table": [
+        "fourrure_doree"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:scarabee_obsidien",
+      "legacy_numeric_id": 26,
+      "name": "Scarabée Obsidien",
+      "biome": "Desert",
+      "size": "Petit",
+      "behavior": "Blindé",
+      "ai_goals": "Chercher minéraux",
+      "danger_level": 2,
+      "loot_table": [
+        "obsidienne"
+      ],
+      "mmo_role": "tank"
+    },
+    {
+      "id": "creature:djinn_mineur",
+      "legacy_numeric_id": 27,
+      "name": "Djinn Mineur",
+      "biome": "Desert",
+      "size": "Humanoïde",
+      "behavior": "Magique",
+      "ai_goals": "Protéger oasis",
+      "danger_level": 3,
+      "loot_table": [
+        "poussiere_arcanique"
+      ],
+      "mmo_role": "caster"
+    },
+    {
+      "id": "creature:marcheur_des_dunes",
+      "legacy_numeric_id": 28,
+      "name": "Marcheur des Dunes",
+      "biome": "Desert",
+      "size": "Énorme",
+      "behavior": "Lent, massif",
+      "ai_goals": "Traverser désert",
+      "danger_level": 4,
+      "loot_table": [
+        "os_geants"
+      ],
+      "mmo_role": "tank"
+    },
+    {
+      "id": "creature:fennec_mirage",
+      "legacy_numeric_id": 29,
+      "name": "Fennec Mirage",
+      "biome": "Desert",
+      "size": "Petit",
+      "behavior": "Illusionniste",
+      "ai_goals": "Fuir prédateurs",
+      "danger_level": 1,
+      "loot_table": [
+        "poussiere_mirage"
+      ],
+      "mmo_role": "rare"
+    },
+    {
+      "id": "creature:horreur_fangeuse",
+      "legacy_numeric_id": 30,
+      "name": "Horreur Fangeuse",
+      "biome": "Marais",
+      "size": "Variable",
+      "behavior": "Dissolution",
+      "ai_goals": "Absorber matière",
+      "danger_level": 3,
+      "loot_table": [
+        "gel_toxique"
+      ],
+      "mmo_role": "toxique"
+    },
+    {
+      "id": "creature:crocodile_ancien",
+      "legacy_numeric_id": 31,
+      "name": "Crocodile Ancien",
+      "biome": "Marais",
+      "size": "Très grand",
+      "behavior": "Camouflage",
+      "ai_goals": "Protéger territoire",
+      "danger_level": 4,
+      "loot_table": [
+        "peau_epaisse"
+      ],
+      "mmo_role": "mini_boss"
+    },
+    {
+      "id": "creature:sorciere_des_boues",
+      "legacy_numeric_id": 32,
+      "name": "Sorcière des Boues",
+      "biome": "Marais",
+      "size": "Humanoïde",
+      "behavior": "Magie sombre",
+      "ai_goals": "Corrompre marais",
+      "danger_level": 4,
+      "loot_table": [
+        "essence_corrompue"
+      ],
+      "mmo_role": "caster"
+    },
+    {
+      "id": "creature:moustique_geant",
+      "legacy_numeric_id": 33,
+      "name": "Moustique Géant",
+      "biome": "Marais",
+      "size": "Petit",
+      "behavior": "Essaim",
+      "ai_goals": "Prélever sang",
+      "danger_level": 2,
+      "loot_table": [
+        "glande_sang"
+      ],
+      "mmo_role": "swarm"
+    },
+    {
+      "id": "creature:tortue_vaseuse",
+      "legacy_numeric_id": 34,
+      "name": "Tortue Vaseuse",
+      "biome": "Marais",
+      "size": "Grand",
+      "behavior": "Défensive",
+      "ai_goals": "Se nourrir d'algues",
+      "danger_level": 2,
+      "loot_table": [
+        "carapace_vaseuse"
+      ],
+      "mmo_role": "tank"
+    },
+    {
+      "id": "creature:liane_sangsue",
+      "legacy_numeric_id": 35,
+      "name": "Liane-Sangsue",
+      "biome": "Marais",
+      "size": "Moyen",
+      "behavior": "Parasite",
+      "ai_goals": "Aspirer énergie",
+      "danger_level": 3,
+      "loot_table": [
+        "sève_sombre"
+      ],
+      "mmo_role": "controle"
+    },
+    {
+      "id": "creature:spectre_noye",
+      "legacy_numeric_id": 36,
+      "name": "Spectre Noyé",
+      "biome": "Marais",
+      "size": "Humanoïde",
+      "behavior": "Furtif, spectral",
+      "ai_goals": "Hanter eaux stagnantes",
+      "danger_level": 3,
+      "loot_table": [
+        "ether_humide"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:spectre_lie",
+      "legacy_numeric_id": 37,
+      "name": "Spectre Lié",
+      "biome": "Ruines",
+      "size": "Humanoïde",
+      "behavior": "Téléportation courte",
+      "ai_goals": "Garder reliques",
+      "danger_level": 3,
+      "loot_table": [
+        "ether_condense"
+      ],
+      "mmo_role": "caster"
+    },
+    {
+      "id": "creature:garde_squelettique",
+      "legacy_numeric_id": 38,
+      "name": "Garde Squelettique",
+      "biome": "Ruines",
+      "size": "Humanoïde",
+      "behavior": "Patrouille",
+      "ai_goals": "Défendre salle",
+      "danger_level": 2,
+      "loot_table": [
+        "os",
+        "arme_rouillee"
+      ],
+      "mmo_role": "melee"
+    },
+    {
+      "id": "creature:araignee_de_cryptes",
+      "legacy_numeric_id": 39,
+      "name": "Araignée de Cryptes",
+      "biome": "Ruines",
+      "size": "Moyen",
+      "behavior": "Embuscade",
+      "ai_goals": "Tendre pièges",
+      "danger_level": 3,
+      "loot_table": [
+        "venin_cryptes"
+      ],
+      "mmo_role": "controle"
+    },
+    {
+      "id": "creature:goule_affamee",
+      "legacy_numeric_id": 40,
+      "name": "Goule Affamée",
+      "biome": "Ruines",
+      "size": "Humanoïde",
+      "behavior": "Agressive",
+      "ai_goals": "Chercher chair",
+      "danger_level": 3,
+      "loot_table": [
+        "chair_corrompue"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:chevalier_dechu",
+      "legacy_numeric_id": 41,
+      "name": "Chevalier Déchu",
+      "biome": "Ruines",
+      "size": "Humanoïde",
+      "behavior": "Combat lourd",
+      "ai_goals": "Garder tombeau",
+      "danger_level": 4,
+      "loot_table": [
+        "armure_fendue"
+      ],
+      "mmo_role": "elite"
+    },
+    {
+      "id": "creature:gargouille_de_pierre",
+      "legacy_numeric_id": 42,
+      "name": "Gargouille de Pierre",
+      "biome": "Ruines",
+      "size": "Moyen",
+      "behavior": "Sentinelle immobile",
+      "ai_goals": "Surveiller entrée",
+      "danger_level": 3,
+      "loot_table": [
+        "fragment_pierre"
+      ],
+      "mmo_role": "tank"
+    },
+    {
+      "id": "creature:ombre_errante",
+      "legacy_numeric_id": 43,
+      "name": "Ombre Errante",
+      "biome": "Ruines",
+      "size": "Humanoïde",
+      "behavior": "Furtif, intangible",
+      "ai_goals": "Errer dans les couloirs",
+      "danger_level": 3,
+      "loot_table": [
+        "fragment_ombre"
+      ],
+      "mmo_role": "furtif"
+    },
+    {
+      "id": "creature:aberration_instable",
+      "legacy_numeric_id": 44,
+      "name": "Aberration Instable",
+      "biome": "Corruption",
+      "size": "Variable",
+      "behavior": "Attaques imprévisibles",
+      "ai_goals": "Chercher énergie brute",
+      "danger_level": 4,
+      "loot_table": [
+        "fragment_instable"
+      ],
+      "mmo_role": "elite"
+    },
+    {
+      "id": "creature:drone_organique",
+      "legacy_numeric_id": 45,
+      "name": "Drone Organique",
+      "biome": "Corruption",
+      "size": "Moyen",
+      "behavior": "Essaim coordonné",
+      "ai_goals": "Protéger la ruche",
+      "danger_level": 3,
+      "loot_table": [
+        "bio_circuit"
+      ],
+      "mmo_role": "swarm"
+    },
+    {
+      "id": "creature:fusion_ratee",
+      "legacy_numeric_id": 46,
+      "name": "Fusion Ratée",
+      "biome": "Corruption",
+      "size": "Grand",
+      "behavior": "Instable, agressif",
+      "ai_goals": "Chercher stabilité",
+      "danger_level": 4,
+      "loot_table": [
+        "chair_mutante"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:parasite_mental",
+      "legacy_numeric_id": 47,
+      "name": "Parasite Mental",
+      "biome": "Corruption",
+      "size": "Petit",
+      "behavior": "Psychique, possession",
+      "ai_goals": "Contrôler hôtes",
+      "danger_level": 4,
+      "loot_table": [
+        "noyau_psychique"
+      ],
+      "mmo_role": "controle"
+    },
+    {
+      "id": "creature:colosse_mute",
+      "legacy_numeric_id": 48,
+      "name": "Colosse Muté",
+      "biome": "Corruption",
+      "size": "Énorme",
+      "behavior": "Force brute",
+      "ai_goals": "Détruire intrus",
+      "danger_level": 5,
+      "loot_table": [
+        "os_mutant",
+        "chair_epaisse"
+      ],
+      "mmo_role": "boss"
+    },
+    {
+      "id": "creature:chien_de_labo_altere",
+      "legacy_numeric_id": 49,
+      "name": "Chien de Laboratoire Altéré",
+      "biome": "Corruption",
+      "size": "Moyen",
+      "behavior": "Agressif, rapide",
+      "ai_goals": "Traquer cibles",
+      "danger_level": 3,
+      "loot_table": [
+        "glande_mutante"
+      ],
+      "mmo_role": "agressif"
+    },
+    {
+      "id": "creature:nuee_acide",
+      "legacy_numeric_id": 50,
+      "name": "Nuée Acide",
+      "biome": "Corruption",
+      "size": "Petit",
+      "behavior": "Essaim corrosif",
+      "ai_goals": "Dissoudre matière",
+      "danger_level": 3,
+      "loot_table": [
+        "acide_concentre"
+      ],
+      "mmo_role": "swarm"
+    }
+  ]
+}

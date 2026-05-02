@@ -105,6 +105,10 @@ Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure de
 - NPC gouvernés par `lyra_engine/` (comportements + jauges).
 - **HTTP** (`http_app`, uvicorn typiquement **8050**) : tick en thread d’arrière-plan ; **`GET /v1/world/lyra`** expose les jauges PNJ pour **`context.lyra`** (voir `docs/lyra.md`, variable **`LBG_MMO_SERVER_URL`** côté backend). En **prod systemd** (`lbg-mmo-server`), l’écoute est **`0.0.0.0:8050`** pour permettre au **backend sur une autre VM** d’appeler le LAN (`192.168.x.x:8050`) ; en local, **`127.0.0.1`** reste recommandé. Persistance **`WorldState`** en JSON (chargement au boot, sauvegarde périodique + arrêt) — **`LBG_MMO_STATE_PATH`**, **`LBG_MMO_SAVE_INTERVAL_S`** (`mmo_server/README.md`).
 
+### Catalogue monde (`content/world/`) — races & bestiaire
+
+Données **data-driven** versionnées dans le monorepo : `LBG_IA_MMO/content/world/races.json`, `creatures.json`. **Consommateurs** : `lbg_agents.world_content` (enrichissement des prompts dialogue ; `GET /world-content` sur l’agent HTTP), `npc_registry.json` des agents (**`race_id`** par PNJ), `mmmorpg_server.world_catalog` + champ **`Entity.race_id`** / snapshot Lyra (`meta.race_id`, `meta.race_display`). **Pilot** : proxy same-origin **`GET /v1/pilot/agent-dialogue/world-content`**. Surcharge de répertoire : **`LBG_WORLD_CONTENT_DIR`**. Fil documentaire : `docs/plan_de_route.md` (section *Fil produit ↔ documentation*, Historique), `docs/plan_mmorpg.md`, `agents/README.md`, `pilot_web/README.md`.
+
 ### Frontend et Pilotage (`pilot_web/` et `web_client/`)
 - **Routage unifié (Nginx, port 8080)** : La VM 110 centralise l'accès utilisateur.
     - `http://<IP>:8080/` : Interface **Lyra / Pilotage** (Originale).

@@ -4,6 +4,17 @@ from fastapi.testclient import TestClient
 from lbg_agents.dialogue_http_app import app
 
 
+def test_world_content_inventory() -> None:
+    client = TestClient(app)
+    r = client.get("/world-content")
+    assert r.status_code == 200
+    j = r.json()
+    assert j["ok"] is True
+    assert j["races_count"] >= 10
+    assert "race:human" in j["race_ids"]
+    assert j["creatures_count"] == 50
+
+
 def test_healthz_includes_metadata() -> None:
     client = TestClient(app)
     r = client.get("/healthz")

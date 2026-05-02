@@ -16,6 +16,23 @@ La numérotation **0** = toujours actif en parallèle des autres priorités. La 
 
 ---
 
+## Fil produit ↔ documentation (continuité)
+
+**Règle** : tout incrément **mergé ou déployé** qui change un contrat, une UI pilot / MMO, ou le comportement attendu par un opérateur doit **conserver le fil** en :
+
+1. ajoutant une ligne datée dans **Historique** (section plus bas) — *obligatoire* pour toute livraison notable ;
+2. mettant à jour **au moins une** entrée du tableau ci‑dessous quand la livraison touche le périmètre concerné (même petit paragraphe ou lien).
+
+| Fil | Source inspiration | Données versionnées | Code consommateur | Doc pivot |
+|-----|-------------------|---------------------|--------------------|-----------|
+| Idées lore / listes longues | `Boite à idées/` (non contractuel) | `LBG_IA_MMO/content/world/*.json` | `lbg_agents.world_content`, registre PNJ, `mmmorpg_server.world_catalog`, entités `race_id` | `plan_mmorpg.md`, `agents/README.md`, `pilot_web/README.md` |
+| Pilot & proxies backend | — | — | `backend/api/v1/routes/pilot.py` | `fusion_etat_des_lieux_v0.md`, `bootstrap.md` |
+| Snapshot Lyra / PNJ monde | `docs/lyra.md`, `fusion_spec_lyra.md` | état serveur + catalogue races | `mmmorpg_server` (`build_lyra_snapshot`, …) | `plan_de_route` (Historique), `lyra.md` si contrat change |
+
+**Variable optionnelle** : `LBG_WORLD_CONTENT_DIR` (répertoire contenant `races.json` et `creatures.json`) — à documenter dans `infra/secrets/lbg.env.example` si l’équipe standardise un chemin hors repo sur VM.
+
+---
+
 ## Priorité 0 — Documentation
 
 **Objectif** : ne pas perdre le fil technique et produit ; garder une source de vérité alignée avec le code et l’infra.
@@ -23,6 +40,7 @@ La numérotation **0** = toujours actif en parallèle des autres priorités. La 
 **À faire /À maintenir** :
 
 - Tenir à jour : `docs/architecture.md`, `bootstrap.md`, ce fichier `plan_de_route.md`, et les docs thématiques (`vision_projet.md`, `lyra.md`, `plan_mmorpg.md`) lorsque le comportement ou les déploiements changent.
+- **Continuité** : suivre la section **Fil produit ↔ documentation** ci‑dessus pour ne pas disperser les mises à jour (une évolution = Historique + doc du bon pivot).
 - **`docs/lexique.md`** : définitions (**ADR**, composants, acronymes projet) pour la **transmission** / onboarding ; compléter lorsqu’un terme nouveau devient stable (nouvelle capability, nouveau service, jargon fusion).
 - **Fusion multi-dépôts → un seul repo** : **`LBG_IA`** et **`mmmorpg`** comme **références non modifiées** ; intégration dans **`LBG_IA_MMO/`** uniquement. Tenir à jour **`docs/plan_fusion_lbg_ia.md`** (phases, ADR, pont jeu ↔ IA, topologie **3 VM**) à chaque jalon ; jalons inventaire / état des lieux : **`fusion_etat_des_lieux_v0.md`** ; specs phase B : **`fusion_spec_*.md`**, **`fusion_pont_jeu_ia.md`** ; ne pas dupliquer la vision fusionnée ailleurs sans lien vers ces fichiers.
 - **Promouvoir le dev vers la prod (VM privée)** : `LBG_IA_MMO/infra/scripts/deploy_vm.sh` depuis le poste de travail (ex. WSL) ; tu peux **ne pas** lancer la stack locale et valider **sur la VM** uniquement (`curl`, `/pilot/`, systemd). Les tests `pytest` en local restent recommandés avant un merge sensible. Détail : `bootstrap.md` (*Pousser les évolutions* → *sans exécuter les services en local*).
@@ -100,6 +118,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-03 | **Catalogue monde (races + bestiaire)** : fichiers `LBG_IA_MMO/content/world/races.json` et `creatures.json` ; injection prompt dialogue (`race_id`, `context._creature_refs`) ; snapshot Lyra (`meta.race_id`, `meta.race_display`) côté `mmmorpg_server` ; agent dialogue `GET /world-content` ; proxy pilot `GET /v1/pilot/agent-dialogue/world-content` ; UI `/pilot/` (*Charger world-content*). Variable optionnelle `LBG_WORLD_CONTENT_DIR`. **Suite — continuité doc** : section *Fil produit ↔ documentation* dans ce plan ; paragraphe *Catalogue monde* dans `architecture.md` ; exemples `curl` npc-registry / world-content dans `bootstrap.md` ; section env catalogue dans `lbg.env.example` ; renvoi opérationnel dans `plan_mmorpg.md`. |
 | 2026-05-02 | **Quêtes — réputation sur ACTION_JSON quest** : `reputation_delta` optionnel (entier ±100) dans la même ligne `kind:"quest"` ; sanitisation agent, commit HTTP, application serveur existante (`reputation_delta` dans les flags). |
 | 2026-05-02 | **Client MMO — quête suivie dans tout le chat** : si une quête est suivie dans le HUD, `_active_quest_id` est fusionné automatiquement dans `ia_context` pour chaque message PNJ (sans écraser une valeur déjà fournie), pour aligner dialogue libre et boutons rapides. |
 | 2026-05-02 | **Quêtes — clôture monde (`quest_completed`)** : whitelist serveur + ACTION_JSON dialogue + commit agent + `world_event` « Quête accomplie » ; contexte `_active_quest_id` vers l’IA ; HUD « TERMINER QUÊTE » ; journal local et état PNJ affichent la clôture. **Mouvement client** : offset sprite stable (plus de flip selon position), bobbing et lissage positions/caméra adoucis. |

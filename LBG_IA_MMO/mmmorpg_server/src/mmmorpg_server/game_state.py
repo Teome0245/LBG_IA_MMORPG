@@ -158,6 +158,9 @@ class GameState:
                             
                     npc = Entity.new_npc(npc_data["name"], float(x_val), float(z_val), npc_id=npc_data.get("id"))
                     npc.role = npc_data.get("role", "civil")
+                    r0 = npc_data.get("race_id")
+                    if isinstance(r0, str) and r0.strip():
+                        npc.race_id = r0.strip()
                     self.entities[npc.id] = npc
             except Exception as e:
                 print(f"Erreur chargement seed: {e}")
@@ -308,17 +311,19 @@ class GameState:
 
     def _seed_npcs(self) -> None:
         # Identifiants stables : alignement avec `fusion_spec_monde.md` (format `npc:...`)
-        for npc_id, name, xz, scale in (
-            ("npc:merchant", "Marchand civile", (12.0, -5.0), 1.0),
-            ("npc:guard", "Garde poste", (-20.0, 8.0), 1.0),
-            ("npc:mayor", "Maire", (4.0, 14.0), 1.1),
-            ("npc:healer", "Guérisseuse", (-6.0, 10.0), 0.9),
-            ("npc:alchemist", "Alchimiste", (18.0, 9.0), 1.0),
-            ("npc:wizard", "Chef Magicien", (-10.0, 20.0), 1.2),
-            ("npc:celadon", "Guerrier Celadon", (25.0, -10.0), 1.3),
-            ("npc:mushroom", "Champignon Magique", (0.0, -30.0), 2.5),
+        for npc_id, name, xz, scale, race_id in (
+            ("npc:merchant", "Marchand civile", (12.0, -5.0), 1.0, "race:halfblood_khar"),
+            ("npc:guard", "Garde poste", (-20.0, 8.0), 1.0, "race:sylven"),
+            ("npc:mayor", "Maire", (4.0, 14.0), 1.1, "race:human"),
+            ("npc:healer", "Guérisseuse", (-6.0, 10.0), 0.9, "race:fae_lume"),
+            ("npc:alchemist", "Alchimiste", (18.0, 9.0), 1.0, "race:tinkling"),
+            ("npc:wizard", "Chef Magicien", (-10.0, 20.0), 1.2, "race:human"),
+            ("npc:celadon", "Guerrier Celadon", (25.0, -10.0), 1.3, "race:nocthrim"),
+            ("npc:mushroom", "Champignon Magique", (0.0, -30.0), 2.5, "race:champi_sapient"),
         ):
             npc = Entity.new_npc(name, xz[0], xz[1], npc_id=npc_id, scale=scale)
+            if race_id:
+                npc.race_id = race_id
             self.entities[npc.id] = npc
 
     def get_npc(self, npc_id: str) -> Entity | None:

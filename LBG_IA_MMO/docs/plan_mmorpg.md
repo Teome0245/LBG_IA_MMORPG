@@ -35,6 +35,7 @@ Source d’inspiration : le fichier `plan MMMORPG.md` (à la racine) est un **ca
 - **3 factions principales** dont **1 neutre**
 - Majorité **civile** (objectif : ~75% du monde), avec opinions/réputation
 - Races jouables + races civiles, systèmes de langages possibles
+- **Données catalogue (monorepo)** : `content/world/races.json` (liste bornée, extensible), `content/world/creatures.json` (bestiaire) — utilisées par l’agent dialogue (prompt), le serveur WS (champs `race_id` / snapshot Lyra), registre PNJ (`race_id` par PNJ). Pour **maintenir le fil** doc ↔ code lors des évolutions : `docs/plan_de_route.md` (section *Fil produit ↔ documentation*, Historique).
 
 ## Professions (SWG pre‑CU-like)
 

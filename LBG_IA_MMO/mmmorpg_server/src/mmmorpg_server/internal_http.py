@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import unquote
 
 from mmmorpg_server.game_state import GameState
+from mmmorpg_server.world_catalog import race_display_name
 
 LOG = logging.getLogger("mmmorpg.internal_http")
 
@@ -122,6 +123,10 @@ def build_lyra_snapshot(*, game: GameState, npc_id: str, trace_id: str | None = 
             "reputation": {"value": int(game.get_npc_reputation(npc_id))},
         },
     }
+    rid = getattr(npc, "race_id", "") if npc else ""
+    if isinstance(rid, str) and rid.strip():
+        lyra["meta"]["race_id"] = rid.strip()
+        lyra["meta"]["race_display"] = race_display_name(rid.strip())
     if flags:
         lyra["meta"]["world_flags"] = flags
     if isinstance(trace_id, str) and trace_id.strip():

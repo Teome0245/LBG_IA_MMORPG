@@ -37,6 +37,57 @@ def test_pilot_proxy_dialogue_skipped_when_no_url(monkeypatch: pytest.MonkeyPatc
     assert j.get("skipped") is True
 
 
+def test_pilot_proxy_dialogue_world_content_skipped_when_no_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_AGENT_DIALOGUE_URL", raising=False)
+    from backend.main import app
+
+    client = TestClient(app)
+    r = client.get("/v1/pilot/agent-dialogue/world-content")
+    assert r.status_code == 200
+    assert r.json().get("skipped") is True
+
+
+def test_pilot_proxy_dialogue_world_content_forwards_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_AGENT_DIALOGUE_URL", "http://127.0.0.1:8020")
+
+    class _OkWorld:
+        status_code = 200
+
+        def json(self) -> dict[str, object]:
+            return {
+                "ok": True,
+                "races_count": 14,
+                "race_ids": ["race:human"],
+                "creatures_count": 50,
+            }
+
+    class _ClientWorld:
+        def __init__(self, *a: object, **k: object) -> None:
+            pass
+
+        async def __aenter__(self) -> "_ClientWorld":
+            return self
+
+        async def __aexit__(self, *a: object) -> None:
+            return None
+
+        async def get(self, url: str) -> _OkWorld:
+            assert url.endswith("/world-content")
+            return _OkWorld()
+
+    monkeypatch.setattr(pilot_mod.httpx, "AsyncClient", lambda **kw: _ClientWorld())
+
+    from backend.main import app
+
+    client = TestClient(app)
+    r = client.get("/v1/pilot/agent-dialogue/world-content")
+    assert r.status_code == 200
+    j = r.json()
+    assert j.get("ok") is True
+    assert j.get("creatures_count") == 50
+    assert "race:human" in (j.get("race_ids") or [])
+
+
 def test_pilot_proxy_dialogue_forwards_json(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LBG_AGENT_DIALOGUE_URL", "http://127.0.0.1:8020")
     monkeypatch.setattr(pilot_mod.httpx, "AsyncClient", lambda **kw: _FakeClient())

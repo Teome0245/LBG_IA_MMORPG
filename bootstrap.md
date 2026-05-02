@@ -332,7 +332,14 @@ curl -sS http://127.0.0.1:8000/v1/pilot/agent-quests/healthz
 curl -sS http://127.0.0.1:8000/v1/pilot/agent-combat/healthz
 ```
 
-L’UI `/pilot/` utilise ces URLs pour les liens « healthz (proxy) ».
+**Lecture registre / catalogue (même principe proxy)** — sans appeler directement le port **8020** :
+
+```bash
+curl -sS "http://127.0.0.1:8000/v1/pilot/agent-dialogue/npc-registry?npc_id=npc:mayor"
+curl -sS http://127.0.0.1:8000/v1/pilot/agent-dialogue/world-content
+```
+
+L’UI `/pilot/` utilise ces URLs pour les liens « healthz (proxy) » et les panneaux *Registre PNJ* / *Catalogue monde*.
 
 **4. Navigateur** — une fois le `curl` OK :
 

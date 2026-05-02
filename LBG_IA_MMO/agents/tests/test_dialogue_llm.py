@@ -177,6 +177,79 @@ def test_build_system_prompt_includes_npc_registry_context(
     assert "Profil PNJ (registre):" in s
     assert "Zone: Archives" in s
     assert "Objectifs:" in s
+    mod._npc_registry_cache = None
+
+
+def test_build_system_prompt_includes_race_and_bestiary_refs() -> None:
+    from lbg_agents import dialogue_llm as mod
+    from lbg_agents import world_content as wc
+
+    mod._npc_registry_cache = None
+    wc.reset_cache()
+    s = build_system_prompt(
+        "Maire",
+        {
+            "world_npc_id": "npc:mayor",
+            "_creature_refs": ["creature:luporeve", "creature:inexistant"],
+        },
+    )
+    assert "Race du personnage" in s
+    assert "Humain" in s
+    assert "Luporêve" in s
+    assert "bestiaire" in s.lower() or "Créatures mentionnées" in s
+
+
+def test_build_system_prompt_lyra_race_overrides_registry(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    from lbg_agents import dialogue_llm as mod
+    from lbg_agents import world_content as wc
+
+    d = tmp_path / "w"
+    d.mkdir()
+    (d / "races.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "races": [
+                    {"id": "race:alpha", "display_name": "Alpha", "morphology": "M1", "lore_one_liner": "L1"},
+                    {"id": "race:beta", "display_name": "Beta", "morphology": "M2", "lore_one_liner": "L2"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    (d / "creatures.json").write_text(json.dumps({"schema_version": 1, "creatures": []}), encoding="utf-8")
+    monkeypatch.setenv("LBG_WORLD_CONTENT_DIR", str(d))
+    wc.reset_cache()
+    reg = {
+        "schema_version": 1,
+        "npcs": [
+            {
+                "id": "npc:duo",
+                "name": "Test",
+                "role": "x",
+                "race_id": "race:alpha",
+                "summary": "S",
+            }
+        ],
+    }
+    p = tmp_path / "npc_registry.json"
+    p.write_text(json.dumps(reg), encoding="utf-8")
+    monkeypatch.setenv("LBG_DIALOGUE_NPC_REGISTRY_PATH", str(p))
+    mod._npc_registry_cache = None
+
+    s_only_reg = build_system_prompt("T", {"world_npc_id": "npc:duo"})
+    assert "Alpha" in s_only_reg
+
+    s_lyra = build_system_prompt(
+        "T",
+        {"world_npc_id": "npc:duo", "lyra": {"meta": {"race_id": "race:beta"}}},
+    )
+    assert "Beta" in s_lyra
+    assert "Alpha" not in s_lyra
+    monkeypatch.delenv("LBG_WORLD_CONTENT_DIR", raising=False)
+    monkeypatch.delenv("LBG_DIALOGUE_NPC_REGISTRY_PATH", raising=False)
+    mod._npc_registry_cache = None
+    wc.reset_cache()
 
 
 def test_cache_key_changes_when_reputation_changes(monkeypatch: pytest.MonkeyPatch) -> None:

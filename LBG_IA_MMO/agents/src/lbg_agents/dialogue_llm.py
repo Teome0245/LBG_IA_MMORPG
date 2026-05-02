@@ -28,6 +28,11 @@ from pathlib import Path
 
 import httpx
 
+from lbg_agents.world_content import (
+    format_creature_refs_for_prompt,
+    format_race_for_prompt,
+)
+
 # Défauts : Ollama, API OpenAI-compatible sur la même machine (port 11434).
 DEFAULT_LBG_DIALOGUE_LLM_BASE_URL = "http://127.0.0.1:11434/v1"
 # Valeur par défaut orientée "prod prévisible" (petit modèle rapide si disponible).
@@ -213,10 +218,13 @@ def _cache_key(*, speaker: str, player_text: str, context: dict[str, Any]) -> st
                     if rvi > 100:
                         rvi = 100
                     lyra_v = (lyra_v + (";" if lyra_v else "") + f"rep={rvi}")
+            rid = meta.get("race_id")
+            if isinstance(rid, str) and rid.strip():
+                lyra_v = (lyra_v + (";" if lyra_v else "") + f"rid={rid.strip()}")
     # Optionnel : inclure certains champs de contexte dans la clé (évite les hits quand l'état change).
     raw_keys = os.environ.get(
         "LBG_DIALOGUE_CACHE_CONTEXT_KEYS",
-        "world_npc_id,quest_state,encounter_state,world_flags",
+        "world_npc_id,quest_state,encounter_state,world_flags,_active_quest_id,_creature_refs",
     )
     keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
     picked: dict[str, object] = {}
@@ -455,6 +463,25 @@ def _format_npc_registry_for_prompt(context: dict[str, Any]) -> str | None:
     return "Profil PNJ (registre): " + " | ".join(lines)
 
 
+def _resolve_race_id_for_prompt(context: dict[str, Any]) -> str | None:
+    """Priorité au snapshot serveur (lyra.meta.race_id), sinon registre PNJ."""
+    lyra = context.get("lyra")
+    if isinstance(lyra, dict):
+        meta = lyra.get("meta")
+        if isinstance(meta, dict):
+            r = meta.get("race_id")
+            if isinstance(r, str) and r.strip():
+                return r.strip()
+    rid = context.get("world_npc_id")
+    if isinstance(rid, str) and rid.strip():
+        entry = _load_npc_registry().get(rid.strip())
+        if isinstance(entry, dict):
+            r2 = entry.get("race_id")
+            if isinstance(r2, str) and r2.strip():
+                return r2.strip()
+    return None
+
+
 def _timeout_s() -> float:
     raw = os.environ.get("LBG_DIALOGUE_LLM_TIMEOUT", "120").strip()
     try:
@@ -582,6 +609,14 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
     pnj_reg_line = _format_npc_registry_for_prompt(context)
     if pnj_reg_line:
         lines.append(pnj_reg_line)
+    rid = _resolve_race_id_for_prompt(context)
+    if rid:
+        rline = format_race_for_prompt(rid)
+        if rline:
+            lines.append(rline)
+    cref_line = format_creature_refs_for_prompt(context.get("_creature_refs"))
+    if cref_line:
+        lines.append(cref_line)
     aq = context.get("_active_quest_id")
     if isinstance(aq, str) and aq.strip():
         lines.append(

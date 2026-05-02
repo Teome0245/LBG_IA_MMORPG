@@ -48,6 +48,8 @@ def test_internal_http_healthz_and_lyra_snapshot() -> None:
         assert lyra["kind"] == "npc_world"
         assert lyra["meta"]["npc_id"] == "npc:merchant"
         assert lyra["meta"]["trace_id"] == "t1"
+        assert lyra["meta"].get("race_id") == "race:halfblood_khar"
+        assert lyra["meta"].get("race_display") == "Métis Khar'Zuun"
         rep = lyra["meta"]["reputation"]
         assert isinstance(rep, dict)
         assert isinstance(rep.get("value"), int)

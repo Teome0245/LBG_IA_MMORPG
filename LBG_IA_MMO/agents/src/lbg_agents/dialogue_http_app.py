@@ -16,6 +16,7 @@ from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
 from lbg_agents import dialogue_llm
+from lbg_agents import world_content as world_content_mod
 
 app = FastAPI(title="LBG_IA_MMO dialogue HTTP agent", version="0.2.0")
 
@@ -116,6 +117,14 @@ def npc_registry(npc_id: str | None = None) -> dict[str, object]:
     except Exception:
         pass
     return {"ok": True, "count": len(rows), "npcs": rows}
+
+
+@app.get("/world-content")
+def world_content() -> dict[str, object]:
+    """Inventaire du catalogue monde (races + bestiaire) pour debug / outils."""
+    races = world_content_mod.list_race_ids()
+    creatures_n = len(world_content_mod.load_creatures_by_id())
+    return {"ok": True, "races_count": len(races), "race_ids": races, "creatures_count": creatures_n}
 
 
 @app.post("/invoke")

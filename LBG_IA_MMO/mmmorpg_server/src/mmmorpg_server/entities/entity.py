@@ -21,6 +21,7 @@ class Entity:
     ry: float = 0.0
     scale: float = 1.0
     busy_timer: float = 0.0
+    race_id: str = ""
     stats: dict[str, Any] | None = None
 
     @staticmethod
@@ -56,7 +57,7 @@ class Entity:
         )
 
     def to_snapshot(self) -> dict:
-        return {
+        snap = {
             "id": self.id,
             "kind": self.kind,
             "name": self.name,
@@ -71,3 +72,6 @@ class Entity:
             "scale": self.scale,
             "stats": self.stats or {},
         }
+        if isinstance(self.race_id, str) and self.race_id.strip():
+            snap["race_id"] = self.race_id.strip()
+        return snap
