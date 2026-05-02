@@ -28,6 +28,27 @@ LOG = logging.getLogger("mmmorpg")
 PendingReply = tuple[str, str, dict[str, Any] | None]
 
 
+def _persist_game_state(game: GameState, raw_path: str, *, source: str) -> bool:
+    """Sauvegarde l'état monde persistant sans interrompre la boucle WS."""
+    path_text = (raw_path or "").strip()
+    if not path_text:
+        return False
+    try:
+        seen, flags, rep, gauges = game.export_commit_state()
+        save_state(Path(path_text), seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep, npc_gauges=gauges)
+        LOG.info(
+            "état mmmorpg sauvegardé vers %s (source=%s commits=%s, npcs=%s)",
+            path_text,
+            source,
+            len(seen),
+            len(flags),
+        )
+        return True
+    except Exception as e:
+        LOG.warning("impossible de sauvegarder l’état mmmorpg vers %s (source=%s) : %s", path_text, source, e)
+        return False
+
+
 def _format_ia_placeholder(template: str, npc_name: str | None) -> str:
     """Rend le placeholder IA plus incarné sans attendre le LLM."""
     raw = (template or "").strip()
@@ -244,6 +265,8 @@ def _queue_ia_bridge(
                     flags=commit.get("flags"),
                 )
                 if ok:
+                    if not config.PERSIST_DISABLE:
+                        _persist_game_state(game, config.STATE_PATH, source=f"ia:{source}")
                     LOG.info(
                         "Pont IA: commit appliqué (npc_id=%s trace_id=%s reason=%s source=%s)",
                         commit["npc_id"],
@@ -443,6 +466,8 @@ async def client_handler(
                     if not ok:
                         await ws.send(json.dumps(msg_error(f"world_commit refusé: {reason}")))
                         continue
+                    if not config.PERSIST_DISABLE:
+                        _persist_game_state(game, config.STATE_PATH, source="world_commit")
 
                 if has_ia:
                     # Pont IA via `move` (sans nouveau type) : ne pas être bloqué par l'anti-spam `move`.
