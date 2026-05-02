@@ -208,7 +208,11 @@ export class Renderer {
         const height = padY * 2 + titleH + lines.length * lineH + 4;
         const x = Math.max(12, Math.min(this.canvas.width - width - 12, pos.x - width / 2));
         const y = Math.max(12, drawY - 86 - height);
-        const accent = bubble.kind === "pending" ? "#ffea00" : "#00f2ff";
+        const accent = bubble.kind === "pending"
+            ? "#ffea00"
+            : bubble.kind === "world_event"
+                ? "#7CFF6B"
+                : "#00f2ff";
 
         ctx.shadowBlur = 18;
         ctx.shadowColor = "rgba(0, 242, 255, 0.35)";

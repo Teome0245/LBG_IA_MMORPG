@@ -152,6 +152,12 @@ class App {
         const summary = typeof event.summary === "string" && event.summary.trim()
             ? event.summary.trim()
             : "Action monde appliquée.";
+        this.renderer.setDialogueBubble(target.id, summary, {
+            speaker: "Action",
+            traceId: event.trace_id || traceId || "",
+            kind: "world_event",
+            ttlMs: 7000,
+        });
         this.addLog(`Action monde (${target.name}): ${summary}`, 'system');
     }
 
