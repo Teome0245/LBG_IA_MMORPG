@@ -642,4 +642,15 @@ class GameState:
             npc.ry = math.atan2(dx, dz)
 
     def entity_snapshots(self) -> list[dict]:
-        return [e.to_snapshot() for e in self.entities.values()]
+        out: list[dict] = []
+        for ent in self.entities.values():
+            snap = ent.to_snapshot()
+            if ent.kind == "npc":
+                flags = self.get_npc_commit_flags(ent.id)
+                snap["world_state"] = {
+                    "reputation": int(self.get_npc_reputation(ent.id)),
+                    "gauges": self.get_npc_gauges(ent.id),
+                    "flags": flags,
+                }
+            out.append(snap)
+        return out

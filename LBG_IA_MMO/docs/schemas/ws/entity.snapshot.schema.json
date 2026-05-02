@@ -13,7 +13,24 @@
     "z": { "type": "number" },
     "vx": { "type": "number" },
     "vy": { "type": "number" },
-    "vz": { "type": "number" }
+    "vz": { "type": "number" },
+    "world_state": {
+      "type": "object",
+      "properties": {
+        "reputation": { "type": "integer" },
+        "gauges": {
+          "type": "object",
+          "properties": {
+            "hunger": { "type": "number", "minimum": 0, "maximum": 1 },
+            "thirst": { "type": "number", "minimum": 0, "maximum": 1 },
+            "fatigue": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "additionalProperties": true
+        },
+        "flags": { "type": "object" }
+      },
+      "additionalProperties": true
+    }
   },
   "additionalProperties": true
 }

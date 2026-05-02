@@ -234,6 +234,7 @@ class App {
             this.playerLocalPos = { x: me.x, y: me.y, z: me.z };
         }
         this.updateDialogueTargetHUD();
+        this.updateNpcWorldStateHUD();
     }
 
     getDialogueTarget() {
@@ -301,6 +302,33 @@ class App {
         const target = this.getDialogueTarget();
         const selected = this.selectedDialogueTarget && this.selectedDialogueTarget.id === target.id;
         targetEl.textContent = selected ? `${target.name} (sélectionné)` : target.name;
+    }
+
+    updateNpcWorldStateHUD() {
+        const el = document.getElementById('npc-world-state');
+        if (!el) return;
+        const target = this.getDialogueTarget();
+        const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
+        const npc = entities.find((ent) => ent && ent.id === target.id && ent.kind === "npc");
+        const state = npc && typeof npc.world_state === "object" && npc.world_state ? npc.world_state : null;
+        if (!state) {
+            el.innerHTML = '<span class="muted">État PNJ non disponible.</span>';
+            return;
+        }
+        const gauges = typeof state.gauges === "object" && state.gauges ? state.gauges : {};
+        const flags = typeof state.flags === "object" && state.flags ? state.flags : {};
+        const pct = (value) => `${Math.round(Math.max(0, Math.min(1, Number(value || 0))) * 100)}%`;
+        const rep = Number.isFinite(Number(state.reputation)) ? Number(state.reputation) : 0;
+        const repClass = rep > 0 ? "good" : rep < 0 ? "warn" : "muted";
+        const quest = typeof flags.quest_id === "string" && flags.quest_id.trim()
+            ? `<br>Quête: <span class="warn">${flags.quest_id.trim()}</span>`
+            : "";
+        el.innerHTML = [
+            `Réputation: <span class="${repClass}">${rep}</span>`,
+            `Faim: <span>${pct(gauges.hunger)}</span>`,
+            `Soif: <span>${pct(gauges.thirst)}</span>`,
+            `Fatigue: <span>${pct(gauges.fatigue)}</span>${quest}`,
+        ].join("<br>");
     }
 
     formatTime(seconds) {

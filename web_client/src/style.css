@@ -247,6 +247,28 @@ button:hover {
   margin-top: 0.15rem;
 }
 
+.npc-world-state {
+  border-top: 1px solid rgba(0, 242, 255, 0.18);
+  color: var(--text-color);
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+}
+
+.npc-world-state .muted {
+  color: var(--text-muted);
+}
+
+.npc-world-state .good {
+  color: #7cff6b;
+}
+
+.npc-world-state .warn {
+  color: #ffea00;
+}
+
 /* Console/Chat */
 #console-logs {
   height: 150px;

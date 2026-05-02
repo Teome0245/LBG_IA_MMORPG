@@ -135,6 +135,7 @@ Forme (commune `welcome`/`world_tick`) :
 - `name` (string)
 - `x,y,z` (number)
 - `vx,vy,vz` (number)
+- `world_state` (PNJ uniquement, optionnel) : état IA monde minimal (`reputation`, `gauges`, `flags`)
 
 Schéma : `docs/schemas/ws/entity.snapshot.schema.json`
 

@@ -118,6 +118,24 @@ class TestWsInbound(unittest.TestCase):
         self.assertGreater(after["fatigue"], before["fatigue"])
         self.assertEqual(game.get_npc_reputation("npc:merchant"), 7)
 
+    def test_npc_snapshot_exposes_world_state(self):
+        game = GameState()
+        ok, reason = game.commit_dialogue(
+            npc_id="npc:merchant",
+            trace_id="snapshot-world-state-1",
+            flags={"aid_hunger_delta": 0.3, "aid_reputation_delta": 4, "quest_id": "q:test"},
+        )
+        self.assertTrue(ok, reason)
+
+        snap = next(e for e in game.entity_snapshots() if e["id"] == "npc:merchant")
+        state = snap.get("world_state")
+
+        self.assertIsInstance(state, dict)
+        assert isinstance(state, dict)
+        self.assertEqual(state["reputation"], 4)
+        self.assertIn("hunger", state["gauges"])
+        self.assertEqual(state["flags"]["quest_id"], "q:test")
+
     def test_dialogue_commit_world_event_is_sent_on_world_tick(self):
         commit = {
             "npc_id": "npc:merchant",
