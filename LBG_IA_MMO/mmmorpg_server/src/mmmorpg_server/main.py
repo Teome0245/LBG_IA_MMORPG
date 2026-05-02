@@ -63,6 +63,44 @@ def _parse_move_world_commit(data: dict[str, Any]) -> dict[str, Any] | None | st
     return {"npc_id": npc_id.strip(), "trace_id": trace_id.strip(), "flags": flags if isinstance(flags, dict) else None}
 
 
+def _extract_ia_dialogue_commit(
+    route_response: dict[str, Any],
+    *,
+    target_npc_id: str,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """
+    Extrait un commit monde produit par l'agent dialogue.
+
+    Le serveur WS reste autoritaire : seul le PNJ ciblé par la conversation peut
+    être modifié, et les flags seront revalidés par `GameState.commit_dialogue`.
+    """
+    target = (target_npc_id or "").strip()
+    if not target or not isinstance(route_response, dict):
+        return None, None
+
+    result = route_response.get("result")
+    output = result.get("output") if isinstance(result, dict) else None
+    if not isinstance(output, dict):
+        return None, None
+
+    raw_commit = output.get("commit")
+    if not isinstance(raw_commit, dict):
+        remote = output.get("remote")
+        raw_commit = remote.get("commit") if isinstance(remote, dict) else None
+    if not isinstance(raw_commit, dict):
+        return None, None
+
+    raw_npc_id = raw_commit.get("npc_id")
+    npc_id = raw_npc_id.strip() if isinstance(raw_npc_id, str) and raw_npc_id.strip() else target
+    if npc_id != target:
+        return None, f"commit npc mismatch: {npc_id!r} != {target!r}"
+
+    flags = raw_commit.get("flags")
+    if flags is not None and not isinstance(flags, dict):
+        return None, "commit flags invalid"
+    return {"npc_id": npc_id, "flags": flags if isinstance(flags, dict) else None}, None
+
+
 def _queue_ia_bridge(
     *,
     game: GameState,
@@ -163,6 +201,31 @@ def _queue_ia_bridge(
             out = res.get("output") if isinstance(res, dict) else None
             remote = out.get("remote") if isinstance(out, dict) else None
             rep = remote.get("reply") if isinstance(remote, dict) else None
+            commit, commit_err = _extract_ia_dialogue_commit(j, target_npc_id=npc_id)
+            if commit_err:
+                LOG.warning("Pont IA: commit ignoré (%s trace_id=%s source=%s)", commit_err, tid, source)
+            elif commit is not None and isinstance(tid, str) and tid.strip():
+                ok, reason = game.commit_dialogue(
+                    npc_id=commit["npc_id"],
+                    trace_id=tid.strip(),
+                    flags=commit.get("flags"),
+                )
+                if ok:
+                    LOG.info(
+                        "Pont IA: commit appliqué (npc_id=%s trace_id=%s reason=%s source=%s)",
+                        commit["npc_id"],
+                        tid.strip(),
+                        reason,
+                        source,
+                    )
+                else:
+                    LOG.warning(
+                        "Pont IA: commit refusé (npc_id=%s trace_id=%s reason=%s source=%s)",
+                        commit["npc_id"],
+                        tid.strip(),
+                        reason,
+                        source,
+                    )
             if isinstance(rep, str) and rep.strip() and isinstance(tid, str) and tid.strip():
                 pending_replies[ws] = (rep.strip(), tid.strip())
                 game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)

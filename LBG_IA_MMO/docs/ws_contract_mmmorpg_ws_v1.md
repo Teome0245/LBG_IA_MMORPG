@@ -64,6 +64,9 @@ Schéma : `docs/schemas/ws/client.move.schema.json`
 Notes :
 
 - le serveur applique un anti-spam de move ; l’appel IA est fait **hors** de ce throttle (voir `main.py`)
+- si l’agent dialogue renvoie un `commit` monde (`aid`/`quest`), le serveur WS l’applique côté `GameState`
+  avec le `trace_id` de la conversation ; l’action est refusée si elle tente de viser un autre PNJ que
+  `world_npc_id`.
 
 ---
 
@@ -133,6 +136,7 @@ Le `trace_id` issu du pont IA sert aussi à :
 
 - corréler `GET /internal/v1/npc/{npc_id}/lyra-snapshot?trace_id=...`
 - idempotence sur `POST /internal/v1/npc/{npc_id}/dialogue-commit` (même `trace_id` ⇒ noop accepté)
+- idempotence des commits `aid`/`quest` renvoyés par l’agent dialogue puis appliqués directement par le pont WS
 
 Notes d’implémentation (HTTP interne `mmmorpg_server`) :
 
