@@ -25,6 +25,7 @@ src/world_core/planet.py
 src/world_core/time_manager.py
 tests/test_config.py
 tests/test_internal_http.py
+tests/test_npc_conversation_pause.py
 tests/test_persistence.py
 tests/test_time_manager.py
 tests/test_ws_inbound.py

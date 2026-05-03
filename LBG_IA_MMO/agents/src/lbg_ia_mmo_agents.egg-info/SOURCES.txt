@@ -3,15 +3,19 @@ pyproject.toml
 src/lbg_agents/__init__.py
 src/lbg_agents/combat_http_app.py
 src/lbg_agents/combat_stub.py
+src/lbg_agents/desktop_executor.py
+src/lbg_agents/desktop_http_app.py
 src/lbg_agents/devops_executor.py
 src/lbg_agents/dialogue_http_app.py
 src/lbg_agents/dialogue_llm.py
 src/lbg_agents/dispatch.py
 src/lbg_agents/lyra_bridge.py
+src/lbg_agents/opengame_executor.py
 src/lbg_agents/pm_http_app.py
 src/lbg_agents/pm_stub.py
 src/lbg_agents/quests_http_app.py
 src/lbg_agents/quests_stub.py
+src/lbg_agents/world_content.py
 src/lbg_agents/world_stub.py
 src/lbg_ia_mmo_agents.egg-info/PKG-INFO
 src/lbg_ia_mmo_agents.egg-info/SOURCES.txt
@@ -29,4 +33,6 @@ tests/test_dispatch_pm.py
 tests/test_dispatch_quests.py
 tests/test_lyra_bridge.py
 tests/test_lyra_bridge_mmo_world.py
+tests/test_opengame_executor.py
 tests/test_quests_http_app.py
+tests/test_world_content.py

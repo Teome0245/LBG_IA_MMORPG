@@ -16,12 +16,16 @@ lbg_ia_mmo_backend.egg-info/top_level.txt
 models/__init__.py
 models/intents.py
 services/__init__.py
+services/brain_lyra_sync.py
+services/lyra_regulator.py
 services/metrics.py
 services/mmmorpg_commit.py
 services/mmo_lyra_sync.py
 services/orchestrator_client.py
+tests/test_brain_lyra_sync.py
 tests/test_cors.py
 tests/test_health.py
+tests/test_lyra_regulator.py
 tests/test_metrics_endpoint.py
 tests/test_mmo_lyra_sync.py
 tests/test_pilot_aid.py
