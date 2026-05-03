@@ -277,8 +277,8 @@ Exemple (sur Windows, là où tourne le worker `Agent_IA`) :
 ### Smoke “ComfyUI 2-pass” (terrain puis bâtiments)
 
 Pour un rendu plus contrôlé (style fort sans inventer de bâtiments), exécuter 2 passes :
-- **Pass 1** : stylise terrain/route/végétation (bâtiments gelés via noise mask)
-- **Pass 2** : stylise uniquement les bâtiments (noise mask bâtiments, denoise bas)
+- **Pass 1** : fond nature (herbe, arbres, rochers) — ControlNet **routes** désactivé (`strength: 0`) ; bâtiments guidés par Canny sur `buildings.png`
+- **Pass 2** : affiner les **bâtiments** uniquement (masque) ; prompts sans incitation aux chemins ni au village
 
 Script : `infra/scripts/smoke_comfyui_2pass.ps1`
 
@@ -296,39 +296,41 @@ Exemple :
   -SeedPass2 43
 ```
 
-#### État (2026-05-01) — pipeline “fond de village” + exécution repo
+#### État carte MMO — pipeline 2 passes (point situation **2026-05-02**, pause)
 
-Objectif :
-- Approcher un rendu “carte peinte” (référence visuelle) **sans casser l’échelle** ni inventer des bâtiments.
-- Orchestrer l’exécution **depuis WSL/repo** via le worker Windows (`Agent_IA`) et les actions ComfyUI :
-  `comfyui_queue`, `comfyui_patch_and_queue`, `comfyui_history`, `comfyui_view`.
+**Objectif visuel (en cours)**  
+- Les **gros bâtiments** sont jugés corrects dans l’ensemble.  
+- Le **remplissage hors bâtiments** doit rester **clair** : herbe, arbres, rochers — **sans** petit village, **sans** réseau de chemins, cadre moins “carte de bourg saturée”.
 
-Ce qui est prêt côté repo :
-- `infra/scripts/smoke_comfyui.ps1` : 1 passe (queue → poll history → download).
-- `infra/scripts/smoke_comfyui_2pass.ps1` : 2 passes (pass1 → download → copie vers `ComfyUI\input\bourg.png` → pass2 → download final).
-- Workflows API JSON (exemples utilisés) :
-  - `Boite à idées/Map_mmo.json` (pass 1 : styliser terrain/route/végétation, bâtiments gelés via noise mask)
-  - `Boite à idées/Map_mmo_pass2_buildings.json` (pass 2 : styliser les bâtiments uniquement, denoise bas)
+**Ce qui fonctionne techniquement**  
+- Le smoke **`smoke_comfyui_2pass.ps1`** peut aller au bout : pass 1 → copie `bourg.png` → pass 2 → fichier final sous `ComfyUI\output` (préfixes `lbg_map_pass1_*` / `lbg_map_pass2_*`).  
+- Fallback **fichier sur disque** si `/history` est vide ou peu fiable (voir ci‑dessous).  
+- Scripts : `infra/scripts/smoke_comfyui.ps1`, `infra/scripts/smoke_comfyui_2pass.ps1`.  
+- Workflows API dans le repo :  
+  - `Boite à idées/Map_mmo.json` — pass 1  
+  - `Boite à idées/Map_mmo_pass2_buildings.json` — pass 2  
 
-Contraintes importantes découvertes :
-- **PowerShell depuis WSL** : utiliser `\` (bash) et pas les backticks (PowerShell). Exemple correct :
-  - `/mnt/c/.../powershell.exe ... -File "C:\Agent_IA\smoke_comfyui_2pass.ps1" -BaseUrl "http://192.168.0.10:5005" ...`
-- **Approval token** : `healthz` montre `approval_gate_active: true` → il faut fournir `-Approval` égal à `LBG_DESKTOP_APPROVAL_TOKEN`.
-- **Encodage JSON** : FastAPI peut refuser un body encodé “odd” par PowerShell → les scripts envoient maintenant le body en bytes UTF‑8.
-- **IP-Adapter preset** : la valeur doit être exactement une entrée du dropdown (ex. `STANDARD (medium strength)`), sinon ComfyUI refuse (`value_not_in_list`).
-- **LoadImage** : ComfyUI refuse si un fichier référencé n’existe pas dans `ComfyUI\input` (ex. `roads_edit.png`) → valider présence ou retomber sur `roads.png`.
-- **ImageToMask** : ComfyUI demande l’input `channel` (ex. `red`) sinon `required_input_missing`.
+**Modifs déjà dans le repo (pass 1)** — à **recopier** sur Windows si tu testes depuis `C:\Agent_IA\workflows\` :  
+- Prompt positif : prairie / cailloux / arbres épars, **interdiction explicite** de routes et hameaux ; conserve la consigne “layout des bâtiments inchangé”.  
+- Prompt négatif : ajout de termes **roads, paths, trails, dirt tracks**, etc.  
+- Chaîne sampler : `213/214 → 209` (Canny sur **`buildings.png`**) → **`215`** (image **`roads.png`**). Le node **`215`** a **`strength: 0.0`** pour **ne plus imposer** le graphe de routes via ControlNet tout en gardant l’étape dans le graphe.
 
-État d’exécution (dernier test) :
-- `comfyui_patch_and_queue` fonctionne : on obtient un `prompt_id(pass1)`.
-- Blocage restant : le script 2-pass plante lors de l’extraction du résultat `history` (“La propriété `Name` est introuvable…”).
-  - Le rendu ComfyUI continue côté Windows (progress 5%…10%…), donc le bug est dans le parsing PowerShell, pas dans ComfyUI.
+**Constat (tests visuels)**  
+- Le rendu peut rester **chargé** (micro-maisons, chemins). Causes possibles : décalage **copie locale Windows** vs repo ; **IP‑Adapter** / référence style ; limites du modèle. Les prompts **pass 2** dans le repo ont été alignés (plus de fusion « grass and paths », négatif routes/village) — **à re-tester** après sync des JSON vers `C:\Agent_IA\workflows\`.
 
-Prochaine action (à faire au prochain créneau) :
-- Finir le durcissement du parsing `comfyui_history` dans `smoke_comfyui_2pass.ps1` :
-  - dumper la réponse brute (shape `history`)
-  - extraction robuste du premier `images[0]` sans accès `.Name` fragile
-  - relancer la 2‑pass jusqu’au téléchargement final.
+**Contraintes déjà documentées (rappel)**  
+- **PowerShell depuis WSL** : une ligne ou `\` en continuation, pas les backticks Windows depuis bash.  
+- **Approval token** si `approval_gate_active` sur le worker.  
+- **IP‑Adapter preset** : valeur exacte du dropdown (ex. `STANDARD (medium strength)`).  
+- **LoadImage** : tous les fichiers référencés doivent exister dans `ComfyUI\input`.  
+- **`ImageToMask`** : renseigner `channel` (ex. `red`).  
+- **`smoke_comfyui_2pass.ps1`** : parsing `history` tolérant ; timeout large (`TimeoutS` défaut élevé) ; fallback **attente fichier** sous `ComfyUI\output`.
+
+**Reprise / itération**  
+1. Copier **`Map_mmo.json`** et **`Map_mmo_pass2_buildings.json`** du repo vers `C:\Agent_IA\workflows\` (ou chemins passés à `-WorkflowPass1Path` / `-WorkflowPass2Path`).  
+2. **Isoler pass 1** : juger le PNG `lbg_map_pass1_*` seul avant pass 2.  
+3. Si le fond reste trop “bourg” : baisser **IP‑Adapter** (pass 1 / pass 2 selon graphe) ou changer la **référence** image.  
+4. Option ultérieure : passe “nettoyage fond” (inpaint / dénoise **hors bâtiments** uniquement).
 
 
 ## `desktop.env` (config hot-reload)

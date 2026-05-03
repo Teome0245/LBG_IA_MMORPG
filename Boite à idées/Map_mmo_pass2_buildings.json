@@ -20,6 +20,19 @@
       "title": "Aperçu Image"
     }
   },
+  "300": {
+    "inputs": {
+      "filename_prefix": "lbg_map_pass2",
+      "images": [
+        "206",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
   "204": {
     "inputs": {
       "pixels": [
@@ -39,11 +52,11 @@
   "205": {
     "inputs": {
       "seed": 246207409360292,
-      "steps": 16,
-      "cfg": 7,
+      "steps": 18,
+      "cfg": 6.5,
       "sampler_name": "euler",
       "scheduler": "simple",
-      "denoise": 0.35,
+      "denoise": 0.52,
       "model": [
         "222",
         0
@@ -93,9 +106,9 @@
   },
   "209": {
     "inputs": {
-      "strength": 0.9,
+      "strength": 0.62,
       "start_percent": 0,
-      "end_percent": 0.9,
+      "end_percent": 0.62,
       "positive": [
         "213",
         0
@@ -138,7 +151,7 @@
   },
   "213": {
     "inputs": {
-      "text": "top-down orthographic medieval village buildings, hand-painted map illustration, inked outline, crisp roof tiles, subtle watercolor shading, soft ambient occlusion, consistent light direction, keep exact building shapes and positions, no extra buildings",
+      "text": "top-down orthographic medieval fantasy village buildings, hand-painted RPG battle map, timber framing with dark wooden beams, plaster/stone walls, varied roof pitches, weathered clay roof tiles with subtle color variation, chimneys, small windows and doors, organic edges, inked outlines but soft, watercolor gouache shading, soft ambient occlusion, consistent warm daylight from upper-left, seamless blend into surrounding meadow grass, scattered trees and mossy rocks, no roads, no dirt paths, keep EXACT footprint shapes from mask, no extra buildings",
       "clip": [
         "196",
         1
@@ -151,7 +164,7 @@
   },
   "214": {
     "inputs": {
-      "text": "extra buildings, additional houses, new structures, messy lines, warped roofs, distorted perspective, photorealistic, 3d render, blurry",
+      "text": "extra buildings, additional houses, new structures, messy lines, warped roofs, distorted perspective, photorealistic, 3d render, blurry, plastic look, uniform orange roof slabs, flat cardboard buildings, giant rectangles, modern architecture, skyscrapers, neon, grid texture, watermark, text, roads, paths, trails, walkways, dirt tracks, cobblestone, village clutter, tiny houses, cottages, huts",
       "clip": [
         "196",
         1
@@ -231,7 +244,7 @@
   },
   "222": {
     "inputs": {
-      "weight": 0.7,
+      "weight": 0.45,
       "weight_type": "linear",
       "combine_embeds": "concat",
       "start_at": 0,
