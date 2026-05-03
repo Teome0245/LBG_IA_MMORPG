@@ -25,6 +25,7 @@ Construire un framework complet permettant :
 - **Lyra (futur)** : le contrat d’état optionnel `context.lyra` / `output.lyra` est décrit dans `lyra.md` ; **`lbg_agents.lyra_bridge`** applique un pas sur **`lyra_engine.gauges`** (si **`mmo_server`** dans le venv) pour **`agent.fallback`** et pour **`agent.dialogue`** avant l’appel HTTP à l’agent dialogue.
 - Après routage, appelle le paquet **`agents/`** (`lbg_agents.dispatch.invoke_after_route`) pour enrichir le champ `output`. Le dialogue peut cibler un **agent HTTP** (`LBG_AGENT_DIALOGUE_URL`, port **8020** en prod systemd, voir `agents/README.md`). L’intention **`devops_probe`** déclenche **`agent.devops`** : GET HTTP et lecture de fichiers **uniquement** via listes blanches d’environnement (`agents/README.md`) ; dry-run **`LBG_DEVOPS_DRY_RUN`** ; garde **`LBG_DEVOPS_APPROVAL_TOKEN`** + `context.devops_approval` ; audit JSON **`agents.devops.audit`** (champ `ts`) sur stdout et/ou fichier **`LBG_DEVOPS_AUDIT_LOG_PATH`** (JSONL).
 - **Forge de prototypes OpenGame (cadrage)** : si OpenGame est intégré, il reste une capability expérimentale orchestrée (`agent.opengame`) pour générer des prototypes isolés ; l’orchestrateur reste maître du déclenchement, et le code généré ne modifie pas le cœur MMO automatiquement. Décision : `docs/adr/0003-opengame-forge-prototypes.md`.
+- **Assistant poste vs persona MMO** : deux modes produit (`local_assistant` / `mmo_persona`), isolation des secrets et routage ; pas d’exécution OS sensible depuis le flux MMO sans pont dédié. Décision : `docs/adr/0004-assistant-local-vs-persona-mmo.md`.
 - Introspection : **`GET /v1/capabilities`** (liste des `CapabilitySpec`). Le backend expose **`GET /v1/pilot/capabilities`** en proxy pour l’UI `/pilot/`.
 
 #### Dialogue orchestré multi‑LLM (cadrage backlog)
@@ -178,4 +179,5 @@ Recommandation pour **cette** machine : **déploiement via systemd** (voir `../.
 - `ops_devops_audit.md` : VM — audit DevOps JSONL (logrotate), rotation du jeton d’approbation
 - `ops_vm_user.md` : compte **`lbg`** (sudoer, SSH, `User=` systemd, `/opt`, secrets `640 root:lbg`)
 - `adr/0003-opengame-forge-prototypes.md` : OpenGame comme forge de prototypes orchestrée et sandboxée
+- `adr/0004-assistant-local-vs-persona-mmo.md` : assistant poste de travail (`local_assistant`) vs incarnation MMO (`mmo_persona`)
 

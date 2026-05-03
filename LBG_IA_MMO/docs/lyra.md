@@ -4,6 +4,8 @@ Ce document synthétise `Lyra 20260409.txt` et l’intègre au projet.
 
 **Fusion (phase B)** : alignement assistant vs PNJ, enveloppe `kind`, plages — voir **`fusion_spec_lyra.md`** (ne remplace pas ce fichier pour le comportement **actuel** du code).
 
+**Périmètre « même esprit, deux mondes »** (assistant PC vs persona MMO) : voir **`docs/adr/0004-assistant-local-vs-persona-mmo.md`** — modes `local_assistant` / `mmo_persona`, pas de fuite automatique entre vie privée et session joueur.
+
 ## Nommage / version
 
 - Version : **Lyra 2.0**

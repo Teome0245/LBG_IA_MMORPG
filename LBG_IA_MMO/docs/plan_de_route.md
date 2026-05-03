@@ -46,6 +46,7 @@ La numérotation **0** = toujours actif en parallèle des autres priorités. La 
 - **Promouvoir le dev vers la prod (VM privée)** : `LBG_IA_MMO/infra/scripts/deploy_vm.sh` depuis le poste de travail (ex. WSL) ; tu peux **ne pas** lancer la stack locale et valider **sur la VM** uniquement (`curl`, `/pilot/`, systemd). Les tests `pytest` en local restent recommandés avant un merge sensible. Détail : `bootstrap.md` (*Pousser les évolutions* → *sans exécuter les services en local*).
 - **Environnement secrets** : toute réorganisation des sections ou des variables de `infra/secrets/lbg.env` (fichier local non versionné) doit être **reflétée dans `infra/secrets/lbg.env.example`** dans le même changement (même ordre de sections, commentaires alignés, placeholders à la place des secrets). Le fichier exemple est la référence **structurelle** ; les vraies valeurs restent uniquement dans `lbg.env`.
 - **Déploiement global / reproductibilité** : maintenir dans `bootstrap.md` (*Déploiement global initial*) et `architecture.md` (*Déploiement global final et reproductibilité*) la procédure pour recréer un serveur **vierge** équivalent ; tout changement de dépendance système, de chemin ou de port doit y être reflété (priorité 0).
+- **Assistant local vs MMO** : toute évolution « agent bureau / mail / web ouvert » doit rester alignée avec **`docs/adr/0004-assistant-local-vs-persona-mmo.md`** (modes séparés, audit, drapeaux).
 - Après chaque étape livrée (feature, correctif majeur, déploiement) : **court changelog** dans ce plan ou lien vers une section « État courant » (date + ce qui a bougé).
 - Exemples opérationnels (commandes `curl`, flux d’appel backend ↔ orchestrateur) dès que les APIs stabilisent.
 
@@ -118,6 +119,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-05 | **ADR 0004** : assistant poste (`local_assistant`) vs persona MMO (`mmo_persona`) — périmètres, routage, audit, lien doux session→assistant, aligné vision Boîte à idées. Renvoi depuis `lyra.md`. |
 | 2026-05-04 | **Tests / déploiement MMO** : `bootstrap.md` — pytest ciblé avec **uv** depuis `LBG_IA_MMO/`. `deploy_web_client.sh` : **`LBG_MMO_WEB_DEPLOY_LOCAL_ONLY=1`** (build `--base=/mmo/` + `pilot_web/mmo/` sans SSH). `.gitignore` : `uv.lock` sous agents/backend/mmmorpg_server. Doc `architecture`, `runbook`. Sync **`pilot_web/mmo`** + `web_client/dist` alignés. |
 | 2026-05-03 | **Client MMO — libellés races (catalogue)** : `GET /world-content` enrichi (`race_display` id → nom) ; client `web_client` charge pilot/agent (same-origin / ports 8080·8000·8020) ; **fiches rafraîchies en async** après `welcome`. Doc `agents/README`, `mmmorpg_PROTOCOL`, `plan_de_route`. |
 | 2026-05-02 | **Client MMO — fiches personnage (joueur + PNJ)** : HUD *Fiche voyageur* et *Fiche PNJ* (`web_client`) ; doc `docs/mmmorpg_PROTOCOL.md` (*HUD client MMO — fiches personnage*). Build `dist` à jour. |
