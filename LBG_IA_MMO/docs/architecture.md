@@ -116,7 +116,7 @@ Données **data-driven** versionnées dans le monorepo : `LBG_IA_MMO/content/wor
     - `http://<IP>:8080/v1/` : Proxy vers le backend API (VM 140:8000).
 - **Déploiement** : 
     - Le rôle `front` de `deploy_vm.sh` gère Lyra.
-    - `deploy_web_client.sh` gère le MMO (build avec `--base=/mmo/` et déploiement dans le sous-dossier).
+    - `deploy_web_client.sh` gère le MMO (build avec `--base=/mmo/` et déploiement dans le sous-dossier). Variable **`LBG_MMO_WEB_DEPLOY_LOCAL_ONLY=1`** : build + vérifs + copie vers `pilot_web/mmo/` sans SSH VM.
 - **Note** : Le serveur Python sur le port **8081** est déprécié et supprimé.
 
 #### Notes opérationnelles (client MMO `/mmo/`)

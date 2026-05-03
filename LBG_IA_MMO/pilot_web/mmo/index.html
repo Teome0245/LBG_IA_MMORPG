@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LBG IA MMO - Client Web</title>
-  <script type="module" crossorigin src="/mmo/assets/index-BkCWX1oK.js"></script>
-  <link rel="stylesheet" crossorigin href="/mmo/assets/index-D_YFQpcj.css">
+  <script type="module" crossorigin src="/mmo/assets/index-DMskd_6g.js"></script>
+  <link rel="stylesheet" crossorigin href="/mmo/assets/index-DYayYgkz.css">
 </head>
 <body>
     <div id="app">
@@ -50,6 +50,10 @@
                         <span class="label">TIME :</span>
                         <span id="world-time">--:--</span>
                     </div>
+                    <div class="panel-title sheet-panel-title">Fiche voyageur</div>
+                    <div id="player-sheet-body" class="character-sheet-body">
+                        <span class="muted">—</span>
+                    </div>
                     <div id="active-quest-summary" class="active-quest-summary">
                         Quête suivie : aucune
                     </div>
@@ -83,8 +87,9 @@
                         <span class="label">CIBLE :</span>
                         <span id="dialogue-target">?</span>
                     </div>
-                    <div id="npc-world-state" class="npc-world-state">
-                        Sélectionnez un PNJ.
+                    <div class="panel-title sheet-panel-title">Fiche PNJ</div>
+                    <div id="npc-sheet-body" class="character-sheet-body">
+                        <span class="muted">Sélectionnez un PNJ sur la carte.</span>
                     </div>
                     <div class="npc-actions">
                         <button id="quick-aid-btn" type="button">DEMANDER AIDE</button>

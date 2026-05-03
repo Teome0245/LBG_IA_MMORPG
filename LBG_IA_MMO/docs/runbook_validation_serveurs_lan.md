@@ -41,6 +41,7 @@ Pour éviter les grosses régressions “front” :
 
 - `infra/scripts/deploy_web_client.sh` fait un **déploiement atomique** (stage → switch) et refuse le déploiement si `index.html` référence des assets manquants.
 - Il garde automatiquement un **backup** des derniers déploiements dans `mmo_releases/` sur la VM front (110).
+- **Sans accès SSH** (poste de dev uniquement) : `LBG_MMO_WEB_DEPLOY_LOCAL_ONLY=1 bash infra/scripts/deploy_web_client.sh` exécute le build `--base=/mmo/`, les vérifications, et copie le `dist/` vers `LBG_IA_MMO/pilot_web/mmo/` (pas de rsync vers la VM).
 
 Commande :
 

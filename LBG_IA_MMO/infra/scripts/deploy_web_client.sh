@@ -7,9 +7,26 @@ VM_USER="${LBG_VM_USER:-lbg}"
 REMOTE_DIR="/opt/LBG_IA_MMO/pilot_web/mmo"
 REMOTE_RELEASES_DIR="/opt/LBG_IA_MMO/pilot_web/mmo_releases"
 KEEP_RELEASES="${LBG_MMO_WEB_KEEP_RELEASES:-5}"
+# 1 : build + vérifications + copie vers LBG_IA_MMO/pilot_web/mmo uniquement (pas de SSH VM).
+LBG_MMO_WEB_DEPLOY_LOCAL_ONLY="${LBG_MMO_WEB_DEPLOY_LOCAL_ONLY:-0}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CLIENT_DIR="${ROOT_DIR}/../web_client"
+
+sync_local_pilot_mmo() {
+  local LOCAL_TARGET="${ROOT_DIR}/pilot_web/mmo"
+  local LOCAL_STAGE="${ROOT_DIR}/pilot_web/.mmo_stage"
+  local LOCAL_BACKUP="${ROOT_DIR}/pilot_web/.mmo_backup"
+
+  mkdir -p "${LOCAL_STAGE}"
+  rsync -a --delete "${CLIENT_DIR}/dist/" "${LOCAL_STAGE}/"
+  if [[ -d "${LOCAL_TARGET}" ]]; then
+    rm -rf "${LOCAL_BACKUP}" || true
+    cp -a "${LOCAL_TARGET}" "${LOCAL_BACKUP}" || true
+  fi
+  rm -rf "${LOCAL_TARGET}" || true
+  mv "${LOCAL_STAGE}" "${LOCAL_TARGET}"
+}
 
 echo "Compiling client with base /mmo/..."
 cd "${CLIENT_DIR}"
@@ -77,6 +94,13 @@ if "x / 2 - y / 2" in text:
     raise SystemExit("ERREUR: bundle MMO contient l'ancien rendu isométrique régressif")
 print(f"ok ({bundle.name})")
 PY
+
+if [[ "${LBG_MMO_WEB_DEPLOY_LOCAL_ONLY}" == "1" ]]; then
+  echo "LBG_MMO_WEB_DEPLOY_LOCAL_ONLY=1 → synchronisation locale vers pilot_web/mmo uniquement."
+  sync_local_pilot_mmo
+  echo "OK : ${ROOT_DIR}/pilot_web/mmo"
+  exit 0
+fi
 
 echo "Déploiement du client MMO vers ${VM_USER}@${VM_HOST}:${REMOTE_DIR}..."
 
@@ -149,18 +173,7 @@ ssh "${SSH_OPTS[@]}" "${VM_USER}@${VM_HOST}" "sudo systemctl restart nginx"
 
 # 4. Sync locale (pour visibilité dans l'explorateur)
 echo "Synchronisation locale vers LBG_IA_MMO/pilot_web/mmo/..."
-LOCAL_TARGET="${ROOT_DIR}/pilot_web/mmo"
-LOCAL_STAGE="${ROOT_DIR}/pilot_web/.mmo_stage"
-LOCAL_BACKUP="${ROOT_DIR}/pilot_web/.mmo_backup"
-
-mkdir -p "${LOCAL_STAGE}"
-rsync -avz --delete "${CLIENT_DIR}/dist/" "${LOCAL_STAGE}/"
-if [[ -d "${LOCAL_TARGET}" ]]; then
-  rm -rf "${LOCAL_BACKUP}" || true
-  cp -a "${LOCAL_TARGET}" "${LOCAL_BACKUP}" || true
-fi
-rm -rf "${LOCAL_TARGET}" || true
-mv "${LOCAL_STAGE}" "${LOCAL_TARGET}"
+sync_local_pilot_mmo
 
 echo "Client MMO déployé et accessible sur http://192.168.0.110:8080/mmo/"
 echo "L'interface Lyra reste sur http://${VM_HOST}:8080/"
