@@ -93,6 +93,15 @@ Depuis `LBG_IA_MMO/` :
 bash infra/ci/test_pytest.sh
 ```
 
+**Sans recréer le venv CI** : depuis `LBG_IA_MMO/`, **uv** peut lancer des cibles ciblées (le `conftest.py` racine règle les imports monorepo) :
+
+```bash
+cd LBG_IA_MMO
+uv run --with pytest --with 'httpx>=0.26' --with 'fastapi>=0.110' python -m pytest backend/tests/test_pilot_proxy_agent_healthz.py -q
+uv run --with pytest --with 'httpx>=0.26' --with 'fastapi>=0.110' python -m pytest agents/tests/test_dialogue_http_app.py agents/tests/test_world_content.py -q
+uv run --with pytest --with 'websockets>=12' python -m pytest mmmorpg_server/tests/ -q
+```
+
 ### Forge OpenGame (prototypes)
 
 La capability `prototype_game` / `agent.opengame` est documentée dans `LBG_IA_MMO/docs/opengame.md`.
