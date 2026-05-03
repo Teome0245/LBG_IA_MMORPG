@@ -373,6 +373,13 @@ Module : `lbg_agents.dialogue_http_app` (FastAPI).
 - `GET /npc-registry` → registre PNJ (`npc_registry.json`), option `?npc_id=` pour une entrée.
 - `GET /world-content` → inventaire **races + bestiaire** (JSON sous `content/world/`, surcharge par `LBG_WORLD_CONTENT_DIR`) ; inclut `race_ids`, `races_count`, `creatures_count` et la carte **`race_display`** (`race_id` → `display_name`) pour les clients légers (ex. HUD MMO web via proxy pilot).
 
+**Tests** (sans activer un venv projet, avec **uv**) :
+
+```bash
+cd LBG_IA_MMO/agents
+PYTHONPATH=src uv run --with pytest --with 'httpx>=0.26' --with 'fastapi>=0.110' python -m pytest tests/test_dialogue_http_app.py tests/test_world_content.py -q
+```
+
 ### Lancer en local (WSL), 4ᵉ terminal
 
 ```bash
