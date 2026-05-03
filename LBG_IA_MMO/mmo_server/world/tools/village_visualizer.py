@@ -12,6 +12,66 @@ GRID_W = 50
 GRID_H = 40
 TILE_M = 2.0  # 1 tuile = 2m (cf docs/area_generation.md)
 
+# Si défini : grille importée (ex. Watabou via `watabou_import`) remplace `generate_village`.
+VILLAGE_GRID_OVERRIDE: list[list[str]] | None = None
+
+
+def reset_village_to_procedural_defaults() -> None:
+    """Revient au village procédural 50×40 (comportement historique)."""
+    global VILLAGE_GRID_OVERRIDE, GRID_W, GRID_H, TILE_SIZE
+    VILLAGE_GRID_OVERRIDE = None
+    GRID_W = 50
+    GRID_H = 40
+    TILE_SIZE = 32
+
+
+def configure_village_from_watabou_json(
+    watabou_json: Path,
+    *,
+    tile_m: float = 2.0,
+    unit_m: float = 1.0,
+    padding_tiles: int = 2,
+    max_image_px: int = 1680,
+) -> None:
+    """
+    Charge une carte Watabou (JSON) comme grille de village (collisions / rendu).
+    Ajuste dynamiquement GRID_W/H et TILE_SIZE pour garder une image raisonnable.
+    """
+    global VILLAGE_GRID_OVERRIDE, GRID_W, GRID_H, TILE_SIZE
+    from watabou_import import build_grid_from_watabou
+
+    if not watabou_json.exists():
+        raise FileNotFoundError(str(watabou_json))
+    g = build_grid_from_watabou(
+        watabou_json_path=watabou_json.resolve(),
+        tile_m=tile_m,
+        unit_m=unit_m,
+        padding_tiles=padding_tiles,
+    )
+    GRID_W = int(g["grid"]["w"])
+    GRID_H = int(g["grid"]["h"])
+    VILLAGE_GRID_OVERRIDE = [list(row) for row in g["grid"]["rows"]]
+    m = max(GRID_W, GRID_H)
+    TILE_SIZE = max(4, min(32, int(max_image_px) // max(m, 1)))
+
+
+def _village_grid(seed: int) -> list[list[str]]:
+    if VILLAGE_GRID_OVERRIDE is not None:
+        return VILLAGE_GRID_OVERRIDE
+    return generate_village(GRID_W, GRID_H, seed=seed)
+
+
+def _house_sizes_for_render() -> list[tuple[int, int]]:
+    """Grille Watabou : bâtiments déjà « remplis » en H ; on dessine 1×1 tuile pour éviter les empilements."""
+    if VILLAGE_GRID_OVERRIDE is not None:
+        return [(1, 1)]
+    return [(6, 4), (3, 3), (3, 3), (4, 3), (4, 3), (4, 3), (6, 5), (4, 3), (5, 4), (4, 3)]
+
+
+def _default_pixie_seat_json() -> Path:
+    # .../LBG_IA_MMO/mmo_server/world/tools/village_visualizer.py -> parents[4] = racine LBG_IA_MMORPG
+    return Path(__file__).resolve().parents[4] / "Boite à idées" / "pixie_seat.json"
+
 
 def _px_per_m() -> float:
     return float(TILE_SIZE) / float(TILE_M)
@@ -79,12 +139,13 @@ def export_layout_and_masks(
             elif ch == "T":
                 cx = x1 + TILE_SIZE // 2
                 cy = y1 + TILE_SIZE // 2
-                dt.ellipse([cx - 8, cy - 8, cx + 8, cy + 8], fill=255)
+                tr = max(2, min(8, TILE_SIZE // 2))
+                dt.ellipse([cx - tr, cy - tr, cx + tr, cy + tr], fill=255)
 
     # Buildings mask + layout rectangles (mêmes tailles que le rendu)
     visited_h: set[tuple[int, int]] = set()
     house_idx = 0
-    house_sizes = [(6, 4), (3, 3), (3, 3), (4, 3), (4, 3), (4, 3), (6, 5), (4, 3), (5, 4), (4, 3)]
+    house_sizes = _house_sizes_for_render()
     buildings_out: list[dict] = []
 
     for gy in range(GRID_H):
@@ -123,6 +184,7 @@ def export_layout_and_masks(
 
     layout: dict = {
         "kind": "village_layout_v1",
+        "village_source": "watabou" if VILLAGE_GRID_OVERRIDE is not None else "procedural",
         "seed": int(seed),
         "style": str(style),
         "scale": {
@@ -276,7 +338,7 @@ def _draw_stone_path(img: Image.Image, *, mask: Image.Image, seed: int) -> None:
 
 def generate_village_premium(output_path="bourg_palette_map.png", seed=42):
     # On génère la grille de base
-    grid = generate_village(GRID_W, GRID_H, seed=seed)
+    grid = _village_grid(seed)
     
     # Couleurs Palette LBG Premium
     COLORS = {
@@ -306,12 +368,11 @@ def generate_village_premium(output_path="bourg_palette_map.png", seed=42):
                 rect = [x * TILE_SIZE, y * TILE_SIZE, (x + 1) * TILE_SIZE, (y + 1) * TILE_SIZE]
                 draw.rectangle(rect, fill=(80, 80, 90), outline=(60, 60, 70))
 
-    # 3. Dessin des Bâtiments (Tailles variables selon index)
+    # 3. Dessin des Bâtiments (Tailles variables selon index ; Watabou = 1×1)
     visited_h = set()
     house_idx = 0
-    # Tailles en tuiles (largeur, hauteur) pour les 10 maisons générées par le seed 42
-    house_sizes = [(6, 4), (3, 3), (3, 3), (4, 3), (4, 3), (4, 3), (6, 5), (4, 3), (5, 4), (4, 3)]
-    
+    house_sizes = _house_sizes_for_render()
+
     for y in range(GRID_H):
         for x in range(GRID_W):
             if grid[y][x] == 'H' and (x, y) not in visited_h:
@@ -365,7 +426,7 @@ def generate_village_illustrated(output_path="bourg_illustrated.png", seed=42):
     - herbe texturée et palette chaude
     - bâtiments avec ombres douces + toits “tuiles”
     """
-    grid = generate_village(GRID_W, GRID_H, seed=seed)
+    grid = _village_grid(seed)
     w, h = GRID_W * TILE_SIZE, GRID_H * TILE_SIZE
 
     # Base papier + couche herbe
@@ -402,7 +463,7 @@ def generate_village_illustrated(output_path="bourg_illustrated.png", seed=42):
     # Bâtiments : ombre douce + corps + toit + petites annexes
     visited_h = set()
     house_idx = 0
-    house_sizes = [(6, 4), (3, 3), (3, 3), (4, 3), (4, 3), (4, 3), (6, 5), (4, 3), (5, 4), (4, 3)]
+    house_sizes = _house_sizes_for_render()
     random.seed(seed + 7)
 
     for gy in range(GRID_H):
@@ -488,7 +549,36 @@ if __name__ == "__main__":
     ap.add_argument("--layout-out", type=str, default="")
     ap.add_argument("--masks-dir", type=str, default="")
     ap.add_argument("--style", type=str, default="premium", choices=["premium", "illustrated"])
+    ap.add_argument(
+        "--procedural",
+        action="store_true",
+        help="Forcer le village procédural interne (50×40) au lieu de Watabou.",
+    )
+    ap.add_argument(
+        "--watabou-json",
+        type=str,
+        default="",
+        help="Export JSON Watabou (FeatureCollection). Vide = essayer Boite à idées/pixie_seat.json à la racine du dépôt.",
+    )
+    ap.add_argument(
+        "--max-image-px",
+        type=int,
+        default=1680,
+        help="Taille max (px) du plus grand côté du PNG ; TILE_SIZE est réduit pour les grandes grilles.",
+    )
     args = ap.parse_args()
+
+    reset_village_to_procedural_defaults()
+    if not args.procedural:
+        wb = Path(args.watabou_json).expanduser() if str(args.watabou_json).strip() else _default_pixie_seat_json()
+        if wb.exists():
+            configure_village_from_watabou_json(wb, max_image_px=int(args.max_image_px))
+            print(f"Village Watabou: {wb}  →  grille {GRID_W}×{GRID_H}, TILE_SIZE={TILE_SIZE}px")
+        else:
+            reset_village_to_procedural_defaults()
+            print("Watabou JSON introuvable → village procédural 50×40")
+    else:
+        print("Village procédural (--procedural)")
 
     if args.style == "premium":
         generate_village_premium(output_path=args.out, seed=args.seed)
@@ -508,7 +598,7 @@ if __name__ == "__main__":
     if not masks_dir:
         masks_dir = f"{args.out}.masks"
     # On regénère la grille pour exporter le plan (source de vérité gameplay).
-    grid = generate_village(GRID_W, GRID_H, seed=args.seed)
+    grid = _village_grid(args.seed)
     export_layout_and_masks(grid=grid, seed=args.seed, style=args.style, output_layout_path=layout_out, output_masks_dir=masks_dir)
     print(f"Layout exporté : {layout_out}")
     print(f"Masks exportés : {masks_dir}/(roads|buildings|trees).png")

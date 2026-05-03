@@ -16,6 +16,9 @@ Voir `../../bootstrap.md`.
 - **Local (dev)** : **`python3 -m uvicorn http_app:app --host 127.0.0.1 --port 8050`** (répertoire courant : ce dossier, **venv activé** ; sur Ubuntu sans paquet `python-is-python3`, la commande `python` n’existe pas — utiliser **`python3`** ou **`/opt/LBG_IA_MMO/.venv/bin/python -m uvicorn …`**).
 - **LAN / systemd** : l’unité **`lbg-mmo-server`** démarre plutôt avec **`--host 0.0.0.0 --port 8050`** afin que le **backend** (autre machine) puisse joindre **`LBG_MMO_SERVER_URL`**.
 - **`GET /healthz`**, **`GET /v1/world/lyra?npc_id=npc:smith`** — instantané des jauges PNJ (tick en thread d’arrière-plan).
+- **`GET /v1/world/collision`** — méta grille village (taille, bounds, etc.).
+- **`GET /v1/world/collision-grid`** — document JSON complet `watabou_grid_v1` (même fichier que les collisions) pour **client web** / prédiction locale ; réponse `{"loaded": false}` si aucune grille.
+- **`LBG_MMO_CORS_ORIGINS`** — liste d’origines séparées par des virgules (ex. `http://127.0.0.1:5173,http://localhost:5173`) pour autoriser le **fetch** navigateur depuis le client Vite vers ce serveur HTTP (sinon pas de middleware CORS).
 - **Gameplay v1 (écriture interne, LAN)** :
   - **`POST /internal/v1/npc/{npc_id}/aid`** — applique des deltas bornés sur les jauges (`hunger/thirst/fatigue`) et la réputation, avec gate optionnel `LBG_MMO_INTERNAL_TOKEN` via `X-LBG-Service-Token`.
 - Variable **`LBG_MMO_SERVER_URL`** côté backend ; contexte **`world_npc_id`** — voir `docs/lyra.md`.

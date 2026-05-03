@@ -143,6 +143,11 @@ def _dialogue(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, An
         out: dict[str, Any] = {"agent": "http_dialogue", "remote": data}
         if isinstance(data.get("commit"), dict):
             out["commit"] = data["commit"]
+        meta = data.get("meta")
+        if isinstance(meta, dict):
+            dpr = meta.get("dialogue_profile_resolved")
+            if isinstance(dpr, str) and dpr.strip():
+                out["dialogue_profile_resolved"] = dpr.strip()
         if lyra_out is not None:
             out["lyra"] = lyra_out
         return out
@@ -314,7 +319,7 @@ def _desktop(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any
             "ok": False,
             "outcome": "bad_request",
             "error": "Aucune desktop_action dans context.",
-            "hint": 'Ex. {"desktop_action": {"kind":"open_url","url":"https://example.org"}}',
+            "hint": 'Ex. {"desktop_action": {"kind":"open_url","url":"https://example.org"}} ; search_web_open / mail_imap_preview si variables d’activation correspondantes',
         }
 
     # Mode hybride : exécution attendue sur un worker Windows.

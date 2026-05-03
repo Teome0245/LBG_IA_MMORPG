@@ -6,12 +6,16 @@
  * revalider le front `/mmo/`.
  */
 export class Renderer {
+    /** Limite d’affichage du corps de bulle (lignes visibles) — tronque les répliques extrêmement longues. */
+    static MAX_BUBBLE_BODY_LINES = 18;
+
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
         this.ctx = this.canvas.getContext('2d');
         this.entities = [];
         this.interpolatedEntities = new Map(); // id -> {x, y, z}
-        this.dialogueBubbles = new Map(); // entity id -> {text, speaker, traceId, expiresAt}
+        /** @type {Map<string, object>} entity id -> bulle (texte, interlocuteur, sous-titre rôle, écho joueur en attente, etc.) */
+        this.dialogueBubbles = new Map();
         this.selectedEntityId = null;
         this.selectedId = null; // compat historique du client stable
         this.locations = [];
@@ -150,11 +154,27 @@ export class Renderer {
     setDialogueBubble(entityId, text, opts = {}) {
         if (!entityId || typeof text !== "string" || !text.trim()) return;
         const ttlMs = Number.isFinite(opts.ttlMs) ? opts.ttlMs : 9000;
+        const kind = typeof opts.kind === "string" ? opts.kind.trim() : "npc";
+        let defaultChars = 42;
+        let defaultLines = 12;
+        if (kind === "pending") {
+            defaultChars = 34;
+            defaultLines = 6;
+        } else if (kind === "world_event") {
+            defaultChars = 34;
+            defaultLines = 5;
+        }
+        const maxChars = Number.isFinite(opts.maxChars) ? opts.maxChars : defaultChars;
+        const maxLines = Number.isFinite(opts.maxLines) ? opts.maxLines : defaultLines;
         this.dialogueBubbles.set(entityId, {
             text: text.trim(),
             speaker: typeof opts.speaker === "string" ? opts.speaker.trim() : "",
+            subtitle: typeof opts.subtitle === "string" ? opts.subtitle.trim() : "",
+            playerEcho: typeof opts.playerEcho === "string" ? opts.playerEcho.trim() : "",
             traceId: typeof opts.traceId === "string" ? opts.traceId.trim() : "",
-            kind: typeof opts.kind === "string" ? opts.kind.trim() : "npc",
+            kind,
+            maxChars,
+            maxLines,
             expiresAt: Date.now() + ttlMs,
         });
     }
@@ -168,7 +188,7 @@ export class Renderer {
     }
 
     wrapText(text, maxChars = 32, maxLines = 4) {
-        const words = String(text || "").replace(/\s+/g, " ").trim().split(" ");
+        const words = String(text || "").replace(/\s+/g, " ").trim().split(/\s+/).filter(Boolean);
         const lines = [];
         let line = "";
         for (const word of words) {
@@ -182,10 +202,43 @@ export class Renderer {
             if (lines.length >= maxLines) break;
         }
         if (line && lines.length < maxLines) lines.push(line);
-        if (lines.length === maxLines && words.join(" ").length > lines.join(" ").length) {
-            lines[maxLines - 1] = `${lines[maxLines - 1].replace(/[.…]+$/, "")}...`;
+        if (lines.length === maxLines && words.join(" ").length > lines.join(" ").length + 1) {
+            lines[maxLines - 1] = `${lines[maxLines - 1].replace(/[.…]+$/, "")}…`;
         }
         return lines;
+    }
+
+    /**
+     * Lignes affichées dans la bulle (corps), selon le kind.
+     */
+    dialogueBodyLines(bubble) {
+        const maxC = bubble.maxChars ?? 32;
+        const maxL = bubble.maxLines ?? 4;
+        if (bubble.kind === "pending" && bubble.playerEcho) {
+            const status = (bubble.text || "Réponse en cours…").trim();
+            const echoLines = this.wrapText(bubble.playerEcho, Math.min(maxC, 36), Math.min(maxL, 6));
+            const out = [status];
+            if (echoLines.length) {
+                out.push("");
+                out.push("Vous");
+                out.push(...echoLines);
+            }
+            return out;
+        }
+        return this.wrapText(bubble.text, maxC, maxL);
+    }
+
+    /**
+     * Coupe le tableau de lignes au besoin pour garder la bulle lisible à l’écran.
+     */
+    clampBubbleBodyLines(lines) {
+        const max = Renderer.MAX_BUBBLE_BODY_LINES;
+        if (!Array.isArray(lines) || lines.length <= max) return lines;
+        const out = lines.slice(0, max);
+        let last = String(out[max - 1] || "").trimEnd();
+        if (last.length > 52) last = last.slice(0, 49).trimEnd();
+        out[max - 1] = `${last.replace(/[.…]+$/u, "")}…`;
+        return out;
     }
 
     drawDialogueBubble(ent, pos, drawY) {
@@ -193,24 +246,29 @@ export class Renderer {
         if (!bubble) return;
 
         const ctx = this.ctx;
-        const lines = this.wrapText(bubble.text);
+        const lines = this.clampBubbleBodyLines(this.dialogueBodyLines(bubble));
         if (!lines.length) return;
 
         const title = bubble.speaker || ent.name || "PNJ";
+        const subtitle = (bubble.subtitle || "").trim();
         ctx.save();
+        ctx.font = '800 11px "Inter", sans-serif';
+        const titleW = ctx.measureText(title.toUpperCase()).width;
+        ctx.font = '500 10px "Inter", sans-serif';
+        const subtitleW = subtitle ? ctx.measureText(subtitle).width : 0;
         ctx.font = '600 12px "Inter", sans-serif';
-        const maxTextWidth = Math.max(
-            ctx.measureText(title).width,
-            ...lines.map((line) => ctx.measureText(line).width),
-        );
+        const bodyWidths = lines.map((line) => ctx.measureText(line).width);
+        const maxTextWidth = Math.max(titleW, subtitleW, ...bodyWidths);
         const padX = 12;
         const padY = 8;
         const lineH = 15;
-        const titleH = 13;
-        const width = Math.min(300, Math.max(120, maxTextWidth + padX * 2));
-        const height = padY * 2 + titleH + lines.length * lineH + 4;
+        const titleBlockH = 16;
+        const subtitleBlockH = subtitle ? 13 : 0;
+        const width = Math.min(380, Math.max(120, maxTextWidth + padX * 2));
+        const height = padY * 2 + titleBlockH + subtitleBlockH + lines.length * lineH + 8;
+        const bubbleLift = 86 + Math.max(0, (lines.length - 4) * 10 + (subtitle ? 6 : 0));
         const x = Math.max(12, Math.min(this.canvas.width - width - 12, pos.x - width / 2));
-        const y = Math.max(12, drawY - 86 - height);
+        const y = Math.max(12, drawY - bubbleLift - height);
         const accent = bubble.kind === "pending"
             ? "#ffea00"
             : bubble.kind === "world_event"
@@ -247,10 +305,33 @@ export class Renderer {
         ctx.font = '800 11px "Inter", sans-serif';
         ctx.fillText(title.toUpperCase(), x + padX, y + padY + 10);
 
+        let bodyY0 = y + padY + titleBlockH + 8;
+        if (subtitle) {
+            ctx.fillStyle = "rgba(244, 247, 255, 0.62)";
+            ctx.font = '500 10px "Inter", sans-serif';
+            ctx.fillText(subtitle, x + padX, y + padY + titleBlockH + 8);
+            bodyY0 = y + padY + titleBlockH + subtitleBlockH + 10;
+        }
+
         ctx.fillStyle = "#f4f7ff";
         ctx.font = '600 12px "Inter", sans-serif';
         lines.forEach((line, i) => {
-            ctx.fillText(line, x + padX, y + padY + titleH + 8 + i * lineH);
+            const isEchoLabel = bubble.kind === "pending" && line === "Vous";
+            const isEchoBody = bubble.kind === "pending"
+                && bubble.playerEcho
+                && i > 0
+                && lines[i - 1] === "Vous";
+            if (isEchoLabel) {
+                ctx.fillStyle = "rgba(255, 234, 0, 0.85)";
+                ctx.font = '700 11px "Inter", sans-serif';
+            } else if (isEchoBody) {
+                ctx.fillStyle = "rgba(244, 247, 255, 0.82)";
+                ctx.font = '600 11px "Inter", sans-serif';
+            } else {
+                ctx.fillStyle = "#f4f7ff";
+                ctx.font = '600 12px "Inter", sans-serif';
+            }
+            ctx.fillText(line, x + padX, bodyY0 + i * lineH);
         });
         ctx.restore();
     }

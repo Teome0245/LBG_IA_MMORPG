@@ -210,6 +210,49 @@ def test_internal_http_snapshot_reflects_aid_gauges_after_commit() -> None:
     finally:
         http.stop()
 
+
+def test_internal_http_dialogue_commit_player_inventory() -> None:
+    game = GameState()
+    http = start_internal_http(host="127.0.0.1", port=0, game=game, token="secret")
+    try:
+        ply = game.add_player("HttpLoot")
+        url = f"http://127.0.0.1:{http.port}/internal/v1/npc/npc:merchant/dialogue-commit"
+        headers = {"X-LBG-Service-Token": "secret"}
+        code_miss, j_miss = _http_post_json(
+            url,
+            {
+                "trace_id": "t-inv-miss",
+                "flags": {"player_item_id": "item:x", "player_item_qty_delta": 1},
+            },
+            headers=headers,
+        )
+        assert code_miss == 409
+        assert j_miss.get("accepted") is False
+
+        code_ok, j_ok = _http_post_json(
+            url,
+            {
+                "trace_id": "t-inv-http",
+                "player_id": ply.id,
+                "flags": {
+                    "player_item_id": "item:via_http",
+                    "player_item_qty_delta": 2,
+                    "player_item_label": "Objet HTTP",
+                },
+            },
+            headers=headers,
+        )
+        assert code_ok == 200
+        assert j_ok.get("accepted") is True
+        inv = (game.entities[ply.id].stats or {}).get("inventory")
+        assert isinstance(inv, list)
+        row = next((x for x in inv if isinstance(x, dict) and x.get("item_id") == "item:via_http"), None)
+        assert row is not None
+        assert row.get("qty") == 2
+    finally:
+        http.stop()
+
+
 def test_internal_http_rate_limit(monkeypatch: object) -> None:
     # Activer un RL très bas pour provoquer un 429 rapidement.
     import os

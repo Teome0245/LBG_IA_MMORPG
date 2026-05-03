@@ -245,3 +245,63 @@ def test_pilot_proxy_desktop_forwards_json(monkeypatch: pytest.MonkeyPatch) -> N
     j = r.json()
     assert j.get("ok") is True
     assert j.get("service") == "desktop_http"
+
+
+def test_pilot_proxy_agent_dialogue_invoke_forwards_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_AGENT_DIALOGUE_URL", "http://127.0.0.1:8020")
+    captured: dict[str, object] = {}
+
+    class _OkInvoke:
+        status_code = 200
+
+        def json(self) -> dict[str, object]:
+            return {
+                "agent": "http_dialogue",
+                "reply": "Salut.",
+                "lines": ["Salut."],
+                "speaker": "PNJ",
+                "player_text": "Hi",
+                "actor_id": "p:1",
+                "meta": {
+                    "stub": False,
+                    "llm": True,
+                    "dialogue_profile_resolved": "professionnel",
+                },
+            }
+
+    class _ClientInvoke:
+        def __init__(self, *a: object, **k: object) -> None:
+            pass
+
+        async def __aenter__(self) -> "_ClientInvoke":
+            return self
+
+        async def __aexit__(self, *a: object) -> None:
+            return None
+
+        async def post(self, url: str, json: dict[str, object] | None = None) -> _OkInvoke:
+            captured["url"] = url
+            captured["json"] = json
+            return _OkInvoke()
+
+    monkeypatch.setattr(pilot_mod.httpx, "AsyncClient", lambda **kw: _ClientInvoke())
+
+    from backend.main import app
+
+    client = TestClient(app)
+    r = client.post(
+        "/v1/pilot/agent-dialogue/invoke",
+        json={"actor_id": "p:1", "text": "Hi", "context": {"world_npc_id": "npc:merchant"}},
+    )
+    assert r.status_code == 200
+    j = r.json()
+    assert j.get("reply") == "Salut."
+    meta = j.get("meta")
+    assert isinstance(meta, dict)
+    assert meta.get("dialogue_profile_resolved") == "professionnel"
+    assert captured.get("url") == "http://127.0.0.1:8020/invoke"
+    body = captured.get("json")
+    assert isinstance(body, dict)
+    assert body.get("actor_id") == "p:1"
+    assert body.get("text") == "Hi"
+    assert isinstance(body.get("context"), dict)

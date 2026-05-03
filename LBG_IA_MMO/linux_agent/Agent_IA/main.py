@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
+from mail_imap_preview import run_mail_imap_preview
 from pydantic import BaseModel, Field
 
 import core
@@ -39,6 +40,9 @@ def healthz() -> dict[str, object]:
             "approval_gate_active": bool(core.get_cfg("LBG_LINUX_APPROVAL_TOKEN").strip()),
             "audit_log_path_set": bool(core.get_cfg("LBG_LINUX_AUDIT_LOG_PATH").strip()),
             "learn_enabled": core.learn_enabled(),
+            "web_search_enabled": core.web_search_enabled(),
+            "search_engine": core.linux_search_engine(),
+            "mail_imap_enabled": core.mail_imap_enabled(),
         },
     }
 
@@ -101,6 +105,141 @@ def invoke(payload: InvokeRequest) -> dict[str, object]:
             out = {**base, "ok": False, "outcome": "error", "error": str(e), "url": url}
             core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
             return out
+
+    if kind == "search_web_open":
+        if not core.web_search_enabled():
+            out = {
+                **base,
+                "ok": False,
+                "outcome": "feature_disabled",
+                "error": "Recherche web désactivée (LBG_LINUX_WEB_SEARCH=1 pour activer)",
+            }
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        query = action.get("query")
+        if not isinstance(query, str) or not query.strip():
+            out = {**base, "ok": False, "outcome": "bad_request", "error": "Champ `query` requis"}
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        url3, qerr = core.build_web_search_url(query)
+        if not url3 or qerr:
+            out = {**base, "ok": False, "outcome": "bad_request", "error": qerr or "requête invalide"}
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        if not core.web_search_url_trusted(url3):
+            out = {**base, "ok": False, "outcome": "error", "error": "URL de recherche interne invalide", "url": url3}
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        if not dry_run and core.linux_requires_approval() and not core.linux_approval_ok(ctx):
+            out = {**base, "ok": False, "outcome": "approval_denied", "error": "Approval token requis", "url": url3}
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        if dry_run:
+            out = {**base, "ok": True, "outcome": "dry_run", "url": url3, "engine": core.linux_search_engine()}
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        try:
+            core.popen_quiet(["xdg-open", url3])
+            out = {**base, "ok": True, "outcome": "ok", "url": url3, "engine": core.linux_search_engine()}
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        except Exception as e:
+            out = {**base, "ok": False, "outcome": "error", "error": str(e), "url": url3}
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+
+    if kind == "mail_imap_preview":
+        if not core.mail_imap_enabled():
+            out = {
+                **base,
+                "ok": False,
+                "outcome": "feature_disabled",
+                "error": "Messagerie IMAP désactivée (LBG_LINUX_MAIL_ENABLED=1 pour activer)",
+            }
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        fc_ok, sc_ok, max_m, max_b, max_sc, perr = core.mail_imap_parse_action(action)
+        if perr:
+            out = {**base, "ok": False, "outcome": "bad_request", "error": perr}
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        host, port, user, password, use_ssl = core.mail_imap_credentials()
+        if not dry_run and core.linux_requires_approval() and not core.linux_approval_ok(ctx):
+            out = {
+                **base,
+                "ok": False,
+                "outcome": "approval_denied",
+                "error": "Approval token requis",
+                "from_contains": fc_ok,
+                "subject_contains": sc_ok,
+            }
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        if dry_run:
+            hint_q = fc_ok or sc_ok
+            messages = [
+                {
+                    "uid": "(dry-run)",
+                    "from": "expéditeur@exemple.invalid",
+                    "subject": f"… filtre « {hint_q} » (simulation)",
+                    "date": "",
+                    "body_preview": "[dry-run] Aucune connexion IMAP ; définir LBG_LINUX_MAIL_IMAP_* pour une exécution réelle.",
+                }
+            ]
+            out = {
+                **base,
+                "ok": True,
+                "outcome": "dry_run",
+                "messages": messages,
+                "matched_count": len(messages),
+                "from_contains": fc_ok,
+                "subject_contains": sc_ok,
+            }
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        if not host or not user or not password:
+            out = {
+                **base,
+                "ok": False,
+                "outcome": "configuration_error",
+                "error": "IMAP incomplet : LBG_LINUX_MAIL_IMAP_HOST, USER et PASSWORD requis",
+            }
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        msgs, ierr = run_mail_imap_preview(
+            host=host,
+            port=port,
+            user=user,
+            password=password,
+            use_ssl=use_ssl,
+            from_contains=fc_ok,
+            subject_contains=sc_ok,
+            max_messages=max_m,
+            max_body_chars=max_b,
+            max_scan=max_sc,
+        )
+        if ierr:
+            out = {
+                **base,
+                "ok": False,
+                "outcome": "error",
+                "error": ierr,
+                "from_contains": fc_ok,
+                "subject_contains": sc_ok,
+            }
+            core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+            return out
+        out = {
+            **base,
+            "ok": True,
+            "outcome": "ok",
+            "messages": msgs,
+            "matched_count": len(msgs),
+            "from_contains": fc_ok,
+            "subject_contains": sc_ok,
+        }
+        core.audit_write({"event": "agents.linux.audit", "trace_id": trace_id, **out})
+        return out
 
     if kind == "file_append":
         path = action.get("path")

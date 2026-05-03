@@ -13,8 +13,11 @@ def test_dialogue_stub_when_no_url(monkeypatch: pytest.MonkeyPatch) -> None:
 class _FakeOk:
     status_code = 200
 
-    def json(self) -> dict[str, str]:
-        return {"reply": "from-agent"}
+    def json(self) -> dict[str, object]:
+        return {
+            "reply": "from-agent",
+            "meta": {"dialogue_profile_resolved": "professionnel"},
+        }
 
 
 class _FakeClient:
@@ -40,6 +43,7 @@ def test_dialogue_http_when_url_set(monkeypatch: pytest.MonkeyPatch) -> None:
     out = invoke_after_route("agent.dialogue", actor_id="p:1", text="hello", context={})
     assert out["agent"] == "http_dialogue"
     assert out["remote"]["reply"] == "from-agent"
+    assert out.get("dialogue_profile_resolved") == "professionnel"
 
 
 def test_dialogue_http_passes_stepped_lyra_to_invoke_and_returns_output_lyra(

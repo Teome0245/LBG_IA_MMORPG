@@ -370,6 +370,10 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
                     return
                 trace_id = body.get("trace_id")
                 flags = body.get("flags")
+                pid_raw = body.get("player_id")
+                player_id_sess: str | None = None
+                if isinstance(pid_raw, str) and pid_raw.strip():
+                    player_id_sess = pid_raw.strip()
                 if not isinstance(trace_id, str):
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": "bad_request", "detail": "trace_id requis"})
                     return
@@ -377,6 +381,7 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
                     npc_id=npc_id,
                     trace_id=trace_id,
                     flags=flags if isinstance(flags, dict) else None,
+                    player_id=player_id_sess,
                 )
                 if ok:
                     LOG.info(

@@ -53,7 +53,7 @@
     "inputs": {
       "seed": 246207409360292,
       "steps": 20,
-      "cfg": 8,
+      "cfg": 7.5,
       "sampler_name": "euler",
       "scheduler": "simple",
       "denoise": 0.58,
@@ -162,7 +162,7 @@
   },
   "213": {
     "inputs": {
-      "text": "top-down orthographic medieval fantasy map, hand-painted RPG map illustration, watercolor gouache, textured paper, painterly brush strokes, warm cohesive palette, soft painterly shading, subtle paper grain, clean readable shapes, bright airy daylight, natural outdoor terrain around the landmark buildings: open meadow and pasture grass, scattered wildflowers, mossy rocks and boulders, scattered trees and shrubs, soft ambient occlusion, NO roads, NO dirt tracks, NO cobblestone paths, NO extra hamlets, IMPORTANT: keep EXACT building layout, do not add buildings, no new houses, no extra structures",
+      "text": "top-down orthographic medieval fantasy map, hand-painted RPG map illustration, watercolor gouache, textured paper, painterly brush strokes, warm cohesive palette, soft painterly shading, subtle paper grain, clean readable shapes, bright airy daylight, vast open outdoor terrain between landmarks: empty pasture grass, gentle slopes, scattered mossy rocks and boulders, sparse trees and bushes with breathing room, wildflowers in patches, pastoral wilderness, generous negative space, NOT a populated settlement, NO roads, NO dirt tracks, NO cobblestone paths, NO clusters of tiny houses, IMPORTANT: keep EXACT building layout, do not add buildings, no new houses, no extra structures",
       "clip": [
         "196",
         1
@@ -175,7 +175,7 @@
   },
   "214": {
     "inputs": {
-      "text": "portrait, face, people, person, character, human, body, naked, nsfw, anime, close-up, cinematic scene, interior, room, foggy, abstract, text, watermark, logo, blurry, deformed, extra limbs, distorted perspective, photorealistic, satellite, aerial photo, 3d render, noisy, grainy, messy outlines, cluttered, dense forest, city, town, village, hamlet, settlement, neighborhood, suburb, many houses, too many buildings, extra buildings, additional houses, new structures, houses, house, buildings, building, hut, huts, cabin, cabins, shack, shacks, cottage, cottages, gazebo, tents, carts, fences, ruins, small houses everywhere, roads, paths, trails, walkways, sidewalks, dirt tracks, cobblestone, highway, street grid",
+      "text": "portrait, face, people, person, character, human, body, naked, nsfw, anime, close-up, cinematic scene, interior, room, foggy, abstract, text, watermark, logo, blurry, deformed, extra limbs, distorted perspective, photorealistic, satellite, aerial photo, 3d render, noisy, grainy, messy outlines, cluttered, dense forest, city, town, village, hamlet, settlement, neighborhood, suburb, packed settlement, suburban sprawl, aerial view of city, residential blocks, many houses, too many buildings, extra buildings, additional houses, new structures, houses, house, buildings, building, hut, huts, cabin, cabins, shack, shacks, cottage, cottages, gazebo, tents, carts, fences, ruins, small houses everywhere, roads, paths, trails, walkways, sidewalks, dirt tracks, cobblestone, highway, street grid",
       "clip": [
         "196",
         1
@@ -272,7 +272,7 @@
   },
   "222": {
     "inputs": {
-      "weight": 0.9,
+      "weight": 0.42,
       "weight_type": "linear",
       "combine_embeds": "concat",
       "start_at": 0,

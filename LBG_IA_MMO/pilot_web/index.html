@@ -365,9 +365,13 @@
       <p class="muted">
         Exécution PC via <strong>worker Windows</strong> (HTTP) derrière allowlists + dry-run + approval + audit.
         Le routage est forcé quand <code>context.desktop_action</code> est présent.
+        <strong>Proposer via IA</strong> appelle <code>POST /v1/pilot/agent-dialogue/invoke</code> ; relisez le JSON puis utilisez <strong>Envoyer</strong>.
+        Agent dialogue : activer <code>LBG_DIALOGUE_DESKTOP_PLAN=1</code>.
       </p>
     </header>
     <section>
+      <p class="muted" id="desktop-config-hint" style="margin:0.35rem 0 0 0;font-size:0.88rem;">—</p>
+
       <label for="desktop-text">Texte (trace / intention)</label>
       <textarea id="desktop-text" rows="2" style="font-family: inherit;">ouvre https://example.org dans le navigateur</textarea>
 
@@ -382,6 +386,8 @@
   "desktop_dry_run": true,
   "history": []
 }</textarea>
+      <label for="desktop-mmo-summary" style="margin-top:0.75rem">Résumé MMO → assistant (<code>session_summary</code>, JSON optionnel, persistant navigateur)</label>
+      <textarea id="desktop-mmo-summary" rows="3" placeholder='Ex. {"player_note":"…","session_mood":"…"} — clés tracked_quest / last_npc priment côté serveur si tu parles au PNJ via le jeu.' style="font-family: ui-monospace, monospace; font-size: 0.85rem;"></textarea>
       <label for="desktop-approval" style="margin-top:0.75rem">Approval token (optionnel)</label>
       <input type="password" id="desktop-approval" placeholder="desktop_approval (stocké localement)" autocomplete="off" />
 
@@ -393,6 +399,7 @@
       </p>
 
       <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-desktop-propose-llm">Proposer via IA (dialogue)</button>
         <button type="button" id="btn-desktop-send">Envoyer (POST /v1/pilot/route)</button>
         <button type="button" id="btn-desktop-health">GET agent-desktop /healthz</button>
         <span class="muted" id="desktop-hint">—</span>
@@ -596,7 +603,7 @@
           <h2>Cache (latence)</h2>
           <p class="muted">p50 / p95 (hit vs miss)</p>
         </div>
-        <p class="muted">Statistiques locales (derniers envois) selon <code>remote.meta.cache_hit</code>.</p>
+        <p class="muted">Statistiques locales (derniers envois) selon <code>remote.meta.cache_hit</code> ; après réponse, la vue détaillée peut afficher <code>profil résolu</code> (<code>remote.meta.dialogue_profile_resolved</code>).</p>
         <p><button type="button" id="btn-cache-lat-reset">Reset stats cache</button></p>
         <pre id="cache-lat-out">—</pre>
       </section>
@@ -1619,6 +1626,9 @@
       if (res && res.routed_to) addKV("routed_to", res.routed_to);
       if (res && typeof res.confidence === "number") addKV("confidence", res.confidence);
       if (out && out.agent) addKV("agent", out.agent);
+      if (out && out.dialogue_profile_resolved) {
+        addKV("dialogue_profile_resolved", out.dialogue_profile_resolved);
+      }
       if (root && root.commit_result && typeof root.commit_result === "object") {
         const cr = root.commit_result;
         const attempted = cr.attempted === true ? "yes" : "no";
@@ -1691,8 +1701,17 @@
           "</div>";
         }
         const rmeta = remote.meta;
-        if (rmeta && typeof rmeta === "object" && rmeta.cache_hit != null) {
-          html += "<div class=\"muted\" style=\"margin-top:0.35rem\">cache_hit: <code>" + escapeHtml(String(rmeta.cache_hit)) + "</code></div>";
+        if (rmeta && typeof rmeta === "object") {
+          const bits = [];
+          if (rmeta.cache_hit != null) {
+            bits.push("cache_hit: <code>" + escapeHtml(String(rmeta.cache_hit)) + "</code>");
+          }
+          if (rmeta.dialogue_profile_resolved != null && String(rmeta.dialogue_profile_resolved).trim() !== "") {
+            bits.push("profil résolu: <code>" + escapeHtml(String(rmeta.dialogue_profile_resolved)) + "</code>");
+          }
+          if (bits.length) {
+            html += "<div class=\"muted\" style=\"margin-top:0.35rem\">" + bits.join(" · ") + "</div>";
+          }
         }
         if (Array.isArray(remote.lines) && remote.lines.length) {
           html += "<div style=\"margin-top:0.5rem\" class=\"muted\">lines: " + escapeHtml(remote.lines.join(" | ")) + "</div>";
@@ -2300,6 +2319,10 @@
       if (pm) pm.hidden = r !== "pm";
       if (ly) ly.hidden = r !== "lyra";
       if (de) de.hidden = r !== "desktop";
+      if (r === "desktop") {
+        try { pilotDesktopRefreshConfigHint(); } catch (_) {}
+        try { pilotDesktopLoadMmoSummaryFromStorage(); } catch (_) {}
+      }
       const title = document.getElementById("pilot-work-title");
       const sub = document.getElementById("pilot-work-sub");
       if (title && sub && (r === "chat" || r === "ops")) {
@@ -3101,6 +3124,124 @@
       }
     }
 
+    const LBG_PILOT_MMO_SUMMARY_KEY = "lbg_pilot_mmo_session_summary_json";
+
+    function pilotDesktopMergeMmoSummaryIntoContext(ctx) {
+      if (!ctx || typeof ctx !== "object") return;
+      const ta = document.getElementById("desktop-mmo-summary");
+      const raw = ta && ta.value ? String(ta.value).trim() : "";
+      try {
+        if (raw) {
+          const o = JSON.parse(raw);
+          if (o && typeof o === "object" && !Array.isArray(o)) {
+            ctx.session_summary = o;
+          }
+        }
+      } catch (e) {
+        console.warn("session_summary JSON invalide (desktop)", e);
+      }
+      try {
+        if (ta) localStorage.setItem(LBG_PILOT_MMO_SUMMARY_KEY, ta.value || "");
+      } catch (_) {}
+    }
+
+    function pilotDesktopLoadMmoSummaryFromStorage() {
+      try {
+        const ta = document.getElementById("desktop-mmo-summary");
+        if (!ta || (ta.value && String(ta.value).trim())) return;
+        const v = localStorage.getItem(LBG_PILOT_MMO_SUMMARY_KEY);
+        if (v) ta.value = v;
+      } catch (_) {}
+    }
+
+    async function pilotDesktopRefreshConfigHint() {
+      const el = document.getElementById("desktop-config-hint");
+      if (!el) return;
+      const base = getBase();
+      el.textContent = "Santé dialogue…";
+      try {
+        const r = await fetch(base + "/v1/pilot/status");
+        const t = await r.text();
+        let j = null;
+        try { j = t ? JSON.parse(t) : null; } catch (_) {}
+        if (!j || typeof j !== "object") {
+          el.textContent = "Statut pilot indisponible (HTTP " + r.status + ").";
+          return;
+        }
+        const st = j.agent_dialogue;
+        const info = j.agent_dialogue_info;
+        const dpe = info && typeof info.desktop_plan_env_enabled === "boolean" ? info.desktop_plan_env_enabled : null;
+        const llm = info && typeof info.llm_configured === "boolean" ? info.llm_configured : null;
+        if (st === "skipped") {
+          el.textContent =
+            "Dialogue : non configuré côté backend (LBG_AGENT_DIALOGUE_URL). « Proposer via IA » ne fonctionnera pas.";
+          return;
+        }
+        if (st !== "ok") {
+          el.textContent = "Dialogue : état « " + String(st || "?") + " » — vérifier l’agent (8020) et " + (j.agent_dialogue_detail || "réseau") + ".";
+          return;
+        }
+        const parts = [];
+        if (llm === false) parts.push("LLM non configuré sur l’agent (LBG_DIALOGUE_LLM_BASE_URL)");
+        if (dpe === false) parts.push("Mode DESKTOP_JSON désactivé sur l’agent (LBG_DIALOGUE_DESKTOP_PLAN=1 requis pour les propositions structur.)");
+        if (!parts.length) {
+          el.textContent = "Dialogue : OK — LLM + plan desktop (env) actifs côté agent.";
+        } else {
+          el.textContent = "Dialogue : reachable mais — " + parts.join(" ; ") + ".";
+        }
+      } catch (e) {
+        el.textContent = "Statut pilot : " + e;
+      }
+    }
+
+    async function pilotDesktopProposeLlm() {
+      const base = getBase();
+      const hint = document.getElementById("desktop-hint");
+      const rawEl = document.getElementById("desktop-raw");
+      const prettyEl = document.getElementById("desktop-pretty");
+      const aEl = document.getElementById("desktop-action");
+      if (hint) hint.textContent = "…";
+
+      let text = (document.getElementById("desktop-text") && document.getElementById("desktop-text").value) || "";
+      text = String(text || "").trim();
+      if (!text) text = "Proposition d’action desktop";
+
+      let ctx;
+      try {
+        ctx = JSON.parse((document.getElementById("desktop-context") && document.getElementById("desktop-context").value) || "{}");
+      } catch (_) {
+        alert("context JSON invalide");
+        if (hint) hint.textContent = "context invalide";
+        return;
+      }
+      if (!ctx || typeof ctx !== "object") ctx = {};
+      ctx._desktop_plan = true;
+      if (!ctx.npc_name && !ctx.speaker) ctx.npc_name = "Assistant desktop";
+      pilotDesktopMergeMmoSummaryIntoContext(ctx);
+
+      const payload = { actor_id: "ui:desktop_llm", text: text, context: ctx };
+      const out = await postJson(base + "/v1/pilot/agent-dialogue/invoke", payload);
+      if (rawEl) rawEl.textContent = out.json ? JSON.stringify(out.json, null, 2) : ("HTTP " + out.status + "\n" + (out.text || ""));
+      if (prettyEl) {
+        try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
+      }
+      if (out.status !== 200) {
+        if (hint) hint.textContent = "invoke → HTTP " + out.status;
+        return;
+      }
+      const prop =
+        out.json && out.json.meta && typeof out.json.meta === "object"
+          ? out.json.meta.desktop_action_proposal
+          : null;
+      if (prop && typeof prop === "object" && aEl) {
+        aEl.value = JSON.stringify(prop, null, 2);
+        try { desktopTrySyncTextFromAction(); } catch (_) {}
+        if (hint) hint.textContent = "OK — JSON proposé (relire puis Envoyer)";
+      } else {
+        if (hint) hint.textContent = "OK — pas de DESKTOP_JSON valide (voir réponse brute)";
+      }
+    }
+
     async function pilotDesktopSend() {
       const base = getBase();
       const hint = document.getElementById("desktop-hint");
@@ -3141,6 +3282,7 @@
         if (v && !ctx.desktop_approval) ctx.desktop_approval = v;
       } catch (_) {}
       ctx.desktop_action = action;
+      pilotDesktopMergeMmoSummaryIntoContext(ctx);
 
       const payload = { actor_id: "ui:desktop", text: text, context: ctx };
       const out = await postJson(base + "/v1/pilot/route", payload);
@@ -3634,6 +3776,13 @@
     } catch (_) {}
 
     // Desktop page bindings
+    try {
+      document.getElementById("btn-desktop-propose-llm").addEventListener("click", function () {
+        pilotDesktopProposeLlm().catch(function (e) {
+          alert("Desktop LLM: " + e);
+        });
+      });
+    } catch (_) {}
     try {
       document.getElementById("btn-desktop-send").addEventListener("click", function () {
         pilotDesktopSend().catch(function (e) {

@@ -4,6 +4,16 @@ Ce document formalise la vision issue de `Detail du projet_v3_20260409.txt`.
 
 ## Objectif fondamental
 
+**Recentrage (priorité produit)** — formalisé aussi dans `docs/plan_de_route.md` § *Étoile du nord produit*, à partir de `Boite à idées/20260428_1220_on ce recentre.txt` :
+
+1. **D’abord** une **IA incarnée sur le poste et l’infra** : actions concrètes et contrôlées (ex. ouvrir le bloc-notes et écrire à la dictée, ouvrir des pages web, lire des mails pertinent sous **garde-fous** — dry-run, allowlists, audit). Piste : `docs/desktop_hybride.md`, ADR **`docs/adr/0004-assistant-local-vs-persona-mmo.md`**.
+2. **Ensuite** une **partie de cette même famille** au **cœur du MMO** : persona / dialogue / apprentissage dans un **contexte simulé**, sans fusionner abusivement les périmètres poste ↔ monde (même ADR).
+3. **Enfin** la capacité à **faire évoluer** le MMO et le code : uniquement via **chemins explicites** (forge sandbox, promotions manuelles, pas d’écriture aveugle sur le tronc autoritaire — voir `docs/adr/0003-opengame-forge-prototypes.md`).
+
+---
+
+## Synthèse historique (carnet de bord initial)
+
 Construire **un orchestrateur IA autonome** capable de piloter :
 - plusieurs **LLM** (locaux + cloud)
 - plusieurs **agents** (Windows, Linux, VM, DevOps)
@@ -74,5 +84,7 @@ Voir aussi `docs/plan_mmorpg.md`.
 
 ## Point de situation technique (monorepo, avril 2026)
 
-Sans remplacer la vision ci‑dessus : le dépôt **`LBG_IA_MMO/`** porte déjà **backend**, **orchestrator**, **agents**, **`mmo_server`**, **`mmmorpg_server`**, déploiement **systemd** / LAN documentés (**`bootstrap.md`**, **`docs/fusion_env_lan.md`**, **`docs/runbook_validation_serveurs_lan.md`**). **Observabilité** : métriques Prometheus **`/metrics`** en opt-in sur les services HTTP concernés. **Priorité produit suivante** (tracée dans **`docs/plan_de_route.md`**) : cadrer et exécuter un **premier jalon MMO v1 gameplay** mesurable (boucle joueur → monde).
+Sans remplacer la vision ci‑dessus : le dépôt **`LBG_IA_MMO/`** porte déjà **backend**, **orchestrator**, **agents**, **`mmo_server`**, **`mmmorpg_server`**, déploiement **systemd** / LAN documentés (**`bootstrap.md`**, **`docs/fusion_env_lan.md`**, **`docs/runbook_validation_serveurs_lan.md`**). **Observabilité** : métriques Prometheus **`/metrics`** en opt-in sur les services HTTP concernés.
+
+**Ordre de traction court / moyen terme** (aligné *Étoile du nord*) : renforcer le **desktop hybride** et les parcours **poste/infra** sous audit ; en parallèle, jalons **MMO gameplay** et **pont dialogue** déjà tracés dans **`docs/plan_de_route.md`** (jalon #6, inventaire, etc.) sans sacrifier la **sécurité et la séparation** assistant local / persona MMO.
 

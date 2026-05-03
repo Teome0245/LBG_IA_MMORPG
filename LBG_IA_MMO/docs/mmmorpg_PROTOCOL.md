@@ -61,6 +61,15 @@ pour déclencher une réplique PNJ **après** `hello` (même mécanisme que `hel
 }
 ```
 
+`ia_context` (objet optionnel) : seules les clés listées ci‑dessous sont transmises au backend / agent dialogue ; le serveur fixe **`lyra_engagement":"mmo_persona"`** dans le `context` (le client ne peut pas forcer l’assistant poste sur ce pont).
+
+| Clé | Rôle |
+|-----|------|
+| `session_summary` | Objet **sanitisé** : `tracked_quest`, `last_npc`, `player_note`, `session_mood`, `quest_snapshot` (valeurs courtes). Le **serveur** fusionne un résumé autoritatif (quête joueur + PNJ courant) : il **prime** sur `tracked_quest`, `quest_snapshot` et `last_npc` ; le client peut compléter avec `player_note` / `session_mood`. |
+| `_active_quest_id` | ID quête (string ≤ 80), si non déjà fusionné côté client. |
+| `_require_action_json`, `_no_cache` | Booléens (debug / UI). |
+| `_world_action_kind` | `"aid"` ou `"quest"` si l’UI impose le type d’`ACTION_JSON`. |
+
 ### `move` — option `world_commit` (gameplay v1, **sans** pont IA)
 
 Permet d’appliquer un **commit PNJ** synchronisé sur le même message que le déplacement, **sans** appeler le backend LLM. Même liste blanche de `flags` que `POST …/dialogue-commit` (HTTP interne).
@@ -87,13 +96,27 @@ Champs :
 
 - `world_commit.npc_id` (string, requis) : PNJ cible (`npc:…`).
 - `world_commit.trace_id` (string, requis) : idempotence (même sémantique que le commit HTTP).
-- `world_commit.flags` (objet, optionnel) : ex. `reputation_delta`, `aid_hunger_delta`, etc. (voir serveur / tests).
+- `world_commit.flags` (objet, optionnel) : ex. `reputation_delta`, `aid_hunger_delta`, **inventaire joueur** (`player_item_id` + `player_item_qty_delta` [+ `player_item_label`]), etc. — même liste blanche que `POST …/dialogue-commit` (HTTP interne). Pour l’inventaire, le joueur est toujours celui de la session WS (pas besoin de champ séparé).
 
-**Effet joueur (session)** : lorsque le commit est appliqué depuis une session WS authentifiée (`hello` puis `move` avec le même joueur), le serveur copie les champs quête reconnus (`quest_id`, `quest_step`, `quest_accepted`, `quest_completed`) dans `entities[].stats.quest_state` pour l’entité joueur — visible dans les snapshots `welcome` / `world_tick`. Donnée **volatile** (disparaît à la déconnexion ; pas de persistance disque pour l’instant).
+**Effet joueur (session)** : lorsque le commit est appliqué depuis une session WS authentifiée (`hello` puis `move` avec le même joueur), le serveur copie les champs quête reconnus (`quest_id`, `quest_step`, `quest_accepted`, `quest_completed`) dans `entities[].stats.quest_state` pour l’entité joueur — visible dans les snapshots `welcome` / `world_tick`. Les flags **`player_item_*`** mettent à jour **`stats.inventory`** (même joueur). Données **volatiles** (disparaissent à la déconnexion ; pas de persistance disque pour l’instant).
 
 **Client MMO web (`web_client`)** : après réception de `welcome` et à chaque `world_tick`, le client lit l’entité joueur (`kind: "player"`, `id` = `player_id` / id session) et fusionne `stats.quest_state` dans le journal de quêtes local (HUD + `localStorage`), sans remplacer un `npcName` déjà connu si le serveur ne l’expose pas. Les événements `world_event` de type quête enrichissent toujours le journal (ex. nom PNJ).
 
 Recette LAN : `infra/scripts/smoke_ws_move_commit_snapshot_lan.sh`.
+
+### HTTP interne — `POST /internal/v1/npc/{npc_id}/dialogue-commit`
+
+Corps JSON :
+
+| Champ | Rôle |
+|-------|------|
+| `trace_id` | Requis ; idempotence (deuxième envoi avec le même id → accepté sans ré-appliquer). |
+| `flags` | Optionnel ; liste blanche (quête, réputation, aid, **inventaire** …). |
+| `player_id` | Optionnel ; **obligatoire** dès que `flags` contient `player_item_id` et `player_item_qty_delta` — UUID joueur (équivalent `welcome.player_id`). |
+
+**Inventaire** : `player_item_id` (str ≤ 64) et `player_item_qty_delta` (int, −50…50, non nul) doivent être présents **ensemble** ; `player_item_label` (str ≤ 80) optionnel pour le libellé d’une nouvelle pile. Sans `player_id`, le commit est **refusé** (sans consommer l’idempotence si la validation échoue avant enregistrement du `trace_id`).
+
+Pilot / backend : lors d’un `POST /v1/pilot/route`, le backend transmet `player_id` au commit interne s’il peut le déduire de `context.player_id`, `context.mmmorpg_player_id`, ou d’un `actor_id` de la forme `player:<uuid>`.
 
 ## Serveur → client
 
@@ -159,14 +182,16 @@ Une entité : joueur ou PNJ.
 
 `kind` : `"player"` | `"npc"`.
 
-Champs additionnels selon l’implémentation : `stats` (ex. joueur : HP/MP ; **`stats.quest_state`** après commit quête sur la session courante), `world_state` pour les PNJ, `race_id` si renseigné côté serveur, etc.
+Champs additionnels selon l’implémentation : `stats` (ex. joueur : HP/MP ; **`stats.inventory`** inventaire session ; **`stats.quest_state`** après commit quête sur la session courante), `world_state` pour les PNJ, `race_id` si renseigné côté serveur, etc.
 
 ### HUD client MMO (`web_client`) — fiches personnage
 
 Le client web affiche deux blocs **lecture seule** alimentés par les snapshots `welcome` / `world_tick` :
 
-- **Fiche voyageur** : entité `kind: "player"` dont `id` correspond au joueur courant — nom, rôle, **race** (libellé depuis le catalogue quand disponible, voir ci‑dessous), identifiant (affichage tronqué, id complet en infobulle), **`stats.quest_state`** (quête session serveur), et autre contenu de `stats` (hors `quest_state`) si présent.
+- **Fiche voyageur** : entité `kind: "player"` dont `id` correspond au joueur courant — nom, rôle, **race** (libellé depuis le catalogue quand disponible, voir ci‑dessous), identifiant (affichage tronqué, id complet en infobulle), **`stats.quest_state`** (quête session serveur), section **Sac (session)** pour **`stats.inventory`** (liste d’objets `{ item_id, qty, label? }`, sac de départ côté serveur — non persisté disque tant qu’il n’y a pas de persistance joueur), et autre contenu de `stats` (hors `quest_state` et hors `inventory`) si présent.
 - **Fiche PNJ** : entité `kind: "npc"` correspondant à la cible dialogue (sélection carte ou PNJ le plus proche) — identité, **`world_state`** (réputation, jauges, flags quête PNJ), et **`stats`** éventuels. Rafraîchissement au tick **et** au clic sur un PNJ.
+
+**Bulles de dialogue** (canvas) : titre = nom de la cible ; **sous-titre** = `role` du snapshot lorsqu’il est informatif (pas `civil` ni `player`, underscores → espaces). En attente de réponse IA, la bulle affiche « Réponse en cours… » et un **écho** du message joueur ; la réponse `npc_reply` remplace ce contenu avec un corps de texte plus large qu’auparavant. Le nombre de **lignes affichées** est plafonné côté client pour éviter les répliques hors cadre.
 
 Les chaînes réseau sont échappées à l’affichage. **Libellés de races** : le client tente de charger `race_display` via `GET /v1/pilot/agent-dialogue/world-content` (même origine que la page si servi sous `/mmo/`, sinon `http://<hôte saisi>:8080|8000/…` ou agent direct `:8020/world-content`). L’agent dialogue expose dans la réponse JSON une carte `race_display` : `{ "race:human": "Humain", … }` (voir `GET /world-content` sur l’agent). Le chargement est **asynchrone** après le `welcome` (le jeu n'attend pas le catalogue) ; les fiches se **rafraîchissent** à la réception des libellés. Si aucune source n’est joignable (CORS, service arrêté), l’interface retombe sur l’identifiant `race_id` seul.
 

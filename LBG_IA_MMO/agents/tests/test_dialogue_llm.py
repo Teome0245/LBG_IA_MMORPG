@@ -9,6 +9,8 @@ from lbg_agents.dialogue_llm import (
     is_configured,
     model_name,
     normalize_history,
+    _postprocess_llm_content,
+    _sanitize_desktop_action_proposal,
     _sanitize_world_action,
 )
 
@@ -48,6 +50,7 @@ def test_resolve_route_fast_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     assert route["target"] == "fast"
     assert route["base_url"] == "https://api.groq.com/openai/v1"
     assert route["model"] == "llama-3.1-8b-instant"
+    assert route.get("route_decision") == "explicit"
 
 
 def test_resolve_route_fast_provider_resolves_api_key_reference(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -74,6 +77,52 @@ def test_resolve_route_fast_falls_back_to_local(monkeypatch: pytest.MonkeyPatch)
     route = mod._resolve_route({"dialogue_target": "fast"})
     assert route["target"] == "local"
     assert route["base_url"] == base_url()
+    assert route.get("route_decision") == "explicit"
+
+
+def test_resolve_route_auto_prefers_local(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    monkeypatch.delenv("LBG_DIALOGUE_LLM_DISABLED", raising=False)
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_AUTO_ORDER", "local,fast,remote")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_ENABLED", "1")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_BASE_URL", "https://api.groq.com/openai/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_MODEL", "llama-3.1-8b-instant")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_API_KEY", "secret")
+    route = mod._resolve_route({"dialogue_target": "auto"})
+    assert route["target"] == "local"
+    assert route.get("route_decision") == "auto"
+
+
+def test_resolve_route_auto_skips_fast_when_budget_capped(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    monkeypatch.delenv("LBG_DIALOGUE_LLM_DISABLED", raising=False)
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_BUDGET_MAX_USD", "0.01")
+    monkeypatch.setenv("LBG_DIALOGUE_AUTO_ORDER", "fast,local")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_ENABLED", "1")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_BASE_URL", "https://api.groq.com/openai/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_MODEL", "llama-3.1-8b-instant")
+    monkeypatch.setenv("LBG_DIALOGUE_FAST_API_KEY", "secret")
+    monkeypatch.setattr(mod, "_budget_spent_usd", 1.0, raising=False)
+    route = mod._resolve_route({"dialogue_target": "auto"})
+    assert route["target"] == "local"
+    skips = route.get("auto_skip_detail") or []
+    assert any(isinstance(x, dict) and x.get("reason") == "budget_cap" for x in skips)
+
+
+def test_resolve_route_default_env_auto(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    monkeypatch.delenv("LBG_DIALOGUE_LLM_DISABLED", raising=False)
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_TARGET_DEFAULT", "auto")
+    monkeypatch.setenv("LBG_DIALOGUE_AUTO_ORDER", "local")
+    route = mod._resolve_route({})
+    assert route["target"] == "local"
+    assert route.get("route_decision") == "auto"
 
 
 def test_build_system_prompt_includes_scene() -> None:
@@ -131,6 +180,17 @@ def test_build_system_prompt_uses_mmo_profile_when_world_npc() -> None:
     assert "MMORPG multivers" in s
 
 
+def test_build_system_prompt_mmo_hal_and_test_profiles() -> None:
+    s_hal = build_system_prompt("Gloin", {"dialogue_profile": "hal", "world_npc_id": "npc:smith"})
+    assert "Gloin" in s_hal
+    assert "HAL 9000" in s_hal
+    assert "MMORPG multivers" in s_hal
+
+    s_test = build_system_prompt("Lyse", {"dialogue_profile": "test", "world_npc_id": "npc:dummy"})
+    assert "Lyse" in s_test
+    assert "personnage de test PNJ" in s_test
+
+
 def test_build_system_prompt_honors_requested_world_action_kind(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LBG_DIALOGUE_WORLD_ACTIONS", "1")
 
@@ -175,8 +235,104 @@ def test_build_system_prompt_includes_npc_registry_context(
 
     s = build_system_prompt("Testeur", {"world_npc_id": "npc:test"})
     assert "Profil PNJ (registre):" in s
+    assert "Tu es Testeur pédagogique." in s
+    assert "Profil actif: pedagogue" in s
     assert "Zone: Archives" in s
     assert "Objectifs:" in s
+    mod._npc_registry_cache = None
+
+
+def test_build_system_prompt_dialogue_profile_overrides_registry_tone(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    reg = {
+        "schema_version": 1,
+        "npcs": [
+            {
+                "id": "npc:test",
+                "name": "Testeur",
+                "role": "scribe",
+                "tone": "pedagogue",
+                "summary": "S",
+            }
+        ],
+    }
+    p = tmp_path / "npc_registry.json"
+    p.write_text(json.dumps(reg), encoding="utf-8")
+    monkeypatch.setenv("LBG_DIALOGUE_NPC_REGISTRY_PATH", str(p))
+    mod._npc_registry_cache = None
+
+    s = build_system_prompt(
+        "Testeur",
+        {"world_npc_id": "npc:test", "dialogue_profile": "chaleureux"},
+    )
+    assert "Tu es Testeur chaleureux." in s
+    assert "Profil actif: chaleureux" in s
+    mod._npc_registry_cache = None
+
+
+def test_resolve_profile_registry_tone_alias_pragmatique(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    reg = {
+        "schema_version": 1,
+        "npcs": [{"id": "npc:merc", "name": "Marchand", "tone": "pragmatique"}],
+    }
+    p = tmp_path / "npc_registry.json"
+    p.write_text(json.dumps(reg), encoding="utf-8")
+    monkeypatch.setenv("LBG_DIALOGUE_NPC_REGISTRY_PATH", str(p))
+    mod._npc_registry_cache = None
+    assert mod._resolve_profile({"world_npc_id": "npc:merc"}) == "professionnel"
+    mod._npc_registry_cache = None
+
+
+def test_resolve_profile_registry_tone_alias_direct(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    reg = {
+        "schema_version": 1,
+        "npcs": [{"id": "npc:s", "name": "Forge", "tone": "direct"}],
+    }
+    p = tmp_path / "npc_registry.json"
+    p.write_text(json.dumps(reg), encoding="utf-8")
+    monkeypatch.setenv("LBG_DIALOGUE_NPC_REGISTRY_PATH", str(p))
+    mod._npc_registry_cache = None
+    assert mod._resolve_profile({"world_npc_id": "npc:s"}) == "mini-moi"
+    mod._npc_registry_cache = None
+
+
+def test_build_system_prompt_invalid_registry_tone_uses_env_default(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    reg = {
+        "schema_version": 1,
+        "npcs": [
+            {
+                "id": "npc:weird",
+                "name": "Zorg",
+                "role": "x",
+                "tone": "grognon_inconnu",
+                "summary": "S",
+            }
+        ],
+    }
+    p = tmp_path / "npc_registry.json"
+    p.write_text(json.dumps(reg), encoding="utf-8")
+    monkeypatch.setenv("LBG_DIALOGUE_NPC_REGISTRY_PATH", str(p))
+    monkeypatch.setenv("LBG_DIALOGUE_PROFILE_DEFAULT", "creatif")
+    mod._npc_registry_cache = None
+
+    s = build_system_prompt("Zorg", {"world_npc_id": "npc:weird"})
+    assert "Tu es Zorg créatif." in s
+    assert "Profil actif: creatif" in s
     mod._npc_registry_cache = None
 
 
@@ -297,3 +453,64 @@ def test_sanitize_world_action_quest_reputation_omit_when_zero() -> None:
     )
     assert out is not None
     assert "reputation_delta" not in out
+
+
+def test_build_system_prompt_desktop_plan_branch(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    s = build_system_prompt("Assistant", {"_desktop_plan": True})
+    assert "DESKTOP_JSON" in s
+    assert "open_url" in s
+    assert "MMORPG" not in s
+
+
+def test_sanitize_desktop_action_proposal_open_url() -> None:
+    out = _sanitize_desktop_action_proposal({"kind": "open_url", "url": "https://example.org/x"})
+    assert out == {"kind": "open_url", "url": "https://example.org/x"}
+
+
+def test_sanitize_desktop_action_proposal_rejects_non_http_url() -> None:
+    assert _sanitize_desktop_action_proposal({"kind": "open_url", "url": "ftp://a"}) is None
+
+
+def test_sanitize_desktop_open_app_args() -> None:
+    out = _sanitize_desktop_action_proposal({"kind": "open_app", "app": "vlc", "args": ["--fullscreen"], "learn": True})
+    assert out is not None
+    assert out["kind"] == "open_app"
+    assert out["args"] == ["--fullscreen"]
+    assert out["learn"] is True
+
+
+def test_postprocess_llm_content_desktop_before_world(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    monkeypatch.setenv("LBG_DIALOGUE_WORLD_ACTIONS", "1")
+    ctx: dict = {"_desktop_plan": True, "world_npc_id": "npc:innkeeper"}
+    raw = (
+        'DESKTOP_JSON: {"kind":"open_url","url":"https://example.org"}\n'
+        'ACTION_JSON: {"kind":"aid","hunger_delta":-0.1,"thirst_delta":0,"fatigue_delta":0,"reputation_delta":1}\n'
+        "Voilà."
+    )
+    reply, world_act = _postprocess_llm_content(raw=raw, context=ctx)
+    assert ctx.get("_desktop_action_proposal") == {"kind": "open_url", "url": "https://example.org"}
+    assert world_act is not None
+    assert world_act.get("kind") == "aid"
+    assert "DESKTOP_JSON" not in reply
+    assert "ACTION_JSON" not in reply
+
+
+def test_desktop_plan_env_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    monkeypatch.delenv("LBG_DIALOGUE_DESKTOP_PLAN", raising=False)
+    assert mod.desktop_plan_env_enabled() is False
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    assert mod.desktop_plan_env_enabled() is True
+
+
+def test_postprocess_llm_content_desktop_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    ctx: dict = {"_desktop_plan": True}
+    raw = 'DESKTOP_JSON: {"kind":"open_url","url":"https://example.org"}\nOK.'
+    reply, world_act = _postprocess_llm_content(raw=raw, context=ctx)
+    assert ctx["_desktop_action_proposal"]["url"] == "https://example.org"
+    assert world_act is None
+    assert "OK" in reply

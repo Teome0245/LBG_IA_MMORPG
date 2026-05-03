@@ -1,0 +1,26 @@
+---
+description: À chaque livraison notable — Historique plan_de_route + doc pivot + env
+alwaysApply: true
+---
+
+# Continuité documentation (LBG_IA_MMO)
+
+Objectif : **ne pas perdre le fil** entre code, ops et vision produit.
+
+## Quand c’est obligatoire
+
+Livraison **notable** : nouveau endpoint ou contrat, changement UI pilot/MMO, comportement opérateur, nouvelle variable d’env ou sémantique modifiée, ADR/contrat stable.
+
+## Checklist (faire avant de considérer la tâche terminée)
+
+1. **`LBG_IA_MMO/docs/plan_de_route.md`** — section *Historique* : **une ligne datée** `AAAA-MM-JJ` + changement court (+ chemins si utile).
+2. **Doc pivot** : **au moins un** fichier parmi ceux du tableau *Fil produit ↔ documentation* dans le même `plan_de_route.md` (ex. `docs/*.md`, `agents/README.md`, `bootstrap.md`, `pilot_web/README.md`).
+3. **Env** : nouvelles vars ou sens modifié → **`infra/secrets/lbg.env.example`** + si besoin `bootstrap.md` / `agents/README.md`.
+
+## Exceptions
+
+Typo seule, formatage, refacto sans effet observable / sans changement de contrat : pas d’Historique requis.
+
+## Rappel
+
+La règle détaillée du workspace est dans `/.cursor/rules` (section *Continuité documentation*).

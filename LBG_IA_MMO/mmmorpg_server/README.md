@@ -32,6 +32,26 @@ python -m mmmorpg_server
 
 Variables : `MMMORPG_HOST`, `MMMORPG_PORT` (défaut **7733**), `MMMORPG_TICK_RATE_HZ`, etc. (voir `mmmorpg_server/config.py`).
 
+## Collisions village (grille `watabou_grid_v1`)
+
+Le serveur WS peut charger la même grille tuilée que `mmo_server` (export `pixie_seat.grid.json`, etc.) pour bloquer les déplacements sur l’herbe, les arbres, les bâtiments, etc. Seules les tuiles **`.`** et **`R`** sont franchissables.
+
+Variables d’environnement (dans l’ordre de tentative) :
+
+| Variable | Rôle |
+| :--- | :--- |
+| `MMMORPG_VILLAGE_GRID_JSON` | Chemin vers un JSON `watabou_grid_v1` (prioritaire pour ce service). |
+| `LBG_MMO_VILLAGE_GRID_JSON` | Même format ; pratique pour pointer un fichier unique partagé avec `mmo_server`. |
+| *(défaut)* | Si aucune des deux n’est définie ou le fichier manque, le chargeur essaie `mmo_server/world/seed_data/pixie_seat.grid.json` (chemins relatifs au CWD ou au layout `LBG_IA_MMO/`). |
+
+**Spawn joueur** : si la grille est chargée et que le point monde `(0, 0)` est franchissable, le joueur apparaît à `(0, 0, 0)`. Sinon, le serveur choisit le **centre de la première tuile franchissable** en **spirale** (couches autour de la tuile sous `(0, 0)`). Si aucune tuile n’est franchissable, repli sur l’ancien défaut `(0, 0, -20)`.
+
+**PNJ (seed)** : si une grille est chargée, les positions issues de `world_initial.json` (ou du fallback `_seed_npcs`) sont recalées sur la **tuile franchissable la plus proche** (même spirale depuis la tuile cible).
+
+**Logs** : chaque `add_player` émet une ligne **JSON** (`event`, `player_id`, `name`, `x`/`y`/`z`, `grid_source`, `tile_char`, `tile_gx`, `tile_gz`) sur le logger `mmmorpg_server.game_state` au niveau `INFO` (agrégation / Loki / `journalctl`).
+
+**Tests CI** : `tests/fixtures/minimal_village.grid.json` + fixture pytest `minimal_village_grid_env` (`tests/conftest.py`) pour ne pas dépendre du seed Pixie sur les agents CI.
+
 ## HTTP interne (optionnel) — snapshot Lyra (lecture seule)
 
 Pour la phase “pont lecture seule” (voir `docs/fusion_pont_jeu_ia.md`), le serveur WS peut exposer
@@ -61,7 +81,14 @@ Commit (ex.) :
 ```bash
 curl -s "http://127.0.0.1:8773/internal/v1/npc/npc:merchant/dialogue-commit" \
   -H "content-type: application/json" \
+  -H "X-LBG-Service-Token: $TOKEN" \
   -d '{"trace_id":"t-commit-1","flags":{"quest_accepted":true}}'
+
+# Inventaire joueur (session) : ajouter player_id (= welcome.player_id)
+curl -s "http://127.0.0.1:8773/internal/v1/npc/npc:merchant/dialogue-commit" \
+  -H "content-type: application/json" \
+  -H "X-LBG-Service-Token: $TOKEN" \
+  -d '{"trace_id":"t-inv-1","player_id":"<uuid-joueur>","flags":{"player_item_id":"item:potion","player_item_qty_delta":2,"player_item_label":"Potion faible"}}'
 ```
 
 ## Tests

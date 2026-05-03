@@ -16,6 +16,10 @@ from websockets.asyncio.server import ServerConnection, serve
 
 from mmmorpg_server import config
 from mmmorpg_server.game_state import GameState, NPC_CONVERSATION_RESUME_DELAY_S
+from mmmorpg_server.ia_context_sanitize import (
+    build_server_session_summary_parts,
+    merge_session_summaries,
+)
 from mmmorpg_server.internal_http import start_internal_http
 from mmmorpg_server.persistence import load_state, save_state
 from mmmorpg_server.protocol import (
@@ -26,6 +30,15 @@ from mmmorpg_server.protocol import (
 
 LOG = logging.getLogger("mmmorpg")
 PendingReply = tuple[str, str, dict[str, Any] | None]
+
+
+def _player_quest_state(game: GameState, player_id: str) -> dict[str, Any] | None:
+    ent = game.entities.get(player_id)
+    if not ent or getattr(ent, "kind", None) != "player":
+        return None
+    st = ent.stats if isinstance(ent.stats, dict) else {}
+    qs = st.get("quest_state")
+    return qs if isinstance(qs, dict) else None
 
 
 def _persist_game_state(game: GameState, raw_path: str, *, source: str) -> bool:
@@ -185,6 +198,8 @@ def _queue_ia_bridge(
     game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
 
     ctx: dict[str, Any] = {"world_npc_id": npc_id, "history": []}
+    # Rang 2 (ADR 0004) : persona MMO explicite côté pont WS — le client ne peut pas forcer local_assistant ici.
+    ctx["lyra_engagement"] = "mmo_persona"
     if isinstance(npc_name, str) and npc_name.strip():
         ctx["npc_name"] = npc_name.strip()
     if config.IA_PLACEHOLDER_ENABLED and config.IA_PLACEHOLDER_REPLY:
@@ -194,7 +209,20 @@ def _queue_ia_bridge(
     # Permet aux clients/outils d'injecter un mini contexte vers l'IA (borné).
     # Important: ne pas permettre d'écraser `world_npc_id` ni d'injecter des structures arbitraires.
     if isinstance(ia_context, dict) and ia_context:
+        server_ssum = build_server_session_summary_parts(
+            quest_state=_player_quest_state(game, player_id),
+            npc_id=npc_id,
+            npc_name=npc_name,
+        )
+        ssum_merged = merge_session_summaries(
+            server_parts=server_ssum,
+            client_raw=ia_context.get("session_summary"),
+        )
+        if ssum_merged:
+            ctx["session_summary"] = ssum_merged
         for k, v in ia_context.items():
+            if k == "session_summary":
+                continue
             if k in ("_require_action_json", "_no_cache"):
                 if isinstance(v, bool):
                     ctx[k] = v

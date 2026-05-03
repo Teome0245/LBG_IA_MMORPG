@@ -16,6 +16,20 @@ La numérotation **0** = toujours actif en parallèle des autres priorités. La 
 
 ---
 
+## Étoile du nord produit (priorisée)
+
+Prise en compte explicite de la note **`Boite à idées/20260428_1220_on ce recentre.txt`** : *IA incarnée sur le poste / l’infra* (ex. bloc-notes dictée, recherche web, lecture mail), **puis** présence au **cœur du MMO** pour apprendre dans un monde simulé, **puis** capacité à **faire évoluer** le MMO sous contrôle humain. Les idées brutes restent dans `Boite à idées/` ; **ici** on fixe l’ordre de priorité pour le monorepo.
+
+| Rang | Objectif | Piste technique / doc |
+|------|----------|------------------------|
+| **1** | **Assistant sur PC et infra** — actions concrètes, bornées, observables | `docs/desktop_hybride.md`, capability **`desktop_control`** → `agent.desktop`, workers `windows_agent` / `linux_agent` ; `docs/adr/0004-assistant-local-vs-persona-mmo.md` |
+| **2** | **Même famille cognitive côté MMO** — apprentissage / persona dans le bac à sable | `mmmorpg_server`, `agents/dialogue_*`, Lyra (`docs/lyra.md`) ; séparation **assistant local** vs **persona MMO** (ADR 0004) |
+| **3** | **Évolution du monde par l’IA** — jamais sans repreneur humain sur le tronc | Forge OpenGame (`docs/adr/0003-opengame-forge-prototypes.md`), Brain / DevOps **opt-in** + jetons, pas d’écriture sauvage sur le moteur autoritaire |
+
+**Règle** : tant que le **rang 1** n’est pas suffisamment fiable (dry-run, allowlists, audit, parcours réels « Notepad / URL / mail » progressivement), les gros chantiers **rang 3** sur le dépôt restent **secondaires** dans la planification exécutoire — sans rejeter la vision long terme.
+
+---
+
 ## Fil produit ↔ documentation (continuité)
 
 **Règle** : tout incrément **mergé ou déployé** qui change un contrat, une UI pilot / MMO, ou le comportement attendu par un opérateur doit **conserver le fil** en :
@@ -26,6 +40,7 @@ La numérotation **0** = toujours actif en parallèle des autres priorités. La 
 | Fil | Source inspiration | Données versionnées | Code consommateur | Doc pivot |
 |-----|-------------------|---------------------|--------------------|-----------|
 | Idées lore / listes longues | `Boite à idées/` (non contractuel) | `LBG_IA_MMO/content/world/*.json` | `lbg_agents.world_content`, registre PNJ, `mmmorpg_server.world_catalog`, entités `race_id` | `plan_mmorpg.md`, `agents/README.md`, `pilot_web/README.md` |
+| **Poste + MMO unifiés (vision nord)** | `Boite à idées/` (ex. `20260428_1220_on ce recentre.txt`) | — | `agent.desktop`, orchestrateur, pont dialogue MMO, Lyra | `vision_projet.md`, `desktop_hybride.md`, `docs/adr/0004-assistant-local-vs-persona-mmo.md`, § *Étoile du nord* ci‑dessus |
 | Pilot & proxies backend | — | — | `backend/api/v1/routes/pilot.py` | `fusion_etat_des_lieux_v0.md`, `bootstrap.md` |
 | Snapshot Lyra / PNJ monde | `docs/lyra.md`, `fusion_spec_lyra.md` | état serveur + catalogue races | `mmmorpg_server` (`build_lyra_snapshot`, …) | `plan_de_route` (Historique), `lyra.md` si contrat change |
 
@@ -119,6 +134,24 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-03 | **Rang 2+** : `session_summary` fusionné côté `mmmorpg_server` (quête joueur + PNJ ; client complète notes/humeur) ; clé `quest_snapshot` ; Pilot `#/desktop` champ résumé MMO + localStorage ; prompt desktop + PNJ ; tests sanitize enrichis. |
+| 2026-05-03 | **Rang 2 (persona MMO)** : `lyra_engagement` forcé `mmo_persona` sur le pont WS ; `ia_context.session_summary` sanitisé ; paragraphes prompt dialogue + `meta.lyra_engagement_resolved` ; client `web_client` envoie `session_summary` (quête + PNJ) ; tests `test_lyra_engagement_prompt`, `test_ia_context_sanitize` ; `lyra.md`, `mmmorpg_PROTOCOL`. |
+| 2026-05-03 | **Desktop rang 1 — IMAP aperçu** : action `mail_imap_preview` (filtres `from_contains` / `subject_contains`, extraits de corps bornés, INBOX lecture seule) ; module `mail_imap_preview.py` (agents + workers) ; env `LBG_DESKTOP_MAIL_*` / `LBG_LINUX_MAIL_*` ; prompt `DESKTOP_JSON` ; doc `desktop_hybride.md` / `agents/README` ; tests `test_desktop_mail_imap`. |
+| 2026-05-03 | **Desktop rang 1 — recherche web bornée** : action `search_web_open` (`query`) dans `desktop_executor`, workers Windows/Linux, sanitize `dialogue_llm`, dry-run / approval / audit alignés `open_url` ; opt-in `LBG_DESKTOP_WEB_SEARCH` / `LBG_LINUX_WEB_SEARCH`, moteur `LBG_*_SEARCH_ENGINE` (DDG ou Google) ; doc `desktop_hybride.md`, `agents/README`, tests `test_desktop_search_web`. |
+| 2026-05-03 | **Commit inventaire (session)** : flags `player_item_id` + `player_item_qty_delta` (+ `player_item_label`) ; `player_id` JSON sur `POST …/dialogue-commit` ; ordre **validation puis idempotence** sur `trace_id` ; fusion NPC **sans** `player_item_*` dans `world_flags` ; `/v1/pilot/route` → `try_commit_dialogue(..., player_id)` depuis `actor_id` `player:<uuid>` ou `context` ; tests `test_player_inventory`, `test_internal_http_dialogue_commit_player_inventory` ; `mmmorpg_PROTOCOL`, `mmmorpg_server/README`. |
+| 2026-05-03 | **Étoile du nord (Boîte à idées)** : prise en compte prioritaire de `Boite à idées/20260428_1220_on ce recentre.txt` — ordre **poste/infra → MMO/apprentissage → évolution monde contrôlée** ; tableau *Fil produit* + section *Étoile du nord produit* dans `plan_de_route.md` ; `vision_projet.md` (objectif premier recentré). |
+| 2026-05-03 | **Carte plan global** : `docs/carte_plan_global.md` (alignement items `.cursor/rules` ↔ monorepo, backlog explicite) ; `README.md` : `mmmorpg_server/`, `web_client/`. |
+| 2026-05-03 | **Inventaire joueur v1 (session)** : `stats.inventory` (liste `{ item_id, qty, label }`) — sac de départ côté `mmmorpg_server` (`GameState.add_player` / fusion stats au `move` sans écraser l’inventaire) ; fiche voyageur **Sac (session)** dans `web_client` ; test `test_player_inventory` ; doc `mmmorpg_PROTOCOL`. |
+| 2026-05-03 | **Dispatch dialogue** : `output.dialogue_profile_resolved` (miroir de `remote.meta`) pour Pilot / traces ; doc `agents/README` ; test `test_dispatch_dialogue`. |
+| 2026-05-02 | **Client MMO — bulle : plafond lignes** : garde-fou visuel `Renderer.MAX_BUBBLE_BODY_LINES` (troncature avec ellipse) pour répliques LLM très longues (`renderer.js`). |
+| 2026-05-02 | **Pilot** : affichage `remote.meta.dialogue_profile_resolved` (chat) ; `pilot_web/README` (invoke proxy, profil résolu) ; `lbg.env.example` — laisser `LBG_ORCHESTRATOR_DIALOGUE_PROFILE_DEFAULT` vide pour prioriser le `tone` du registre PNJ ; test `POST /v1/pilot/agent-dialogue/invoke`. |
+| 2026-05-02 | **Agent dialogue — alias ``tone`` registre + méta invoke** : `REGISTRY_TONE_ALIASES` (ex. `pragmatique`→`professionnel`, `direct`→`mini-moi`) ; réponse `POST /invoke` → `meta.dialogue_profile_resolved`. |
+| 2026-05-02 | **Agent dialogue — profil depuis registre PNJ** : si ``context.dialogue_profile`` est absent, le champ ``tone`` de l’entrée ``npc_registry.json`` (clé = ``world_npc_id``) est utilisé quand il correspond à un profil connu ; la clé de cache LLM inclut le profil résolu (``pf=…``). |
+| 2026-05-02 | **Agent dialogue — profils PNJ (MMO)** : parité des clés `dialogue_profile` avec l’assistant (`hal`, `test`, etc.) + constante `MMO_PROFILE_TEMPLATES` dans `dialogue_llm` (suffixe `BASE_GUARDRAILS_MMO` inchangé). |
+| 2026-05-02 | **Client MMO — bulles riches** : sous-titre de rôle PNJ (`entities[].role`, masqué pour `civil` / `player`), état d’attente avec écho du message joueur, corps des répliques PNJ wrap plus large (≈ 42×12) ; sources `web_client` `main.js`, `renderer.js`, build `dist`. |
+| 2026-05-02 | **Dialogue multi‑LLM + suivi** : `dialogue_target=auto`, `LBG_DIALOGUE_AUTO_ORDER`, budget soft `LBG_DIALOGUE_BUDGET_MAX_USD` (mode auto), coût estimé `fast`, traces enrichies (`latency_ms`, `outcome`, `player_text_preview`, `invoke_actor_id`, décision route) ; `GET /healthz` expose `dialogue_budget` ; orchestrateur accepte `LBG_ORCHESTRATOR_DIALOGUE_TARGET_DEFAULT=auto`. Doc `agents/README`, `lbg.env.example`, tests. |
+| 2026-05-02 | **Pilot desktop — bandeau config** : `GET /healthz` agent dialogue expose `desktop_plan_env_enabled` ; page `#/desktop` interroge `GET /v1/pilot/status` pour guider LLM + `LBG_DIALOGUE_DESKTOP_PLAN` ; doc `agents/README.md`, `lbg.env.example`, `desktop_hybride.md`. |
+| 2026-05-02 | **Pilot desktop — proposition LLM** : `DESKTOP_JSON` dans `dialogue_llm` (env `LBG_DIALOGUE_DESKTOP_PLAN` + `context._desktop_plan`), `meta.desktop_action_proposal` sur l’agent HTTP, proxy `POST /v1/pilot/agent-dialogue/invoke`, bouton *Proposer via IA* dans `#/desktop` ; doc `desktop_hybride.md`. |
 | 2026-05-05 | **ADR 0004 (màj)** : aligné sur l’existant **`desktop_control`** / **`agent.desktop`** / worker **`windows_agent`·`linux_agent`** ; commentaires `lbg.env.example` ; renvoi depuis `desktop_hybride.md`. |
 | 2026-05-05 | **ADR 0004** : assistant poste (`local_assistant`) vs persona MMO (`mmo_persona`) — périmètres, routage, audit, lien doux session→assistant, aligné vision Boîte à idées. Renvoi depuis `lyra.md`. |
 | 2026-05-04 | **Tests / déploiement MMO** : `bootstrap.md` — pytest ciblé avec **uv** depuis `LBG_IA_MMO/`. `deploy_web_client.sh` : **`LBG_MMO_WEB_DEPLOY_LOCAL_ONLY=1`** (build `--base=/mmo/` + `pilot_web/mmo/` sans SSH). `.gitignore` : `uv.lock` sous agents/backend/mmmorpg_server. Doc `architecture`, `runbook`. Sync **`pilot_web/mmo`** + `web_client/dist` alignés. |
@@ -297,17 +330,17 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 **Règle** : une **seule** phrase actionnable à la fois ; quand elle est **faite**, la remplacer par la suivante et, si utile, ajouter une ligne dans **État courant** ci‑dessus.
 
 - [x] **Jalon #5 : Physique & Collisions (Priorité 3)** : Bloquer les murs du village (`hollow=False`), ajuster les marges et régénérer le PNG sans chevauchements (v1.4).
-- [/] **Jalon #6 : Interactions & Dialogue (Priorité 2/3)** : Intégration des bulles de dialogue riches, gestion des inventaires basiques ou interaction avec des objets (portes, coffres). Première tranche client livrée : bulles PNJ + sélection de cible au clic + ciblage automatique du PNJ le plus proche.
+- [/] **Jalon #6 : Interactions & Dialogue (Priorité 2/3)** : Bulles riches + ciblage PNJ **faits** ; **inventaire session v1** (`stats.inventory`, HUD Sac) **fait** ; suite : interactions objets / commits inventaire, etc.
 
-**Étape actuelle** : Intégration des bulles de dialogue riches sur le client MMO et liaison avec l'orchestrateur.
+**Étape actuelle** : **(A)** *Étoile du nord — rang 1* : renforcer l’**assistant poste / infra** (`desktop_control`, workers, audit, parcours du type Notepad / URL / mail — voir `desktop_hybride.md`). **(B)** *Jalon #6* : après inventaire session v1 — **commits inventaire** (HTTP interne + backend) et/ou **interactions objets** (stub), sans relâcher ADR 0004.
 
 **File d’attente (intention produit)** : **Développement de l'univers MMO** — implémentation des niveaux de détails de simulation PNJ (LOD), Ticks sociaux, événements dynamiques (voir `plan_mmorpg.md`).
 
 **Parking validé (à reprendre)** :
-- **Dialogue multi‑LLM** : router le dialogue entre modèles locaux et distants selon coût/latence/qualité (avec fallback budget).
+- **Dialogue multi‑LLM** : **`auto` livré** (ordre + budget soft) ; prolongations possibles : budgets par `actor_id`, persistence disque du compteur, circuit‑breaker latence.
 - **Profils conversationnels** : base `guardrails` + profils côté assistant (`chaleureux`, `professionnel`, `pedagogue`, `creatif`, `mini-moi`, `hal`, `test`) et variante MMO PNJ (`pnj_name` + style).
 - **Registre PNJ exhaustif** : liste des PNJ avec contexte minimal (rôle, zone, faction, ton, objectifs, contraintes).
-- **Base de suivi** : journal structuré par échange (trace_id, modèle choisi, profil, tokens, coût estimé, latence, issue).
+- **Base de suivi** : **journal JSONL + `meta.trace` enrichi** ; prolongations : agrégation Prometheus, export vers BI, corrélation coût réel vs estimé.
 
 **Historique** : CI `pytest` fait (entrée 2026-04-17 ci‑dessus).
 
@@ -330,6 +363,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 - `lexique.md` — **termes, acronymes, définitions** (dont **ADR**) pour transmission du projet
 - `architecture.md` — architecture et règles réseau
+- `carte_plan_global.md` — alignement plan large (`.cursor/rules`) ↔ modules réels et backlog
 - `runbook_validation_serveurs_lan.md` — validation rapide LAN (santé, smokes, **métriques §2bis–2ter**)
 - `ops_pont_interne_auth_rl.md` — ops : token service + rate-limit du pont interne `mmmorpg_server` → backend
 - `plan_fusion_lbg_ia.md` — **fusion LBG_IA + LBG_IA_MMO + mmmorpg** (phases, correspondances, matrice tronc, pont jeu ↔ IA)

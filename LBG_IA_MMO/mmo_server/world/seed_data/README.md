@@ -9,6 +9,12 @@ Après la première sauvegarde, c’est **`LBG_MMO_STATE_PATH`** qui fait foi (r
 
 Voir ADR **`docs/adr/0002-mmo-autorite-pont.md`** pour l’alignement futur avec le serveur jeu (`mmmorpg`).
 
+## Grille village (collisions) — Pixie Seat / Watabou
+
+- **`pixie_seat.grid.json`** : export `watabou_grid_v1` (généré via `world/tools/watabou_import.py`), chargé au boot du `mmo_server` pour les endpoints collisions.
+- **`LBG_MMO_VILLAGE_GRID_JSON`** : chemin absolu vers un autre fichier `.grid.json` (optionnel).
+- API : `GET /v1/world/collision` (méta), `GET /internal/v1/world/collision-probe?x=&z=` (franchissable ; token `X-LBG-Service-Token` si `LBG_MMO_INTERNAL_TOKEN` est défini).
+
 ## PNJ v1 (IDs stables)
 
 Les `npc_id` sont **stables** et **versionnés** (cf. `docs/fusion_spec_monde.md`).

@@ -33,7 +33,7 @@ def _dialogue_context_for_route(context: dict[str, object]) -> dict[str, object]
     ctx = dict(context)
     if not isinstance(ctx.get("dialogue_target"), str) or not str(ctx.get("dialogue_target")).strip():
         target = os.environ.get("LBG_ORCHESTRATOR_DIALOGUE_TARGET_DEFAULT", "fast").strip().lower()
-        if target not in ("local", "remote", "fast"):
+        if target not in ("local", "remote", "fast", "auto"):
             target = "fast"
         ctx["dialogue_target"] = target
     if not isinstance(ctx.get("dialogue_profile"), str) or not str(ctx.get("dialogue_profile")).strip():

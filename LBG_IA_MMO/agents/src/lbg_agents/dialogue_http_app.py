@@ -90,6 +90,10 @@ def healthz() -> dict[str, object]:
         "llm_configured": llm_on,
         "llm_model": dialogue_llm.model_name() if llm_on else None,
         "llm_base_url": dialogue_llm.base_url() if llm_on else None,
+        "desktop_plan_env_enabled": dialogue_llm.desktop_plan_env_enabled(),
+        "dialogue_budget": dialogue_llm.budget_stats(),
+        "dialogue_target_default": os.environ.get("LBG_DIALOGUE_TARGET_DEFAULT", "local").strip().lower(),
+        "dialogue_auto_order": os.environ.get("LBG_DIALOGUE_AUTO_ORDER", "local,fast,remote").strip(),
         "cache": dialogue_llm.cache_stats(),
     }
     return out
@@ -134,13 +138,21 @@ def world_content() -> dict[str, object]:
     }
 
 
+def _meta_profile(ctx: dict[str, object]) -> str:
+    """Profil dialogue effectif (explicite, registre ``tone``, ou env)."""
+    return dialogue_llm._resolve_profile(ctx)
+
+
 @app.post("/invoke")
 def invoke(p: InvokeIn) -> dict[str, object]:
     player = _truncate(p.text, _MAX_PLAYER_CHARS) or "(…)"
     speaker = _resolve_speaker(p.context)
+    profile_resolved = _meta_profile(p.context)
 
     if dialogue_llm.is_configured():
         try:
+            if isinstance(p.context, dict):
+                p.context["_invoke_actor_id"] = p.actor_id
             reply_text = dialogue_llm.run_dialogue_turn(
                 player_text=player,
                 speaker=speaker,
@@ -152,6 +164,7 @@ def invoke(p: InvokeIn) -> dict[str, object]:
             trace = p.context.get("_dialogue_trace") if isinstance(p.context, dict) else None
             trace_model = trace.get("model") if isinstance(trace, dict) else None
             trace_target = trace.get("target") if isinstance(trace, dict) else None
+            desk_prop = p.context.get("_desktop_action_proposal") if isinstance(p.context, dict) else None
             commit = None
             if isinstance(world_action, dict):
                 npc_id = (p.context.get("world_npc_id") if isinstance(p.context, dict) else None)
@@ -202,7 +215,12 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                     "target": trace_target if isinstance(trace_target, str) and trace_target.strip() else None,
                     "agent_version": app.version,
                     "cache_hit": cache_hit,
+                    "dialogue_profile_resolved": profile_resolved,
                     "world_action": world_action if isinstance(world_action, dict) else None,
+                    "desktop_action_proposal": desk_prop if isinstance(desk_prop, dict) else None,
+                    "lyra_engagement_resolved": dialogue_llm.resolve_lyra_engagement(p.context)
+                    if isinstance(p.context, dict)
+                    else "",
                     "trace": trace,
                 },
             }
@@ -222,6 +240,7 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                     "llm_error": str(e)[:800],
                     "agent_version": app.version,
                     "cache_hit": False,
+                    "dialogue_profile_resolved": profile_resolved,
                 },
             }
 
@@ -237,6 +256,7 @@ def invoke(p: InvokeIn) -> dict[str, object]:
             "stub": True,
             "llm": False,
             "agent_version": app.version,
+            "dialogue_profile_resolved": profile_resolved,
         },
     }
 

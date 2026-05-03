@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-import math
 import json
+import logging
+import math
 import os
 from typing import Any
 
 from mmmorpg_server.entities.entity import Entity
 from mmmorpg_server.world_core.planet import PlanetConfig
 from mmmorpg_server.world_core.time_manager import TimeManager
+from mmmorpg_server.world_core.village_tile_grid import VillageTileGrid, try_load_village_tile_grid
+
+logger = logging.getLogger(__name__)
 
 
 class StaticObstacle:
@@ -65,6 +69,25 @@ BOUNDS_HALF = 60000.0 # Augmenté pour le continent (102km)
 NPC_CONVERSATION_RESUME_DELAY_S = 120.0
 
 
+def _default_player_inventory() -> list[dict[str, Any]]:
+    """Sac de départ (session WS, non persisté disque) — inventaire v1."""
+    return [
+        {"item_id": "item:rations", "qty": 3, "label": "Rations"},
+        {"item_id": "item:waterskin", "qty": 1, "label": "Outre"},
+        {"item_id": "item:bronze_coin", "qty": 12, "label": "Pièces de bronze"},
+    ]
+
+
+def _ensure_player_inventory(ent: Entity) -> None:
+    if not ent or ent.kind != "player":
+        return
+    if ent.stats is None:
+        ent.stats = {}
+    inv = ent.stats.get("inventory")
+    if not isinstance(inv, list) or len(inv) == 0:
+        ent.stats["inventory"] = [dict(row) for row in _default_player_inventory()]
+
+
 class GameState:
     def __init__(self) -> None:
         self.planet = PlanetConfig(id="terre1", label="Terre1")
@@ -80,12 +103,15 @@ class GameState:
         
         # Obstacles du décor
         self.obstacles: list[StaticObstacle] = []
+        # Grille tuilée (Watabou / mmo_server) : collisions herbe / routes / bâtiments
+        self._village_tile_grid: VillageTileGrid | None = None
         # Rampes verticales (Escaliers)
         self.vertical_ramps = [
             # Auberge: Zone d'escalier vers l'étage
             {"x": -25, "z": -45, "w": 6, "d": 6, "y_start": 0, "y_end": 4}
         ]
         
+        self._village_tile_grid = try_load_village_tile_grid()
         self._load_world_data()
 
     def _load_world_data(self) -> None:
@@ -155,7 +181,12 @@ class GameState:
                             z_val += random.uniform(-3, 3)
                         else:
                             x_val, z_val = random.uniform(-20, 20), random.uniform(-20, 20)
-                            
+
+                    if self._village_tile_grid is not None:
+                        snapped = self._village_tile_grid.nearest_walkable_tile_center_world_m(float(x_val), float(z_val))
+                        if snapped is not None:
+                            x_val, z_val = snapped[0], snapped[1]
+
                     npc = Entity.new_npc(npc_data["name"], float(x_val), float(z_val), npc_id=npc_data.get("id"))
                     npc.role = npc_data.get("role", "civil")
                     r0 = npc_data.get("race_id")
@@ -243,7 +274,7 @@ class GameState:
             return None, None
 
         # Anti-abus : bornes simples (LAN, mais on protège des payloads accidentels).
-        if len(flags) > 12:
+        if len(flags) > 14:
             return None, "too many flags"
 
         allowed: dict[str, tuple[type, ...]] = {
@@ -262,6 +293,10 @@ class GameState:
             "aid_thirst_delta": (int, float),
             "aid_fatigue_delta": (int, float),
             "aid_reputation_delta": (int,),
+            # Inventaire joueur (session WS) — exige ``player_id`` dans ``commit_dialogue``.
+            "player_item_id": (str,),
+            "player_item_qty_delta": (int,),
+            "player_item_label": (str,),
         }
 
         cleaned: dict[str, Any] = {}
@@ -279,9 +314,25 @@ class GameState:
                 return None, f"empty value for {key}"
             if isinstance(v, str):
                 vv = v.strip()
-                if len(vv) > 120:
+                if key == "player_item_id":
+                    if len(vv) > 64:
+                        return None, f"value too long for {key}"
+                    cleaned[key] = vv
+                elif key == "player_item_label":
+                    if len(vv) > 80:
+                        return None, f"value too long for {key}"
+                    cleaned[key] = vv
+                elif len(vv) > 120:
                     return None, f"value too long for {key}"
-                cleaned[key] = vv
+                else:
+                    cleaned[key] = vv
+            elif key == "player_item_qty_delta":
+                di = int(v)
+                if di < -50 or di > 50:
+                    return None, f"invalid value for {key}"
+                if di == 0:
+                    return None, "player_item_qty_delta ne peut pas être 0"
+                cleaned[key] = di
             elif key == "quest_step":
                 # bornes simples
                 vi = int(v)
@@ -307,6 +358,11 @@ class GameState:
             else:
                 cleaned[key] = v
 
+        inv_related = {k for k in cleaned if isinstance(k, str) and k.startswith("player_item_")}
+        if inv_related:
+            if "player_item_id" not in cleaned or "player_item_qty_delta" not in cleaned:
+                return None, "player_item_id et player_item_qty_delta requis ensemble pour inventaire"
+
         return cleaned, None
 
     def _seed_npcs(self) -> None:
@@ -321,7 +377,12 @@ class GameState:
             ("npc:celadon", "Guerrier Celadon", (25.0, -10.0), 1.3, "race:nocthrim"),
             ("npc:mushroom", "Champignon Magique", (0.0, -30.0), 2.5, "race:champi_sapient"),
         ):
-            npc = Entity.new_npc(name, xz[0], xz[1], npc_id=npc_id, scale=scale)
+            px, pz = float(xz[0]), float(xz[1])
+            if self._village_tile_grid is not None:
+                sn = self._village_tile_grid.nearest_walkable_tile_center_world_m(px, pz)
+                if sn is not None:
+                    px, pz = float(sn[0]), float(sn[1])
+            npc = Entity.new_npc(name, px, pz, npc_id=npc_id, scale=scale)
             if race_id:
                 npc.race_id = race_id
             self.entities[npc.id] = npc
@@ -356,6 +417,60 @@ class GameState:
             qin["quest_completed"] = cleaned["quest_completed"]
         ent.stats["quest_state"] = qin
 
+    def _apply_player_inventory_delta(self, player_id: str, cleaned: dict[str, Any]) -> None:
+        """Applique ``player_item_id`` + ``player_item_qty_delta`` (+ ``player_item_label`` optionnel) sur le joueur."""
+        if "player_item_id" not in cleaned or "player_item_qty_delta" not in cleaned:
+            return
+        pid = (player_id or "").strip()
+        if not pid:
+            return
+        ent = self.entities.get(pid)
+        if not ent or ent.kind != "player":
+            return
+        _ensure_player_inventory(ent)
+        raw_id = cleaned.get("player_item_id")
+        if not isinstance(raw_id, str) or not raw_id.strip():
+            return
+        iid = raw_id.strip()
+        try:
+            delta = int(cleaned.get("player_item_qty_delta", 0))
+        except Exception:
+            return
+        if ent.stats is None:
+            ent.stats = {}
+        inv = ent.stats.get("inventory")
+        if not isinstance(inv, list):
+            inv = []
+        inv_list: list[dict[str, Any]] = []
+        for row in inv:
+            if isinstance(row, dict):
+                inv_list.append(dict(row))
+        label_opt = cleaned.get("player_item_label")
+        label_use = label_opt.strip() if isinstance(label_opt, str) and label_opt.strip() else None
+        idx = next(
+            (i for i, row in enumerate(inv_list) if str(row.get("item_id", "")).strip() == iid),
+            -1,
+        )
+        if idx < 0:
+            if delta < 0:
+                return
+            lab = label_use if label_use else iid
+            inv_list.append({"item_id": iid, "qty": int(delta), "label": lab})
+        else:
+            row = inv_list[idx]
+            try:
+                q = int(row.get("qty", 0))
+            except Exception:
+                q = 0
+            q += int(delta)
+            if q <= 0:
+                inv_list.pop(idx)
+            else:
+                row["qty"] = q
+                if label_use and not (isinstance(row.get("label"), str) and str(row.get("label")).strip()):
+                    row["label"] = label_use
+        ent.stats["inventory"] = inv_list
+
     def commit_dialogue(
         self,
         *,
@@ -373,6 +488,9 @@ class GameState:
         Si ``player_id`` est un joueur connecté et ``flags`` contient des clés quête, une copie
         est écrite dans ``entity.stats["quest_state"]`` (vue client via snapshot ; non persistée
         sur disque tant qu'il n'y a pas de compte joueur stable).
+
+        Flags ``player_item_*`` : variation d'inventaire sur le joueur ; ``player_id`` obligatoire
+        (HTTP interne ou pont WS).
         """
         npc_id = npc_id.strip()
         trace_id = trace_id.strip()
@@ -382,12 +500,16 @@ class GameState:
             return False, "trace_id requis"
         if not self.get_npc(npc_id):
             return False, "npc introuvable"
-        if trace_id in self._seen_commit_trace_ids:
-            return True, "duplicate (idempotent noop)"
-        self._seen_commit_trace_ids.add(trace_id)
         cleaned, err = self._validate_commit_flags(flags)
         if err:
             return False, err
+        if isinstance(cleaned, dict) and cleaned:
+            if any(isinstance(k, str) and k.startswith("player_item_") for k in cleaned):
+                if not (player_id or "").strip():
+                    return False, "player_id requis pour commit inventaire"
+        if trace_id in self._seen_commit_trace_ids:
+            return True, "duplicate (idempotent noop)"
+        self._seen_commit_trace_ids.add(trace_id)
         if isinstance(cleaned, dict) and cleaned:
             # Effet de bord contrôlé : réputation locale.
             if "reputation_delta" in cleaned:
@@ -416,10 +538,13 @@ class GameState:
             for k, v in cleaned.items():
                 if isinstance(k, str) and k.startswith("aid_"):
                     continue
+                if isinstance(k, str) and k.startswith("player_item_"):
+                    continue
                 cur[k] = v
             self._npc_commit_flags[npc_id] = cur
             if player_id:
                 self._apply_player_quest_snapshot(player_id, cleaned)
+                self._apply_player_inventory_delta(player_id, cleaned)
         return True, "accepted"
 
     def freeze_npc_and_face(self, npc_id: str, player_id: str, duration: float = NPC_CONVERSATION_RESUME_DELAY_S) -> None:
@@ -491,10 +616,40 @@ class GameState:
 
     def add_player(self, name: str) -> Entity:
         p = Entity.new_player(name)
-        # Spawn au centre de la place (au Sud de l'Hôtel de Ville déplacé)
-        # Altitude 0.0 pour être au niveau du sol
-        p.x, p.y, p.z = 0.0, 0.0, -20.0
+        # Spawn : grille Watabou → (0,0) si franchissable ; sinon première tuile `.`/`R` en spirale depuis (0,0) ; sinon défaut historique.
+        g = self._village_tile_grid
+        if g is not None:
+            if g.is_walkable_world_m(0.0, 0.0):
+                p.x, p.y, p.z = 0.0, 0.0, 0.0
+            else:
+                wz = g.first_walkable_spawn_world_m()
+                if wz is not None:
+                    p.x, p.y, p.z = float(wz[0]), 0.0, float(wz[1])
+                else:
+                    p.x, p.y, p.z = 0.0, 0.0, -20.0
+        else:
+            p.x, p.y, p.z = 0.0, 0.0, -20.0
         self.entities[p.id] = p
+        ch = gx = gz = None
+        if g is not None:
+            ch, gx, gz = g.terrain_at_world_m(p.x, p.z)
+        log_line = json.dumps(
+            {
+                "event": "player_spawn",
+                "player_id": p.id,
+                "name": name,
+                "x": round(p.x, 4),
+                "y": round(p.y, 4),
+                "z": round(p.z, 4),
+                "grid_source": getattr(g, "source_path", None) if g is not None else None,
+                "tile_char": ch,
+                "tile_gx": gx,
+                "tile_gz": gz,
+            },
+            ensure_ascii=False,
+        )
+        logger.info("%s", log_line)
+        _ensure_player_inventory(p)
         return p
 
     def remove_player(self, player_id: str) -> None:
@@ -506,15 +661,24 @@ class GameState:
         ent = self.entities.get(player_id)
         if not ent or ent.kind != "player":
             return
-            
-        # Initialisation des stats par défaut pour le joueur
-        if not getattr(ent, "stats", None):
-            ent.stats = {
-                "hp": 100, "hp_max": 100,
-                "mp": 50, "mp_max": 50,
-                "stamina": 100, "stamina_max": 100,
-                "level": 1, "exp": 0
-            }
+
+        if ent.stats is None:
+            ent.stats = {}
+        st = ent.stats
+        defaults = {
+            "hp": 100,
+            "hp_max": 100,
+            "mp": 50,
+            "mp_max": 50,
+            "stamina": 100,
+            "stamina_max": 100,
+            "level": 1,
+            "exp": 0,
+        }
+        for k, v in defaults.items():
+            if k not in st:
+                st[k] = v
+        _ensure_player_inventory(ent)
 
         # Calcul du delta conscient du Wrap-Around (102400m)
         dx = x - ent.x
@@ -569,12 +733,17 @@ class GameState:
             nx = ent.x + ent.vx * dt
             nz = ent.z + ent.vz * dt
             
-            # Vérification des obstacles (Joueurs et PNJ)
+            # Grille village (Watabou) : hors carte ou tuile non franchissable = bloqué
             blocked = False
-            for obs in self.obstacles:
-                if obs.is_inside(nx, nz, margin=0.5):
-                    blocked = True
-                    break
+            if self._village_tile_grid is not None and not self._village_tile_grid.is_walkable_world_m(nx, nz):
+                blocked = True
+
+            # Vérification des obstacles (seed / boîtes)
+            if not blocked:
+                for obs in self.obstacles:
+                    if obs.is_inside(nx, nz, margin=0.5):
+                        blocked = True
+                        break
             
             if not blocked:
                 ent.x = nx

@@ -2,6 +2,7 @@ import { NetworkManager } from './network.js';
 import { Renderer } from './renderer.js';
 import { InputManager } from './input.js';
 import { loadRaceDisplayMap } from './worldCatalog.js';
+import { loadVillageCollisionGridFromMmoServer } from './villageCollisionGrid.js';
 
 const QUEST_LOG_STORAGE_KEY = "lbg-mmo.questLog.v1";
 const ACTIVE_QUEST_STORAGE_KEY = "lbg-mmo.activeQuest.v1";
@@ -41,6 +42,8 @@ class App {
         this.questLogById = new Map();
         this.activeQuestId = "";
         this.raceDisplayById = Object.create(null);
+        /** @type {import('./villageCollisionGrid.js').VillageCollisionGrid | null} */
+        this.collisionGrid = null;
         
         this.initUI();
     }
@@ -153,12 +156,22 @@ class App {
         if (qid && !Object.prototype.hasOwnProperty.call(merged, "_active_quest_id")) {
             merged._active_quest_id = qid;
         }
+        const summary = {};
+        if (qid) summary.tracked_quest = qid.slice(0, 80);
+        const tn = target && target.name ? String(target.name).trim() : "";
+        if (tn) summary.last_npc = tn.slice(0, 80);
+        if (Object.keys(summary).length) {
+            merged.session_summary = summary;
+        }
         const outCtx = Object.keys(merged).length ? merged : null;
         this.network.sendChat(clean, target.id, target.name, this.playerLocalPos, outCtx);
-        this.renderer.setDialogueBubble(target.id, "...", {
+        const echo = clean.length > 120 ? `${clean.slice(0, 117)}…` : clean;
+        this.renderer.setDialogueBubble(target.id, "Réponse en cours…", {
             speaker: target.name,
             kind: "pending",
             ttlMs: 120000,
+            subtitle: this._formatRoleSubtitle(target),
+            playerEcho: echo,
         });
         this.addLog(`À ${target.name}: ${clean}`, 'player');
     }
@@ -230,6 +243,18 @@ class App {
         }
         this.renderPlayerSheet(me || null);
         this.updateNpcWorldStateHUD();
+
+        const host = this._lastConnect && this._lastConnect.serverHost ? String(this._lastConnect.serverHost).trim() : "";
+        if (host) {
+            loadVillageCollisionGridFromMmoServer(host)
+                .then((g) => {
+                    this.collisionGrid = g;
+                    if (g) {
+                        this.addLog("Grille collisions village chargée (prédiction client alignée serveur).", "system");
+                    }
+                })
+                .catch(() => {});
+        }
     }
 
     handleMessage(msg) {
@@ -248,6 +273,7 @@ class App {
                     speaker: target.name,
                     traceId: msg.trace_id || "",
                     kind: "npc",
+                    subtitle: this._formatRoleSubtitle(target),
                 });
                 this.addLog(`${target.name}: ${msg.npc_reply}`, 'npc');
             }
@@ -272,6 +298,7 @@ class App {
             traceId: event.trace_id || traceId || "",
             kind: "world_event",
             ttlMs: 7000,
+            subtitle: this._formatRoleSubtitle(target),
         });
         this.recordWorldEvent(event, target, summary);
         this.addLog(`Action monde (${target.name}): ${summary}`, 'system');
@@ -573,6 +600,29 @@ class App {
         const nid = formatSheetId(me.id);
         const idTitle = escapeHtml(me.id || "");
 
+        let sacBlock =
+            '<div class="sheet-section"><div class="sheet-row muted" style="margin-bottom:0.35rem">Sac (session)</div>' +
+            '<span class="muted">Vide</span></div>';
+        const invRaw = stats.inventory;
+        if (Array.isArray(invRaw) && invRaw.length) {
+            const lines = invRaw.slice(0, 24).map((row) => {
+                if (!row || typeof row !== "object") return null;
+                const label =
+                    typeof row.label === "string" && row.label.trim()
+                        ? row.label.trim()
+                        : typeof row.item_id === "string" && row.item_id.trim()
+                          ? row.item_id.trim()
+                          : "?";
+                let qty = row.qty;
+                if (!Number.isFinite(Number(qty))) qty = 1;
+                else qty = Math.max(0, Math.round(Number(qty)));
+                return `<div class="sheet-row"><span class="label">${escapeHtml(label)}</span> <span class="sheet-val">×${qty}</span></div>`;
+            }).filter(Boolean);
+            if (lines.length) {
+                sacBlock = `<div class="sheet-section"><div class="sheet-row muted" style="margin-bottom:0.35rem">Sac (session)</div>${lines.join("")}</div>`;
+            }
+        }
+
         let questBlock = '<div class="sheet-row"><span class="label">Quête</span> <span class="muted">aucune (session)</span></div>';
         if (qs && typeof qs.quest_id === "string" && qs.quest_id.trim()) {
             const qid = qs.quest_id.trim();
@@ -587,7 +637,7 @@ class App {
             ].join("");
         }
 
-        const extraKeys = Object.keys(stats).filter((k) => k !== "quest_state");
+        const extraKeys = Object.keys(stats).filter((k) => k !== "quest_state" && k !== "inventory");
         let extraBlock = "";
         if (extraKeys.length) {
             const lines = extraKeys.slice(0, 8).map((k) => {
@@ -615,6 +665,7 @@ class App {
             `<div class="sheet-row"><span class="label">Id</span> <span class="sheet-mono" title="${idTitle}">${escapeHtml(nid)}</span></div>`,
             "</div>",
             `<div class="sheet-section">${questBlock}</div>`,
+            sacBlock,
             extraBlock,
         ].join("");
     }
@@ -699,15 +750,31 @@ class App {
         el.innerHTML = identity + stateHtml + statsExtra;
     }
 
+    _formatRoleSubtitle(target) {
+        if (!target || typeof target.role !== "string") return "";
+        const r = target.role.trim();
+        if (!r || r === "civil" || r === "player") return "";
+        return r.replace(/_/g, " ");
+    }
+
     getDialogueTarget() {
         if (this.selectedDialogueTarget && this.entityExists(this.selectedDialogueTarget.id)) {
-            return this.selectedDialogueTarget;
+            const sel = this.selectedDialogueTarget;
+            const ent = (Array.isArray(this.renderer.entities) ? this.renderer.entities : []).find(
+                (e) => e && e.id === sel.id
+            );
+            const role = typeof ent?.role === "string" ? ent.role : sel.role;
+            return {
+                id: sel.id,
+                name: sel.name,
+                role: typeof role === "string" ? role : "",
+            };
         }
 
         const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
         const npcs = entities.filter((ent) => ent && ent.kind === "npc" && typeof ent.id === "string");
         if (!npcs.length) {
-            return { id: "npc:merchant", name: "Marchand" };
+            return { id: "npc:merchant", name: "Marchand", role: "merchant" };
         }
 
         const nearest = npcs
@@ -718,7 +785,11 @@ class App {
             })
             .sort((a, b) => a.dist2 - b.dist2)[0].ent;
 
-        return { id: nearest.id, name: nearest.name || nearest.id };
+        return {
+            id: nearest.id,
+            name: nearest.name || nearest.id,
+            role: typeof nearest.role === "string" ? nearest.role : "",
+        };
     }
 
     entityExists(entityId) {
@@ -738,7 +809,11 @@ class App {
             return;
         }
 
-        this.selectedDialogueTarget = { id: npc.id, name: npc.name || npc.id };
+        this.selectedDialogueTarget = {
+            id: npc.id,
+            name: npc.name || npc.id,
+            role: typeof npc.role === "string" ? npc.role : "",
+        };
         this.lastDialogueTarget = this.selectedDialogueTarget;
         this.renderer.setSelectedEntityId(npc.id);
         this.updateDialogueTargetHUD();
@@ -824,11 +899,12 @@ class App {
         const move = this.input.getMovementVector();
         if (move.x !== 0 || move.y !== 0) {
             const speed = 0.2;
-            const newX = this.playerLocalPos.x + move.x * speed;
-            const newZ = this.playerLocalPos.z + move.y * speed;
-            
-            // Note: On pourrait faire de la prédiction côté client, 
-            // mais ici on envoie juste l'intention au serveur.
+            let newX = this.playerLocalPos.x + move.x * speed;
+            let newZ = this.playerLocalPos.z + move.y * speed;
+            if (this.collisionGrid && !this.collisionGrid.isWalkableWorldM(newX, newZ)) {
+                newX = this.playerLocalPos.x;
+                newZ = this.playerLocalPos.z;
+            }
             this.network.sendMove(newX, 0, newZ);
         }
     }

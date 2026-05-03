@@ -29,6 +29,19 @@ def test_healthz_includes_metadata() -> None:
     assert j["invoke"] == "POST /invoke"
     assert "llm_configured" in j
     assert j["llm_configured"] is False
+    assert "desktop_plan_env_enabled" in j
+    assert j["desktop_plan_env_enabled"] is False
+    assert "dialogue_budget" in j
+    assert j["dialogue_budget"]["enabled"] is False
+    assert j.get("dialogue_target_default") == "local"
+
+
+def test_healthz_desktop_plan_env_when_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    client = TestClient(app)
+    r = client.get("/healthz")
+    assert r.status_code == 200
+    assert r.json().get("desktop_plan_env_enabled") is True
 
 
 def test_invoke_returns_rich_dialogue_shape_stub() -> None:
@@ -52,6 +65,7 @@ def test_invoke_returns_rich_dialogue_shape_stub() -> None:
     assert j["meta"]["stub"] is True
     assert j["meta"]["llm"] is False
     assert j["meta"]["agent_version"] == app.version
+    assert j["meta"].get("dialogue_profile_resolved") == "professionnel"
 
 
 def test_invoke_default_speaker_when_no_npc_in_context() -> None:
@@ -114,6 +128,7 @@ def test_invoke_uses_llm_when_configured(monkeypatch: pytest.MonkeyPatch) -> Non
     assert j["meta"]["stub"] is False
     assert j["meta"]["llm"] is True
     assert j["reply"] == "Bienvenue à la forge, voyageur."
+    assert j["meta"].get("dialogue_profile_resolved") == "professionnel"
     assert j["meta"]["cache_hit"] in (True, False)
     assert isinstance(j.get("commit"), dict)
     assert j["commit"]["flags"]["aid_hunger_delta"] == -0.2

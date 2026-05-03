@@ -56,6 +56,8 @@ Ces grilles peuvent être utilisées de deux manières :
 
 Le script `mmo_server/world/tools/village_visualizer.py` permet de rendre une grille de village en image.
 
+**Source de la grille (défaut)** : si le fichier `Boite à idées/pixie_seat.json` existe à la racine du dépôt `LBG_IA_MMORPG`, il est chargé comme **village Watabou** (via `watabou_import`). Sinon, retour au village **procédural** 50×40. Pour forcer le procédural : `--procedural`. Pour un autre export Watabou : `--watabou-json /chemin/vers.json`. Les grandes grilles réduisent automatiquement `TILE_SIZE` (plafond `--max-image-px`, défaut 1680).
+
 Deux styles sont disponibles :
 
 - **`premium`** : rendu simple et lisible (utile pour calage, debug, collision/positions).
@@ -67,6 +69,8 @@ Exemples :
 cd LBG_IA_MMO/mmo_server/world/tools
 python3 village_visualizer.py --style premium --seed 42 --out bourg_palette_map.png
 python3 village_visualizer.py --style illustrated --seed 42 --out bourg_illustrated.png
+# Village procédural historique (sans Watabou) :
+python3 village_visualizer.py --style premium --seed 42 --out bourg_palette_map.png --procedural
 ```
 
 Note : ce script dépend de **Pillow** (`PIL`). Si ton `python3` système ne l’a pas, utilise un venv (ex. `.venv-img/bin/python`) ou installe Pillow dans un environnement dédié.
@@ -99,3 +103,57 @@ python3 village_visualizer.py --style illustrated --seed 42 --out bourg_illustra
 ```
 
 Usage recommandé : ComfyUI/A1111 en **img2img** + ControlNet branché sur ces masques, pour obtenir un rendu “peint” tout en respectant strictement positions/échelle.
+
+## Import Watabou (Village Generator) → “premier monde”
+
+Watabou peut exporter une géométrie structurée (JSON) et un rendu (PNG/SVG). Pour **construire le monde serveur** (collisions, obstacles, routes, POI), on préfère importer la **géométrie** plutôt que de “deviner” depuis un PNG.
+
+### Export Watabou
+
+- Export JSON (FeatureCollection) : contient typiquement `earth`, `buildings` (MultiPolygon), `roads` (LineString + width), `trees` (MultiPoint), `fields`, etc.
+- Export SVG/PNG : utile pour l’habillage / minimap, mais pas comme source de vérité.
+
+### Outil d’import (grille + layout)
+
+Un importeur minimal est fourni :
+
+- `mmo_server/world/tools/watabou_import.py`
+
+Il génère :
+- une **grille ASCII** (`.` `H` `R` `T`) utile pour collisions/debug,
+- un **layout JSON** avec polygones bâtiments, polylines routes (avec largeur), positions d’arbres.
+
+Exemple (depuis le repo) :
+
+```bash
+cd LBG_IA_MMO/mmo_server/world/tools
+python3 watabou_import.py --in "../../../../Boite à idées/pixie_seat.json" --out-dir "/tmp/watabou_pixie" --name "pixie_seat"
+ls -la /tmp/watabou_pixie
+```
+
+Stats (échelle / surfaces bâtiments vs référence doc 64 m², emprise earth, routes, arbres) :
+
+```bash
+cd LBG_IA_MMO/mmo_server/world/tools
+python3 watabou_import.py --in "../../../../Boite à idées/pixie_seat.json" --stats-only
+# ou en plus de l'export :
+python3 watabou_import.py --in "../../../../Boite à idées/pixie_seat.json" --out-dir "/tmp/watabou_pixie" --name "pixie_seat" --stats
+# JSON machine :
+python3 watabou_import.py --in "../../../../Boite à idées/pixie_seat.json" --stats-only --stats-json "/tmp/pixie_seat.stats.json"
+```
+
+Notes :
+- `--unit-m` permet d’ajuster la conversion **unités Watabou → mètres** (par défaut 1 unité = 1m).
+- `--tile-m` ajuste la résolution de la grille collisions.
+
+## Intégration `mmo_server` (collisions au boot)
+
+Le serveur charge `world/seed_data/pixie_seat.grid.json` (ou le chemin `LBG_MMO_VILLAGE_GRID_JSON`) au démarrage et expose :
+
+- `GET /v1/world/collision` — méta (taille tuile, bounds, etc.), sans token ;
+- `GET /internal/v1/world/collision-probe?x=&z=` — tuile et `walkable` (`.` et `R` franchissables ; `H`, `T`, etc. bloqués) ; `X-LBG-Service-Token` si `LBG_MMO_INTERNAL_TOKEN` est défini.
+- `GET /v1/world/collision-grid` — export JSON **`watabou_grid_v1`** complet pour le **client** (prédiction de mouvement alignée sur l’autorité). Pour le navigateur, activer **`LBG_MMO_CORS_ORIGINS`** sur le `mmo_server` (voir `mmo_server/README.md`).
+
+### Serveur WebSocket `mmmorpg_server`
+
+Les déplacements côté autorité WS utilisent la même convention (`.` / `R` franchissables). Chargement du JSON `watabou_grid_v1` via `MMMORPG_VILLAGE_GRID_JSON`, puis `LBG_MMO_VILLAGE_GRID_JSON`, puis le même fichier seed `pixie_seat.grid.json` que `mmo_server` si les variables ne pointent pas vers un autre fichier. Si le point monde `(0, 0)` n’est pas sur une tuile franchissable, le **spawn joueur** utilise la première tuile franchissable trouvée en **spirale** depuis la tuile sous `(0, 0)` (centre de tuile en coordonnées monde). Les **PNJ** issus du seed sont recalés sur la tuile franchissable la plus proche si une grille est active. Le **client web** (`web_client`) peut charger la même grille via `GET /v1/world/collision-grid` sur le `mmo_server` (CORS `LBG_MMO_CORS_ORIGINS`) pour une prédiction de mouvement locale alignée. Voir `mmmorpg_server/README.md` (section collisions village).

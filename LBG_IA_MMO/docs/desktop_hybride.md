@@ -29,6 +29,15 @@ Flux :
 4. `agent.desktop` appelle `POST {LBG_AGENT_DESKTOP_URL}/invoke` (worker Windows)
 5. Worker applique gardes + exécute + renvoie un résultat structuré + écrit un audit
 
+### Proposition `DESKTOP_JSON` (LLM → validation humaine)
+
+Pour rapprocher le flux du MMO (`ACTION_JSON`) sans exécuter à l’aveugle :
+
+1. Sur l’agent dialogue HTTP : activer **`LBG_DIALOGUE_DESKTOP_PLAN=1`** (avec un LLM configuré).
+2. Un appel `POST /invoke` avec **`context._desktop_plan`: true** utilise un prompt « planificateur desktop » ; le modèle peut émettre une première ligne **`DESKTOP_JSON: {"kind":...}`**.
+3. Le serveur parse et sanitise la proposition, puis l’expose dans **`meta.desktop_action_proposal`** (les allowlists réelles restent au worker lors du routage). L’agent dialogue annonce **`desktop_plan_env_enabled`** dans **`GET /healthz`** (utile pour le bandeau diagnostique sur `#/desktop` via `GET /v1/pilot/status`).
+4. Le Pilot (`#/desktop`) peut appeler **`POST /v1/pilot/agent-dialogue/invoke`** (proxy même origine), remplir le textarea `desktop_action`, puis l’opérateur clique **Envoyer** (`/v1/pilot/route`) après relecture.
+
 ## Module Windows dans le repo + sync vers `C:\Agent_IA`
 
 Le worker Windows est désormais un **module du repo** :
@@ -65,6 +74,67 @@ Ouvre une URL dans le navigateur par défaut (worker Windows).
 Contrôle :
 - soit `url` est **exactement** dans `LBG_DESKTOP_URL_ALLOWLIST` (mode strict),
 - soit le host de `url` matche un domaine/host dans `LBG_DESKTOP_URL_HOST_ALLOWLIST` (recommandé).
+
+### `search_web_open` (recherche web bornée)
+
+Ouvre le navigateur sur une URL **HTTPS** construite en interne (pas d’URL arbitraire) :
+
+- moteur **DuckDuckGo** par défaut (`https://duckduckgo.com/?q=…`) ;
+- ou **Google** si `LBG_DESKTOP_SEARCH_ENGINE=google` (ou `LBG_LINUX_SEARCH_ENGINE=google` sur l’agent Linux).
+
+**Activation** : `LBG_DESKTOP_WEB_SEARCH=1` (Windows / exécuteur Python `desktop_executor`) ou `LBG_LINUX_WEB_SEARCH=1` (linux_agent). **Désactivé par défaut** : tant que la variable n’est pas truthy, l’action renvoie `feature_disabled`.
+
+Payload :
+
+```json
+{
+  "desktop_action": {
+    "kind": "search_web_open",
+    "query": "site de machin"
+  }
+}
+```
+
+- `query` : obligatoire, tronquée à 220 caractères côté serveur.
+- L’URL finale est validée par une **liste blanche de domaines** (duckduckgo.com / google.com selon le moteur) : pas besoin d’autoriser chaque requête dans `LBG_DESKTOP_URL_HOST_ALLOWLIST`.
+
+Même **dry-run**, **approval** et **audit** que `open_url`.
+
+### `mail_imap_preview` (IMAP INBOX, lecture seule, bornée)
+
+Retourne un **JSON** avec en-têtes + `body_preview` pour les messages récents de l’**INBOX** qui matchent les filtres (sous-chaînes insensibles à la casse, **ET** logique si les deux sont fournis).
+
+**Activation** : `LBG_DESKTOP_MAIL_ENABLED=1` (Windows / exécuteur `desktop_executor`) ou `LBG_LINUX_MAIL_ENABLED=1` (linux_agent). **Désactivé par défaut.**
+
+**Configuration** (secrets — ne jamais mettre de mot de passe dans `desktop_action`) :
+
+- `LBG_DESKTOP_MAIL_IMAP_HOST`, `LBG_DESKTOP_MAIL_IMAP_USER`, `LBG_DESKTOP_MAIL_IMAP_PASSWORD`
+- `LBG_DESKTOP_MAIL_IMAP_PORT` (défaut 993), option `LBG_DESKTOP_MAIL_IMAP_NO_SSL=1` pour lab sans TLS (déconseillé)
+
+Équivalents Linux : `LBG_LINUX_MAIL_*`.
+
+Payload :
+
+```json
+{
+  "desktop_action": {
+    "kind": "mail_imap_preview",
+    "from_contains": "intel",
+    "subject_contains": "facture",
+    "max_messages": 3,
+    "max_body_chars": 800,
+    "max_scan": 200
+  }
+}
+```
+
+- `from_contains` / `subject_contains` : au moins **un** des deux obligatoire.
+- `max_messages` : 1–10 (défaut 3) ; `max_body_chars` : 0–4000 (défaut 800) ; `max_scan` : nombre max de UIDs récents examinés (10–500, défaut 200).
+- Dossier **INBOX uniquement** en MVP (`folder` autre valeur → refus).
+
+Sortie typique : `outcome: ok|dry_run|error|configuration_error|feature_disabled`, champ **`messages`** (liste `uid`, `from`, `subject`, `date`, `body_preview`).
+
+Le module partagé `mail_imap_preview.py` est copié sous `agents/src/lbg_agents/` et les répertoires `windows_agent/Agent_IA/` / `linux_agent/Agent_IA/` — **à resynchroniser** si tu modifies la logique IMAP.
 
 ### 2) `notepad_append`
 
@@ -298,6 +368,24 @@ Exemple :
   -SeedPass2 43
 ```
 
+**Depuis WSL (bash)** : lancer PowerShell Windows avec les chemins du repo convertis automatiquement :
+
+```bash
+cd LBG_IA_MMO/infra/scripts
+export LBG_DESKTOP_BASE_URL="http://192.168.0.10:5005"   # agent Windows (obligatoire si défaut auto faux)
+export LBG_DESKTOP_APPROVAL="CHANGE-MOI"                   # si approval actif
+./run_smoke_comfyui_2pass_wsl.sh
+```
+
+Sans `LBG_DESKTOP_BASE_URL`, le script utilise `http://<nameserver resolv.conf>:5005` (souvent l’hôte Windows sous WSL2). Les workflows par défaut sont `Boite à idées/Map_mmo.json` et `Map_mmo_pass2_buildings.json` ; sinon définir `WF_PASS1` / `WF_PASS2` (chemins absolus WSL).
+
+**Même chose mais workflows déjà copiés sous `C:\Agent_IA\workflows\`** (script PS1 sur `C:\Agent_IA\`) — équivalent de ta commande one-liner :
+
+```bash
+./run_smoke_comfyui_2pass_agent_ia.sh
+# ou : LBG_DESKTOP_APPROVAL=xxx COMFY_INPUT_DIR='C:/Users/autre/ComfyUI/input' ./run_smoke_comfyui_2pass_agent_ia.sh
+```
+
 #### État carte MMO — pipeline 2 passes (point situation **2026-05-02**, pause)
 
 **Objectif visuel (en cours)**  
@@ -462,6 +550,6 @@ Aller sur `/pilot/#/desktop`, garder `desktop_dry_run: true`, et cliquer sur **o
 
 ## Limites connues (MVP)
 
-- Pas de lecture mail / navigateur contrôlé finement (à concevoir après stabilisation des gardes).
+- Pas d’autres dossiers IMAP que **INBOX** ; pas d’écriture (envoi, marquage lu, suppression) via ce canal.
 - `notepad_append` est un “pont” simple ; l’UI automation avancée nécessitera une lib dédiée (ex. Playwright/WinAppDriver/Power Automate, etc.) et une modélisation d’actions plus riche.
 

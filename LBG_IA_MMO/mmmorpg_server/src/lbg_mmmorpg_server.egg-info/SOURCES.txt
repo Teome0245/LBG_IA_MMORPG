@@ -15,11 +15,13 @@ src/mmmorpg_server/internal_http.py
 src/mmmorpg_server/main.py
 src/mmmorpg_server/persistence.py
 src/mmmorpg_server/protocol.py
+src/mmmorpg_server/world_catalog.py
 src/mmmorpg_server/entities/__init__.py
 src/mmmorpg_server/entities/entity.py
 src/mmmorpg_server/world_core/__init__.py
 src/mmmorpg_server/world_core/planet.py
 src/mmmorpg_server/world_core/time_manager.py
+src/mmmorpg_server/world_core/village_tile_grid.py
 src/world_core/__init__.py
 src/world_core/planet.py
 src/world_core/time_manager.py
@@ -28,6 +30,7 @@ tests/test_internal_http.py
 tests/test_npc_conversation_pause.py
 tests/test_persistence.py
 tests/test_time_manager.py
+tests/test_village_tile_grid.py
 tests/test_ws_inbound.py
 tests/test_ws_integration.py
 tests/test_ws_world_commit.py
