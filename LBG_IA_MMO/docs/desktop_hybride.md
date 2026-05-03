@@ -1,5 +1,7 @@
 # Desktop (hybride) — VM orchestrateur + agent Windows
 
+**Alignement produit** : ce flux implémente le **Mode A — `local_assistant`** décrit dans [`adr/0004-assistant-local-vs-persona-mmo.md`](adr/0004-assistant-local-vs-persona-mmo.md) (capability **`desktop_control`** → **`agent.desktop`** → worker HTTP Windows ou Linux).
+
 ## Objectif
 
 Permettre à une IA « incarnée » de **déclencher des actions sur un PC Windows** (UI automation / navigateur / fichiers),

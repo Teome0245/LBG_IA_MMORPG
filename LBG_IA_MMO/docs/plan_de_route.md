@@ -119,6 +119,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-05 | **ADR 0004 (màj)** : aligné sur l’existant **`desktop_control`** / **`agent.desktop`** / worker **`windows_agent`·`linux_agent`** ; commentaires `lbg.env.example` ; renvoi depuis `desktop_hybride.md`. |
 | 2026-05-05 | **ADR 0004** : assistant poste (`local_assistant`) vs persona MMO (`mmo_persona`) — périmètres, routage, audit, lien doux session→assistant, aligné vision Boîte à idées. Renvoi depuis `lyra.md`. |
 | 2026-05-04 | **Tests / déploiement MMO** : `bootstrap.md` — pytest ciblé avec **uv** depuis `LBG_IA_MMO/`. `deploy_web_client.sh` : **`LBG_MMO_WEB_DEPLOY_LOCAL_ONLY=1`** (build `--base=/mmo/` + `pilot_web/mmo/` sans SSH). `.gitignore` : `uv.lock` sous agents/backend/mmmorpg_server. Doc `architecture`, `runbook`. Sync **`pilot_web/mmo`** + `web_client/dist` alignés. |
 | 2026-05-03 | **Client MMO — libellés races (catalogue)** : `GET /world-content` enrichi (`race_display` id → nom) ; client `web_client` charge pilot/agent (same-origin / ports 8080·8000·8020) ; **fiches rafraîchies en async** après `welcome`. Doc `agents/README`, `mmmorpg_PROTOCOL`, `plan_de_route`. |

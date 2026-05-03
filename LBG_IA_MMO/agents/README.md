@@ -219,6 +219,8 @@ Recette LAN (dry-run par défaut) : `bash infra/scripts/smoke_devops_systemd_lan
 
 ### Desktop — agent Windows hybride (`agent.desktop`)
 
+**Mode produit** : ce handler matérialise **`local_assistant`** (poste propriétaire), distinct du flux MMO — voir `docs/adr/0004-assistant-local-vs-persona-mmo.md`.
+
 Capability orchestrateur : **`desktop_control`** → handler **`agent.desktop`**. Par design, on n’exécute **rien**
 sur simple texte : il faut fournir une action structurée via `context.desktop_action` (priorité de routage).
 
