@@ -371,7 +371,7 @@ Module : `lbg_agents.dialogue_http_app` (FastAPI).
 - `GET /healthz` → JSON (`llm_configured`, `llm_model`, etc.).
 - `POST /invoke` → corps `InvokeIn` (`actor_id`, `text`, `context`). Réponse : `agent`, `reply`, `lines`, `speaker`, `player_text`, `meta` (`stub`, `llm`, `model`, évent. `llm_error` si le LLM est configuré mais l’appel échoue).
 - `GET /npc-registry` → registre PNJ (`npc_registry.json`), option `?npc_id=` pour une entrée.
-- `GET /world-content` → inventaire **races + bestiaire** (JSON sous `content/world/`, surcharge par `LBG_WORLD_CONTENT_DIR`).
+- `GET /world-content` → inventaire **races + bestiaire** (JSON sous `content/world/`, surcharge par `LBG_WORLD_CONTENT_DIR`) ; inclut `race_ids`, `races_count`, `creatures_count` et la carte **`race_display`** (`race_id` → `display_name`) pour les clients légers (ex. HUD MMO web via proxy pilot).
 
 ### Lancer en local (WSL), 4ᵉ terminal
 

@@ -165,10 +165,10 @@ Champs additionnels selon l’implémentation : `stats` (ex. joueur : HP/MP ; **
 
 Le client web affiche deux blocs **lecture seule** alimentés par les snapshots `welcome` / `world_tick` :
 
-- **Fiche voyageur** : entité `kind: "player"` dont `id` correspond au joueur courant — nom, rôle, `race_id`, identifiant (affichage tronqué, id complet en infobulle), **`stats.quest_state`** (quête session serveur), et autre contenu de `stats` (hors `quest_state`) si présent.
+- **Fiche voyageur** : entité `kind: "player"` dont `id` correspond au joueur courant — nom, rôle, **race** (libellé depuis le catalogue quand disponible, voir ci‑dessous), identifiant (affichage tronqué, id complet en infobulle), **`stats.quest_state`** (quête session serveur), et autre contenu de `stats` (hors `quest_state`) si présent.
 - **Fiche PNJ** : entité `kind: "npc"` correspondant à la cible dialogue (sélection carte ou PNJ le plus proche) — identité, **`world_state`** (réputation, jauges, flags quête PNJ), et **`stats`** éventuels. Rafraîchissement au tick **et** au clic sur un PNJ.
 
-Les chaînes réseau sont échappées à l’affichage. Les `race_id` restent des identifiants techniques (pas de résolution catalogue côté client pour l’instant).
+Les chaînes réseau sont échappées à l’affichage. **Libellés de races** : le client tente de charger `race_display` via `GET /v1/pilot/agent-dialogue/world-content` (même origine que la page si servi sous `/mmo/`, sinon `http://<hôte saisi>:8080|8000/…` ou agent direct `:8020/world-content`). L’agent dialogue expose dans la réponse JSON une carte `race_display` : `{ "race:human": "Humain", … }` (voir `GET /world-content` sur l’agent). Le chargement est **asynchrone** après le `welcome` (le jeu n'attend pas le catalogue) ; les fiches se **rafraîchissent** à la réception des libellés. Si aucune source n’est joignable (CORS, service arrêté), l’interface retombe sur l’identifiant `race_id` seul.
 
 ### `error`
 

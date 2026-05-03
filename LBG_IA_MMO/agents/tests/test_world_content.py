@@ -7,6 +7,7 @@ from lbg_agents.world_content import (
     format_race_for_prompt,
     list_race_ids,
     load_creatures_by_id,
+    race_display_map,
     reset_cache,
 )
 
@@ -17,6 +18,8 @@ def test_format_race_and_creatures_use_repo_catalog() -> None:
     assert s and "Humain" in s
     c = format_creature_refs_for_prompt(["creature:luporeve"])
     assert c and "Luporêve" in c and "Foret" in c
+    m = race_display_map()
+    assert m.get("race:human") == "Humain"
 
 
 def test_custom_content_dir(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:

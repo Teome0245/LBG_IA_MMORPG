@@ -13,6 +13,8 @@ def test_world_content_inventory() -> None:
     assert j["races_count"] >= 10
     assert "race:human" in j["race_ids"]
     assert j["creatures_count"] == 50
+    rd = j.get("race_display")
+    assert isinstance(rd, dict) and rd.get("race:human") == "Humain"
 
 
 def test_healthz_includes_metadata() -> None:

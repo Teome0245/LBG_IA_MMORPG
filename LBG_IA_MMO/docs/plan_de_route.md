@@ -118,6 +118,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-03 | **Client MMO — libellés races (catalogue)** : `GET /world-content` enrichi (`race_display` id → nom) ; client `web_client` charge pilot/agent (same-origin / ports 8080·8000·8020) ; **fiches rafraîchies en async** après `welcome`. Doc `agents/README`, `mmmorpg_PROTOCOL`, `plan_de_route`. |
 | 2026-05-02 | **Client MMO — fiches personnage (joueur + PNJ)** : HUD *Fiche voyageur* et *Fiche PNJ* (`web_client`) ; doc `docs/mmmorpg_PROTOCOL.md` (*HUD client MMO — fiches personnage*). Build `dist` à jour. |
 | 2026-05-02 | **Client MMO — synchro `stats.quest_state`** : après `welcome` et chaque `world_tick`, le journal / quête suivie se réalignent sur `entities[].stats.quest_state` du joueur courant ; build `web_client` + doc `docs/mmmorpg_PROTOCOL.md` (paragraphe client). |
 | 2026-05-03 | **MMO WS — quête joueur (session)** : `commit_dialogue` accepte `player_id` et met à jour `stats.quest_state` sur le joueur si les `flags` contiennent des champs quête (pont IA + `move.world_commit`). État **volatile** (pas de persistance disque). Doc : `docs/mmmorpg_PROTOCOL.md`. |

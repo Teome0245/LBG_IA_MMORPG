@@ -1,6 +1,7 @@
 import { NetworkManager } from './network.js';
 import { Renderer } from './renderer.js';
 import { InputManager } from './input.js';
+import { loadRaceDisplayMap } from './worldCatalog.js';
 
 const QUEST_LOG_STORAGE_KEY = "lbg-mmo.questLog.v1";
 const ACTIVE_QUEST_STORAGE_KEY = "lbg-mmo.activeQuest.v1";
@@ -39,6 +40,7 @@ class App {
         this.seenWorldEventTraceIds = new Set();
         this.questLogById = new Map();
         this.activeQuestId = "";
+        this.raceDisplayById = Object.create(null);
         
         this.initUI();
     }
@@ -171,17 +173,31 @@ class App {
             const wsScheme = (window.location && window.location.protocol === "https:") ? "wss" : "ws";
             const wsUrl = `${wsScheme}://${serverHost}:7733`;
             this._lastConnect = { serverHost, name };
+            this.raceDisplayById = Object.create(null);
+            const catalogPromise = loadRaceDisplayMap(serverHost).then((m) => {
+                if (m) Object.assign(this.raceDisplayById, m);
+                return m ? Object.keys(m).length : 0;
+            });
+
             const welcomeData = await this.network.connect(wsUrl, name, {
                 welcomeTimeoutMs: 6000,
                 autoReconnect: true,
                 reconnectMaxDelayMs: 5000,
             });
-            
+
             this.handleWelcome(welcomeData);
             document.getElementById('game-container').classList.remove('hidden');
-            
-            // Démarrer la boucle de jeu
+
             this.startGameLoop();
+
+            catalogPromise
+                .then((nRaceLabels) => {
+                    if (nRaceLabels) {
+                        this.addLog(`Catalogue races : ${nRaceLabels} libellés.`, "system");
+                    }
+                    this.refreshRaceLabelsOnSheets();
+                })
+                .catch(() => {});
         } catch (err) {
             console.error(err);
             alert("Impossible de se connecter au serveur MMO (port 7733). Assurez-vous que le serveur est lancé.");
@@ -523,6 +539,24 @@ class App {
         this.updateNpcWorldStateHUD();
     }
 
+    formatRaceSheetHtml(raceIdRaw) {
+        const rid = typeof raceIdRaw === "string" ? raceIdRaw.trim() : "";
+        if (!rid) return "—";
+        const label = this.raceDisplayById[rid];
+        if (label && label !== rid) {
+            return `${escapeHtml(label)} <span class="muted">(${escapeHtml(rid)})</span>`;
+        }
+        return escapeHtml(label || rid);
+    }
+
+    refreshRaceLabelsOnSheets() {
+        const pid = this.network.playerId;
+        const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
+        const me = pid ? entities.find((e) => e && e.id === pid && e.kind === "player") : null;
+        this.renderPlayerSheet(me || null);
+        this.updateNpcWorldStateHUD();
+    }
+
     renderPlayerSheet(me) {
         const el = document.getElementById("player-sheet-body");
         if (!el) return;
@@ -533,7 +567,7 @@ class App {
         const stats = me.stats && typeof me.stats === "object" ? me.stats : {};
         const qs = stats.quest_state && typeof stats.quest_state === "object" ? stats.quest_state : null;
         const raceRaw = typeof me.race_id === "string" ? me.race_id.trim() : "";
-        const raceHtml = raceRaw ? escapeHtml(raceRaw) : "—";
+        const raceHtml = this.formatRaceSheetHtml(raceRaw);
         const roleRaw = typeof me.role === "string" ? me.role.trim() : "";
         const roleHtml = roleRaw ? escapeHtml(roleRaw) : "—";
         const nid = formatSheetId(me.id);
@@ -598,7 +632,7 @@ class App {
         }
 
         const raceRaw = typeof npc.race_id === "string" ? npc.race_id.trim() : "";
-        const raceHtml = raceRaw ? escapeHtml(raceRaw) : "—";
+        const raceHtml = this.formatRaceSheetHtml(raceRaw);
         const roleRaw = typeof npc.role === "string" ? npc.role.trim() : "";
         const roleHtml = roleRaw ? escapeHtml(roleRaw) : "—";
         const nid = formatSheetId(npc.id);

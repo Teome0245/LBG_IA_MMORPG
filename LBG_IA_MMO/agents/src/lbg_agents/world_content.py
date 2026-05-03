@@ -79,6 +79,11 @@ def list_race_ids() -> list[str]:
     return sorted(load_races_by_id().keys())
 
 
+def race_display_map() -> dict[str, str]:
+    """Carte ``race_id`` → libellé affichable (pour APIs / clients légers)."""
+    return {rid: race_display_name(rid) for rid in load_races_by_id().keys()}
+
+
 def race_display_name(race_id: str) -> str:
     m = load_races_by_id().get((race_id or "").strip())
     if not isinstance(m, dict):
