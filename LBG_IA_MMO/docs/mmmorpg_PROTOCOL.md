@@ -70,6 +70,8 @@ pour déclencher une réplique PNJ **après** `hello` (même mécanisme que `hel
 | `_require_action_json`, `_no_cache` | Booléens (debug / UI). |
 | `_world_action_kind` | `"aid"` ou `"quest"` si l’UI impose le type d’`ACTION_JSON`. |
 
+**Récompense inventaire via LLM** : lorsque `LBG_DIALOGUE_WORLD_ACTIONS` est actif côté agent, une ligne `ACTION_JSON` avec `kind:"quest"` peut inclure `player_item_id`, `player_item_qty_delta` (entier non nul dans [-50, 50]) et `player_item_label` (optionnel) ; ils sont sanitisés puis transmis dans `output.commit.flags` comme les autres champs quête (même sémantique que `player_item_*` en `world_commit` / HTTP interne).
+
 ### `move` — option `world_commit` (gameplay v1, **sans** pont IA)
 
 Permet d’appliquer un **commit PNJ** synchronisé sur le même message que le déplacement, **sans** appeler le backend LLM. Même liste blanche de `flags` que `POST …/dialogue-commit` (HTTP interne).
@@ -101,6 +103,8 @@ Champs :
 **Effet joueur (session)** : lorsque le commit est appliqué depuis une session WS authentifiée (`hello` puis `move` avec le même joueur), le serveur copie les champs quête reconnus (`quest_id`, `quest_step`, `quest_accepted`, `quest_completed`) dans `entities[].stats.quest_state` pour l’entité joueur — visible dans les snapshots `welcome` / `world_tick`. Les flags **`player_item_*`** mettent à jour **`stats.inventory`** (même joueur). Données **volatiles** (disparaissent à la déconnexion ; pas de persistance disque pour l’instant).
 
 **Client MMO web (`web_client`)** : après réception de `welcome` et à chaque `world_tick`, le client lit l’entité joueur (`kind: "player"`, `id` = `player_id` / id session) et fusionne `stats.quest_state` dans le journal de quêtes local (HUD + `localStorage`), sans remplacer un `npcName` déjà connu si le serveur ne l’expose pas. Les événements `world_event` de type quête enrichissent toujours le journal (ex. nom PNJ).
+
+**Interaction objet (stub, sans LLM)** : en jeu, touche **E** ou bouton **RAMASSER** (panneau PNJ) : envoi d’un `move` avec `world_commit` (`player_item_*`) vers le PNJ **cible** (sélection clavier/souris), si le joueur est assez proche (distance bornée côté client). Même liste blanche de flags que `POST …/dialogue-commit`.
 
 Recette LAN : `infra/scripts/smoke_ws_move_commit_snapshot_lan.sh`.
 

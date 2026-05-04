@@ -109,6 +109,34 @@ export class NetworkManager {
         });
     }
 
+    /**
+     * Même position qu'un move normal + commit PNJ sans LLM (jalon interactions objets).
+     * Ne pas envoyer text/world_npc_id sur le même message si le commit doit s'appliquer : le serveur les refuse avec world_commit.
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     * @param {{ npc_id: string, trace_id: string, flags?: Record<string, unknown> }} worldCommit
+     */
+    sendMoveWithWorldCommit(x, y, z, worldCommit) {
+        const wc = worldCommit && typeof worldCommit === "object" ? worldCommit : null;
+        if (!wc || typeof wc.npc_id !== "string" || typeof wc.trace_id !== "string") {
+            console.warn("sendMoveWithWorldCommit: npc_id et trace_id requis");
+            return;
+        }
+        const payload = {
+            type: "move",
+            x: Number.isFinite(x) ? x : 0,
+            y: Number.isFinite(y) ? y : 0,
+            z: Number.isFinite(z) ? z : 0,
+            world_commit: {
+                npc_id: wc.npc_id,
+                trace_id: wc.trace_id,
+                flags: wc.flags && typeof wc.flags === "object" ? wc.flags : undefined,
+            },
+        };
+        this.send(payload);
+    }
+
     sendChat(text, targetNpcId, npcName, position = null, iaContext = null) {
         // Le protocole supporte l'envoi de texte via le message 'move' (pont IA)
         // ou d'autres extensions selon docs/mmmorpg_PROTOCOL.md

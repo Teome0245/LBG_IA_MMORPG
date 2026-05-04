@@ -455,6 +455,40 @@ def test_sanitize_world_action_quest_reputation_omit_when_zero() -> None:
     assert "reputation_delta" not in out
 
 
+def test_sanitize_world_action_quest_player_item_reward() -> None:
+    out = _sanitize_world_action(
+        {
+            "kind": "quest",
+            "quest_id": "q:loot",
+            "quest_step": 1,
+            "quest_accepted": True,
+            "player_item_id": "item:potion",
+            "player_item_qty_delta": 2,
+            "player_item_label": "Potion",
+        }
+    )
+    assert out is not None
+    assert out["player_item_id"] == "item:potion"
+    assert out["player_item_qty_delta"] == 2
+    assert out["player_item_label"] == "Potion"
+
+
+def test_sanitize_world_action_quest_rejects_bad_player_item_qty() -> None:
+    assert (
+        _sanitize_world_action(
+            {
+                "kind": "quest",
+                "quest_id": "q:x",
+                "quest_step": 0,
+                "quest_accepted": True,
+                "player_item_id": "item:x",
+                "player_item_qty_delta": 0,
+            }
+        )
+        is None
+    )
+
+
 def test_build_system_prompt_desktop_plan_branch(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
     s = build_system_prompt("Assistant", {"_desktop_plan": True})

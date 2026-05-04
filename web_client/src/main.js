@@ -7,6 +7,14 @@ import { loadVillageCollisionGridFromMmoServer } from './villageCollisionGrid.js
 const QUEST_LOG_STORAGE_KEY = "lbg-mmo.questLog.v1";
 const ACTIVE_QUEST_STORAGE_KEY = "lbg-mmo.activeQuest.v1";
 
+/** Objet « ramassage » déterministe (stub gameplay) — même canal que Pilot / LLM (flags player_item_*). */
+const STUB_PICKUP = {
+    itemId: "item:brindille",
+    label: "Brindille",
+    qty: 1,
+    maxDistance: 12,
+};
+
 function escapeHtml(s) {
     if (s == null || s === undefined) return "";
     return String(s)
@@ -57,6 +65,7 @@ class App {
         const quickAidBtn = document.getElementById('quick-aid-btn');
         const quickQuestBtn = document.getElementById('quick-quest-btn');
         const quickQuestCompleteBtn = document.getElementById('quick-quest-complete-btn');
+        const stubPickupBtn = document.getElementById('stub-pickup-btn');
         const clearQuestsBtn = document.getElementById('clear-quests-btn');
 
         connectBtn.addEventListener('click', () => {
@@ -123,6 +132,21 @@ class App {
             });
         }
 
+        if (stubPickupBtn) {
+            stubPickupBtn.addEventListener('click', () => this.tryStubPickupFromNpc());
+        }
+
+        this._onKeyPickup = (e) => {
+            if (!e || e.code !== "KeyE" || e.repeat) return;
+            const gameEl = document.getElementById("game-container");
+            if (!gameEl || gameEl.classList.contains("hidden")) return;
+            const chatEl = document.getElementById("chat-msg");
+            if (document.activeElement === chatEl) return;
+            e.preventDefault();
+            this.tryStubPickupFromNpc();
+        };
+        window.addEventListener("keydown", this._onKeyPickup);
+
         if (clearQuestsBtn) {
             clearQuestsBtn.addEventListener('click', () => {
                 this.questLogById.clear();
@@ -141,6 +165,43 @@ class App {
         this.restoreQuestLog();
         this.renderQuestLog();
         this.updateActiveQuestHUD();
+    }
+
+    tryStubPickupFromNpc() {
+        const target = this.getDialogueTarget();
+        if (!target || !target.id) {
+            this.addLog("Ramasser : aucune cible PNJ.", "system");
+            return;
+        }
+        const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
+        const npc = entities.find((ent) => ent && ent.id === target.id && ent.kind === "npc");
+        if (!npc) {
+            this.addLog("Ramasser : PNJ introuvable sur la carte.", "system");
+            return;
+        }
+        const px = Number(this.playerLocalPos.x || 0);
+        const pz = Number(this.playerLocalPos.z || 0);
+        const nx = Number(npc.x || 0);
+        const nz = Number(npc.z || 0);
+        const dx = px - nx;
+        const dz = pz - nz;
+        const maxD = STUB_PICKUP.maxDistance;
+        if (dx * dx + dz * dz > maxD * maxD) {
+            this.addLog(`Trop loin de ${target.name} pour ramasser (≤ ${maxD} m). Approchez-vous.`, "system");
+            return;
+        }
+        const traceId = `pickup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        const p = this.playerLocalPos;
+        this.network.sendMoveWithWorldCommit(p.x, p.y, p.z, {
+            npc_id: target.id,
+            trace_id: traceId,
+            flags: {
+                player_item_id: STUB_PICKUP.itemId,
+                player_item_qty_delta: STUB_PICKUP.qty,
+                player_item_label: STUB_PICKUP.label,
+            },
+        });
+        this.addLog(`Ramassage (stub) près de ${target.name} : +${STUB_PICKUP.qty} ${STUB_PICKUP.label}`, "player");
     }
 
     sendDialogueToTarget(text, iaContext = null) {

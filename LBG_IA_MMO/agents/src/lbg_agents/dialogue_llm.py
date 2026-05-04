@@ -1039,6 +1039,12 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             "comme petite récompense ou pénalité RP ; 0 ou absent = aucun effet réputation."
         )
         lines.append(
+            "Pour récompenser le joueur avec un objet d'inventaire (session), sur une ligne kind='quest' tu peux ajouter "
+            "player_item_id (string), player_item_qty_delta (entier non nul entre -50 et 50), et player_item_label (optionnel). "
+            'Exemple : ACTION_JSON: {"kind":"quest","quest_id":"q:loot","quest_step":1,"quest_accepted":true,'
+            '"player_item_id":"item:potion","player_item_qty_delta":1,"player_item_label":"Potion faible"}'
+        )
+        lines.append(
             "Si tu déclenches une aide, mets en général un petit reputation_delta positif (ex: 1 à 10) "
             "car l'aide améliore la confiance, sauf raison RP contraire."
         )
@@ -1046,7 +1052,8 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             "Contraintes: kind='aid' ou kind='quest'. "
             "Pour aid: deltas hunger/thirst/fatigue dans [-1,1]; reputation_delta dans [-100,100]. "
             "Pour quest: quest_id string non vide; quest_step int [0,10000]; quest_accepted bool; "
-            "quest_completed bool optionnel (false par défaut); reputation_delta int optionnel [-100,100]. "
+            "quest_completed bool optionnel (false par défaut); reputation_delta int optionnel [-100,100]; "
+            "optionnel sur la même ligne quest: player_item_id + player_item_qty_delta (non nul, [-50,50]) + player_item_label optionnel. "
             + ("Tu DOIS écrire ACTION_JSON car il est requis." if require_action else "Si aucune action n'est nécessaire, n'écris pas ACTION_JSON.")
         )
     return "\n".join(lines)
@@ -1286,6 +1293,22 @@ def _sanitize_world_action(action: dict[str, Any] | None) -> dict[str, Any] | No
     }
     if rep_d != 0:
         out["reputation_delta"] = int(rep_d)
+
+    pid_raw = action.get("player_item_id")
+    if isinstance(pid_raw, str) and pid_raw.strip():
+        qd_inv = i("player_item_qty_delta")
+        if qd_inv == 0 or qd_inv < -50 or qd_inv > 50:
+            return None
+        pid_s = pid_raw.strip()
+        if len(pid_s) > 64:
+            pid_s = pid_s[:64]
+        out["player_item_id"] = pid_s
+        out["player_item_qty_delta"] = int(qd_inv)
+        plab = action.get("player_item_label")
+        if isinstance(plab, str):
+            pl2 = plab.strip()
+            if pl2:
+                out["player_item_label"] = pl2[:80]
     return out
 
 

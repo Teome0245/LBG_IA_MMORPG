@@ -134,6 +134,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-02 | **Jalon #6 (suite)** : client `web_client` — `move` + `world_commit` stub (**E** / **RAMASSER**), objet `item:brindille` ; agent `ACTION_JSON` quest + `player_item_*` (sanitize + commit HTTP) ; tests `test_dialogue_llm`, `test_dialogue_http_app` ; `mmmorpg_PROTOCOL`, `plan_de_route`. |
 | 2026-05-02 | **Jalon #6** : `POST /v1/pilot/player-inventory` (commit `player_item_*` sans LLM, `player_id` requis) ; UI Pilot *Chat* ; tests `test_pilot_player_inventory` ; `pilot_web/README`, `mmmorpg_PROTOCOL`. |
 | 2026-05-02 | **LAN** : `fusion_env_lan.md` — recette express `deploy_web_client.sh` + `deploy_vm.sh front` + redémarrage `lbg-mmmorpg-ws` + note HTTPS dictée ; lien depuis `web_client/README.md`. **Agents** : `test_lyra_engagement_prompt` couvre `memory_hint` dans `build_system_prompt`. |
 | 2026-05-02 | **Rang 1** : Pilot `#/desktop` — dictée navigateur (Web Speech API) + **Appliquer → notepad_append** ; doc `desktop_hybride.md`. **Rang 2+** : `memory_hint` (clés flags PNJ) + fusion `session_summary` **toujours** côté serveur même sans `ia_context` ; `dialogue_llm`, `mmmorpg_PROTOCOL`, tests `test_ia_context_sanitize`. **Client** : `web_client/README.md` (build, collisions village). **Branche** : merge `feature/comfyui-map-2pass-mmo` → `main`. |
@@ -333,9 +334,9 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 **Règle** : une **seule** phrase actionnable à la fois ; quand elle est **faite**, la remplacer par la suivante et, si utile, ajouter une ligne dans **État courant** ci‑dessus.
 
 - [x] **Jalon #5 : Physique & Collisions (Priorité 3)** : Bloquer les murs du village (`hollow=False`), ajuster les marges et régénérer le PNG sans chevauchements (v1.4).
-- [/] **Jalon #6 : Interactions & Dialogue (Priorité 2/3)** : Bulles riches + ciblage PNJ **faits** ; **inventaire session v1** + **commit Pilot `POST /v1/pilot/player-inventory`** (debug sans LLM) **fait** ; suite : **interactions objets** (client) / enrichissement gameplay, etc.
+- [x] **Jalon #6 : Interactions & Dialogue (Priorité 2/3)** : inventaire session + commit Pilot ; **stub client** (`world_commit` + touche E) ; **ACTION_JSON quest + `player_item_*`** côté agent.
 
-**Étape actuelle** : **(A)** *Étoile du nord — rang 1* : renforcer l’**assistant poste / infra** (`desktop_control`, workers, audit, parcours du type Notepad / URL / mail — voir `desktop_hybride.md`). **(B)** *Jalon #6* : **interactions objets** côté client (stub ou ramassage) et/ou quêtes donnant des objets via ACTION_JSON, sans relâcher ADR 0004.
+**Étape actuelle** : **(A)** *Étoile du nord — rang 1* : renforcer l’**assistant poste / infra** (`desktop_control`, workers, audit — `desktop_hybride.md`). **(B)** suite *Jalon #6* : **objets utilisables**, quêtes à récompenses variées, polish UX ramassage — sans relâcher ADR 0004.
 
 **File d’attente (intention produit)** : **Développement de l'univers MMO** — implémentation des niveaux de détails de simulation PNJ (LOD), Ticks sociaux, événements dynamiques (voir `plan_mmorpg.md`).
 

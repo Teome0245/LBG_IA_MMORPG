@@ -196,6 +196,17 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                     if rep_i != 0:
                         rep_i = max(-100, min(100, rep_i))
                         flags_q["reputation_delta"] = rep_i
+                    pid = world_action.get("player_item_id")
+                    if isinstance(pid, str) and pid.strip():
+                        flags_q["player_item_id"] = pid.strip()
+                        try:
+                            qdi = int(world_action.get("player_item_qty_delta", 0))
+                        except (TypeError, ValueError):
+                            qdi = 0
+                        flags_q["player_item_qty_delta"] = qdi
+                        plab = world_action.get("player_item_label")
+                        if isinstance(plab, str) and plab.strip():
+                            flags_q["player_item_label"] = plab.strip()[:80]
                     commit = {
                         "npc_id": npc_id,
                         "flags": flags_q,
