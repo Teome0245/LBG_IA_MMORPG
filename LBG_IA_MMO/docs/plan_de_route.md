@@ -134,6 +134,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-02 | **LAN** : `fusion_env_lan.md` — recette express `deploy_web_client.sh` + `deploy_vm.sh front` + redémarrage `lbg-mmmorpg-ws` + note HTTPS dictée ; lien depuis `web_client/README.md`. **Agents** : `test_lyra_engagement_prompt` couvre `memory_hint` dans `build_system_prompt`. |
 | 2026-05-02 | **Rang 1** : Pilot `#/desktop` — dictée navigateur (Web Speech API) + **Appliquer → notepad_append** ; doc `desktop_hybride.md`. **Rang 2+** : `memory_hint` (clés flags PNJ) + fusion `session_summary` **toujours** côté serveur même sans `ia_context` ; `dialogue_llm`, `mmmorpg_PROTOCOL`, tests `test_ia_context_sanitize`. **Client** : `web_client/README.md` (build, collisions village). **Branche** : merge `feature/comfyui-map-2pass-mmo` → `main`. |
 | 2026-05-03 | **Rang 2+** : `session_summary` fusionné côté `mmmorpg_server` (quête joueur + PNJ ; client complète notes/humeur) ; clé `quest_snapshot` ; Pilot `#/desktop` champ résumé MMO + localStorage ; prompt desktop + PNJ ; tests sanitize enrichis. |
 | 2026-05-03 | **Rang 2 (persona MMO)** : `lyra_engagement` forcé `mmo_persona` sur le pont WS ; `ia_context.session_summary` sanitisé ; paragraphes prompt dialogue + `meta.lyra_engagement_resolved` ; client `web_client` envoie `session_summary` (quête + PNJ) ; tests `test_lyra_engagement_prompt`, `test_ia_context_sanitize` ; `lyra.md`, `mmmorpg_PROTOCOL`. |

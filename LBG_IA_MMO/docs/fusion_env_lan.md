@@ -154,6 +154,18 @@ LBG_DEPLOY_ROLE=all bash infra/scripts/deploy_vm.sh
     - Proxy `/v1/` : Vers l'API sur 140:8000.
 - **Déploiement** : Utiliser `deploy_web_client.sh` pour le MMO et `deploy_vm.sh front` pour Lyra.
 
+#### Recette express — client MMO (`/mmo/`) + pont IA (`mmmorpg_server`)
+
+1. **Build** : depuis la racine du dépôt (`…/LBG_IA_MMORPG`), le script regénère le bundle avec la base **`/mmo/`** ; en manuel : `cd web_client && npm ci && npm run build` (le déploiement officiel repasse par le script ci‑dessous).
+2. **Copie `pilot_web/mmo` (+ option VM front)** : depuis **`LBG_IA_MMO/`** :
+   ```bash
+   bash infra/scripts/deploy_web_client.sh
+   ```
+   Par défaut le script met à jour **`pilot_web/mmo/`** localement puis **rsync** vers **`/opt/LBG_IA_MMO/pilot_web/mmo/`** sur **`LBG_VM_HOST`** (souvent **192.168.0.110**). Pour **ne pas** toucher la VM : `LBG_MMO_WEB_DEPLOY_LOCAL_ONLY=1 bash infra/scripts/deploy_web_client.sh`.
+3. **Static Pilot + page Desktop** : **`pilot_web/index.html`** (dictée Web Speech, `#/desktop`) part avec le rôle **`front`** : `LBG_DEPLOY_ROLE=front LBG_VM_HOST=192.168.0.110 bash infra/scripts/deploy_vm.sh`.
+4. **Serveur WebSocket MMO (VM 245)** : après mise à jour de `mmmorpg_server` (ex. `session_summary` / `memory_hint` sur le pont IA), redémarrer l’unité **`lbg-mmmorpg-ws`** sur la VM MMO ou repasser **`LBG_DEPLOY_ROLE=mmo`** pour resynchroniser et recharger les services.
+5. **Dictée navigateur** : l’API **SpeechRecognition** exige en pratique **HTTPS** ou **localhost** ; un Pilot servi en HTTP nu sur une IP LAN peut bloquer le micro. Prévoir TLS (Nginx), tunnel, ou test local.
+
 **Alternative** : garder le **frontend sur 140** avec le reste LBG_IA pour limiter la latence et la config réseau.
 
 ---
@@ -170,6 +182,7 @@ LBG_DEPLOY_ROLE=all bash infra/scripts/deploy_vm.sh
 
 | Date | Changement |
 |------|------------|
+| 2026-05-02 | **Recette LAN** : sous‑section *Recette express* (build `web_client`, `deploy_web_client.sh`, `deploy_vm.sh front`, redémarrage `lbg-mmmorpg-ws`, contrainte HTTPS pour dictée `#/desktop`). |
 | 2026-04-12 | Conflit **:80** : **Traefik** LBG_IA (`orchestrateur-traefik`) vs nginx pilot — **port 8080** ou route Traefik ; précisions § option front. |
 | 2026-04-12 | **`LBG_CORS_ORIGINS`** (backend), exemple **Nginx** `infra/nginx/pilot_web_110.conf.example`, smoke **`smoke_vm_lan.sh`**. |
 | 2026-04-12 | Env partagé sur 3 VM : `LBG_ORCHESTRATOR_URL` / `LBG_AGENT_*` en **192.168.0.140** (pas loopback) ; précisions dans la table. |

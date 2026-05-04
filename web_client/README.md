@@ -18,4 +18,4 @@ La grille de collision côté client (marcher autour des bâtiments) est piloté
 
 ## Déploiement LAN
 
-Recettes et variables d’environnement : voir `LBG_IA_MMO/docs/fusion_env_lan.md` et le runbook du monorepo.
+Recette pas à pas (build, `deploy_web_client.sh`, VM front, redémarrage `mmmorpg`) : **`LBG_IA_MMO/docs/fusion_env_lan.md`** (section *Recette express — client MMO*). Variables d’environnement : même fichier et `infra/secrets/lbg.env.example`.

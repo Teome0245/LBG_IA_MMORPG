@@ -50,6 +50,23 @@ def test_build_prompt_includes_quest_snapshot() -> None:
     assert "step=1" in p
 
 
+def test_build_prompt_includes_memory_hint_from_server_merge() -> None:
+    """memory_hint (clés flags PNJ sanitisées côté pont) apparaît dans le bloc Résumé session."""
+    p = dialogue_llm.build_system_prompt(
+        "Mara",
+        {
+            "world_npc_id": "npc:innkeeper",
+            "session_summary": {
+                "memory_hint": "aid_hunger,reputation_delta",
+                "tracked_quest": "q:side (étape 0)",
+            },
+        },
+    )
+    assert "Mémoire monde PNJ" in p
+    assert "reputation_delta" in p
+    assert "aid_hunger" in p
+
+
 def test_desktop_plan_includes_session_summary() -> None:
     import os
 
@@ -65,6 +82,28 @@ def test_desktop_plan_includes_session_summary() -> None:
         )
         assert "Résumé MMO" in p or "session_summary" in p.lower()
         assert "village" in p
+    finally:
+        if old is None:
+            os.environ.pop("LBG_DIALOGUE_DESKTOP_PLAN", None)
+        else:
+            os.environ["LBG_DIALOGUE_DESKTOP_PLAN"] = old
+
+
+def test_desktop_plan_includes_memory_hint_in_session_summary() -> None:
+    import os
+
+    old = os.environ.get("LBG_DIALOGUE_DESKTOP_PLAN")
+    try:
+        os.environ["LBG_DIALOGUE_DESKTOP_PLAN"] = "1"
+        p = dialogue_llm.build_system_prompt(
+            "Assistant",
+            {
+                "_desktop_plan": True,
+                "session_summary": {"memory_hint": "quest_ready,aid_hunger"},
+            },
+        )
+        assert "Mémoire monde PNJ" in p
+        assert "quest_ready" in p
     finally:
         if old is None:
             os.environ.pop("LBG_DIALOGUE_DESKTOP_PLAN", None)
