@@ -482,6 +482,16 @@
           <span class="muted">agit sur <code>context.world_npc_id</code> (ou <code>npc:merchant</code> par défaut)</span>
         </p>
         <p class="muted" style="margin-top:0.5rem">
+          Inventaire joueur (commit WS, sans LLM) — <code>POST /v1/pilot/player-inventory</code> :
+          <input type="text" id="pilot-inv-player-id" placeholder="player_id (welcome MMO)" style="max-width:19rem" />
+          <input type="text" id="pilot-inv-item-id" placeholder="item_id" style="max-width:11rem" value="item:potion_test" />
+          <input type="number" id="pilot-inv-qty" value="1" step="1" style="width:4.2rem" title="qty_delta" />
+          <input type="text" id="pilot-inv-label" placeholder="label (opt.)" style="max-width:10rem" />
+          <button type="button" id="btn-pilot-inv-preset-qty">Appliquer qty</button>
+          <button type="button" id="btn-pilot-inv-minus-one">−1</button>
+          <span class="muted">PNJ = <code>world_npc_id</code> du contexte (même défaut que Réputation). Token service si requis.</span>
+        </p>
+        <p class="muted" style="margin-top:0.5rem">
           Monde (aid, sans LLM) :
           <button type="button" id="btn-aid-help">Aider (−jauges, +rep)</button>
           <button type="button" id="btn-aid-reset">Reset jauges (→0)</button>
@@ -3656,6 +3666,41 @@
       try { document.getElementById("intent-pretty").innerHTML = renderPretty(out.json); } catch (_) {}
     }
 
+    async function commitPlayerInventoryDelta(qtyDelta) {
+      const npcId = getWorldNpcIdOrDefault();
+      const base = getBase();
+      const pid = (document.getElementById("pilot-inv-player-id") && String(document.getElementById("pilot-inv-player-id").value || "").trim()) || "";
+      const itemId = (document.getElementById("pilot-inv-item-id") && String(document.getElementById("pilot-inv-item-id").value || "").trim()) || "";
+      const qtyEl = document.getElementById("pilot-inv-qty");
+      let q = qtyDelta;
+      if (qtyDelta === null || qtyDelta === undefined) {
+        try {
+          q = qtyEl ? parseInt(String(qtyEl.value || "0"), 10) : 0;
+        } catch (_) {
+          q = 0;
+        }
+      }
+      const labRaw = document.getElementById("pilot-inv-label") && String(document.getElementById("pilot-inv-label").value || "").trim();
+      if (!pid) {
+        alert("player_id requis (copier welcome.player_id depuis le client MMO ou les logs WS).");
+        return;
+      }
+      if (!itemId) {
+        alert("item_id requis.");
+        return;
+      }
+      const body = { npc_id: npcId, player_id: pid, item_id: itemId, qty_delta: q };
+      if (labRaw) body.label = labRaw;
+      const out = await postJson(base + "/v1/pilot/player-inventory", body);
+      if (out.json) {
+        window.__last_intent_json = out.json;
+        document.getElementById("intent-out").textContent = JSON.stringify(out.json, null, 2);
+        try { document.getElementById("intent-pretty").innerHTML = renderPretty(out.json); } catch (_) {}
+      } else if (out.status && out.status !== 200) {
+        alert("player-inventory HTTP " + out.status + (out.text ? ": " + out.text.slice(0, 200) : ""));
+      }
+    }
+
     async function commitReputationDelta(delta) {
       const npcId = getWorldNpcIdOrDefault();
       const base = getBase();
@@ -3696,6 +3741,12 @@
     document.getElementById("btn-rep-plus").addEventListener("click", () => commitReputationDelta(11));
     document.getElementById("btn-rep-minus").addEventListener("click", () => commitReputationDelta(-5));
     document.getElementById("btn-rep-reset").addEventListener("click", () => resetReputationToZero());
+    try {
+      document.getElementById("btn-pilot-inv-preset-qty").addEventListener("click", () => commitPlayerInventoryDelta(null));
+    } catch (_) {}
+    try {
+      document.getElementById("btn-pilot-inv-minus-one").addEventListener("click", () => commitPlayerInventoryDelta(-1));
+    } catch (_) {}
 
     async function getWorldLyraSnapshot(npcId) {
       const base = getBase();

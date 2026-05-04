@@ -781,6 +781,73 @@ async def pilot_commit_reputation(
     return {"ok": True, "trace_id": trace_id, "commit_result": commit_result}
 
 
+@router.post("/player-inventory", tags=["pilot"])
+async def pilot_commit_player_inventory(
+    payload: dict[str, object],
+    x_lbg_service_token: str | None = Header(default=None, alias="X-LBG-Service-Token"),
+) -> dict[str, object]:
+    """
+    Applique ``player_item_id`` + ``player_item_qty_delta`` (+ ``player_item_label`` optionnel)
+    via le HTTP interne du serveur WS, **sans** LLM.
+
+    Body (JSON) :
+      - ``npc_id`` : PNJ « contexte » du commit (même mécanisme que les autres commits dialogue).
+      - ``player_id`` : UUID joueur session WS (``welcome.player_id``).
+      - ``item_id`` : id d’objet (≤ 64 car. côté serveur jeu).
+      - ``qty_delta`` : entier non nul, borné **[-50, 50]** (aligné ``mmmorpg_server``).
+      - ``label`` : optionnel (≤ 80 car.), utile quand une nouvelle pile est créée.
+    """
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "JSON objet requis"})
+
+    npc_id = payload.get("npc_id")
+    player_id = payload.get("player_id")
+    item_id = payload.get("item_id")
+    qty_raw = payload.get("qty_delta")
+    label_raw = payload.get("label")
+
+    if not isinstance(npc_id, str) or not npc_id.strip():
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "npc_id requis"})
+    if not isinstance(player_id, str) or not player_id.strip():
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "player_id requis (UUID WS)"})
+    if not isinstance(item_id, str) or not item_id.strip():
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "item_id requis"})
+    try:
+        qd = int(qty_raw)  # type: ignore[arg-type]
+    except Exception:
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "qty_delta entier requis"})
+    if qd == 0:
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "qty_delta non nul"})
+    if qd < -50 or qd > 50:
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "qty_delta hors [-50,50]"})
+
+    iid = item_id.strip()
+    if len(iid) > 64:
+        raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "item_id trop long"})
+
+    flags: dict[str, object] = {"player_item_id": iid, "player_item_qty_delta": qd}
+    if label_raw is not None and isinstance(label_raw, str):
+        lab = label_raw.strip()
+        if lab:
+            if len(lab) > 80:
+                raise HTTPException(status_code=400, detail={"error": "bad_request", "hint": "label trop long"})
+            flags["player_item_label"] = lab
+
+    _require_internal_token(x_lbg_service_token)
+
+    trace_id = uuid.uuid4().hex
+    commit_result = await try_commit_dialogue(
+        trace_id=trace_id,
+        npc_id=npc_id.strip(),
+        flags=flags,
+        player_id=player_id.strip(),
+    )
+    if commit_result is None:
+        return {"ok": False, "trace_id": trace_id, "attempted": False, "error": "commit_disabled"}
+
+    return {"ok": True, "trace_id": trace_id, "commit_result": commit_result}
+
+
 @router.post("/aid", tags=["pilot"])
 async def pilot_apply_aid_to_world(
     payload: AidRequest,

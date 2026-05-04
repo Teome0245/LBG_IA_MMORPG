@@ -116,7 +116,7 @@ Corps JSON :
 
 **Inventaire** : `player_item_id` (str ≤ 64) et `player_item_qty_delta` (int, −50…50, non nul) doivent être présents **ensemble** ; `player_item_label` (str ≤ 80) optionnel pour le libellé d’une nouvelle pile. Sans `player_id`, le commit est **refusé** (sans consommer l’idempotence si la validation échoue avant enregistrement du `trace_id`).
 
-Pilot / backend : lors d’un `POST /v1/pilot/route`, le backend transmet `player_id` au commit interne s’il peut le déduire de `context.player_id`, `context.mmmorpg_player_id`, ou d’un `actor_id` de la forme `player:<uuid>`.
+Pilot / backend : lors d’un `POST /v1/pilot/route`, le backend transmet `player_id` au commit interne s’il peut le déduire de `context.player_id`, `context.mmmorpg_player_id`, ou d’un `actor_id` de la forme `player:<uuid>`. Pour un **commit inventaire hors LLM**, utiliser aussi `POST /v1/pilot/player-inventory` (corps : `npc_id`, `player_id`, `item_id`, `qty_delta`, `label` optionnel) — voir `pilot_web/README.md`.
 
 ## Serveur → client
 
