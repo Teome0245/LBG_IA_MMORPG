@@ -97,3 +97,28 @@ def test_merge_session_summaries_server_wins_tracked() -> None:
     assert merged is not None
     assert "q:server" in (merged.get("tracked_quest") or "")
     assert merged.get("player_note") == "hello"
+
+
+def test_sanitize_ia_history_accepts_and_truncates() -> None:
+    from mmmorpg_server.ia_context_sanitize import sanitize_ia_history
+
+    long_u = "u" * 900
+    raw = [
+        {"role": "user", "content": "  hi  "},
+        {"role": "assistant", "content": "Salut"},
+        {"role": "system", "content": "no"},
+        {"role": "user", "content": long_u},
+    ]
+    out = sanitize_ia_history(raw, max_messages=10, max_content_len=100)
+    assert len(out) == 3
+    assert out[0]["content"] == "hi"
+    assert len(out[2]["content"]) <= 100
+
+
+def test_sanitize_ia_history_caps_count() -> None:
+    from mmmorpg_server.ia_context_sanitize import sanitize_ia_history
+
+    raw = [{"role": "user", "content": str(i)} for i in range(40)]
+    out = sanitize_ia_history(raw, max_messages=5, max_content_len=50)
+    assert len(out) == 5
+    assert out[-1]["content"] == "39"

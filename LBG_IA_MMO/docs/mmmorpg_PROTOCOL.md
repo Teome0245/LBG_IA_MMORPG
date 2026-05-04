@@ -69,6 +69,7 @@ pour déclencher une réplique PNJ **après** `hello` (même mécanisme que `hel
 | `_active_quest_id` | ID quête (string ≤ 80), si non déjà fusionné côté client. |
 | `_require_action_json`, `_no_cache` | Booléens (debug / UI). |
 | `_world_action_kind` | `"aid"` ou `"quest"` si l’UI impose le type d’`ACTION_JSON`. |
+| `history` | Liste optionnelle d’objets `{ "role": "user" \| "assistant", "content": "..." }` : **tours précédents** de la conversation avec ce PNJ (le message **courant** du joueur est envoyé séparément). Sanitisée côté serveur (troncature, plafond de tours). |
 
 **Récompense inventaire via LLM** : lorsque `LBG_DIALOGUE_WORLD_ACTIONS` est actif côté agent, une ligne `ACTION_JSON` avec `kind:"quest"` peut inclure `player_item_id`, `player_item_qty_delta` (entier non nul dans [-50, 50]) et `player_item_label` (optionnel) ; ils sont sanitisés puis transmis dans `output.commit.flags` comme les autres champs quête (même sémantique que `player_item_*` en `world_commit` / HTTP interne).
 

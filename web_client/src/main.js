@@ -47,6 +47,10 @@ class App {
         this.dialogueTargetByTrace = new Map();
         this.worldEvents = [];
         this.seenWorldEventTraceIds = new Set();
+        /** @type {Map<string, Array<{role: string, content: string}>>} */
+        this.dialogueHistoryByNpcId = new Map();
+        /** @type {Map<string, string>} dernier trace_id PNJ déjà enregistré dans l'historique (placeholder → remplace) */
+        this._lastDialogueTraceByNpcId = new Map();
         this.questLogById = new Map();
         this.activeQuestId = "";
         this.raceDisplayById = Object.create(null);
@@ -167,6 +171,52 @@ class App {
         this.updateActiveQuestHUD();
     }
 
+    _dialogueHistoryLimit() {
+        return 24;
+    }
+
+    _historySnapshotForNpc(npcId) {
+        const id = String(npcId || "").trim();
+        if (!id) return [];
+        const arr = this.dialogueHistoryByNpcId.get(id);
+        return Array.isArray(arr) ? arr.map((x) => ({ role: x.role, content: x.content })) : [];
+    }
+
+    recordNpcDialogueAssistant(npcId, text, traceId) {
+        const id = String(npcId || "").trim();
+        const t = typeof text === "string" ? text.trim() : "";
+        if (!id || !t) return;
+        const tid = typeof traceId === "string" ? traceId.trim() : "";
+        const lim = this._dialogueHistoryLimit();
+        const cap = 1800;
+        const chunk = t.length > cap ? `${t.slice(0, cap)}…` : t;
+        let arr = this.dialogueHistoryByNpcId.get(id);
+        if (!Array.isArray(arr)) arr = [];
+        const prevTrace = tid ? this._lastDialogueTraceByNpcId.get(id) : null;
+        if (tid && prevTrace === tid && arr.length && arr[arr.length - 1].role === "assistant") {
+            arr[arr.length - 1].content = chunk;
+        } else {
+            arr.push({ role: "assistant", content: chunk });
+            while (arr.length > lim) arr.shift();
+        }
+        if (tid) this._lastDialogueTraceByNpcId.set(id, tid);
+        this.dialogueHistoryByNpcId.set(id, arr);
+    }
+
+    appendNpcDialogueUser(npcId, text) {
+        const id = String(npcId || "").trim();
+        const t = typeof text === "string" ? text.trim() : "";
+        if (!id || !t) return;
+        const lim = this._dialogueHistoryLimit();
+        const cap = 1800;
+        const chunk = t.length > cap ? `${t.slice(0, cap)}…` : t;
+        let arr = this.dialogueHistoryByNpcId.get(id);
+        if (!Array.isArray(arr)) arr = [];
+        arr.push({ role: "user", content: chunk });
+        while (arr.length > lim) arr.shift();
+        this.dialogueHistoryByNpcId.set(id, arr);
+    }
+
     tryStubPickupFromNpc() {
         const target = this.getDialogueTarget();
         if (!target || !target.id) {
@@ -224,6 +274,11 @@ class App {
         if (Object.keys(summary).length) {
             merged.session_summary = summary;
         }
+        const priorHist = this._historySnapshotForNpc(target.id);
+        if (priorHist.length) {
+            merged.history = priorHist;
+        }
+        this.appendNpcDialogueUser(target.id, clean);
         const outCtx = Object.keys(merged).length ? merged : null;
         this.network.sendChat(clean, target.id, target.name, this.playerLocalPos, outCtx);
         const echo = clean.length > 120 ? `${clean.slice(0, 117)}…` : clean;
@@ -283,6 +338,8 @@ class App {
         this.addLog(`Bienvenue ${data.player_id} !`, 'system');
         this.worldEvents = [];
         this.seenWorldEventTraceIds.clear();
+        this.dialogueHistoryByNpcId.clear();
+        this._lastDialogueTraceByNpcId.clear();
         this.renderWorldEvents();
         this.renderQuestLog();
         this.renderer.setPlayerId(data.player_id);
@@ -336,6 +393,7 @@ class App {
                     kind: "npc",
                     subtitle: this._formatRoleSubtitle(target),
                 });
+                this.recordNpcDialogueAssistant(target.id, msg.npc_reply, msg.trace_id || "");
                 this.addLog(`${target.name}: ${msg.npc_reply}`, 'npc');
             }
             if (msg.world_event) {

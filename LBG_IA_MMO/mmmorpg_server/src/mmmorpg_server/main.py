@@ -19,6 +19,7 @@ from mmmorpg_server.game_state import GameState, NPC_CONVERSATION_RESUME_DELAY_S
 from mmmorpg_server.ia_context_sanitize import (
     build_server_session_summary_parts,
     merge_session_summaries,
+    sanitize_ia_history,
 )
 from mmmorpg_server.internal_http import start_internal_http
 from mmmorpg_server.persistence import load_state, save_state
@@ -221,11 +222,15 @@ def _queue_ia_bridge(
     )
     if ssum_merged:
         ctx["session_summary"] = ssum_merged
+    if isinstance(ia_context, dict):
+        hist_san = sanitize_ia_history(ia_context.get("history"))
+        if hist_san:
+            ctx["history"] = hist_san
     # Permet aux clients/outils d'injecter un mini contexte vers l'IA (borné).
     # Important: ne pas permettre d'écraser `world_npc_id` ni d'injecter des structures arbitraires.
     if isinstance(ia_context, dict) and ia_context:
         for k, v in ia_context.items():
-            if k == "session_summary":
+            if k in ("session_summary", "history"):
                 continue
             if k in ("_require_action_json", "_no_cache"):
                 if isinstance(v, bool):

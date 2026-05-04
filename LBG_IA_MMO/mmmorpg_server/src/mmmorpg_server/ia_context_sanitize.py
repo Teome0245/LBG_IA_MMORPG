@@ -39,6 +39,46 @@ def sanitize_session_summary(raw: object) -> dict[str, str] | None:
     return out if out else None
 
 
+def sanitize_ia_history(
+    raw: object,
+    *,
+    max_messages: int = 24,
+    max_content_len: int = 800,
+) -> list[dict[str, str]]:
+    """
+    Historique multi-tours pour le pont IA : liste d'objets ``{ "role": "user"|"assistant", "content": "..." }``.
+    Borné pour limiter la taille des payloads WS et éviter l'injection de structures arbitraires.
+    """
+    if not isinstance(raw, list) or not raw:
+        return []
+    try:
+        lim = int(max_messages)
+    except (TypeError, ValueError):
+        lim = 24
+    lim = max(0, min(lim, 32))
+    try:
+        cmax = int(max_content_len)
+    except (TypeError, ValueError):
+        cmax = 800
+    cmax = max(64, min(cmax, 2000))
+
+    out: list[dict[str, str]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        role = item.get("role")
+        content = item.get("content")
+        if role not in ("user", "assistant") or not isinstance(content, str):
+            continue
+        c = content.strip()
+        if not c:
+            continue
+        out.append({"role": str(role), "content": c[:cmax] if len(c) > cmax else c})
+    if len(out) > lim:
+        out = out[-lim:]
+    return out
+
+
 def _memory_hint_from_npc_flags(flags: dict[str, Any] | None) -> str | None:
     """Indice léger « mémoire monde » : noms de clés flags PNJ (sans valeurs), ordre stable."""
     if not isinstance(flags, dict) or not flags:

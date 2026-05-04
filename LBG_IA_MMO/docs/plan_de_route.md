@@ -134,6 +134,8 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-03 | **MMO collisions / client** : `mmo_server` — `LBG_MMO_CORS_DEV`, doc tests `pip install -e ".[dev]"` + `httpx` ; CI `test_pytest.sh` installe `mmo_server[dev]` ; `lbg.env.example` (CORS + collision-grid). **WS** : commentaire tick PNJ = même grille que joueurs ; test `test_npc_tick_blocked_by_tile_grid_like_player`. **Web** : `web_client/README` (ports 8050, CORS). |
+| 2026-05-02 | **Dialogue multi-tours** : `ia_context.history` sanitisé sur le pont WS ; client MMO maintient l’historique par PNJ (+ fusion placeholder→réplique finale) ; prompt « cohérence / incohérences joueur » ; empreinte `history` dans la clé cache LLM (`dialogue_llm`) ; tests `test_ia_context_sanitize`, `test_dialogue_llm`. |
 | 2026-05-02 | **Jalon #6 (suite)** : client `web_client` — `move` + `world_commit` stub (**E** / **RAMASSER**), objet `item:brindille` ; agent `ACTION_JSON` quest + `player_item_*` (sanitize + commit HTTP) ; tests `test_dialogue_llm`, `test_dialogue_http_app` ; `mmmorpg_PROTOCOL`, `plan_de_route`. |
 | 2026-05-02 | **Jalon #6** : `POST /v1/pilot/player-inventory` (commit `player_item_*` sans LLM, `player_id` requis) ; UI Pilot *Chat* ; tests `test_pilot_player_inventory` ; `pilot_web/README`, `mmmorpg_PROTOCOL`. |
 | 2026-05-02 | **LAN** : `fusion_env_lan.md` — recette express `deploy_web_client.sh` + `deploy_vm.sh front` + redémarrage `lbg-mmmorpg-ws` + note HTTPS dictée ; lien depuis `web_client/README.md`. **Agents** : `test_lyra_engagement_prompt` couvre `memory_hint` dans `build_system_prompt`. |

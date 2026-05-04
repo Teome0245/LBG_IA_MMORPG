@@ -399,7 +399,15 @@ def _cache_key(*, speaker: str, player_text: str, context: dict[str, Any]) -> st
             ctx_hash = hashlib.sha256(blob).hexdigest()[:16]
         except Exception:
             ctx_hash = "ctxerr"
-    return f"{speaker.strip()}|{player_text.strip()}|{lyra_v}|{ctx_hash}|pf={_resolve_profile(context)}"
+    hist_tail = normalize_history(context.get("history"), max_messages=64)
+    hist_h = ""
+    if hist_tail:
+        try:
+            hb = json.dumps(hist_tail, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            hist_h = hashlib.sha256(hb).hexdigest()[:12]
+        except Exception:
+            hist_h = "herr"
+    return f"{speaker.strip()}|{player_text.strip()}|{lyra_v}|{ctx_hash}|pf={_resolve_profile(context)}|h={hist_h}"
 
 
 def _cache_get(key: str) -> str | None:
@@ -957,6 +965,13 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
     sum_line = _format_session_summary_for_prompt(context)
     if sum_line:
         lines.append(sum_line)
+    if normalize_history(context.get("history"), max_messages=1):
+        lines.append(
+            "Ce joueur et toi avez déjà échangé : l'historique ci-dessous reprend la conversation en cours (ordre chronologique). "
+            "Reste cohérent avec tes répliques précédentes. "
+            "Si le joueur contredit le « Résumé session » (faits du monde ou quête) ou se contredit par rapport à ce qu'il vient d'affirmer dans l'historique, "
+            "réagis en une courte phrase, **dans ton rôle** (doute poli, relance, taquinerie) — sans vocabulaire moderne hors cadre ni accusation violente."
+        )
     for key, label in (
         ("scene", "Lieu / scène"),
         ("world_hint", "Monde"),

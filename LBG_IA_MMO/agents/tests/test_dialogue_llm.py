@@ -408,6 +408,19 @@ def test_build_system_prompt_lyra_race_overrides_registry(monkeypatch: pytest.Mo
     wc.reset_cache()
 
 
+def test_cache_key_changes_when_history_present() -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    c0 = {"world_npc_id": "npc:x", "history": []}
+    c1 = {
+        "world_npc_id": "npc:x",
+        "history": [{"role": "user", "content": "Salut"}, {"role": "assistant", "content": "Bienvenue."}],
+    }
+    k0 = mod._cache_key(speaker="PNJ", player_text="Quoi de neuf", context=c0)
+    k1 = mod._cache_key(speaker="PNJ", player_text="Quoi de neuf", context=c1)
+    assert k0 != k1
+
+
 def test_cache_key_changes_when_reputation_changes(monkeypatch: pytest.MonkeyPatch) -> None:
     # Activer le cache (sinon la clé n'est pas utilisée, mais on teste la fonction interne).
     from lbg_agents import dialogue_llm as mod
@@ -487,6 +500,17 @@ def test_sanitize_world_action_quest_rejects_bad_player_item_qty() -> None:
         )
         is None
     )
+
+
+def test_build_system_prompt_mentions_coherence_when_history() -> None:
+    s = build_system_prompt(
+        "Mara",
+        {
+            "world_npc_id": "npc:innkeeper",
+            "history": [{"role": "user", "content": "Je suis roi."}, {"role": "assistant", "content": "Vraiment ?"}],
+        },
+    )
+    assert "historique" in s.lower() or "cohérent" in s.lower()
 
 
 def test_build_system_prompt_desktop_plan_branch(monkeypatch: pytest.MonkeyPatch) -> None:

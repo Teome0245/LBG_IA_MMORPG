@@ -14,11 +14,17 @@ Les artefacts servis en prod sont typiquement dans `web_client/dist/` (voir scri
 
 ## Collisions village
 
-La grille de collision côté client (marcher autour des bâtiments) est pilotée par les assets / logique JS du build (ex. `villageCollisionGrid` / chargement grille alignée sur la carte). Après changement de carte ou de marge bâtiments, regénérer ou resynchroniser la grille avec le serveur selon le flux du dépôt.
+Après connexion au WS, le client tente **`GET /v1/world/collision-grid`** sur le **`mmo_server`** (même hôte que le champ IP de connexion ; ports essayés : **8050**, 8000, 8010, …). Le JSON `watabou_grid_v1` alimente `src/villageCollisionGrid.js` : prédiction locale (ne pas envoyer de `move` vers une tuile non franchissable).
+
+**CORS** : le navigateur doit être autorisé par le `mmo_server` — `LBG_MMO_CORS_ORIGINS` (liste d’origines) ou, en poste de dev si la liste est vide, `LBG_MMO_CORS_DEV=1` (localhost Vite 5173 / preview 4173). Voir `LBG_IA_MMO/mmo_server/README.md` et `infra/secrets/lbg.env.example`.
 
 ## Ramassage (stub)
 
 Touche **E** ou bouton **RAMASSER** (HUD PNJ) : envoi d’un `move` avec `world_commit` (`player_item_*`) vers le PNJ sélectionné si le joueur est assez proche. Sans LLM — voir `LBG_IA_MMO/docs/mmmorpg_PROTOCOL.md`.
+
+## Dialogue — mémoire de conversation (multi-tours)
+
+Le client envoie `ia_context.history` (tours précédents **user** / **assistant**, par PNJ) au serveur ; le pont fusionne avec le résumé session. L’historique est **local à la session** (perdu à la déconnexion). Pour que le PNJ tienne compte des contradictions du joueur, le prompt agent inclut une consigne de cohérence (pas de persistance LLM hors fil de messages).
 
 ## Déploiement LAN
 
