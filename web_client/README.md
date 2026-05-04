@@ -18,6 +18,21 @@ Après connexion au WS, le client tente **`GET /v1/world/collision-grid`** sur l
 
 **CORS** : le navigateur doit être autorisé par le `mmo_server` — `LBG_MMO_CORS_ORIGINS` (liste d’origines) ou, en poste de dev si la liste est vide, `LBG_MMO_CORS_DEV=1` (localhost Vite 5173 / preview 4173). Voir `LBG_IA_MMO/mmo_server/README.md` et `infra/secrets/lbg.env.example`.
 
+### Carte “jolie” vs grille collisions (piège classique)
+
+Le PNG Watabou (`pixie_seat.png`) est **artistique** et n’est pas garanti “métrique” (cadrage/flip/échelle). La **vérité** gameplay reste la grille collisions (`pixie_seat.grid.json`).  
+
+Dans ce client, on applique une **correction** au fond Watabou (flip/scale) pour le faire coller à la grille :
+
+- par défaut : **`pflipz=1`** et **`ps≈0.714`** (calibré pour Pixie Seat)
+- debug : superposition de la grille “moche” (`overlay=1`) et réglages :
+  - `overlay=1&alpha=0.45` : affiche le calque premium par‑dessus
+  - `flipz=1` : flip N/S du calque overlay (debug seulement)
+  - `dx`/`dz` (mètres) : décalage overlay (debug seulement)
+  - `os` : scale overlay (debug seulement)
+
+Exemple : `...?overlay=1&alpha=0.45` (le fond est corrigé automatiquement).
+
 ## Ramassage (stub)
 
 Touche **E** ou bouton **RAMASSER** (HUD PNJ) : envoi d’un `move` avec `world_commit` (`player_item_*`) vers le PNJ sélectionné si le joueur est assez proche. Sans LLM — voir `LBG_IA_MMO/docs/mmmorpg_PROTOCOL.md`.

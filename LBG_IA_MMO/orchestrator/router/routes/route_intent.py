@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from lbg_agents.dispatch import invoke_after_route
 
 from introspection.deterministic_classifier import DeterministicIntentClassifier
+from introspection.llm_intent_classifier import hybrid_classify
 from services import metrics as svc_metrics
 from shared_registry import capability_registry
 
@@ -52,6 +53,8 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
     trace_id = ctx.get("_trace_id")
     trace_id = trace_id if isinstance(trace_id, str) and trace_id.strip() else None
 
+    route_meta: dict[str, object] = {}
+
     # Sonde DevOps : priorité absolue (valider le fil de transmission même avec npc_name / autre bruit).
     if isinstance(ctx.get("devops_action"), dict):
         intent, confidence = ("devops_probe", 1.0)
@@ -78,7 +81,7 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
     else:
         # Priorité : si le texte exprime clairement une quête/mission/etc., respecter le classifieur
         # même si un PNJ est ciblé (ex: une quête donnée par un PNJ).
-        intent, confidence = _classifier.classify(payload.text)
+        intent, confidence, route_meta = hybrid_classify(payload.text, ctx, _classifier.classify)
 
         # Règle produit : si un NPC est explicitement ciblé côté client, forcer le dialogue
         # uniquement quand le texte n'a pas déjà déclenché une autre intention "métier".
@@ -99,6 +102,9 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
         raise
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     svc_metrics.inc("orchestrator_route_success_total")
+    out_body: dict[str, object] = {"capability": cap.name, **agent_out}
+    if route_meta:
+        out_body["orchestrator_route_meta"] = route_meta
     print(
         json.dumps(
             {
@@ -109,6 +115,7 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
                 "confidence": confidence,
                 "routed_to": cap.routed_to,
                 "elapsed_ms": elapsed_ms,
+                "intent_source": route_meta.get("intent_source") if route_meta else None,
             },
             ensure_ascii=False,
         )
@@ -117,6 +124,6 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
         intent=intent,
         confidence=confidence,
         routed_to=cap.routed_to,
-        output={"capability": cap.name, **agent_out},
+        output=out_body,
     )
 

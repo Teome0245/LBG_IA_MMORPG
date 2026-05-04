@@ -8,6 +8,8 @@ set -euo pipefail
 # - smoke_lan_minimal.sh (non destructif, sans LLM)
 #
 # Options (activation explicite) :
+# - smoke_lan_core_desktop.sh si LBG_SMOKE_WITH_CORE_DESKTOP=1 (cœur + pilot/status, sans :8773 ; ne remplace pas minimal)
+# - smoke_lan_pilot_agent_proxies.sh si LBG_SMOKE_WITH_AGENT_PROXIES=1 (GET healthz agents via backend)
 # - smoke_pilot_route_lyra_meta_lan.sh (appelle /v1/pilot/route, peut toucher au LLM selon routing)
 # - smoke_ws_ia_final_only_json.sh (WS→IA final-only, dépend du LLM)
 #
@@ -31,6 +33,8 @@ set -euo pipefail
 #   LBG_SMOKE_WITH_GAMEPLAY_V2=1 active le jalon #2 (WS move+world_commit → snapshot :8773)
 #   LBG_SMOKE_WITH_DEVOPS_SYSTEMD=1 active smoke_devops_systemd_lan.sh (dry-run par défaut ; allowlist sur core)
 #   LBG_SMOKE_WITH_DEVOPS_SELFCHECK=1 active smoke_devops_selfcheck_lan.sh (bundle diagnostic ; dry-run par défaut)
+#   LBG_SMOKE_WITH_CORE_DESKTOP=1 active smoke_lan_core_desktop.sh (cœur core + pilot/status ; sans :8773 MMO ; pas de POST route par défaut)
+#   LBG_SMOKE_WITH_AGENT_PROXIES=1 active smoke_lan_pilot_agent_proxies.sh (GET healthz dialogue/desktop/pm via backend)
 #
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -50,6 +54,8 @@ WITH_GAMEPLAY_V1="${LBG_SMOKE_WITH_GAMEPLAY_V1:-0}"
 WITH_GAMEPLAY_V2="${LBG_SMOKE_WITH_GAMEPLAY_V2:-0}"
 WITH_DEVOPS_SYSTEMD="${LBG_SMOKE_WITH_DEVOPS_SYSTEMD:-0}"
 WITH_DEVOPS_SELFCHECK="${LBG_SMOKE_WITH_DEVOPS_SELFCHECK:-0}"
+WITH_CORE_DESKTOP="${LBG_SMOKE_WITH_CORE_DESKTOP:-0}"
+WITH_AGENT_PROXIES="${LBG_SMOKE_WITH_AGENT_PROXIES:-0}"
 
 step() {
   local label="$1"
@@ -65,7 +71,7 @@ step() {
 }
 
 echo "=== Smoke LAN quick ==="
-echo "timeout_s=${TIMEOUT_S} minimal=${TIMEOUT_MINIMAL} pilot=${TIMEOUT_PILOT} ws=${TIMEOUT_WS} repeat=${REPEAT} with_rep=${WITH_REP} with_rep_world=${WITH_REP_WORLD} rep_delta=${REP_DELTA} reset_rep=${RESET_REP} with_mmo_auth=${WITH_MMO_AUTH} with_pilot=${WITH_PILOT} with_ws=${WITH_WS} with_gameplay_v1=${WITH_GAMEPLAY_V1} with_gameplay_v2=${WITH_GAMEPLAY_V2} with_devops_systemd=${WITH_DEVOPS_SYSTEMD} with_devops_selfcheck=${WITH_DEVOPS_SELFCHECK}"
+echo "timeout_s=${TIMEOUT_S} minimal=${TIMEOUT_MINIMAL} pilot=${TIMEOUT_PILOT} ws=${TIMEOUT_WS} repeat=${REPEAT} with_rep=${WITH_REP} with_rep_world=${WITH_REP_WORLD} rep_delta=${REP_DELTA} reset_rep=${RESET_REP} with_mmo_auth=${WITH_MMO_AUTH} with_pilot=${WITH_PILOT} with_ws=${WITH_WS} with_gameplay_v1=${WITH_GAMEPLAY_V1} with_gameplay_v2=${WITH_GAMEPLAY_V2} with_devops_systemd=${WITH_DEVOPS_SYSTEMD} with_devops_selfcheck=${WITH_DEVOPS_SELFCHECK} with_core_desktop=${WITH_CORE_DESKTOP} with_agent_proxies=${WITH_AGENT_PROXIES}"
 
 step "VM (SSH + systemd + Ollama)" \
   bash "${ROOT_DIR}/infra/scripts/smoke_vm_lan.sh"
@@ -116,6 +122,16 @@ fi
 if [[ "${WITH_DEVOPS_SELFCHECK}" == "1" ]]; then
   step "DevOps selfcheck bundle (LAN, dry-run par défaut)" \
     bash -c "LBG_SMOKE_TIMEOUT_S='${TIMEOUT_MINIMAL}' bash '${ROOT_DIR}/infra/scripts/smoke_devops_selfcheck_lan.sh'"
+fi
+
+if [[ "${WITH_CORE_DESKTOP}" == "1" ]]; then
+  step "Core + pilot desktop (sans mmmorpg :8773)" \
+    bash -c "LBG_SMOKE_TIMEOUT_S='${TIMEOUT_MINIMAL}' bash '${ROOT_DIR}/infra/scripts/smoke_lan_core_desktop.sh'"
+fi
+
+if [[ "${WITH_AGENT_PROXIES}" == "1" ]]; then
+  step "Pilot agent proxies (GET healthz)" \
+    bash -c "LBG_SMOKE_TIMEOUT_S='${TIMEOUT_MINIMAL}' bash '${ROOT_DIR}/infra/scripts/smoke_lan_pilot_agent_proxies.sh'"
 fi
 
 echo ""

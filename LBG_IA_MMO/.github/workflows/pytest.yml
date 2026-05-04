@@ -28,3 +28,10 @@ jobs:
         run: |
           chmod +x infra/ci/test_pytest.sh
           bash infra/ci/test_pytest.sh
+
+      - name: Bash syntax (smokes Pilot / core desktop)
+        run: |
+          bash -n LBG_IA_MMO/infra/scripts/smoke_lan_core_desktop.sh
+          bash -n LBG_IA_MMO/infra/scripts/smoke_lan_quick.sh
+          bash -n LBG_IA_MMO/infra/scripts/smoke_lan_pilot_agent_proxies.sh
+          if [ -f infra/scripts/smoke_lan_core_desktop.sh ]; then bash -n infra/scripts/smoke_lan_core_desktop.sh; fi

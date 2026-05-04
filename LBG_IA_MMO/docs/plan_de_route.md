@@ -40,7 +40,7 @@ Prise en compte explicite de la note **`Boite à idées/20260428_1220_on ce rece
 | Fil | Source inspiration | Données versionnées | Code consommateur | Doc pivot |
 |-----|-------------------|---------------------|--------------------|-----------|
 | Idées lore / listes longues | `Boite à idées/` (non contractuel) | `LBG_IA_MMO/content/world/*.json` | `lbg_agents.world_content`, registre PNJ, `mmmorpg_server.world_catalog`, entités `race_id` | `plan_mmorpg.md`, `agents/README.md`, `pilot_web/README.md` |
-| **Poste + MMO unifiés (vision nord)** | `Boite à idées/` (ex. `20260428_1220_on ce recentre.txt`) | — | `agent.desktop`, orchestrateur, pont dialogue MMO, Lyra | `vision_projet.md`, `desktop_hybride.md`, `docs/adr/0004-assistant-local-vs-persona-mmo.md`, § *Étoile du nord* ci‑dessus |
+| **Poste + MMO unifiés (vision nord)** | `Boite à idées/` (ex. `20260428_1220_on ce recentre.txt`) | — | `agent.desktop`, orchestrateur, pont dialogue MMO, Lyra | `vision_projet.md`, `desktop_hybride.md`, `docs/adr/0004-assistant-local-vs-persona-mmo.md`, § *Étoile du nord* ci‑dessus, **`smoke_lan_core_desktop.sh`**, **`smoke_lan_pilot_agent_proxies.sh`** |
 | Pilot & proxies backend | — | — | `backend/api/v1/routes/pilot.py` | `fusion_etat_des_lieux_v0.md`, `bootstrap.md` |
 | Snapshot Lyra / PNJ monde | `docs/lyra.md`, `fusion_spec_lyra.md` | état serveur + catalogue races | `mmmorpg_server` (`build_lyra_snapshot`, …) | `plan_de_route` (Historique), `lyra.md` si contrat change |
 
@@ -118,7 +118,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 ---
 
-## État courant (2026-04-27) — v1.1.1
+## État courant (2026-05-04) — v1.1.1
 
 | Composant | Statut | Notes |
 |-----------|--------|-------|
@@ -128,12 +128,20 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 | **Urbanisme** | **STABLE** | Échelle **16px/m** ; alignement bâtiments/PNJ corrigé sur `planet_map.png`. |
 | **Physique Village** | **STABLE** | Collisions **SOLIDES** (hollow=False) sur les bâtiments ; marge ajustée (0.5). |
 | **Monde MMO** | **STABLE** | Bouclage à ±51km (World Wrap) ; interpolation fluide client/serveur. |
-| **Documentation** | **OK** | `architecture.md`, `fusion_env_lan.md`, `runbook` et `lexique` synchronisés. |
+| **Documentation** | **OK** | Historique **2026-05-04** : dialogue RP (LLM + client), inventaire `player_item_*` via WS, recette déploiement ; `architecture.md`, `fusion_env_lan.md`, `runbook`, `lexique`. |
 
 ## Historique
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-02 | **Orchestrateur — intent LLM** : `introspection/llm_intent_classifier.py` (API OpenAI-compatible, repli mots-clés) ; `hybrid_classify` dans `router/routes/route_intent.py` ; `output.orchestrator_route_meta` ; variables `LBG_ORCHESTRATOR_INTENT_LLM*` dans `lbg.env.example` ; Pilot accueil **Routage intention** ; tests `orchestrator/tests/test_llm_intent_classifier.py` ; `orchestrator/README.md`, `architecture.md`. |
+| 2026-05-02 | **CI + smoke proxies + hints Pilot** : GitHub Actions — étape **`bash -n`** sur `smoke_lan_core_desktop.sh`, `smoke_lan_quick.sh`, `smoke_lan_pilot_agent_proxies.sh` (+ wrapper racine si présent) ; nouveau **`infra/scripts/smoke_lan_pilot_agent_proxies.sh`** (GET `/v1/pilot/agent-{dialogue,desktop,pm}/healthz`, mode strict optionnel) ; `smoke_lan_quick` — **`LBG_SMOKE_WITH_AGENT_PROXIES=1`** ; runbook § **3.0.1** ; **`pilot_web/index.html`** — `pilotInlineHint`, bandeaux PM / accueil orchestrateur / Lyra step+chaos (moins d’`alert`). |
+| 2026-05-02 | **Smoke core desktop + quick** : `docs/runbook_validation_serveurs_lan.md` § **3.0** (recette isolée + note *quick*) ; `smoke_lan_quick.sh` — flag **`LBG_SMOKE_WITH_CORE_DESKTOP=1`** ; fil produit (tableau) : lien script `smoke_lan_core_desktop.sh`. |
+| 2026-05-02 | **Pilot desktop (hors MMO)** : `#/desktop` — hint centralisé (`pilotDesktopUiHint`), dry-run pilot persistant, presets **search_web_open** / **mail_imap_preview** + sync texte ; smoke **`infra/scripts/smoke_lan_core_desktop.sh`** (healthz core + `GET /v1/pilot/status`, option `LBG_SMOKE_DESKTOP_ROUTE=1`) ; test **`agents/tests/test_desktop_open_url.py`** ; doc **`architecture.md`**, **`desktop_hybride.md`**, **`pilot_web/README.md`**. |
+| 2026-05-04 | **Priorité 0 — continuité (dialogue + inventaire WS + journal client)** : **`agents/dialogue_llm.py`** — pas de séquence d’arrêt `\n\n` en mode actions monde (`LBG_DIALOGUE_WORLD_ACTIONS` + `world_npc_id`) pour éviter une réplique vide après `ACTION_JSON` ; plancher `max_tokens` (ex. 160) quand le monde ou un JSON structuré est requis ; `_soft_cap_words` (coupure préférentielle phrase/virgule) ; défauts phrases/mots assouplis ; consignes RP : pas de réintroduction « nouveau visiteur » si historique non vide ; confirmations courtes (« ok », promesse d’action) sans reprise générique type « que souhaitez-vous ? » ; fallback si texte vide après `ACTION_JSON`. **`dialogue_http_app`** — lignes `lines` jusqu’à **2000** car par défaut (`LBG_DIALOGUE_HTTP_MAX_LINE_CHARS`). **`lbg.env.example`** — garde-fous dialogue (`LBG_DIALOGUE_LLM_MAX_TOKENS`, phrases/mots). **`web_client`** — **journal PNJ** : une seule ligne par tour (`trace_id` partagé placeholder WS ↔ réplique finale), via `addNpcJournalLine` ; bulles un peu plus lisibles (`renderer.js`). **`mmmorpg_server`** — test **`test_ws_move_world_commit_player_item_updates_inventory`** (stub ramassage / inventaire session). **Ops** : après évolution binaire WS, **`LBG_DEPLOY_ROLE=mmo`** sur la VM MMO si erreur `unsupported flag: player_item_id` (code source déjà à jour ; ancien service sur disque). Recettes : `deploy_web_client.sh`, `push_secrets_vm.sh`. |
+| 2026-05-04 | **Visibilité** : `mmmorpg_server` — champ de vision serveur (rayon + LoS optionnelle sur grille) via `MMMORPG_FOV_RANGE_M` / `MMMORPG_FOV_LOS` ; PNJ seed spawn préférant une tuile route proche de leur bâtiment ; garde patrouille recadrée sur tuiles walkables. |
+| 2026-05-04 | **Pixie Seat — POI & maisons** : seed `world_initial.json` — typage `house` pour les petits bâtiments, PNJ rattachés à `building:b_*` ; **auberge / forge** — `geometry.rotation_rad` (axe principal du polygone Watabou) propagé au WS et au client pour orienter les fonds `tavern` / `forge` ; `mmo_server` — `Npc.situation` / `goals`, `WorldState.locations` + persistance ; doc `area_generation.md`. Déploiements LAN : `deploy_web_client.sh`, `deploy_vm.sh` (mmo 245). |
+| 2026-05-04 | **Pixie Seat (village réel)** : `web_client/public/assets/bourg_palette_map.png` régénéré depuis Watabou (premium) ; `mmo_server/world/seed_data/world_initial.json` enrichi (`locations` + `situation.location` PNJ) pour aligner rendu/POI avec la grille `pixie_seat.grid.json` ; build `web_client/dist` mis à jour. |
 | 2026-05-03 | **MMO collisions / client** : `mmo_server` — `LBG_MMO_CORS_DEV`, doc tests `pip install -e ".[dev]"` + `httpx` ; CI `test_pytest.sh` installe `mmo_server[dev]` ; `lbg.env.example` (CORS + collision-grid). **WS** : commentaire tick PNJ = même grille que joueurs ; test `test_npc_tick_blocked_by_tile_grid_like_player`. **Web** : `web_client/README` (ports 8050, CORS). |
 | 2026-05-02 | **Dialogue multi-tours** : `ia_context.history` sanitisé sur le pont WS ; client MMO maintient l’historique par PNJ (+ fusion placeholder→réplique finale) ; prompt « cohérence / incohérences joueur » ; empreinte `history` dans la clé cache LLM (`dialogue_llm`) ; tests `test_ia_context_sanitize`, `test_dialogue_llm`. |
 | 2026-05-02 | **Jalon #6 (suite)** : client `web_client` — `move` + `world_commit` stub (**E** / **RAMASSER**), objet `item:brindille` ; agent `ACTION_JSON` quest + `player_item_*` (sanitize + commit HTTP) ; tests `test_dialogue_llm`, `test_dialogue_http_app` ; `mmmorpg_PROTOCOL`, `plan_de_route`. |

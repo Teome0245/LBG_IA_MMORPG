@@ -15,6 +15,10 @@ MAX_WS_INBOUND_BYTES: int = int(os.environ.get("MMMORPG_MAX_WS_INBOUND_BYTES", s
 # Anti-spam sur `move` (secondes entre deux commandes appliquées).
 MOVE_MIN_INTERVAL_S: float = float(os.environ.get("MMMORPG_MOVE_MIN_INTERVAL_S", "0.02"))
 
+# Champ de vision (serveur WS) : filtre les entités renvoyées par `world_tick`.
+FOV_RANGE_M: float = float(os.environ.get("MMMORPG_FOV_RANGE_M", "140"))
+FOV_LOS_ENABLED: bool = os.environ.get("MMMORPG_FOV_LOS", "").strip().lower() in ("1", "true", "yes", "on")
+
 # Pont "jeu → IA" (optionnel) : si défini, le serveur WS peut appeler le backend monorepo
 # pour obtenir une réplique PNJ (via POST /v1/pilot/internal/route par défaut) lorsqu'un client envoie `hello`
 # avec des champs optionnels (ex. `world_npc_id`, `npc_name`, `text`).

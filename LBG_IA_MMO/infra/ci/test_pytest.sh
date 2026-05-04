@@ -20,7 +20,7 @@ python -m pip install \
   -e ./backend \
   -e ./orchestrator \
   -e ./agents \
-  -e ./mmo_server \
+  -e "./mmo_server[dev]" \
   -e ./mmmorpg_server
 
 python -m pip install -U pytest pytest-asyncio

@@ -16,6 +16,8 @@ export class VillageCollisionGrid {
         const scale = data.scale || {};
         this.tileM = Number(scale.tile_m) || 2.0;
         if (this.tileM <= 0) throw new Error("tile_m invalide");
+        this.paddingTiles = Number.isFinite(Number(scale.padding_tiles)) ? Number(scale.padding_tiles) : 0;
+        if (!Number.isFinite(this.paddingTiles) || this.paddingTiles < 0) this.paddingTiles = 0;
         const b = data.bounds_world_m || {};
         this.originX = Number(b.min_x);
         this.originZ = Number(b.min_z);

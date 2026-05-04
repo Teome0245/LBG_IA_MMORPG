@@ -21,6 +21,7 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 _WALKABLE = frozenset({".", "R"})
+_PREFER_ROAD = frozenset({"R"})
 
 
 @dataclass(slots=True)
@@ -143,6 +144,30 @@ class VillageTileGrid:
         if t is None:
             return self.first_walkable_spawn_world_m()
         cx, cz = t
+        return self._first_walkable_from_tile_origin(cx, cz)
+
+    def nearest_preferred_or_walkable_tile_center_world_m(
+        self,
+        x: float,
+        z: float,
+        *,
+        preferred: frozenset[str] | None = None,
+    ) -> tuple[float, float] | None:
+        """
+        Comme `nearest_walkable_tile_center_world_m`, mais tente d'abord une tuile dans `preferred`
+        (ex. route `R`), puis retombe sur `.`/`R`.
+        """
+        pref = preferred if preferred is not None else _PREFER_ROAD
+        t = self.world_to_tile(float(x), float(z))
+        if t is None:
+            return self.first_walkable_spawn_world_m()
+        cx, cz = t
+        for gx, gz in self._iter_spiral_tiles(cx, cz):
+            ch = self.rows[gz][gx]
+            if ch in pref:
+                wx = self.origin_x + (gx + 0.5) * self.tile_m
+                wz = self.origin_z + (gz + 0.5) * self.tile_m
+                return wx, wz
         return self._first_walkable_from_tile_origin(cx, cz)
 
     def _first_walkable_from_tile_origin(self, cx: int, cz: int) -> tuple[float, float] | None:

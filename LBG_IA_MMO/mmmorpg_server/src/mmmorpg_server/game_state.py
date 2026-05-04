@@ -156,6 +156,12 @@ class GameState:
                             "w": w,
                             "h": h,
                         }
+                        try:
+                            rr = geom.get("rotation_rad", None)
+                            if rr is not None:
+                                l_data["rotation_rad"] = float(rr)
+                        except Exception:
+                            pass
                         self.locations.append(l_data)
                         loc_coords[loc["id"]] = (l_data["x"], l_data["z"])
                         
@@ -172,18 +178,22 @@ class GameState:
                     sit = npc_data.get("situation", {})
                     x_val = sit.get("x")
                     z_val = sit.get("y")
+                    loc_id = sit.get("location")
                     
                     if x_val is None or z_val is None:
-                        loc_id = sit.get("location")
                         if loc_id in loc_coords:
                             x_val, z_val = loc_coords[loc_id]
-                            x_val += random.uniform(-3, 3)
-                            z_val += random.uniform(-3, 3)
                         else:
                             x_val, z_val = random.uniform(-20, 20), random.uniform(-20, 20)
 
                     if self._village_tile_grid is not None:
-                        snapped = self._village_tile_grid.nearest_walkable_tile_center_world_m(float(x_val), float(z_val))
+                        # Si on a un bâtiment (location), on préfère une tuile route `R` proche du centre du bâtiment.
+                        if isinstance(loc_id, str) and loc_id in loc_coords:
+                            snapped = self._village_tile_grid.nearest_preferred_or_walkable_tile_center_world_m(
+                                float(x_val), float(z_val)
+                            )
+                        else:
+                            snapped = self._village_tile_grid.nearest_walkable_tile_center_world_m(float(x_val), float(z_val))
                         if snapped is not None:
                             x_val, z_val = snapped[0], snapped[1]
 
@@ -729,7 +739,7 @@ class GameState:
                     if abs(dy) > 0.1:
                         ent.y += (dy / abs(dy)) * 2.0 * dt # Monte à 2m/s
             
-            # Prédiction de la prochaine position
+            # Prédiction de la prochaine position (joueurs **et** PNJ : même autorité)
             nx = ent.x + ent.vx * dt
             nz = ent.z + ent.vz * dt
             
@@ -823,6 +833,10 @@ class GameState:
         # Cible actuelle
         loc_id = patrol_points[npc.stats["patrol_idx"]]
         tx, tz = self._get_location_coords(loc_id)
+        if self._village_tile_grid is not None and not self._village_tile_grid.is_walkable_world_m(tx, tz):
+            sn = self._village_tile_grid.nearest_preferred_or_walkable_tile_center_world_m(tx, tz)
+            if sn is not None:
+                tx, tz = float(sn[0]), float(sn[1])
         
         dx, dz = tx - npc.x, tz - npc.z
         dist = math.sqrt(dx*dx + dz*dz)

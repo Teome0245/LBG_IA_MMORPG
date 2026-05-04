@@ -123,6 +123,42 @@ def test_tick_blocks_move_outside_tile_grid(minimal_village_grid_env: None) -> N
     assert abs(p.x - x0) < 1.0 and abs(p.z - z0) < 1.0
 
 
+def test_npc_tick_blocked_by_tile_grid_like_player(minimal_village_grid_env: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(GameState, "_npc_step", lambda self, npc, dt: None)
+    gs = GameState()
+    g = gs._village_tile_grid
+    assert g is not None
+    npc = gs.get_npc("npc:merchant")
+    assert npc is not None
+    start_x: float | None = None
+    start_z: float | None = None
+    tree_gx: int | None = None
+    for gz in range(g.h):
+        for gx in range(1, g.w):
+            if g.rows[gz][gx] != "T":
+                continue
+            if g.rows[gz][gx - 1] not in (".", "R"):
+                continue
+            tree_gx = gx
+            start_x = g.origin_x + (gx - 1 + 0.5) * g.tile_m
+            start_z = g.origin_z + (gz + 0.5) * g.tile_m
+            break
+        if start_x is not None:
+            break
+    assert start_x is not None and tree_gx is not None
+    npc.x, npc.y, npc.z = start_x, 0.0, start_z
+    npc.busy_timer = 0.0
+    dt = 0.05
+    tree_left_x = g.origin_x + tree_gx * g.tile_m + 0.05
+    npc.vx = (tree_left_x - start_x) / dt
+    npc.vz = 0.0
+    npc.vy = 0.0
+    x0, z0 = npc.x, npc.z
+    assert not g.is_walkable_world_m(x0 + npc.vx * dt, z0)
+    gs.tick(dt)
+    assert npc.x == x0 and npc.z == z0
+
+
 def test_tick_blocks_move_into_tree_tile(minimal_village_grid_env: None) -> None:
     gs = GameState()
     g = gs._village_tile_grid

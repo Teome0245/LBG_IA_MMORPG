@@ -51,11 +51,23 @@ class App {
         this.dialogueHistoryByNpcId = new Map();
         /** @type {Map<string, string>} dernier trace_id PNJ déjà enregistré dans l'historique (placeholder → remplace) */
         this._lastDialogueTraceByNpcId = new Map();
+        /** Fusion journal : même trace_id = placeholder puis réplique finale → une seule ligne */
+        this._npcLogRowByTraceId = new Map();
         this.questLogById = new Map();
         this.activeQuestId = "";
         this.raceDisplayById = Object.create(null);
         /** @type {import('./villageCollisionGrid.js').VillageCollisionGrid | null} */
         this.collisionGrid = null;
+        // Valeurs calibrées pour Pixie Seat : on corrige le PNG Watabou (fond “joli”) pour qu'il colle à la grille collisions.
+        this._villageMapPrettyFlipZ = true;
+        this._villageMapPrettyScale = 1 / 1.4;
+        // Debug overlay : calque “moche” par-dessus.
+        this._villageMapOverlayFlipZ = false;
+        this._villageMapOverlay = false;
+        this._villageMapOverlayAlpha = 0.55;
+        this._villageMapDx = 0.0;
+        this._villageMapDz = 0.0;
+        this._villageMapOverlayScale = 1.0;
         
         this.initUI();
     }
@@ -302,6 +314,34 @@ class App {
             const wsScheme = (window.location && window.location.protocol === "https:") ? "wss" : "ws";
             const wsUrl = `${wsScheme}://${serverHost}:7733`;
             this._lastConnect = { serverHost, name };
+            // Toggle manuel pour aligner le calque “moche” : ajouter ?flipz=1 à l'URL, ou stocker via localStorage.
+            try {
+                const qs = new URLSearchParams(window.location.search || "");
+                // flipz agit sur l'overlay (debug) ; pflipz sur le fond Watabou.
+                const qv = (qs.get("flipz") || "").trim();
+                if (qv === "1" || qv.toLowerCase() === "true") this._villageMapOverlayFlipZ = true;
+                const pqv = (qs.get("pflipz") || "").trim();
+                if (pqv === "0" || pqv.toLowerCase() === "false") this._villageMapPrettyFlipZ = false;
+                if (pqv === "1" || pqv.toLowerCase() === "true") this._villageMapPrettyFlipZ = true;
+                const ov = (qs.get("overlay") || "").trim();
+                const oa = (qs.get("alpha") || "").trim();
+                if (ov === "1" || ov.toLowerCase() === "true") {
+                    this._villageMapOverlay = true;
+                }
+                if (oa) {
+                    this._villageMapOverlayAlpha = Number(oa);
+                }
+                const dx = (qs.get("dx") || "").trim();
+                const dz = (qs.get("dz") || "").trim();
+                if (dx) this._villageMapDx = Number(dx);
+                if (dz) this._villageMapDz = Number(dz);
+                const os = (qs.get("os") || "").trim();
+                if (os) this._villageMapOverlayScale = Number(os);
+                const ps = (qs.get("ps") || "").trim();
+                if (ps) this._villageMapPrettyScale = Number(ps);
+                const ls = (window.localStorage && window.localStorage.getItem("lbg-mmo.villageMap.flipZ")) || "";
+                if (String(ls).trim() === "1") this._villageMapOverlayFlipZ = true;
+            } catch (_) {}
             this.raceDisplayById = Object.create(null);
             const catalogPromise = loadRaceDisplayMap(serverHost).then((m) => {
                 if (m) Object.assign(this.raceDisplayById, m);
@@ -340,6 +380,7 @@ class App {
         this.seenWorldEventTraceIds.clear();
         this.dialogueHistoryByNpcId.clear();
         this._lastDialogueTraceByNpcId.clear();
+        this._npcLogRowByTraceId.clear();
         this.renderWorldEvents();
         this.renderQuestLog();
         this.renderer.setPlayerId(data.player_id);
@@ -368,6 +409,24 @@ class App {
                 .then((g) => {
                     this.collisionGrid = g;
                     if (g) {
+                        // La grille collisions inclut souvent un padding (tuiles) autour de l'earth Watabou.
+                        // L'image Watabou exportée est généralement cadrée sur l'earth (sans padding) :
+                        // on retire donc `padding_tiles * tile_m` sur chaque bord pour caler le fond.
+                        const padM = (Number(g.paddingTiles) || 0) * (Number(g.tileM) || 2.0);
+                        this.renderer.setVillageMapBounds({
+                            min_x: g.originX + padM,
+                            min_z: g.originZ + padM,
+                            max_x: g.originX + g.w * g.tileM - padM,
+                            max_z: g.originZ + g.h * g.tileM - padM,
+                        });
+                        this.renderer.setVillageMapOverlayFlipZ(this._villageMapOverlayFlipZ);
+                        this.renderer.setVillageMapOverlay(this._villageMapOverlay, this._villageMapOverlayAlpha);
+                        this.renderer.setVillageMapOverlayScale(this._villageMapOverlayScale);
+                        this.renderer.setVillageMapOverlayOffset(this._villageMapDx, this._villageMapDz);
+                        this.renderer.setVillageMapPrettyTransform({
+                            flipZ: this._villageMapPrettyFlipZ,
+                            scale: this._villageMapPrettyScale,
+                        });
                         this.addLog("Grille collisions village chargée (prédiction client alignée serveur).", "system");
                     }
                 })
@@ -394,7 +453,7 @@ class App {
                     subtitle: this._formatRoleSubtitle(target),
                 });
                 this.recordNpcDialogueAssistant(target.id, msg.npc_reply, msg.trace_id || "");
-                this.addLog(`${target.name}: ${msg.npc_reply}`, 'npc');
+                this.addNpcJournalLine(target.name, msg.npc_reply, msg.trace_id || "");
             }
             if (msg.world_event) {
                 this.handleWorldEvent(msg.world_event, msg.trace_id);
@@ -966,6 +1025,34 @@ class App {
         const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
         const npc = entities.find((ent) => ent && ent.id === target.id && ent.kind === "npc");
         this.renderNpcSheet(npc || null, target);
+    }
+
+    /**
+     * Une ligne de journal par tour de dialogue WS : le placeholder et la réplique finale partagent le même trace_id,
+     * on met à jour la même ligne au lieu de dupliquer.
+     */
+    addNpcJournalLine(npcName, text, traceId) {
+        const label = String(npcName || "PNJ").trim();
+        const body = String(text || "").trim();
+        if (!body) return;
+        const tid = String(traceId || "").trim();
+        const consoleLogs = document.getElementById("console-logs");
+        if (!consoleLogs) return;
+        const stamp = `[${new Date().toLocaleTimeString()}]`;
+        const full = `${stamp} ${label}: ${body}`;
+        if (tid && this._npcLogRowByTraceId.has(tid)) {
+            const row = this._npcLogRowByTraceId.get(tid);
+            row.textContent = full;
+            this._npcLogRowByTraceId.delete(tid);
+            consoleLogs.scrollTop = consoleLogs.scrollHeight;
+            return;
+        }
+        const row = document.createElement("div");
+        row.className = "log npc";
+        row.textContent = full;
+        consoleLogs.appendChild(row);
+        consoleLogs.scrollTop = consoleLogs.scrollHeight;
+        if (tid) this._npcLogRowByTraceId.set(tid, row);
     }
 
     formatTime(seconds) {

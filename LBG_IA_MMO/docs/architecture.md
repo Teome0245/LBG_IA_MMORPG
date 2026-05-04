@@ -26,6 +26,7 @@ Construire un framework complet permettant :
 - Après routage, appelle le paquet **`agents/`** (`lbg_agents.dispatch.invoke_after_route`) pour enrichir le champ `output`. Le dialogue peut cibler un **agent HTTP** (`LBG_AGENT_DIALOGUE_URL`, port **8020** en prod systemd, voir `agents/README.md`). L’intention **`devops_probe`** déclenche **`agent.devops`** : GET HTTP et lecture de fichiers **uniquement** via listes blanches d’environnement (`agents/README.md`) ; dry-run **`LBG_DEVOPS_DRY_RUN`** ; garde **`LBG_DEVOPS_APPROVAL_TOKEN`** + `context.devops_approval` ; audit JSON **`agents.devops.audit`** (champ `ts`) sur stdout et/ou fichier **`LBG_DEVOPS_AUDIT_LOG_PATH`** (JSONL).
 - **Forge de prototypes OpenGame (cadrage)** : si OpenGame est intégré, il reste une capability expérimentale orchestrée (`agent.opengame`) pour générer des prototypes isolés ; l’orchestrateur reste maître du déclenchement, et le code généré ne modifie pas le cœur MMO automatiquement. Décision : `docs/adr/0003-opengame-forge-prototypes.md`.
 - **Assistant poste vs persona MMO** : deux modes produit (`local_assistant` ↔ **`desktop_control`/`agent.desktop`** + worker ; `mmo_persona` ↔ dialogue/WS MMO), isolation des secrets et routage ; pas d’exécution OS sensible depuis le flux MMO sans pont dédié. Décision : `docs/adr/0004-assistant-local-vs-persona-mmo.md`.
+- **Classification d’intention (langage courant)** : couche **LLM optionnelle** côté orchestrateur (`LBG_ORCHESTRATOR_INTENT_LLM*`) avec repli déterministe ; métadonnées `output.orchestrator_route_meta` ; Pilot accueil **Routage intention**. Voir `orchestrator/README.md`, `introspection/llm_intent_classifier.py`.
 - Introspection : **`GET /v1/capabilities`** (liste des `CapabilitySpec`). Le backend expose **`GET /v1/pilot/capabilities`** en proxy pour l’UI `/pilot/`.
 
 #### Dialogue orchestré multi‑LLM (cadrage backlog)
@@ -118,6 +119,7 @@ Données **data-driven** versionnées dans le monorepo : `LBG_IA_MMO/content/wor
 - **Déploiement** : 
     - Le rôle `front` de `deploy_vm.sh` gère Lyra.
     - `deploy_web_client.sh` gère le MMO (build avec `--base=/mmo/` et déploiement dans le sous-dossier). Variable **`LBG_MMO_WEB_DEPLOY_LOCAL_ONLY=1`** : build + vérifs + copie vers `pilot_web/mmo/` sans SSH VM.
+- **Assistant poste (`#/desktop`) vs boucle MMO** : navigateur, fichiers locaux et messagerie relevés sur le **poste** via **`desktop_control`** → **`agent.desktop`** (ADR 0004), indépendamment du serveur WS **`mmmorpg`**. Recette LAN « cœur seul » (sans santé HTTP interne **VM MMO jeu**) : **`infra/scripts/smoke_lan_core_desktop.sh`** (à la racine du workspace il existe un **wrapper** qui appelle la copie sous **`LBG_IA_MMO/`**) ; option **`LBG_SMOKE_DESKTOP_ROUTE=1`** pour un **`POST /v1/pilot/route`** en **`desktop_dry_run`**.
 - **Note** : Le serveur Python sur le port **8081** est déprécié et supprimé.
 
 #### Notes opérationnelles (client MMO `/mmo/`)

@@ -1,6 +1,263 @@
 {
   "schema_version": 1,
   "now_s": 0.0,
+  "locations": [
+    {
+      "id": "auberge_salle_commune",
+      "name": "Auberge",
+      "type": "inn",
+      "geometry": {
+        "coordinates": { "x": 27.102, "y": -31.867 },
+        "width": 31.739,
+        "height": 37.722,
+        "surface_m2": 532.83,
+        "rotation_rad": -0.999795
+      }
+    },
+    {
+      "id": "hotel_de_ville",
+      "name": "Hôtel de Ville",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": -3.776, "y": 46.36 },
+        "width": 23.699,
+        "height": 17.902,
+        "surface_m2": 303.154
+      }
+    },
+    {
+      "id": "forge",
+      "name": "Forge",
+      "type": "shop",
+      "geometry": {
+        "coordinates": { "x": -13.037, "y": -26.163 },
+        "width": 10.641,
+        "height": 13.105,
+        "surface_m2": 87.457,
+        "rotation_rad": -1.863036
+      }
+    },
+    {
+      "id": "marche",
+      "name": "Marché",
+      "type": "shop",
+      "geometry": {
+        "coordinates": { "x": 47.947, "y": -9.272 },
+        "width": 11.631,
+        "height": 12.611,
+        "surface_m2": 71.878
+      }
+    },
+    {
+      "id": "building:b_0015",
+      "name": "Bâtiment b_0015",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": -64.954, "y": -25.883 },
+        "width": 13.421,
+        "height": 13.443,
+        "surface_m2": 86.993
+      }
+    },
+    {
+      "id": "building:b_0021",
+      "name": "Bâtiment b_0021",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": 29.752, "y": 69.835 },
+        "width": 13.075,
+        "height": 10.687,
+        "surface_m2": 86.594
+      }
+    },
+    {
+      "id": "building:b_0007",
+      "name": "Bâtiment b_0007",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": -29.188, "y": -17.732 },
+        "width": 13.381,
+        "height": 13.263,
+        "surface_m2": 85.833
+      }
+    },
+    {
+      "id": "building:b_0005",
+      "name": "Bâtiment b_0005",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": -30.755, "y": 19.834 },
+        "width": 13.071,
+        "height": 12.793,
+        "surface_m2": 80.239
+      }
+    },
+    {
+      "id": "building:b_0004",
+      "name": "Bâtiment b_0004",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": -16.481, "y": 27.184 },
+        "width": 10.689,
+        "height": 12.956,
+        "surface_m2": 78.82
+      }
+    },
+    {
+      "id": "building:b_0003",
+      "name": "Bâtiment b_0003",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": -2.856, "y": 29.666 },
+        "width": 7.934,
+        "height": 10.608,
+        "surface_m2": 75.365
+      }
+    },
+    {
+      "id": "building:b_0009",
+      "name": "Bâtiment b_0009",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": 3.3, "y": -27.072 },
+        "width": 7.601,
+        "height": 10.777,
+        "surface_m2": 66.705
+      }
+    },
+    {
+      "id": "building:b_0013",
+      "name": "Bâtiment b_0013",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": -47.631, "y": -13.839 },
+        "width": 11.558,
+        "height": 11.356,
+        "surface_m2": 64.479
+      }
+    },
+    {
+      "id": "building:b_0019",
+      "name": "Bâtiment b_0019",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": 26.747, "y": 49.103 },
+        "width": 9.153,
+        "height": 8.396,
+        "surface_m2": 62.702
+      }
+    },
+    {
+      "id": "building:b_0012",
+      "name": "Bâtiment b_0012",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": 40.99, "y": -4.979 },
+        "width": 10.789,
+        "height": 11.464,
+        "surface_m2": 62.656
+      }
+    },
+    {
+      "id": "building:b_0001",
+      "name": "Bâtiment b_0001",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": 33.442, "y": 9.616 },
+        "width": 11.472,
+        "height": 9.06,
+        "surface_m2": 60.959
+      }
+    },
+    {
+      "id": "building:b_0016",
+      "name": "Bâtiment b_0016",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": -50.118, "y": -47.407 },
+        "width": 10.959,
+        "height": 11.082,
+        "surface_m2": 60.326
+      }
+    },
+    {
+      "id": "building:b_0022",
+      "name": "Bâtiment b_0022",
+      "type": "building",
+      "geometry": {
+        "coordinates": { "x": 4.139, "y": 68.524 },
+        "width": 9.265,
+        "height": 8.199,
+        "surface_m2": 58.706
+      }
+    },
+    {
+      "id": "building:b_0018",
+      "name": "Bâtiment b_0018",
+      "type": "house",
+      "geometry": {
+        "coordinates": { "x": 22.881, "y": 37.776 },
+        "width": 9.237,
+        "height": 8.914,
+        "surface_m2": 58.051
+      }
+    },
+    {
+      "id": "building:b_0014",
+      "name": "Bâtiment b_0014",
+      "type": "house",
+      "geometry": {
+        "coordinates": { "x": -53.712, "y": -20.924 },
+        "width": 10.835,
+        "height": 10.852,
+        "surface_m2": 56.972
+      }
+    },
+    {
+      "id": "building:b_0017",
+      "name": "Bâtiment b_0017",
+      "type": "house",
+      "geometry": {
+        "coordinates": { "x": -34.633, "y": -31.009 },
+        "width": 10.651,
+        "height": 10.646,
+        "surface_m2": 56.658
+      }
+    },
+    {
+      "id": "building:b_0020",
+      "name": "Bâtiment b_0020",
+      "type": "house",
+      "geometry": {
+        "coordinates": { "x": 25.672, "y": 61.639 },
+        "width": 8.431,
+        "height": 7.887,
+        "surface_m2": 54.484
+      }
+    },
+    {
+      "id": "building:b_0002",
+      "name": "Bâtiment b_0002",
+      "type": "house",
+      "geometry": {
+        "coordinates": { "x": 21.547, "y": 21.848 },
+        "width": 10.123,
+        "height": 10.202,
+        "surface_m2": 53.367
+      }
+    },
+    {
+      "id": "building:b_0006",
+      "name": "Bâtiment b_0006",
+      "type": "house",
+      "geometry": {
+        "coordinates": { "x": -34.45, "y": -1.758 },
+        "width": 8.315,
+        "height": 7.671,
+        "surface_m2": 52.221
+      }
+    }
+  ],
   "npcs": [
     {
       "id": "npc:smith",
@@ -11,7 +268,8 @@
         "hunger": 0.0,
         "thirst": 0.0,
         "fatigue": 0.0
-      }
+      },
+      "situation": { "location": "forge" }
     },
     {
       "id": "npc:merchant",
@@ -22,7 +280,8 @@
         "hunger": 0.1,
         "thirst": 0.15,
         "fatigue": 0.05
-      }
+      },
+      "situation": { "location": "building:b_0006" }
     },
     {
       "id": "npc:innkeeper",
@@ -33,7 +292,8 @@
         "hunger": 0.25,
         "thirst": 0.35,
         "fatigue": 0.1
-      }
+      },
+      "situation": { "location": "auberge_salle_commune" }
     },
     {
       "id": "npc:guard",
@@ -44,7 +304,8 @@
         "hunger": 0.05,
         "thirst": 0.2,
         "fatigue": 0.15
-      }
+      },
+      "situation": { "location": "building:b_0002" }
     },
     {
       "id": "npc:scribe",
@@ -55,7 +316,8 @@
         "hunger": 0.4,
         "thirst": 0.1,
         "fatigue": 0.3
-      }
+      },
+      "situation": { "location": "building:b_0020" }
     },
     {
       "id": "npc:healer",
@@ -66,7 +328,8 @@
         "hunger": 0.15,
         "thirst": 0.2,
         "fatigue": 0.05
-      }
+      },
+      "situation": { "location": "building:b_0017" }
     },
     {
       "id": "npc:alchemist",
@@ -77,7 +340,8 @@
         "hunger": 0.2,
         "thirst": 0.25,
         "fatigue": 0.15
-      }
+      },
+      "situation": { "location": "building:b_0014" }
     },
     {
       "id": "npc:mayor",
@@ -88,7 +352,8 @@
         "hunger": 0.05,
         "thirst": 0.05,
         "fatigue": 0.1
-      }
+      },
+      "situation": { "location": "hotel_de_ville" }
     }
   ]
 }

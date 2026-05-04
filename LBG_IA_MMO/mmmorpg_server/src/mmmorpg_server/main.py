@@ -381,12 +381,21 @@ async def game_loop_broadcast(
                     npc_reply = extra[0] if extra else None
                     trace_id = extra[1] if extra else None
                     world_event = extra[2] if extra else None
+                    # Champ de vision : filtrer les entités (et locations) selon la position du joueur.
+                    pid = getattr(ws, "player_id", None)
+                    if not isinstance(pid, str) or not pid.strip():
+                        pid = None
+                    entities = game.entity_snapshots()
+                    locations = game.locations
+                    if pid:
+                        entities = _filter_entities_for_player(game, pid, entities)
+                        locations = _filter_locations_for_player(game, pid, locations)
                     payload = json.dumps(
                         msg_world_tick(
                             world_time_s=game.time.world_time_s,
                             day_fraction=game.time.day_fraction,
-                            entities=game.entity_snapshots(),
-                            locations=game.locations,
+                            entities=entities,
+                            locations=locations,
                             npc_reply=npc_reply,
                             trace_id=trace_id,
                             world_event=world_event,
@@ -403,6 +412,89 @@ async def game_loop_broadcast(
                 pending_replies.pop(ws, None)
     except asyncio.CancelledError:
         raise
+
+
+def _filter_entities_for_player(game: GameState, player_id: str, snaps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ent = game.entities.get(player_id)
+    if not ent:
+        return snaps
+    px = float(getattr(ent, "x", 0.0) or 0.0)
+    pz = float(getattr(ent, "z", 0.0) or 0.0)
+    r = float(config.FOV_RANGE_M)
+    r2 = r * r
+    g = getattr(game, "_village_tile_grid", None)
+
+    def los_ok(x: float, z: float) -> bool:
+        if not config.FOV_LOS_ENABLED or g is None:
+            return True
+        # Raycast grossier sur tuiles (Bresenham)
+        t0 = g.world_to_tile(px, pz)
+        t1 = g.world_to_tile(x, z)
+        if t0 is None or t1 is None:
+            return True
+        x0, y0 = t0
+        x1, y1 = t1
+        dx = abs(x1 - x0)
+        dy = abs(y1 - y0)
+        sx = 1 if x0 < x1 else -1
+        sy = 1 if y0 < y1 else -1
+        err = dx - dy
+        xcur, ycur = x0, y0
+        # On ignore la première tuile (position joueur) et la dernière (cible)
+        while not (xcur == x1 and ycur == y1):
+            e2 = 2 * err
+            if e2 > -dy:
+                err -= dy
+                xcur += sx
+            if e2 < dx:
+                err += dx
+                ycur += sy
+            if xcur == x1 and ycur == y1:
+                break
+            if not g.is_walkable_tile(int(xcur), int(ycur)):
+                return False
+        return True
+
+    out: list[dict[str, Any]] = []
+    for s in snaps:
+        try:
+            if s.get("id") == player_id:
+                out.append(s)
+                continue
+            x = float(s.get("x", 0.0) or 0.0)
+            z = float(s.get("z", 0.0) or 0.0)
+            dx = x - px
+            dz = z - pz
+            if dx * dx + dz * dz > r2:
+                continue
+            if not los_ok(x, z):
+                continue
+            out.append(s)
+        except Exception:
+            continue
+    return out
+
+
+def _filter_locations_for_player(game: GameState, player_id: str, locs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    ent = game.entities.get(player_id)
+    if not ent:
+        return locs
+    px = float(getattr(ent, "x", 0.0) or 0.0)
+    pz = float(getattr(ent, "z", 0.0) or 0.0)
+    r = float(config.FOV_RANGE_M)
+    r2 = r * r
+    out: list[dict[str, Any]] = []
+    for loc in locs:
+        try:
+            x = float(loc.get("x", 0.0) or 0.0)
+            z = float(loc.get("z", 0.0) or 0.0)
+            dx = x - px
+            dz = z - pz
+            if dx * dx + dz * dz <= r2:
+                out.append(loc)
+        except Exception:
+            continue
+    return out
 
 
 def _inbound_to_utf8(raw: str | bytes) -> tuple[str | None, str | None]:
@@ -450,6 +542,7 @@ async def client_handler(
                 name = str(data.get("player_name") or "Voyageur").strip() or "Voyageur"
                 ent = game.add_player(name)
                 player_id = ent.id
+                setattr(ws, "player_id", player_id)
 
                 await ws.send(
                     json.dumps(

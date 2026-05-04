@@ -7,7 +7,7 @@
  */
 export class Renderer {
     /** Limite d’affichage du corps de bulle (lignes visibles) — tronque les répliques extrêmement longues. */
-    static MAX_BUBBLE_BODY_LINES = 18;
+    static MAX_BUBBLE_BODY_LINES = 26;
 
     constructor(canvasId) {
         this.canvas = document.getElementById(canvasId);
@@ -25,6 +25,20 @@ export class Renderer {
         this.cameraX = 0;
         this.cameraY = 0;
         this.cameraZ = 0;
+        // BBox monde (m) de la carte village, si connue (depuis collision-grid).
+        this.villageMapBounds = null;
+        // Correction orientation/échelle du fond Watabou (image “jolie”) pour coller à la grille collisions.
+        this.villageMapPrettyFlipZ = false;
+        this.villageMapPrettyScale = 1.0;
+        // Debug overlay (calque “moche” / grille)
+        this.villageMapOverlayFlipZ = false;
+        // Debug : superposition de deux fonds (joli + grille) pour mesurer un décalage.
+        this.villageMapOverlayEnabled = false;
+        this.villageMapOverlayAlpha = 0.5;
+        this.villageMapOverlayScale = 1.0;
+        // Décalage manuel (m) du calque overlay uniquement (debug alignement).
+        this.villageMapOverlayOffsetX = 0.0;
+        this.villageMapOverlayOffsetZ = 0.0;
         
         // Échelle top-down : pixels par mètre = 8 * zoom.
         this.tileW = 64;
@@ -37,7 +51,9 @@ export class Renderer {
             player: new Image(),
             npc: new Image(),
             worldMap: new Image(),
-            villageMap: new Image(),
+            // villageMapPretty: rendu “joli” (Watabou PNG), villageMapGrid: rendu “moche” (premium/grille)
+            villageMapPretty: new Image(),
+            villageMapGrid: new Image(),
             tavern: new Image(),
             forge: new Image(),
         };
@@ -63,6 +79,16 @@ export class Renderer {
             img.src = src;
         });
 
+        const loadImgOk = (img, src) =>
+            new Promise((resolve) => {
+                img.onload = () => resolve(true);
+                img.onerror = () => {
+                    console.error(`Erreur de chargement de l'image: ${src}`);
+                    resolve(false);
+                };
+                img.src = src;
+            });
+
         // IMPORTANT: le client est servi sous /mmo/ en prod (base=/mmo/ au build Vite).
         // On utilise BASE_URL (vite) pour éviter les chemins absolus /assets/... qui cassent sous un sous-dossier.
         const baseRel = (import.meta && import.meta.env && import.meta.env.BASE_URL) ? String(import.meta.env.BASE_URL) : "/";
@@ -70,14 +96,19 @@ export class Renderer {
         const baseAbs = new URL(baseRel.replace(/^\s+|\s+$/g, ""), window.location.origin + "/").toString();
         const asset = (p) => new URL(String(p || "").replace(/^\//, ""), baseAbs).toString();
 
+        // On préfère une version “clean” sans cartouche (sinon le flip du fond l'affiche à l'envers).
+        const okPretty = await loadImgOk(this.assets.villageMapPretty, asset("assets/pixie_seat_clean.png"));
+        const okGrid = await loadImgOk(this.assets.villageMapGrid, asset("assets/bourg_palette_map.png"));
+
         await Promise.all([
-            loadImg(this.assets.floor, asset('assets/tile_floor.png')),
-            loadImg(this.assets.player, asset('assets/char_player.png')),
-            loadImg(this.assets.npc, asset('assets/char_npc.png')),
-            loadImg(this.assets.worldMap, asset('assets/planet_map.png')),
-            loadImg(this.assets.villageMap, asset('assets/bourg_palette_map.png')),
-            loadImg(this.assets.tavern, asset('assets/tavern_floor.png')),
-            loadImg(this.assets.forge, asset('assets/forge_floor.png')),
+            loadImg(this.assets.floor, asset("assets/tile_floor.png")),
+            loadImg(this.assets.player, asset("assets/char_player.png")),
+            loadImg(this.assets.npc, asset("assets/char_npc.png")),
+            loadImg(this.assets.worldMap, asset("assets/planet_map.png")),
+            okPretty ? Promise.resolve() : loadImg(this.assets.villageMapPretty, asset("assets/bourg_palette_map.png")),
+            okGrid ? Promise.resolve() : Promise.resolve(),
+            loadImg(this.assets.tavern, asset("assets/tavern_floor.png")),
+            loadImg(this.assets.forge, asset("assets/forge_floor.png")),
         ]);
         this.assetsLoaded = true;
         console.log("Assets graphiques chargés ou ignorés en cas d'erreur");
@@ -118,6 +149,56 @@ export class Renderer {
         this.selectedId = entityId || null;
     }
 
+    /**
+     * @param {{min_x:number,min_z:number,max_x:number,max_z:number}|null} bounds
+     */
+    setVillageMapBounds(bounds) {
+        if (!bounds) {
+            this.villageMapBounds = null;
+            return;
+        }
+        const b = bounds;
+        const nums = [b.min_x, b.min_z, b.max_x, b.max_z].map((v) => Number(v));
+        if (nums.some((v) => !Number.isFinite(v))) {
+            this.villageMapBounds = null;
+            return;
+        }
+        this.villageMapBounds = {
+            min_x: nums[0],
+            min_z: nums[1],
+            max_x: nums[2],
+            max_z: nums[3],
+        };
+    }
+
+    setVillageMapOverlayFlipZ(enabled) {
+        this.villageMapOverlayFlipZ = enabled === true;
+    }
+
+    setVillageMapPrettyTransform({ flipZ = false, scale = 1.0 } = {}) {
+        this.villageMapPrettyFlipZ = flipZ === true;
+        const s = Number(scale);
+        this.villageMapPrettyScale = Number.isFinite(s) ? Math.max(0.2, Math.min(5.0, s)) : 1.0;
+    }
+
+    setVillageMapOverlay(enabled, alpha = 0.5) {
+        this.villageMapOverlayEnabled = enabled === true;
+        const a = Number(alpha);
+        this.villageMapOverlayAlpha = Number.isFinite(a) ? Math.max(0, Math.min(1, a)) : 0.5;
+    }
+
+    setVillageMapOverlayScale(scale = 1.0) {
+        const s = Number(scale);
+        this.villageMapOverlayScale = Number.isFinite(s) ? Math.max(0.2, Math.min(5.0, s)) : 1.0;
+    }
+
+    setVillageMapOverlayOffset(dx = 0.0, dz = 0.0) {
+        const x = Number(dx);
+        const z = Number(dz);
+        this.villageMapOverlayOffsetX = Number.isFinite(x) ? x : 0.0;
+        this.villageMapOverlayOffsetZ = Number.isFinite(z) ? z : 0.0;
+    }
+
     getEntityScreenInfo(ent) {
         if (!ent || !ent.id) return null;
         const interp = this.interpolatedEntities.get(ent.id) || {
@@ -155,8 +236,8 @@ export class Renderer {
         if (!entityId || typeof text !== "string" || !text.trim()) return;
         const ttlMs = Number.isFinite(opts.ttlMs) ? opts.ttlMs : 9000;
         const kind = typeof opts.kind === "string" ? opts.kind.trim() : "npc";
-        let defaultChars = 42;
-        let defaultLines = 12;
+        let defaultChars = 48;
+        let defaultLines = 18;
         if (kind === "pending") {
             defaultChars = 34;
             defaultLines = 6;
@@ -236,7 +317,7 @@ export class Renderer {
         if (!Array.isArray(lines) || lines.length <= max) return lines;
         const out = lines.slice(0, max);
         let last = String(out[max - 1] || "").trimEnd();
-        if (last.length > 52) last = last.slice(0, 49).trimEnd();
+        if (last.length > 80) last = last.slice(0, 77).trimEnd();
         out[max - 1] = `${last.replace(/[.…]+$/u, "")}…`;
         return out;
     }
@@ -410,11 +491,20 @@ export class Renderer {
             const pos = this.worldToScreen(loc.x, loc.z, loc.y || 0);
             const w = (loc.w || 2) * scale;
             const h = (loc.h || 2) * scale;
+            const rot = Number.isFinite(Number(loc.rotation_rad)) ? Number(loc.rotation_rad) : 0;
             const color = loc.type === "room" ? "255, 150, 0" : "0, 242, 255";
             if (loc.id === "auberge_salle_commune" && this.assets.tavern.complete) {
-                ctx.drawImage(this.assets.tavern, pos.x - w / 2, pos.y - h / 2, w, h);
+                ctx.save();
+                ctx.translate(pos.x, pos.y);
+                if (rot) ctx.rotate(rot);
+                ctx.drawImage(this.assets.tavern, -w / 2, -h / 2, w, h);
+                ctx.restore();
             } else if (loc.id === "forge" && this.assets.forge.complete) {
-                ctx.drawImage(this.assets.forge, pos.x - w / 2, pos.y - h / 2, w, h);
+                ctx.save();
+                ctx.translate(pos.x, pos.y);
+                if (rot) ctx.rotate(rot);
+                ctx.drawImage(this.assets.forge, -w / 2, -h / 2, w, h);
+                ctx.restore();
                 ctx.strokeStyle = `rgba(${color}, 0.3)`;
                 ctx.lineWidth = 1;
                 ctx.strokeRect(pos.x - w / 2, pos.y - h / 2, w, h);
@@ -540,15 +630,62 @@ export class Renderer {
     }
 
     drawVillageMap() {
-        if (!this.assets.villageMap.complete || this.zoom < 0.005) return;
+        if (!this.assets.villageMapPretty.complete || this.zoom < 0.005) return;
         const ctx = this.ctx;
         const scale = 8 * this.zoom;
-        const pos = this.worldToScreen(0, 0);
-        const w = 100 * scale;
-        const h = 80 * scale;
+        let cx = 0;
+        let cz = 0;
+        let wM = 100;
+        let hM = 80;
+        const b = this.villageMapBounds;
+        if (b) {
+            cx = (b.min_x + b.max_x) / 2;
+            cz = (b.min_z + b.max_z) / 2;
+            wM = Math.max(1, b.max_x - b.min_x);
+            hM = Math.max(1, b.max_z - b.min_z);
+        }
+        const pos = this.worldToScreen(cx, cz);
+        const w = wM * scale;
+        const h = hM * scale;
         ctx.save();
         ctx.globalAlpha = Math.min(1, (this.zoom - 0.005) * 20);
-        ctx.drawImage(this.assets.villageMap, pos.x - w / 2, pos.y - h / 2, w, h);
+        const baseAlpha = ctx.globalAlpha;
+
+        const drawImg = (img, alphaMul, flipZ = false, offsetX = 0.0, offsetZ = 0.0, scaleMul = 1.0) => {
+            if (!img || !img.complete) return;
+            const pos2 = (offsetX || offsetZ) ? this.worldToScreen(cx + offsetX, cz + offsetZ) : pos;
+            ctx.globalAlpha = baseAlpha * alphaMul;
+            const ww = w * scaleMul;
+            const hh = h * scaleMul;
+            if (flipZ) {
+                ctx.save();
+                ctx.translate(pos2.x, pos2.y);
+                ctx.scale(1, -1);
+                ctx.drawImage(img, -ww / 2, -hh / 2, ww, hh);
+                ctx.restore();
+            } else {
+                ctx.drawImage(img, pos2.x - ww / 2, pos2.y - hh / 2, ww, hh);
+            }
+        };
+
+        drawImg(
+            this.assets.villageMapPretty,
+            1.0,
+            this.villageMapPrettyFlipZ,
+            0.0,
+            0.0,
+            this.villageMapPrettyScale
+        );
+        if (this.villageMapOverlayEnabled) {
+            drawImg(
+                this.assets.villageMapGrid,
+                this.villageMapOverlayAlpha,
+                this.villageMapOverlayFlipZ,
+                this.villageMapOverlayOffsetX,
+                this.villageMapOverlayOffsetZ,
+                this.villageMapOverlayScale
+            );
+        }
         ctx.restore();
     }
 

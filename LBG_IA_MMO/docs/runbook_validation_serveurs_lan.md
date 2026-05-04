@@ -116,6 +116,37 @@ Référence UI : la page **`/pilot/`** propose des liens et des tests **GET /met
 
 ## 3) Smokes LAN recommandés
 
+### 3.0 Cœur backend / orchestrateur + Pilot (sans HTTP interne `:8773` sur la VM MMO)
+
+Quand tu veux valider **uniquement la VM core** (backend `:8000`, orchestrateur `:8010`, `GET /v1/pilot/status`) **sans** dépendre du serveur jeu / HTTP interne **mmmorpg** (`192.168.0.245:8773`) :
+
+```bash
+cd LBG_IA_MMO
+bash infra/scripts/smoke_lan_core_desktop.sh
+```
+
+Option — enchaîner aussi un **`POST /v1/pilot/route`** avec `open_url` en **`desktop_dry_run`** (chaîne pilot → orchestrateur → `agent.desktop`, si configurée) :
+
+```bash
+bash infra/scripts/smoke_lan_core_desktop.sh --desktop-route
+# ou : LBG_SMOKE_DESKTOP_ROUTE=1 bash infra/scripts/smoke_lan_core_desktop.sh
+```
+
+Depuis la racine du workspace parent (dossier contenant `LBG_IA_MMO/`), le même fichier existe comme **wrapper** : `bash infra/scripts/smoke_lan_core_desktop.sh`.
+
+Dans **`infra/scripts/smoke_lan_quick.sh`**, tu peux ajouter **`LBG_SMOKE_WITH_CORE_DESKTOP=1`** : une étape **supplémentaire** (healthz core + orchestrateur + `GET /v1/pilot/status`, sans **`:8773`**) après les autres smokes optionnels. **Attention** : le *quick* enchaîne par défaut **`smoke_lan_minimal.sh`**, qui interroge aussi la VM MMO — pour **uniquement** le cœur sans accès mmmorpg, lance **`smoke_lan_core_desktop.sh`** seul (sans le *quick*).
+
+### 3.0.1 Proxies Pilot → agents (GET healthz, sans route)
+
+Vérifie que le **backend** répond en proxy pour les healthz **`agent-dialogue`**, **`agent-desktop`**, **`agent-pm`** :
+
+```bash
+cd LBG_IA_MMO
+bash infra/scripts/smoke_lan_pilot_agent_proxies.sh
+```
+
+Codes **502** / **503** sur une ligne indiquent souvent l’agent **non branché** — le script reste en **exit 0** sauf si **`LBG_SMOKE_AGENT_PROXIES_STRICT=1`** (alors toute réponse hors **2xx** fait échouer le smoke).
+
 ### 3.1 Commit “dialogue → aid_*” via API (service→service)
 
 ```bash
@@ -159,6 +190,7 @@ Optionnel :
 
 - Renseigne le champ **token service** (header `X-LBG-Service-Token`) pour que les snapshots `:8773` passent si protégés.
 - **Métriques** : section **Monitoring** → liens `/metrics` + champ Bearer optionnel (voir **2ter**).
+- **Desktop (hybride)** : `#/desktop` — presets d’actions, dry-run pilot, **Proposer via IA** si l’agent dialogue expose le plan desktop ; détail `docs/desktop_hybride.md`, recette HTTP **3.0**.
 
 ---
 

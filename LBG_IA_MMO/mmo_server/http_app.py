@@ -124,7 +124,27 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(title="LBG MMO Server", lifespan=_lifespan)
 
-_cors_origins = [o.strip() for o in os.environ.get("LBG_MMO_CORS_ORIGINS", "").split(",") if o.strip()]
+
+def _resolve_mmo_cors_origins() -> list[str]:
+    """Origines CORS pour le client web (fetch `collision-grid`, etc.)."""
+    out: list[str] = [o.strip() for o in os.environ.get("LBG_MMO_CORS_ORIGINS", "").split(",") if o.strip()]
+    if not out and os.environ.get("LBG_MMO_CORS_DEV", "").strip().lower() in ("1", "true", "yes"):
+        out = [
+            "http://127.0.0.1:5173",
+            "http://localhost:5173",
+            "http://127.0.0.1:4173",
+            "http://localhost:4173",
+        ]
+    seen: set[str] = set()
+    uniq: list[str] = []
+    for o in out:
+        if o not in seen:
+            seen.add(o)
+            uniq.append(o)
+    return uniq
+
+
+_cors_origins = _resolve_mmo_cors_origins()
 if _cors_origins:
     app.add_middleware(
         CORSMiddleware,

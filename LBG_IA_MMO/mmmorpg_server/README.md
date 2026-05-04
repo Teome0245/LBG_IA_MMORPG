@@ -48,9 +48,20 @@ Variables d’environnement (dans l’ordre de tentative) :
 
 **PNJ (seed)** : si une grille est chargée, les positions issues de `world_initial.json` (ou du fallback `_seed_npcs`) sont recalées sur la **tuile franchissable la plus proche** (même spirale depuis la tuile cible).
 
+## Champ de vision (serveur WS)
+
+Pour éviter “tout le monde voit tout le monde tout le temps”, le serveur WS peut filtrer les entités renvoyées dans `world_tick` :
+
+- `MMMORPG_FOV_RANGE_M` : rayon (m) autour du joueur (défaut **140**).
+- `MMMORPG_FOV_LOS=1` : active une **ligne de vue** simple sur la grille tuilée (arbres/bâtiments bloquent).
+
+Note : ce filtrage s’applique au **payload envoyé au client**, pas à la simulation autoritaire.
+
 **Logs** : chaque `add_player` émet une ligne **JSON** (`event`, `player_id`, `name`, `x`/`y`/`z`, `grid_source`, `tile_char`, `tile_gx`, `tile_gz`) sur le logger `mmmorpg_server.game_state` au niveau `INFO` (agrégation / Loki / `journalctl`).
 
 **Tests CI** : `tests/fixtures/minimal_village.grid.json` + fixture pytest `minimal_village_grid_env` (`tests/conftest.py`) pour ne pas dépendre du seed Pixie sur les agents CI.
+
+**Client web** : le chargement de la grille depuis le `mmo_server` impose le **CORS** côté HTTP (`LBG_MMO_CORS_ORIGINS` ou `LBG_MMO_CORS_DEV=1` si liste vide) — voir `mmo_server/README.md` et `web_client/README.md`.
 
 ## HTTP interne (optionnel) — snapshot Lyra (lecture seule)
 

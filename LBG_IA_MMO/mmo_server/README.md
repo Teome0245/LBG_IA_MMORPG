@@ -19,6 +19,7 @@ Voir `../../bootstrap.md`.
 - **`GET /v1/world/collision`** — méta grille village (taille, bounds, etc.).
 - **`GET /v1/world/collision-grid`** — document JSON complet `watabou_grid_v1` (même fichier que les collisions) pour **client web** / prédiction locale ; réponse `{"loaded": false}` si aucune grille.
 - **`LBG_MMO_CORS_ORIGINS`** — liste d’origines séparées par des virgules (ex. `http://127.0.0.1:5173,http://localhost:5173`) pour autoriser le **fetch** navigateur depuis le client Vite vers ce serveur HTTP (sinon pas de middleware CORS).
+- **`LBG_MMO_CORS_DEV=1`** — si `LBG_MMO_CORS_ORIGINS` est **vide**, ajoute les origines Vite/preview localhost (`5173`, `4173`). À réserver au **poste de dev** ; en LAN préférer `LBG_MMO_CORS_ORIGINS` explicite sur la VM.
 - **Gameplay v1 (écriture interne, LAN)** :
   - **`POST /internal/v1/npc/{npc_id}/aid`** — applique des deltas bornés sur les jauges (`hunger/thirst/fatigue`) et la réputation, avec gate optionnel `LBG_MMO_INTERNAL_TOKEN` via `X-LBG-Service-Token`.
 - Variable **`LBG_MMO_SERVER_URL`** côté backend ; contexte **`world_npc_id`** — voir `docs/lyra.md`.
@@ -29,6 +30,17 @@ Voir `../../bootstrap.md`.
 - Utilisé au **premier** démarrage lorsqu’aucun état persisté n’existe encore ; ensuite c’est **`world_state.json`** qui prime.
 - **`LBG_MMO_SEED_PATH`** : chemin optionnel vers un autre JSON seed (absolu ou relatif au cwd du processus).
 - Détail : **`world/seed_data/README.md`**, ADR **`docs/adr/0002-mmo-autorite-pont.md`**.
+
+## Tests (venv)
+
+```bash
+cd LBG_IA_MMO/mmo_server
+python3 -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev]"
+pytest tests/ -q
+```
+
+(`httpx` est requis par `TestClient` pour les routes FastAPI.)
 
 ## Persistance (reprise après redémarrage)
 
