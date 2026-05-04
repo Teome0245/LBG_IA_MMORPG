@@ -42,6 +42,7 @@ def test_sanitize_rejects_empty() -> None:
 def test_keys_frozenset() -> None:
     assert "tracked_quest" in SESSION_SUMMARY_KEYS
     assert "quest_snapshot" in SESSION_SUMMARY_KEYS
+    assert "memory_hint" in SESSION_SUMMARY_KEYS
 
 
 def test_build_server_session_summary_parts() -> None:
@@ -53,6 +54,34 @@ def test_build_server_session_summary_parts() -> None:
     assert parts["last_npc"] == "Mara"
     assert "q:foo" in parts["tracked_quest"]
     assert "step=2" in parts["quest_snapshot"]
+
+
+def test_build_server_session_summary_parts_memory_hint_from_flags() -> None:
+    parts = build_server_session_summary_parts(
+        quest_state=None,
+        npc_id="npc:x",
+        npc_name=None,
+        npc_flags={"reputation_delta": 1, "aid_hunger": 0.5},
+    )
+    assert "memory_hint" in parts
+    assert "aid_hunger" in parts["memory_hint"]
+    assert "reputation_delta" in parts["memory_hint"]
+
+
+def test_merge_session_summaries_server_wins_memory_hint() -> None:
+    server = build_server_session_summary_parts(
+        quest_state=None,
+        npc_id="npc:x",
+        npc_name="Zed",
+        npc_flags={"flag_a": 1},
+    )
+    merged = merge_session_summaries(
+        server_parts=server,
+        client_raw={"memory_hint": "client-should-not-win", "player_note": "hi"},
+    )
+    assert merged is not None
+    assert "flag_a" in (merged.get("memory_hint") or "")
+    assert merged.get("player_note") == "hi"
 
 
 def test_merge_session_summaries_server_wins_tracked() -> None:

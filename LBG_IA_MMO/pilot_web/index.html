@@ -375,6 +375,15 @@
       <label for="desktop-text">Texte (trace / intention)</label>
       <textarea id="desktop-text" rows="2" style="font-family: inherit;">ouvre https://example.org dans le navigateur</textarea>
 
+      <label for="desktop-dictation" style="margin-top:0.75rem">Dictée (Web Speech API — Chromium recommandé, page en HTTPS ou localhost)</label>
+      <textarea id="desktop-dictation" rows="3" placeholder="Les segments reconnus (finalisés) s’ajoutent ici ; puis « Appliquer → notepad_append »." style="font-family: inherit;"></textarea>
+      <p class="muted" style="margin:0.35rem 0 0 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-desktop-dictation-start">Écouter</button>
+        <button type="button" id="btn-desktop-dictation-stop">Arrêter</button>
+        <button type="button" id="btn-desktop-dictation-apply">Appliquer → notepad_append</button>
+        <span id="desktop-dictation-hint">—</span>
+      </p>
+
       <label for="desktop-action" style="margin-top:0.75rem">desktop_action (JSON)</label>
       <textarea id="desktop-action" rows="6" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
   "kind": "open_url",
@@ -2322,6 +2331,7 @@
       if (r === "desktop") {
         try { pilotDesktopRefreshConfigHint(); } catch (_) {}
         try { pilotDesktopLoadMmoSummaryFromStorage(); } catch (_) {}
+        try { pilotDesktopSetupSpeech(); } catch (_) {}
       }
       const title = document.getElementById("pilot-work-title");
       const sub = document.getElementById("pilot-work-sub");
@@ -3125,6 +3135,86 @@
     }
 
     const LBG_PILOT_MMO_SUMMARY_KEY = "lbg_pilot_mmo_session_summary_json";
+    const LBG_PILOT_DESKTOP_NOTEPAD_DEFAULT = "C:\\\\Users\\\\Public\\\\lbg_desktop.txt";
+
+    let pilotDesktopRecog = null;
+
+    function pilotDesktopSetupSpeech() {
+      const dh = document.getElementById("desktop-dictation-hint");
+      const dta = document.getElementById("desktop-dictation");
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        if (dh) dh.textContent = "SpeechRecognition indisponible.";
+        return;
+      }
+      const start = document.getElementById("btn-desktop-dictation-start");
+      const stop = document.getElementById("btn-desktop-dictation-stop");
+      const apply = document.getElementById("btn-desktop-dictation-apply");
+      if (start)
+        start.addEventListener("click", function () {
+          try {
+            if (pilotDesktopRecog) pilotDesktopRecog.stop();
+          } catch (_) {}
+          pilotDesktopRecog = new SR();
+          pilotDesktopRecog.lang = "fr-FR";
+          pilotDesktopRecog.continuous = true;
+          pilotDesktopRecog.interimResults = false;
+          pilotDesktopRecog.onresult = function (ev) {
+            if (!dta) return;
+            for (let i = ev.resultIndex; i < ev.results.length; i++) {
+              if (!ev.results[i].isFinal) continue;
+              const piece = String(ev.results[i][0].transcript || "").trim();
+              if (!piece) continue;
+              const sep = dta.value && !/[ \n]$/.test(dta.value) ? " " : "";
+              dta.value = (dta.value || "") + sep + piece;
+            }
+          };
+          pilotDesktopRecog.onerror = function (e) {
+            if (dh) dh.textContent = "Reconnaissance : " + (e && e.error ? e.error : "?");
+          };
+          pilotDesktopRecog.onend = function () {
+            pilotDesktopRecog = null;
+          };
+          try {
+            pilotDesktopRecog.start();
+            if (dh) dh.textContent = "Écoute…";
+          } catch (err) {
+            if (dh) dh.textContent = "Démarr.err : " + err;
+          }
+        });
+      if (stop)
+        stop.addEventListener("click", function () {
+          try {
+            if (pilotDesktopRecog) pilotDesktopRecog.stop();
+          } catch (_) {}
+          pilotDesktopRecog = null;
+          if (dh) dh.textContent = "Arrêt.";
+        });
+      if (apply)
+        apply.addEventListener("click", function () {
+          const raw = dta ? String(dta.value || "").trim() : "";
+          if (!raw) {
+            if (dh) dh.textContent = "Dictée vide.";
+            return;
+          }
+          const aEl = document.getElementById("desktop-action");
+          const tEl = document.getElementById("desktop-text");
+          let path = LBG_PILOT_DESKTOP_NOTEPAD_DEFAULT;
+          try {
+            const cur = aEl && aEl.value ? JSON.parse(aEl.value) : null;
+            if (cur && cur.kind === "notepad_append" && typeof cur.path === "string" && cur.path.trim())
+              path = cur.path.trim();
+          } catch (_) {}
+          const textLine = raw.endsWith("\n") ? raw : raw + "\n";
+          const action = { kind: "notepad_append", path: path, text: textLine };
+          if (aEl) aEl.value = JSON.stringify(action, null, 2);
+          if (tEl) tEl.value = "notepad_append : " + raw.slice(0, 200);
+          try {
+            desktopTrySyncActionFromText();
+          } catch (_) {}
+          if (dh) dh.textContent = "Action notepad_append mise à jour.";
+        });
+    }
 
     function pilotDesktopMergeMmoSummaryIntoContext(ctx) {
       if (!ctx || typeof ctx !== "object") return;

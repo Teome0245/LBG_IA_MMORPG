@@ -5,7 +5,14 @@ from __future__ import annotations
 from typing import Any
 
 SESSION_SUMMARY_KEYS = frozenset(
-    {"tracked_quest", "last_npc", "player_note", "session_mood", "quest_snapshot"}
+    {
+        "tracked_quest",
+        "last_npc",
+        "player_note",
+        "session_mood",
+        "quest_snapshot",
+        "memory_hint",
+    }
 )
 
 
@@ -32,13 +39,23 @@ def sanitize_session_summary(raw: object) -> dict[str, str] | None:
     return out if out else None
 
 
+def _memory_hint_from_npc_flags(flags: dict[str, Any] | None) -> str | None:
+    """Indice léger « mémoire monde » : noms de clés flags PNJ (sans valeurs), ordre stable."""
+    if not isinstance(flags, dict) or not flags:
+        return None
+    keys = sorted(str(k)[:32] for k in flags.keys())[:12]
+    s = ",".join(keys)
+    return s[:160] if s else None
+
+
 def build_server_session_summary_parts(
     *,
     quest_state: dict[str, Any] | None,
     npc_id: str,
     npc_name: str | None,
+    npc_flags: dict[str, Any] | None = None,
 ) -> dict[str, str]:
-    """Données autoritatives monde (quête joueur + interlocuteur) — fusionnées avant le client."""
+    """Données autoritatives monde (quête joueur + interlocuteur + indice flags PNJ) — fusionnées avant le client."""
     parts: dict[str, str] = {}
     nn = npc_name.strip() if isinstance(npc_name, str) and npc_name.strip() else ""
     nid = (npc_id or "").strip()
@@ -61,6 +78,9 @@ def build_server_session_summary_parts(
             if st_s:
                 qline += f" status={st_s}"
             parts["quest_snapshot"] = qline[:160]
+    mh = _memory_hint_from_npc_flags(npc_flags)
+    if mh:
+        parts["memory_hint"] = mh
     return parts
 
 
@@ -72,6 +92,6 @@ def merge_session_summaries(*, server_parts: dict[str, str], client_raw: object)
     client = sanitize_session_summary(client_raw) or {}
     merged: dict[str, str] = dict(client)
     for k, v in server_parts.items():
-        if k in ("tracked_quest", "quest_snapshot", "last_npc"):
+        if k in ("tracked_quest", "quest_snapshot", "last_npc", "memory_hint"):
             merged[k] = v
     return sanitize_session_summary(merged)

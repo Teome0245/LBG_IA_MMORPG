@@ -65,7 +65,7 @@ pour déclencher une réplique PNJ **après** `hello` (même mécanisme que `hel
 
 | Clé | Rôle |
 |-----|------|
-| `session_summary` | Objet **sanitisé** : `tracked_quest`, `last_npc`, `player_note`, `session_mood`, `quest_snapshot` (valeurs courtes). Le **serveur** fusionne un résumé autoritatif (quête joueur + PNJ courant) : il **prime** sur `tracked_quest`, `quest_snapshot` et `last_npc` ; le client peut compléter avec `player_note` / `session_mood`. |
+| `session_summary` | Objet **sanitisé** : `tracked_quest`, `last_npc`, `player_note`, `session_mood`, `quest_snapshot`, `memory_hint` (valeurs courtes ; `memory_hint` = liste bornée de **clés** de flags PNJ côté serveur, sans exposer les valeurs). Le **serveur** fusionne un résumé autoritatif (quête joueur + PNJ courant + indice flags) : il **prime** sur `tracked_quest`, `quest_snapshot`, `last_npc` et `memory_hint` ; le client peut compléter avec `player_note` / `session_mood`. Le serveur construit ce merge **même si** `ia_context` est absent ou vide (hors `session_summary` client). |
 | `_active_quest_id` | ID quête (string ≤ 80), si non déjà fusionné côté client. |
 | `_require_action_json`, `_no_cache` | Booléens (debug / UI). |
 | `_world_action_kind` | `"aid"` ou `"quest"` si l’UI impose le type d’`ACTION_JSON`. |

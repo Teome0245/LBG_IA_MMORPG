@@ -206,20 +206,24 @@ def _queue_ia_bridge(
         placeholder = _format_ia_placeholder(config.IA_PLACEHOLDER_REPLY, ctx.get("npc_name") if isinstance(ctx.get("npc_name"), str) else None)
         if placeholder:
             pending_replies[ws] = (placeholder, trace_id, None)
+    # Résumé session : toujours construire la partie serveur (quête + PNJ + mémoire monde légère),
+    # même si le client n'envoie pas d'ia_context.
+    server_ssum = build_server_session_summary_parts(
+        quest_state=_player_quest_state(game, player_id),
+        npc_id=npc_id,
+        npc_name=npc_name,
+        npc_flags=game.get_npc_commit_flags(npc_id),
+    )
+    client_raw = ia_context.get("session_summary") if isinstance(ia_context, dict) else None
+    ssum_merged = merge_session_summaries(
+        server_parts=server_ssum,
+        client_raw=client_raw,
+    )
+    if ssum_merged:
+        ctx["session_summary"] = ssum_merged
     # Permet aux clients/outils d'injecter un mini contexte vers l'IA (borné).
     # Important: ne pas permettre d'écraser `world_npc_id` ni d'injecter des structures arbitraires.
     if isinstance(ia_context, dict) and ia_context:
-        server_ssum = build_server_session_summary_parts(
-            quest_state=_player_quest_state(game, player_id),
-            npc_id=npc_id,
-            npc_name=npc_name,
-        )
-        ssum_merged = merge_session_summaries(
-            server_parts=server_ssum,
-            client_raw=ia_context.get("session_summary"),
-        )
-        if ssum_merged:
-            ctx["session_summary"] = ssum_merged
         for k, v in ia_context.items():
             if k == "session_summary":
                 continue

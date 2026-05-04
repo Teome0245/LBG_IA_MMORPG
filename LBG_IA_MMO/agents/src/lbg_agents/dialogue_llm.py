@@ -879,9 +879,10 @@ def _format_session_summary_for_prompt(context: dict[str, Any]) -> str | None:
         "player_note": "Note joueur",
         "session_mood": "Ambiance",
         "quest_snapshot": "Instantané quête (serveur jeu)",
+        "memory_hint": "Mémoire monde PNJ (clés d’état, sans valeurs sensibles)",
     }
     parts: list[str] = []
-    for k in ("tracked_quest", "quest_snapshot", "last_npc", "player_note", "session_mood"):
+    for k in ("tracked_quest", "quest_snapshot", "last_npc", "memory_hint", "player_note", "session_mood"):
         v = ss.get(k)
         if isinstance(v, str) and v.strip():
             lab = labels.get(k, k)

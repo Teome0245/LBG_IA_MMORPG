@@ -38,6 +38,14 @@ Pour rapprocher le flux du MMO (`ACTION_JSON`) sans exécuter à l’aveugle :
 3. Le serveur parse et sanitise la proposition, puis l’expose dans **`meta.desktop_action_proposal`** (les allowlists réelles restent au worker lors du routage). L’agent dialogue annonce **`desktop_plan_env_enabled`** dans **`GET /healthz`** (utile pour le bandeau diagnostique sur `#/desktop` via `GET /v1/pilot/status`).
 4. Le Pilot (`#/desktop`) peut appeler **`POST /v1/pilot/agent-dialogue/invoke`** (proxy même origine), remplir le textarea `desktop_action`, puis l’opérateur clique **Envoyer** (`/v1/pilot/route`) après relecture.
 
+### Dictée → `notepad_append` (Pilot `#/desktop`)
+
+Pour le parcours **rang 1** (bloc-notes sans retaper au clavier) :
+
+1. Ouvrir **`/pilot/#/desktop`** en **HTTPS** ou sur **`localhost`** (les navigateurs limitent souvent `SpeechRecognition` aux contextes sécurisés).
+2. Utiliser le bloc **Dictée** : **Écouter** remplit le champ texte au fil de la reconnaissance (API **Web Speech** — typiquement Chromium ; sinon le bandeau indique l’indisponibilité).
+3. **Appliquer → notepad_append** : remplit / met à jour le JSON `desktop_action` avec `kind: "notepad_append"` en reprenant le **chemin** déjà présent dans l’éditeur (sinon le chemin par défaut du preset) et le **texte** dicté. Relisez l’allowlist worker puis **Envoyer**.
+
 ## Module Windows dans le repo + sync vers `C:\Agent_IA`
 
 Le worker Windows est désormais un **module du repo** :
