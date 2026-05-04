@@ -270,8 +270,8 @@ def test_pilot_proxy_agent_dialogue_invoke_forwards_json(monkeypatch: pytest.Mon
             }
 
     class _ClientInvoke:
-        def __init__(self, *a: object, **k: object) -> None:
-            pass
+        def __init__(self, **k: object) -> None:
+            captured["timeout"] = k.get("timeout")
 
         async def __aenter__(self) -> "_ClientInvoke":
             return self
@@ -284,7 +284,7 @@ def test_pilot_proxy_agent_dialogue_invoke_forwards_json(monkeypatch: pytest.Mon
             captured["json"] = json
             return _OkInvoke()
 
-    monkeypatch.setattr(pilot_mod.httpx, "AsyncClient", lambda **kw: _ClientInvoke())
+    monkeypatch.setattr(pilot_mod.httpx, "AsyncClient", lambda **kw: _ClientInvoke(**kw))
 
     from backend.main import app
 
@@ -300,6 +300,7 @@ def test_pilot_proxy_agent_dialogue_invoke_forwards_json(monkeypatch: pytest.Mon
     assert isinstance(meta, dict)
     assert meta.get("dialogue_profile_resolved") == "professionnel"
     assert captured.get("url") == "http://127.0.0.1:8020/invoke"
+    assert captured.get("timeout") == 300.0
     body = captured.get("json")
     assert isinstance(body, dict)
     assert body.get("actor_id") == "p:1"

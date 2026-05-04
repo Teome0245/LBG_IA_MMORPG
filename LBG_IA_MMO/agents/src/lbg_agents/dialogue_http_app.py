@@ -21,7 +21,9 @@ from lbg_agents import world_content as world_content_mod
 app = FastAPI(title="LBG_IA_MMO dialogue HTTP agent", version="0.2.0")
 
 _MAX_PLAYER_CHARS = 400
-_MAX_LINE_CHARS = 320
+# Réplique complète : les lignes JSON (champ « lines ») ne doivent pas tronquer avant le champ « reply ».
+_MAX_LINE_CHARS = int(os.environ.get("LBG_DIALOGUE_HTTP_MAX_LINE_CHARS", "2000") or "2000")
+_MAX_LINE_CHARS = max(320, min(_MAX_LINE_CHARS, 8000))
 
 
 class InvokeIn(BaseModel):

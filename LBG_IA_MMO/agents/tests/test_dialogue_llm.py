@@ -9,10 +9,27 @@ from lbg_agents.dialogue_llm import (
     is_configured,
     model_name,
     normalize_history,
+    _coerce_openai_message_content,
+    _effective_llm_http_timeout_s,
+    _assistant_message_text,
+    _choice_assistant_text,
+    _enforce_short_reply,
     _postprocess_llm_content,
     _sanitize_desktop_action_proposal,
     _sanitize_world_action,
 )
+
+
+def test_enforce_short_reply_soft_cap_prefers_sentence_end(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_MAX_WORDS", "14")
+    monkeypatch.setenv("LBG_DIALOGUE_MAX_SENTENCES", "8")
+    raw = (
+        "Une pomme de terre fraîche, c'est ce qu'il me faut pour me réconforter après "
+        "une longue journée. Merci pour ton geste."
+    )
+    out = _enforce_short_reply(raw)
+    assert out.endswith("…")
+    assert "Merci" not in out
 
 
 def test_normalize_history_filters_and_caps() -> None:
@@ -510,7 +527,10 @@ def test_build_system_prompt_mentions_coherence_when_history() -> None:
             "history": [{"role": "user", "content": "Je suis roi."}, {"role": "assistant", "content": "Vraiment ?"}],
         },
     )
-    assert "historique" in s.lower() or "cohérent" in s.lower()
+    low = s.lower()
+    assert "historique" in low or "cohérent" in low
+    assert "nouveau visiteur" in low
+    assert "générique" in low or "générique" in s
 
 
 def test_build_system_prompt_desktop_plan_branch(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -555,6 +575,16 @@ def test_postprocess_llm_content_desktop_before_world(monkeypatch: pytest.Monkey
     assert "ACTION_JSON" not in reply
 
 
+def test_postprocess_llm_content_world_action_fallback_when_no_visible(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_WORLD_ACTIONS", "1")
+    ctx: dict = {"world_npc_id": "npc:smith"}
+    raw = 'ACTION_JSON: {"kind":"aid","hunger_delta":-0.1,"thirst_delta":0,"fatigue_delta":0,"reputation_delta":1}\n'
+    reply, world_act = _postprocess_llm_content(raw=raw, context=ctx)
+    assert world_act is not None
+    assert world_act.get("kind") == "aid"
+    assert "enregistre" in reply.lower()
+
+
 def test_desktop_plan_env_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     from lbg_agents import dialogue_llm as mod
 
@@ -572,3 +602,70 @@ def test_postprocess_llm_content_desktop_only(monkeypatch: pytest.MonkeyPatch) -
     assert ctx["_desktop_action_proposal"]["url"] == "https://example.org"
     assert world_act is None
     assert "OK" in reply
+
+
+def test_postprocess_llm_content_desktop_after_preamble(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    ctx: dict = {"_desktop_plan": True}
+    raw = (
+        "Bien sûr, voici le lien.\n"
+        'DESKTOP_JSON: {"kind":"open_url","url":"https://example.org"}\n'
+        "Ouverture prévue."
+    )
+    reply, world_act = _postprocess_llm_content(raw=raw, context=ctx)
+    assert ctx.get("_desktop_action_proposal") == {"kind": "open_url", "url": "https://example.org"}
+    assert world_act is None
+    assert "DESKTOP_JSON" not in reply
+    assert "Bien sûr" in reply
+    assert "Ouverture" in reply
+
+
+def test_postprocess_llm_content_desktop_inline_same_line(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    ctx: dict = {"_desktop_plan": True}
+    raw = 'D’accord. DESKTOP_JSON: {"kind":"open_url","url":"https://example.org"}'
+    reply, _ = _postprocess_llm_content(raw=raw, context=ctx)
+    assert ctx["_desktop_action_proposal"]["url"] == "https://example.org"
+    assert "DESKTOP_JSON" not in reply
+    assert "D’accord" in reply
+
+
+def test_coerce_openai_message_content_list_fragments() -> None:
+    assert _coerce_openai_message_content([{"type": "text", "text": "ab"}, {"type": "text", "text": "cd"}]) == "abcd"
+    assert _coerce_openai_message_content(["x", "y"]) == "xy"
+    assert _coerce_openai_message_content(None) == ""
+
+
+def test_coerce_openai_message_content_nested_content_key() -> None:
+    assert _coerce_openai_message_content([{"content": "x"}]) == "x"
+    assert _coerce_openai_message_content({"text": "solo"}) == "solo"
+
+
+def test_assistant_message_text_reasoning_fallback() -> None:
+    assert _assistant_message_text({"content": "", "reasoning_content": "DESKTOP_JSON: {\"kind\":\"open_url\",\"url\":\"https://a\"}"}).startswith(
+        "DESKTOP_JSON:"
+    )
+    assert _assistant_message_text({"content": None, "thinking": " visible "}).strip() == "visible"
+
+
+def test_choice_assistant_text_prefers_later_nonempty_choice() -> None:
+    assert (
+        _choice_assistant_text({"message": {"content": ""}})
+        == ""
+    )
+    assert _choice_assistant_text({"message": {"content": "OK"}, "finish_reason": "stop"}) == "OK"
+    assert _choice_assistant_text({"text": "legacy"}) == "legacy"
+
+
+def test_effective_llm_http_timeout_desktop_min(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_TIMEOUT", "30")
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_TIMEOUT_DESKTOP_MIN", "240")
+    assert _effective_llm_http_timeout_s(context={"_desktop_plan": True}) == 240.0
+
+
+def test_effective_llm_http_timeout_ignores_desktop_min_without_desktop_plan(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_TIMEOUT", "30")
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_TIMEOUT_DESKTOP_MIN", "240")
+    assert _effective_llm_http_timeout_s(context={"world_npc_id": "npc:innkeeper"}) == 30.0

@@ -86,6 +86,15 @@ def _require_internal_token(got: str | None) -> None:
         )
 
 
+def _pilot_agent_dialogue_invoke_timeout_s() -> float:
+    """HTTP backend → agent dialogue pour POST /invoke (LLM + marge ; doit dépasser le timeout côté agent)."""
+    raw = os.environ.get("LBG_PILOT_AGENT_DIALOGUE_INVOKE_TIMEOUT", "300").strip()
+    try:
+        return max(45.0, float(raw))
+    except ValueError:
+        return 300.0
+
+
 async def _pilot_route_impl(*, payload: IntentRequest, trace_id: str) -> dict[str, object]:
     t0 = time.perf_counter()
     svc_metrics.inc("pilot_route_requests_total")
@@ -459,7 +468,7 @@ async def pilot_proxy_agent_dialogue_invoke(body: AgentDialogueInvokeBody) -> di
     url = f"{base}/invoke"
     payload = {"actor_id": body.actor_id, "text": body.text, "context": body.context}
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=_pilot_agent_dialogue_invoke_timeout_s()) as client:
             r = await client.post(url, json=payload)
     except Exception as e:
         raise HTTPException(

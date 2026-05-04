@@ -6,15 +6,16 @@ Variables d’environnement :
 - ``LBG_DIALOGUE_LLM_DISABLED`` — si ``1`` / ``true`` : pas d’appel LLM (stub côté agent HTTP).
 - ``LBG_DIALOGUE_LLM_API_KEY`` — optionnel (Ollama local souvent sans clé).
 - ``LBG_DIALOGUE_LLM_MODEL`` — défaut ``phi4-mini:latest`` (nom ``ollama list``).
-- ``LBG_DIALOGUE_LLM_TIMEOUT`` — secondes (défaut 120).
+- ``LBG_DIALOGUE_LLM_TIMEOUT`` — secondes (défaut 120 ; **minimum 5** appliqué par le client).
+- ``LBG_DIALOGUE_LLM_TIMEOUT_DESKTOP_MIN`` — optionnel : si défini (>0) et tour ``_desktop_plan`` actif, le timeout effectif est ``max(LBG_DIALOGUE_LLM_TIMEOUT, cette valeur)`` (évite les *timed out* Ollama sans allonger les tours PNJ).
 - ``LBG_DIALOGUE_LLM_TEMPERATURE`` — défaut 0.7.
-- ``LBG_DIALOGUE_LLM_MAX_TOKENS`` — défaut 512.
+- ``LBG_DIALOGUE_LLM_MAX_TOKENS`` — défaut 512 ; avec actions monde (`LBG_DIALOGUE_WORLD_ACTIONS`), un plancher (160) évite les répliques coupées si l’env reste très bas.
 
 Historique multi-tours : ``context["history"]`` = liste d’objets avec ``role`` (``"user"`` ou ``"assistant"``) et ``content`` (chaîne).
 
 État Lyra : si ``context["lyra"]`` est un objet (ex. ``gauges`` faim/soif/fatigue 0–1), un résumé est ajouté au prompt système pour influencer le ton du PNJ.
 
-Proposition d’actions desktop (Pilot / hybride) : si ``LBG_DIALOGUE_DESKTOP_PLAN=1`` et ``context["_desktop_plan"]=true``, le modèle peut émettre ``DESKTOP_JSON: {...}`` ; la proposition sanitée est exposée dans ``context["_desktop_action_proposal"]`` et ``meta.desktop_action_proposal`` côté HTTP.
+Proposition d’actions desktop (Pilot / hybride) : si ``LBG_DIALOGUE_DESKTOP_PLAN=1`` et ``context["_desktop_plan"]=true``, le modèle peut émettre ``DESKTOP_JSON: {...}`` sur une ligne dédiée ou après du texte sur la même ligne ; la proposition sanitée est exposée dans ``context["_desktop_action_proposal"]`` et ``meta.desktop_action_proposal`` côté HTTP.
 
 Multi‑LLM / suivi : ``dialogue_target=auto`` (ou défaut env ``LBG_DIALOGUE_TARGET_DEFAULT=auto``) parcourt ``LBG_DIALOGUE_AUTO_ORDER`` (défaut ``local,fast,remote``). Le budget optionnel ``LBG_DIALOGUE_BUDGET_MAX_USD`` borne la dépense **cumulée process** pour les appels ``fast``/``remote`` en mode auto uniquement. Chaque tour enrichit ``agents.dialogue.trace`` (JSONL si ``LBG_DIALOGUE_TRACE_LOG_PATH``) : latence, coût estimé, profil, extrait texte, issue, décision de route.
 
@@ -308,13 +309,31 @@ def _strip_emoji(s: str) -> str:
     return _emoji_re.sub("", s)
 
 
+def _soft_cap_words(s: str, max_words: int) -> str:
+    """Coupe à max_words en essayant de finir sur une coupure naturelle (phrase / virgule)."""
+    words = s.split()
+    if len(words) <= max_words:
+        return s
+    chunk = " ".join(words[:max_words]).rstrip(" ,;:")
+    min_keep = max(3, int(max_words * 0.45))
+    for i in range(len(chunk) - 1, -1, -1):
+        if chunk[i] in ".!?" and i > len(chunk) // 5:
+            trial = chunk[: i + 1].strip()
+            if len(trial.split()) >= min_keep:
+                return f"{trial}…"
+    comma = chunk.rfind(",")
+    if comma > 0 and len(chunk[:comma].split()) >= min_keep:
+        return f"{chunk[:comma].strip()}…"
+    return f"{chunk}…"
+
+
 def _enforce_short_reply(raw: str) -> str:
     """
-    Post-traitement strict : 1-2 phrases, limite de mots, sans emojis.
+    Post-traitement strict : court mais lisible, sans emojis.
     Contrôlé par env :
       - LBG_DIALOGUE_STRICT_SHORT (défaut 1)
-      - LBG_DIALOGUE_MAX_SENTENCES (défaut 2)
-      - LBG_DIALOGUE_MAX_WORDS (défaut 25)
+      - LBG_DIALOGUE_MAX_SENTENCES (défaut 3)
+      - LBG_DIALOGUE_MAX_WORDS (défaut 52)
     """
     v = os.environ.get("LBG_DIALOGUE_STRICT_SHORT", "1").strip().lower()
     if v in ("0", "false", "no", "off"):
@@ -326,26 +345,23 @@ def _enforce_short_reply(raw: str) -> str:
         return raw.strip()
 
     try:
-        max_sent = int(os.environ.get("LBG_DIALOGUE_MAX_SENTENCES", "2"))
+        max_sent = int(os.environ.get("LBG_DIALOGUE_MAX_SENTENCES", "3"))
     except ValueError:
-        max_sent = 2
-    max_sent = max(1, min(max_sent, 6))
+        max_sent = 3
+    max_sent = max(1, min(max_sent, 8))
 
     try:
-        max_words = int(os.environ.get("LBG_DIALOGUE_MAX_WORDS", "25"))
+        max_words = int(os.environ.get("LBG_DIALOGUE_MAX_WORDS", "52"))
     except ValueError:
-        max_words = 25
-    max_words = max(5, min(max_words, 80))
+        max_words = 52
+    max_words = max(5, min(max_words, 150))
 
     parts = re.split(r"(?<=[.!?])\s+", s)
     s2 = " ".join([p.strip() for p in parts if p.strip()][:max_sent]).strip()
     if not s2:
         s2 = s
 
-    words = s2.split()
-    if len(words) > max_words:
-        s2 = " ".join(words[:max_words]).rstrip(" ,;:") + "…"
-
+    s2 = _soft_cap_words(s2, max_words)
     return s2
 
 
@@ -753,6 +769,21 @@ def _timeout_s() -> float:
         return 120.0
 
 
+def _effective_llm_http_timeout_s(*, context: dict[str, Any]) -> float:
+    """Timeout httpx lecture/connexion LLM : base, avec plancher optionnel pour les tours desktop."""
+    base = _timeout_s()
+    if not _desktop_plan_enabled(context=context):
+        return base
+    raw = os.environ.get("LBG_DIALOGUE_LLM_TIMEOUT_DESKTOP_MIN", "").strip()
+    if not raw or raw.lower() in ("0", "off", "false", "no"):
+        return base
+    try:
+        floor = float(raw)
+    except ValueError:
+        return base
+    return max(base, max(5.0, floor))
+
+
 def _api_key() -> str | None:
     k = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_LLM_API_KEY", ""))
     return k or None
@@ -912,7 +943,7 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
         lines = [
             _profile_prompt(profile, speaker=speaker, context=context),
             f"Tu incarnes {speaker}, un assistant qui aide l'utilisateur à formuler des actions PC contrôlées.",
-            "Tu réponds en français. Reste bref : 1 à 2 phrases maximum (pas de liste), idéalement moins de 25 mots sauf demande explicite de détail.",
+            "Tu réponds en français. Reste bref : 1 à 2 phrases maximum (pas de liste), idéalement moins de 45 mots sauf demande explicite de détail.",
             "Ne dis pas que tu es une intelligence artificielle ni un modèle de langage.",
             (
                 "Tu DOIS commencer ta réponse par UNE ligne exacte :"
@@ -951,7 +982,7 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
         _profile_prompt(profile, speaker=speaker, context=context),
         f"Tu incarnes {speaker}, un personnage non-joueur (PNJ) dans un MMORPG médiéval-fantasy.",
         "Tu réponds en français. Reste dans ton rôle.",
-        "Réponds très court: 1 à 2 phrases maximum (pas de liste), idéalement < 25 mots, sauf si le joueur demande explicitement une explication longue.",
+        "Réponds court: 1 à 3 phrases (pas de liste), idéalement moins de 55 mots, sauf si le joueur demande explicitement une explication longue.",
         "Ne dis pas que tu es une intelligence artificielle ni un modèle de langage.",
         f"Profil actif: {profile}.",
     ]
@@ -965,10 +996,16 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
     sum_line = _format_session_summary_for_prompt(context)
     if sum_line:
         lines.append(sum_line)
-    if normalize_history(context.get("history"), max_messages=1):
+    if normalize_history(context.get("history")):
         lines.append(
             "Ce joueur et toi avez déjà échangé : l'historique ci-dessous reprend la conversation en cours (ordre chronologique). "
             "Reste cohérent avec tes répliques précédentes. "
+            "N'utilise pas de tournure du type « nouveau visiteur », « bienvenue pour la première fois » ou toute réintroduction comme si le joueur venait d'arriver "
+            "lorsque l'historique montre déjà au moins un message user ou assistant — continue la scène telle quelle. "
+            "Si le joueur vient de confirmer ou d'accepter (ex. « ok », « d'accord », « je vous apporte ça ») juste après une de tes demandes "
+            "(nourriture, boisson, objet, rendez-vous, etc.), enchaîne naturellement : remercie, précise où te retrouver ou comment procéder — "
+            "**sans** repartir sur une question générique du type « que souhaitez-vous ? » ou « de quoi avons-nous besoin de parler ? » "
+            "comme si la conversation recommençait à zéro. "
             "Si le joueur contredit le « Résumé session » (faits du monde ou quête) ou se contredit par rapport à ce qu'il vient d'affirmer dans l'historique, "
             "réagis en une courte phrase, **dans ton rôle** (doute poli, relance, taquinerie) — sans vocabulaire moderne hors cadre ni accusation violente."
         )
@@ -1027,6 +1064,11 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
                 else "Optionnel (actions monde) : si tu veux proposer une action sur le monde, commence ta réponse par UNE ligne :"
             )
         )
+        lines.append(
+            "Après toute ligne ACTION_JSON (obligatoire ou non), écris **sur la même ligne ou la ligne suivante, sans ligne vide entre les deux**, "
+            "au moins une courte phrase en voix du personnage (dialogue joueur-visible). "
+            "Ne mets pas de ligne vide juste après ACTION_JSON : enchaîne tout de suite la réplique, sinon le texte peut être tronqué."
+        )
         lines.append('ACTION_JSON: {"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}')
         lines.append('ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":0,"quest_accepted":true}')
         lines.append(
@@ -1074,28 +1116,49 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _parse_desktop_json_prefix(raw: str) -> tuple[dict[str, Any] | None, str]:
-    """Parse un préfixe de lignes `DESKTOP_JSON: {...}` consécutives ; garde la dernière action valide."""
-    s = (raw or "").replace("\r\n", "\n").strip()
-    if not s:
-        return None, raw.strip()
+_DESKTOP_JSON_MARK = re.compile(r"(?i)\bDESKTOP_JSON\s*:\s*")
 
-    lines = s.split("\n")
-    idx = 0
+
+def _strip_desktop_json_from_line(line: str) -> tuple[dict[str, Any] | None, str]:
+    """Retire le ou les blocs ``DESKTOP_JSON: {...}`` d’une ligne (dernier dict valide gagne)."""
     last_obj: dict[str, Any] | None = None
-    while idx < len(lines):
-        line = lines[idx].strip()
-        if not line.startswith("DESKTOP_JSON:"):
-            break
-        payload = line.split("DESKTOP_JSON:", 1)[1].strip()
+    cur = line
+    dec = json.JSONDecoder()
+    while True:
+        ms = list(_DESKTOP_JSON_MARK.finditer(cur))
+        if not ms:
+            return last_obj, cur
+        m = ms[-1]
+        head = cur[: m.start()]
+        tail = cur[m.end() :]
+        t = tail.lstrip()
         try:
-            obj = json.loads(payload)
-            if isinstance(obj, dict):
-                last_obj = obj
-        except Exception:
-            pass
-        idx += 1
-    remaining = "\n".join(lines[idx:]).strip()
+            obj, used = dec.raw_decode(t)
+        except json.JSONDecodeError:
+            return last_obj, cur
+        if not isinstance(obj, dict):
+            return last_obj, cur
+        last_obj = obj
+        drop_end = m.end() + (len(tail) - len(t)) + used
+        rest = cur[drop_end:]
+        cur = (head.rstrip() + rest).strip()
+
+
+def _parse_desktop_json_prefix(raw: str) -> tuple[dict[str, Any] | None, str]:
+    """Extrait ``DESKTOP_JSON: {...}`` sur n’importe quelle ligne ou en fin de ligne ; garde la dernière action dict valide."""
+    s = (raw or "").replace("\r\n", "\n")
+    if not s.strip():
+        return None, s.strip()
+
+    last_obj: dict[str, Any] | None = None
+    kept: list[str] = []
+    for line in s.split("\n"):
+        line_last, visible = _strip_desktop_json_from_line(line)
+        if line_last is not None:
+            last_obj = line_last
+        if visible.strip():
+            kept.append(visible.rstrip("\n"))
+    remaining = "\n".join(kept).strip()
     return last_obj, remaining
 
 
@@ -1368,7 +1431,7 @@ def _postprocess_llm_content(*, raw: str, context: dict[str, Any]) -> tuple[str,
         reply = _enforce_short_reply(visible)
         if action is not None:
             if not (isinstance(reply, str) and reply.strip()):
-                reply = "D'accord."
+                reply = "C'est entendu, j'enregistre ça pour la scène."
             try:
                 context["_world_action"] = action
             except Exception:
@@ -1378,6 +1441,62 @@ def _postprocess_llm_content(*, raw: str, context: dict[str, Any]) -> tuple[str,
 
 
 ### Note: pas d'API publique "with_action" : l'action est exposée best-effort via context["_world_action"].
+
+
+def _coerce_openai_message_content(raw: object) -> str:
+    """Uniformise ``message.content`` (chaîne ou liste de segments texte selon serveurs compatibles OpenAI)."""
+    if raw is None:
+        return ""
+    if isinstance(raw, str):
+        return raw
+    if isinstance(raw, list):
+        parts: list[str] = []
+        for item in raw:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict):
+                tx = item.get("text")
+                if isinstance(tx, str):
+                    parts.append(tx)
+                else:
+                    nested = item.get("content")
+                    if isinstance(nested, str):
+                        parts.append(nested)
+            # autres formes (image_url, etc.) ignorées
+        return "".join(parts)
+    if isinstance(raw, dict):
+        tx = raw.get("text")
+        if isinstance(tx, str):
+            return tx
+    return ""
+
+
+def _assistant_message_text(msg: dict[str, Any]) -> str:
+    """
+    Texte utile d’un message ``assistant`` : ``content`` canonique, puis champs alternatifs
+    (pensements / raisonnement exposés par certains serveurs quand ``content`` est vide).
+    """
+    primary = _coerce_openai_message_content(msg.get("content")).strip()
+    if primary:
+        return primary
+    for key in ("reasoning_content", "reasoning", "thinking"):
+        alt = msg.get(key)
+        if isinstance(alt, str) and alt.strip():
+            return alt.strip()
+    return ""
+
+
+def _choice_assistant_text(choice: dict[str, Any]) -> str:
+    """Extrait le texte assistant d’un élément ``choices[]`` (chat completions)."""
+    msg = choice.get("message")
+    if isinstance(msg, dict):
+        t = _assistant_message_text(msg)
+        if t:
+            return t
+    legacy = choice.get("text")
+    if isinstance(legacy, str) and legacy.strip():
+        return legacy.strip()
+    return ""
 
 
 def normalize_history(raw: object, *, max_messages: int = 24) -> list[dict[str, str]]:
@@ -1481,10 +1600,13 @@ def run_dialogue_turn(
     # Autoriser des sorties très courtes en prod (ex: 24) pour la latence.
     max_tokens = max(1, min(max_tokens, 4096))
     # Si le caller exige un ACTION_JSON ou DESKTOP_JSON, éviter les réponses tronquées.
-    if (_require_action_json(context=context) or _require_desktop_json(context=context)) and max_tokens < 96:
-        max_tokens = 96
+    if (_require_action_json(context=context) or _require_desktop_json(context=context)) and max_tokens < 160:
+        max_tokens = 160
     elif _desktop_plan_enabled(context=context) and max_tokens < 96:
         max_tokens = 96
+    elif _world_actions_enabled(context=context) and max_tokens < 160:
+        # ACTION_JSON optionnel + réplique : sous-tirer fièrement sur petits max_tokens (ex. .env à 32).
+        max_tokens = 160
 
     payload: dict[str, Any] = {
         "model": selected_model,
@@ -1493,8 +1615,10 @@ def run_dialogue_turn(
         "max_tokens": max_tokens,
     }
     # Couper les sorties multi-paragraphes (souvent inutiles, coûteuses en latence).
-    # Compatible OpenAI / la plupart des serveurs OpenAI-like. Ollama a aussi son propre stop dans /api/chat.
-    payload["stop"] = ["\n\n"]
+    # Avec ACTION_JSON ou DESKTOP_JSON, un double saut de ligne après la ligne structurée arrêtait souvent
+    # la génération avant la réplique visible → contenu vide + fallback. Désactiver ce stop dans ces modes.
+    if not _world_actions_enabled(context=context) and not _desktop_plan_enabled(context=context):
+        payload["stop"] = ["\n\n"]
 
     def _parse_openai_chat_completions(data: Any) -> tuple[str, dict[str, int]]:
         if not isinstance(data, dict):
@@ -1502,12 +1626,6 @@ def run_dialogue_turn(
         choices = data.get("choices")
         if not isinstance(choices, list) or not choices:
             raise RuntimeError("Réponse LLM invalide: pas de choices")
-        msg = choices[0].get("message") if isinstance(choices[0], dict) else None
-        if not isinstance(msg, dict):
-            raise RuntimeError("Réponse LLM invalide: message")
-        content = msg.get("content")
-        if not isinstance(content, str) or not content.strip():
-            raise RuntimeError("Réponse LLM vide")
         usage_obj = data.get("usage") if isinstance(data.get("usage"), dict) else {}
         try:
             pt = int(usage_obj.get("prompt_tokens", 0))
@@ -1517,7 +1635,14 @@ def run_dialogue_turn(
             ct = int(usage_obj.get("completion_tokens", 0))
         except Exception:
             ct = 0
-        return content.strip(), {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
+        usage_out = {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
+        for ch in choices:
+            if not isinstance(ch, dict):
+                continue
+            extracted = _choice_assistant_text(ch)
+            if extracted.strip():
+                return extracted.strip(), usage_out
+        raise RuntimeError("Réponse LLM vide")
 
     def _try_ollama_native_api_chat(*, base: str) -> tuple[str, dict[str, int]]:
         """
@@ -1528,6 +1653,13 @@ def run_dialogue_turn(
         if root.endswith("/v1"):
             root = root[:-3]
         native_url = f"{root}/api/chat"
+        ollama_opts: dict[str, Any] = {
+            "temperature": temperature,
+            # Aligner le comportement Ollama sur "max_tokens" OpenAI.
+            "num_predict": max_tokens,
+        }
+        if not _world_actions_enabled(context=context) and not _desktop_plan_enabled(context=context):
+            ollama_opts["stop"] = ["\n\n"]
         native_payload: dict[str, Any] = {
             "model": selected_model,
             "messages": messages,
@@ -1535,16 +1667,9 @@ def run_dialogue_turn(
             # Garder le modèle "chaud" pour éviter les cold starts.
             # Ollama accepte aussi des durées (ex: "10m") selon versions; -1 = keep alive.
             "keep_alive": -1,
-            "options": {
-                "temperature": temperature,
-                # Aligner le comportement Ollama sur "max_tokens" OpenAI.
-                # (num_predict = nombre max de tokens générés)
-                "num_predict": max_tokens,
-                # Couper les réponses multi-paragraphes (souvent inutiles et coûteuses).
-                "stop": ["\n\n"],
-            },
+            "options": ollama_opts,
         }
-        with httpx.Client(timeout=_timeout_s()) as client:
+        with httpx.Client(timeout=_effective_llm_http_timeout_s(context=context)) as client:
             r2 = client.post(native_url, json=native_payload)
         try:
             r2.raise_for_status()
@@ -1557,8 +1682,8 @@ def run_dialogue_turn(
         msg2 = data2.get("message")
         if not isinstance(msg2, dict):
             raise RuntimeError("Réponse Ollama invalide: message")
-        content2 = msg2.get("content")
-        if not isinstance(content2, str) or not content2.strip():
+        content2 = _assistant_message_text(msg2)
+        if not content2.strip():
             raise RuntimeError("Réponse Ollama vide")
         try:
             pt = int(data2.get("prompt_eval_count", 0))
@@ -1613,7 +1738,7 @@ def run_dialogue_turn(
             except Exception:
                 pass
 
-        with httpx.Client(timeout=_timeout_s()) as client:
+        with httpx.Client(timeout=_effective_llm_http_timeout_s(context=context)) as client:
             r = client.post(url, headers=headers, json=payload)
         try:
             r.raise_for_status()

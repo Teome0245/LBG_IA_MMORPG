@@ -29,6 +29,10 @@ Flux :
 4. `agent.desktop` appelle `POST {LBG_AGENT_DESKTOP_URL}/invoke` (worker Windows)
 5. Worker applique gardes + exécute + renvoie un résultat structuré + écrit un audit
 
+### Recette smoke (cœur LAN, sans mmmorpg)
+
+Depuis la racine du workspace (dossier parent qui contient `LBG_IA_MMO/`) : `bash infra/scripts/smoke_lan_core_desktop.sh` ; ou depuis `LBG_IA_MMO/` : même chemin relatif `bash infra/scripts/smoke_lan_core_desktop.sh` — vérifie les **healthz** backend et orchestrateur, puis **`GET /v1/pilot/status`**. Avec **`LBG_SMOKE_DESKTOP_ROUTE=1`** (ou le flag **`--desktop-route`** sur la commande `bash infra/scripts/smoke_lan_core_desktop.sh`), une étape **`POST /v1/pilot/route`** envoie un **`open_url`** avec **`context.desktop_dry_run: true`** (à utiliser quand la chaîne orchestrateur + **`agent.desktop`** est prête sur la VM core). **Sondes GET** distinctes (proxies **`/v1/pilot/agent-dialogue|desktop|pm/healthz`**, sans **`POST /route`**) : `bash infra/scripts/smoke_lan_pilot_agent_proxies.sh` (runbook § **3.0.1**, mode strict optionnel **`LBG_SMOKE_AGENT_PROXIES_STRICT=1`**). L’UI **`/pilot/#/desktop`** propose aussi des presets **search_web_open** et **mail_imap_preview** (variables d’activation côté worker : voir sections dédiées plus bas).
+
 ### Proposition `DESKTOP_JSON` (LLM → validation humaine)
 
 Pour rapprocher le flux du MMO (`ACTION_JSON`) sans exécuter à l’aveugle :
@@ -37,6 +41,19 @@ Pour rapprocher le flux du MMO (`ACTION_JSON`) sans exécuter à l’aveugle :
 2. Un appel `POST /invoke` avec **`context._desktop_plan`: true** utilise un prompt « planificateur desktop » ; le modèle peut émettre une première ligne **`DESKTOP_JSON: {"kind":...}`**.
 3. Le serveur parse et sanitise la proposition, puis l’expose dans **`meta.desktop_action_proposal`** (les allowlists réelles restent au worker lors du routage). L’agent dialogue annonce **`desktop_plan_env_enabled`** dans **`GET /healthz`** (utile pour le bandeau diagnostique sur `#/desktop` via `GET /v1/pilot/status`).
 4. Le Pilot (`#/desktop`) peut appeler **`POST /v1/pilot/agent-dialogue/invoke`** (proxy même origine), remplir le textarea `desktop_action`, puis l’opérateur clique **Envoyer** (`/v1/pilot/route`) après relecture.
+
+#### Dépannage « Proposer via IA » (`stub`, `llm_error`, pas de `desktop_action_proposal`)
+
+Symptômes : `meta.stub: true`, `meta.llm_error` du type **« Réponse LLM vide »** ou **« timed out »**, message Pilot **« pas de DESKTOP_JSON valide »**.
+
+**Changements agent (`lbg_agents/dialogue_llm.py`, 2026-05)** :
+
+- **Parse `DESKTOP_JSON:`** : détection sur **toute ligne** ou **en fin de ligne** (texte avant le marqueur), plus uniquement un bloc en tête de réponse ; dernière proposition JSON **dict** valide conservée.
+- **`stop: ["\n\n"]`** : désactivé pour les tours **`_desktop_plan`** (et déjà pour `ACTION_JSON` monde), pour éviter d’interrompre la génération juste après la ligne structurée.
+- **Réponse OpenAI / Ollama** : normalisation de `message.content` (liste, objets avec `text` ou `content`) ; repli sur **`reasoning_content`**, **`reasoning`**, **`thinking`** si `content` est vide ; parcours de **plusieurs** entrées `choices[]` si la première est vide.
+- **Timeouts** : **`_effective_llm_http_timeout_s`** avec plancher optionnel **`LBG_DIALOGUE_LLM_TIMEOUT_DESKTOP_MIN`** pour les seuls tours `_desktop_plan` ; le **backend** Pilote utilise **`LBG_PILOT_AGENT_DIALOGUE_INVOKE_TIMEOUT`** (défaut 300 s) — doit rester **≥** timeout LLM côté agent **+ marge** (~60 s).
+
+**Réglages opérationnels** (agent dialogue **8020**) : **`LBG_DIALOGUE_LLM_MODEL`** (voir `ollama list` ; un tag lent ou expérimental peut renvoyer des corps vides), **`LBG_DIALOGUE_LLM_TIMEOUT`**, **`LBG_DIALOGUE_DESKTOP_PLAN=1`**. **Autre LLM** : variables **`LBG_DIALOGUE_FAST_*`** / **`LBG_DIALOGUE_REMOTE_*`** puis, dans le JSON **context** du Pilot (champ éditable), **`"dialogue_target":"fast"`** ou **`"remote"`**. Détail des variables : **`infra/secrets/lbg.env.example`**, rappel court dans **`/pilot/#/desktop`**.
 
 ### Dictée → `notepad_append` (Pilot `#/desktop`)
 

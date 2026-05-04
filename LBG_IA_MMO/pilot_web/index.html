@@ -205,7 +205,19 @@
         <textarea id="home-orch-context" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
   "history": []
 }</textarea>
-        <p class="muted" style="margin:0.5rem 0 0 0">Raccourcis :</p>
+        <p style="margin:0.5rem 0 0 0; display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+          <label class="muted" for="home-orch-intent-mode" style="margin:0">Routage intention :</label>
+          <select id="home-orch-intent-mode" style="font-family: inherit;">
+            <option value="auto" selected>Auto (env orchestrateur)</option>
+            <option value="llm">LLM (config orchestrateur)</option>
+            <option value="deterministic">Mots-clés uniquement</option>
+          </select>
+        </p>
+        <p class="muted" style="margin:0.35rem 0 0 0; font-size:0.88rem;">
+          Le LLM classe le message en intent (dialogue, quête, DevOps, PM, etc.) ; les actions structurées
+          (<code>desktop_action</code>, …) restent prioritaires. Réponse courte éventuelle du routeur dans le bandeau ci‑dessous.
+        </p>
+        <p class="muted" style="margin:0.35rem 0 0 0">Raccourcis :</p>
         <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
           <button type="button" id="btn-home-quick-status">Status</button>
           <button type="button" id="btn-home-quick-caps">Capabilities</button>
@@ -243,6 +255,7 @@
         <button type="button" id="btn-pm-send">Interroger le PM</button>
         <button type="button" id="btn-pm-health">GET agent-pm /healthz</button>
         <button type="button" id="btn-pm-export-md">Exporter Markdown</button>
+        <span class="muted" id="pm-route-hint">—</span>
         <span class="muted" id="pm-health-hint">—</span>
         <span class="muted" id="pm-export-hint"></span>
       </p>
@@ -301,6 +314,7 @@
             <button type="button" id="btn-lyra-chaos">Chaos loop x8</button>
             <label class="lyra-small"><input type="checkbox" id="lyra-auto" /> auto (5s)</label>
           </div>
+          <p class="lyra-small" style="margin:0.25rem 0 0 0"><span id="lyra-step-hint" class="muted">—</span></p>
           <div class="lyra-card" style="margin-top:0.85rem;background:#fafcff;border-color:#d8e6f6;">
             <h3 style="margin:0 0 0.35rem 0;font-size:1rem">Dérivées / alias (visuel)</h3>
             <p class="lyra-small" style="margin:0 0 0.35rem 0">
@@ -367,6 +381,7 @@
         Le routage est forcé quand <code>context.desktop_action</code> est présent.
         <strong>Proposer via IA</strong> appelle <code>POST /v1/pilot/agent-dialogue/invoke</code> ; relisez le JSON puis utilisez <strong>Envoyer</strong>.
         Agent dialogue : activer <code>LBG_DIALOGUE_DESKTOP_PLAN=1</code>.
+        Autre modèle ou infra lente : sur l’agent (8020), <code>LBG_DIALOGUE_LLM_MODEL</code> (ex. <code>phi4-mini:latest</code>, voir <code>ollama list</code>) et <code>LBG_DIALOGUE_LLM_TIMEOUT</code> ; option Groq/OpenAI : variables <code>LBG_DIALOGUE_FAST_*</code> / <code>LBG_DIALOGUE_REMOTE_*</code> puis <code>"dialogue_target":"fast"</code> ou <code>"remote"</code> dans le JSON <strong>context</strong> ci‑dessous. Le proxy Pilot utilise <code>LBG_PILOT_AGENT_DIALOGUE_INVOKE_TIMEOUT</code> (doit dépasser le timeout LLM).
       </p>
     </header>
     <section>
@@ -400,11 +415,18 @@
       <label for="desktop-approval" style="margin-top:0.75rem">Approval token (optionnel)</label>
       <input type="password" id="desktop-approval" placeholder="desktop_approval (stocké localement)" autocomplete="off" />
 
+      <label style="margin-top:0.65rem;display:flex;align-items:flex-start;gap:0.45rem;max-width:44rem;">
+        <input type="checkbox" id="desktop-dry-run-toggle" checked style="margin-top:0.2rem" />
+        <span class="muted" style="line-height:1.35">Forcer <code>desktop_dry_run: true</code> à l’envoi (<strong>Proposer via IA</strong> et <strong>Envoyer</strong>), en surcharge du champ JSON si besoin — persistant (navigateur).</span>
+      </label>
+
       <p class="muted" style="margin:0.6rem 0 0 0">Presets :</p>
       <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
         <button type="button" id="btn-desktop-preset-open-url">open_url</button>
         <button type="button" id="btn-desktop-preset-notepad">notepad_append</button>
         <button type="button" id="btn-desktop-preset-open-app-learn">open_app (learn)</button>
+        <button type="button" id="btn-desktop-preset-search-web" title="Nécessite LBG_DESKTOP_WEB_SEARCH=1 sur l’exécuteur">search_web_open</button>
+        <button type="button" id="btn-desktop-preset-mail-imap" title="Nécessite LBG_DESKTOP_MAIL_ENABLED=1 + IMAP sur le worker">mail_imap_preview</button>
       </p>
 
       <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
@@ -745,6 +767,14 @@
       const fromInput = el.value.trim();
       if (fromInput) return fromInput.replace(/\/$/, "");
       return window.location.origin;
+    }
+
+    function pilotInlineHint(elementId, msg, isError) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      el.textContent = msg || "—";
+      el.style.color = isError ? "#f87171" : "";
+      el.style.fontWeight = isError ? "600" : "";
     }
 
     function loadStoredBase() {
@@ -2341,6 +2371,8 @@
       if (r === "desktop") {
         try { pilotDesktopRefreshConfigHint(); } catch (_) {}
         try { pilotDesktopLoadMmoSummaryFromStorage(); } catch (_) {}
+        try { pilotDesktopLoadDryRunToggleFromStorage(); } catch (_) {}
+        try { pilotDesktopBindDryRunTogglePersist(); } catch (_) {}
         try { pilotDesktopSetupSpeech(); } catch (_) {}
       }
       const title = document.getElementById("pilot-work-title");
@@ -3114,13 +3146,16 @@
       try {
         ctx = JSON.parse((document.getElementById("pm-context") && document.getElementById("pm-context").value) || "{}");
       } catch (e) {
-        alert("JSON contexte invalide");
+        pilotInlineHint("pm-route-hint", "JSON contexte invalide", true);
         return;
       }
+      pilotInlineHint("pm-route-hint", "…", false);
       const payload = { actor_id: "svc:pilot-pm", text: text, context: ctx };
       const out = await postJson(base + "/v1/pilot/route", payload);
-      if (out.json) renderPmCards(out.json);
-      else {
+      if (out.json) {
+        renderPmCards(out.json);
+        pilotInlineHint("pm-route-hint", "OK", false);
+      } else {
         const rawEl = document.getElementById("pm-raw");
         if (rawEl) rawEl.textContent = "HTTP " + out.status + "\n" + (out.text || "");
         window.__pm_last_brief = null;
@@ -3129,23 +3164,56 @@
         const ts = document.getElementById("pm-tasks");
         if (ms) ms.innerHTML = "<li class=\"muted\">—</li>";
         if (ts) ts.innerHTML = "<li class=\"muted\">—</li>";
+        pilotInlineHint("pm-route-hint", "HTTP " + out.status, true);
       }
     }
 
     async function pilotPmHealth() {
-      const hint = document.getElementById("pm-health-hint");
       const base = getBase();
+      pilotInlineHint("pm-health-hint", "…", false);
       try {
         const r = await fetch(base + "/v1/pilot/agent-pm/healthz");
         const t = await r.text();
-        if (hint) hint.textContent = "HTTP " + r.status + " " + t.slice(0, 160);
+        pilotInlineHint("pm-health-hint", "HTTP " + r.status + " " + t.slice(0, 160), r.status !== 200);
       } catch (e) {
-        if (hint) hint.textContent = "Erreur: " + e;
+        pilotInlineHint("pm-health-hint", "Erreur : " + e, true);
       }
     }
 
     const LBG_PILOT_MMO_SUMMARY_KEY = "lbg_pilot_mmo_session_summary_json";
     const LBG_PILOT_DESKTOP_NOTEPAD_DEFAULT = "C:\\\\Users\\\\Public\\\\lbg_desktop.txt";
+    const LBG_PILOT_DESKTOP_DRY_RUN_KEY = "lbg_pilot_desktop_dry_run_v1";
+
+    function pilotDesktopUiHint(msg, isError) {
+      pilotInlineHint("desktop-hint", msg, isError);
+    }
+
+    function pilotDesktopApplyDryRunToContext(ctx) {
+      if (!ctx || typeof ctx !== "object") return;
+      const el = document.getElementById("desktop-dry-run-toggle");
+      if (el && el.checked) ctx.desktop_dry_run = true;
+    }
+
+    function pilotDesktopLoadDryRunToggleFromStorage() {
+      try {
+        const el = document.getElementById("desktop-dry-run-toggle");
+        if (!el) return;
+        const v = localStorage.getItem(LBG_PILOT_DESKTOP_DRY_RUN_KEY);
+        if (v === "0") el.checked = false;
+        else if (v === "1") el.checked = true;
+      } catch (_) {}
+    }
+
+    function pilotDesktopBindDryRunTogglePersist() {
+      const el = document.getElementById("desktop-dry-run-toggle");
+      if (!el || el.dataset.lbgBound) return;
+      el.dataset.lbgBound = "1";
+      el.addEventListener("change", function () {
+        try {
+          localStorage.setItem(LBG_PILOT_DESKTOP_DRY_RUN_KEY, el.checked ? "1" : "0");
+        } catch (_) {}
+      });
+    }
 
     let pilotDesktopRecog = null;
 
@@ -3180,7 +3248,16 @@
             }
           };
           pilotDesktopRecog.onerror = function (e) {
-            if (dh) dh.textContent = "Reconnaissance : " + (e && e.error ? e.error : "?");
+            const code = e && e.error ? String(e.error) : "?";
+            const map = {
+              "not-allowed": "Permission micro refusée (paramètres du navigateur).",
+              "service-not-allowed": "Contexte non autorisé (HTTPS ou localhost requis).",
+              "no-speech": "Pas de voix détectée.",
+              "audio-capture": "Micro indisponible.",
+              "network": "Erreur réseau du service de reconnaissance.",
+            };
+            const human = map[code] || code;
+            if (dh) dh.textContent = "Reconnaissance : " + human;
           };
           pilotDesktopRecog.onend = function () {
             pilotDesktopRecog = null;
@@ -3296,11 +3373,10 @@
 
     async function pilotDesktopProposeLlm() {
       const base = getBase();
-      const hint = document.getElementById("desktop-hint");
       const rawEl = document.getElementById("desktop-raw");
       const prettyEl = document.getElementById("desktop-pretty");
       const aEl = document.getElementById("desktop-action");
-      if (hint) hint.textContent = "…";
+      pilotDesktopUiHint("…", false);
 
       let text = (document.getElementById("desktop-text") && document.getElementById("desktop-text").value) || "";
       text = String(text || "").trim();
@@ -3310,14 +3386,14 @@
       try {
         ctx = JSON.parse((document.getElementById("desktop-context") && document.getElementById("desktop-context").value) || "{}");
       } catch (_) {
-        alert("context JSON invalide");
-        if (hint) hint.textContent = "context invalide";
+        pilotDesktopUiHint("context JSON invalide", true);
         return;
       }
       if (!ctx || typeof ctx !== "object") ctx = {};
       ctx._desktop_plan = true;
       if (!ctx.npc_name && !ctx.speaker) ctx.npc_name = "Assistant desktop";
       pilotDesktopMergeMmoSummaryIntoContext(ctx);
+      pilotDesktopApplyDryRunToContext(ctx);
 
       const payload = { actor_id: "ui:desktop_llm", text: text, context: ctx };
       const out = await postJson(base + "/v1/pilot/agent-dialogue/invoke", payload);
@@ -3326,7 +3402,7 @@
         try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
       }
       if (out.status !== 200) {
-        if (hint) hint.textContent = "invoke → HTTP " + out.status;
+        pilotDesktopUiHint("invoke → HTTP " + out.status, true);
         return;
       }
       const prop =
@@ -3336,18 +3412,17 @@
       if (prop && typeof prop === "object" && aEl) {
         aEl.value = JSON.stringify(prop, null, 2);
         try { desktopTrySyncTextFromAction(); } catch (_) {}
-        if (hint) hint.textContent = "OK — JSON proposé (relire puis Envoyer)";
+        pilotDesktopUiHint("OK — JSON proposé (relire puis Envoyer)", false);
       } else {
-        if (hint) hint.textContent = "OK — pas de DESKTOP_JSON valide (voir réponse brute)";
+        pilotDesktopUiHint("OK — pas de DESKTOP_JSON valide (voir réponse brute)", false);
       }
     }
 
     async function pilotDesktopSend() {
       const base = getBase();
-      const hint = document.getElementById("desktop-hint");
       const rawEl = document.getElementById("desktop-raw");
       const prettyEl = document.getElementById("desktop-pretty");
-      if (hint) hint.textContent = "…";
+      pilotDesktopUiHint("…", false);
 
       let text = (document.getElementById("desktop-text") && document.getElementById("desktop-text").value) || "";
       text = String(text || "").trim();
@@ -3357,13 +3432,11 @@
       try {
         action = JSON.parse((document.getElementById("desktop-action") && document.getElementById("desktop-action").value) || "{}");
       } catch (_) {
-        alert("desktop_action JSON invalide");
-        if (hint) hint.textContent = "desktop_action invalide";
+        pilotDesktopUiHint("desktop_action JSON invalide", true);
         return;
       }
       if (!action || typeof action !== "object") {
-        alert("desktop_action doit être un objet JSON");
-        if (hint) hint.textContent = "desktop_action invalide";
+        pilotDesktopUiHint("desktop_action doit être un objet JSON", true);
         return;
       }
 
@@ -3371,8 +3444,7 @@
       try {
         ctx = JSON.parse((document.getElementById("desktop-context") && document.getElementById("desktop-context").value) || "{}");
       } catch (_) {
-        alert("context JSON invalide");
-        if (hint) hint.textContent = "context invalide";
+        pilotDesktopUiHint("context JSON invalide", true);
         return;
       }
       if (!ctx || typeof ctx !== "object") ctx = {};
@@ -3390,7 +3462,7 @@
       if (prettyEl) {
         try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
       }
-      if (hint) hint.textContent = out.status === 200 ? "OK" : ("HTTP " + out.status);
+      pilotDesktopUiHint(out.status === 200 ? "OK" : "HTTP " + out.status, out.status !== 200);
     }
 
     // Desktop UI helpers: garder `desktop_action` en phase avec le texte (évite la double saisie).
@@ -3456,6 +3528,18 @@
       if (kind === "open_url" && typeof act.url === "string" && act.url.trim()) {
         const want = "ouvre " + act.url.trim() + " dans le navigateur";
         if (String(tEl.value || "").trim() !== want) tEl.value = want;
+      } else if (kind === "search_web_open" && typeof act.query === "string" && act.query.trim()) {
+        const want = "recherche web : " + act.query.trim();
+        if (String(tEl.value || "").trim() !== want) tEl.value = want;
+      } else if (kind === "mail_imap_preview") {
+        const parts = [];
+        if (typeof act.from_contains === "string" && act.from_contains.trim())
+          parts.push("expéditeur contient « " + act.from_contains.trim() + " »");
+        if (typeof act.subject_contains === "string" && act.subject_contains.trim())
+          parts.push("sujet contient « " + act.subject_contains.trim() + " »");
+        const want =
+          parts.length > 0 ? "aperçu mails IMAP (" + parts.join(" ; ") + ")" : "aperçu mails IMAP (INBOX)";
+        if (String(tEl.value || "").trim() !== want) tEl.value = want;
       } else if (kind === "open_app" && typeof act.app === "string" && act.app.trim()) {
         const suffix = act.learn === true ? " (learn)" : "";
         const want = "ouvre l'application " + act.app.trim() + suffix;
@@ -3464,14 +3548,14 @@
     }
 
     async function pilotDesktopHealth() {
-      const hint = document.getElementById("desktop-hint");
       const base = getBase();
+      pilotDesktopUiHint("…", false);
       try {
         const r = await fetch(base + "/v1/pilot/agent-desktop/healthz");
         const t = await r.text();
-        if (hint) hint.textContent = "healthz → HTTP " + r.status + " " + t.slice(0, 160);
+        pilotDesktopUiHint("healthz → HTTP " + r.status + " " + t.slice(0, 160), r.status !== 200);
       } catch (e) {
-        if (hint) hint.textContent = "Erreur: " + e;
+        pilotDesktopUiHint("Erreur : " + e, true);
       }
     }
 
@@ -3862,7 +3946,7 @@
     try {
       document.getElementById("btn-pm-send").addEventListener("click", function () {
         pilotPmSend().catch(function (e) {
-          alert("PM: " + e);
+          pilotInlineHint("pm-route-hint", "PM : " + e, true);
         });
       });
     } catch (_) {}
@@ -3903,15 +3987,19 @@
           navigator.clipboard
             .writeText(md)
             .then(function () {
-              if (hint) hint.textContent = "Markdown copié dans le presse-papiers.";
+              if (hint) {
+                hint.textContent = "Markdown copié dans le presse-papiers.";
+                hint.style.color = "";
+                hint.style.fontWeight = "";
+              }
             })
             .catch(function () {
-              if (hint) hint.textContent = "";
-              alert(md);
+              pilotInlineHint("pm-export-hint", "Échec copie — voir la console (F12) pour le Markdown.", true);
+              console.info("[pilot pm export markdown]\n" + md);
             });
         } else {
-          if (hint) hint.textContent = "";
-          alert(md);
+          pilotInlineHint("pm-export-hint", "Presse-papiers indisponible — voir la console (F12).", true);
+          console.info("[pilot pm export markdown]\n" + md);
         }
       });
     } catch (_) {}
@@ -3920,14 +4008,14 @@
     try {
       document.getElementById("btn-desktop-propose-llm").addEventListener("click", function () {
         pilotDesktopProposeLlm().catch(function (e) {
-          alert("Desktop LLM: " + e);
+          pilotDesktopUiHint("Desktop LLM : " + e, true);
         });
       });
     } catch (_) {}
     try {
       document.getElementById("btn-desktop-send").addEventListener("click", function () {
         pilotDesktopSend().catch(function (e) {
-          alert("Desktop: " + e);
+          pilotDesktopUiHint("Desktop : " + e, true);
         });
       });
     } catch (_) {}
@@ -3989,6 +4077,39 @@
         }
       });
     } catch (_) {}
+    try {
+      document.getElementById("btn-desktop-preset-search-web").addEventListener("click", function () {
+        const a = document.getElementById("desktop-action");
+        const t = document.getElementById("desktop-text");
+        if (a) {
+          a.value = JSON.stringify({ kind: "search_web_open", query: "exemple recherche pilot" }, null, 2);
+        }
+        try { desktopTrySyncTextFromAction(); } catch (_) {}
+        if (t && !String(t.value || "").trim()) t.value = "recherche web : exemple recherche pilot";
+      });
+    } catch (_) {}
+    try {
+      document.getElementById("btn-desktop-preset-mail-imap").addEventListener("click", function () {
+        const a = document.getElementById("desktop-action");
+        const t = document.getElementById("desktop-text");
+        if (a) {
+          a.value = JSON.stringify(
+            {
+              kind: "mail_imap_preview",
+              from_contains: "expéditeur",
+              subject_contains: "sujet",
+              max_messages: 3,
+            },
+            null,
+            2
+          );
+        }
+        try { desktopTrySyncTextFromAction(); } catch (_) {}
+        if (t && !String(t.value || "").trim())
+          t.value =
+            "aperçu mails IMAP (expéditeur contient « expéditeur » ; sujet contient « sujet »)";
+      });
+    } catch (_) {}
 
     // Home (orchestrator chat) bindings
     try {
@@ -3997,7 +4118,6 @@
       const cEl = document.getElementById("home-orch-context");
       const outEl = document.getElementById("home-orch-out");
       const prettyEl = document.getElementById("home-orch-pretty");
-      const hintEl = document.getElementById("home-orch-hint");
       try {
         const raw = localStorage.getItem(HOME_ORCH_KEY);
         if (raw) {
@@ -4008,18 +4128,34 @@
           }
         }
       } catch (_) {}
+      const HOME_ORCH_INTENT_MODE_KEY = "lbg_pilot_home_orch_intent_mode_v1";
+      const modeEl = document.getElementById("home-orch-intent-mode");
+      try {
+        const mv = localStorage.getItem(HOME_ORCH_INTENT_MODE_KEY);
+        if (mv && modeEl && (mv === "auto" || mv === "llm" || mv === "deterministic")) modeEl.value = mv;
+      } catch (_) {}
+      if (modeEl) {
+        modeEl.addEventListener("change", function () {
+          try {
+            localStorage.setItem(HOME_ORCH_INTENT_MODE_KEY, modeEl.value);
+          } catch (_) {}
+        });
+      }
 
       async function homeOrchSend() {
-        if (hintEl) hintEl.textContent = "…";
+        pilotInlineHint("home-orch-hint", "…", false);
         const text = (tEl && tEl.value ? tEl.value : "").trim();
         let ctx = {};
         try {
           ctx = JSON.parse((cEl && cEl.value) ? cEl.value : "{}");
         } catch (_) {
-          alert("JSON context invalide");
-          if (hintEl) hintEl.textContent = "context invalide";
+          pilotInlineHint("home-orch-hint", "JSON context invalide", true);
           return;
         }
+        const mode = modeEl && modeEl.value ? modeEl.value : "auto";
+        if (mode === "llm") ctx._intent_classify = "llm";
+        else if (mode === "deterministic") ctx._intent_classify = "deterministic";
+        else delete ctx._intent_classify;
         try {
           localStorage.setItem(HOME_ORCH_KEY, JSON.stringify({ text, context: (cEl && cEl.value) ? cEl.value : "{}" }));
         } catch (_) {}
@@ -4030,17 +4166,30 @@
         if (prettyEl) {
           try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
         }
-        if (hintEl) hintEl.textContent = out.status === 200 ? "OK" : ("HTTP " + out.status);
+        let hintMsg = out.status === 200 ? "OK" : "HTTP " + out.status;
+        let isErr = out.status !== 200;
+        const j = out.json;
+        if (j && j.ok === false && j.error) {
+          hintMsg = String(j.error);
+          isErr = true;
+        } else if (j && j.result && j.result.output && j.result.output.orchestrator_route_meta) {
+          const om = j.result.output.orchestrator_route_meta;
+          const rep = om && typeof om.assistant_reply === "string" ? om.assistant_reply.trim() : "";
+          const src = om && typeof om.intent_source === "string" ? om.intent_source : "";
+          if (rep) hintMsg = rep + (src ? " (" + src + ")" : "") + " — " + hintMsg;
+          else if (src && j.result.intent) hintMsg = "Intent « " + j.result.intent + " » (" + src + ") — " + hintMsg;
+        }
+        pilotInlineHint("home-orch-hint", hintMsg, isErr);
       }
 
       function homeOrchSet(text, ctxObj) {
         if (tEl) tEl.value = text;
         if (cEl) cEl.value = JSON.stringify(ctxObj || {}, null, 2);
-        if (hintEl) hintEl.textContent = "—";
+        pilotInlineHint("home-orch-hint", "—", false);
       }
 
       async function homeQuickGet(path, label) {
-        if (hintEl) hintEl.textContent = "…";
+        pilotInlineHint("home-orch-hint", "…", false);
         const base = getBase();
         const token = getServiceToken();
         const headers = {};
@@ -4054,9 +4203,9 @@
           if (prettyEl) {
             try { prettyEl.innerHTML = j ? renderPretty(j) : ""; } catch (_) { prettyEl.innerHTML = ""; }
           }
-          if (hintEl) hintEl.textContent = (label || path) + " → HTTP " + r.status;
+          pilotInlineHint("home-orch-hint", (label || path) + " → HTTP " + r.status, r.status !== 200);
         } catch (e) {
-          if (hintEl) hintEl.textContent = "Erreur: " + e;
+          pilotInlineHint("home-orch-hint", "Erreur : " + e, true);
         }
       }
 
@@ -4065,11 +4214,11 @@
         if (cEl) cEl.value = "{\n  \"history\": []\n}";
         if (outEl) outEl.textContent = "—";
         if (prettyEl) prettyEl.innerHTML = "";
-        if (hintEl) hintEl.textContent = "—";
+        pilotInlineHint("home-orch-hint", "—", false);
         try { localStorage.removeItem(HOME_ORCH_KEY); } catch (_) {}
       }
 
-      try { document.getElementById("btn-home-orch-send").addEventListener("click", () => homeOrchSend().catch((e) => alert(e))); } catch (_) {}
+      try { document.getElementById("btn-home-orch-send").addEventListener("click", () => homeOrchSend().catch((e) => pilotInlineHint("home-orch-hint", "Orchestrateur : " + e, true))); } catch (_) {}
       try { document.getElementById("btn-home-orch-clear").addEventListener("click", homeOrchClear); } catch (_) {}
       try { document.getElementById("btn-home-quick-status").addEventListener("click", () => homeQuickGet("/v1/pilot/status", "status")); } catch (_) {}
       try { document.getElementById("btn-home-quick-caps").addEventListener("click", () => homeQuickGet("/v1/pilot/capabilities", "capabilities")); } catch (_) {}
@@ -4079,7 +4228,7 @@
             "devops selfcheck (dry-run) : diagnostique et propose une action concrète.",
             { devops_action: { kind: "selfcheck" }, devops_dry_run: true, devops_selfcheck: true, history: [] }
           );
-          homeOrchSend().catch((e) => alert(e));
+          homeOrchSend().catch((e) => pilotInlineHint("home-orch-hint", "Orchestrateur : " + e, true));
         });
       } catch (_) {}
       try {
@@ -4088,7 +4237,7 @@
             "jalons et tâches du plan de route",
             { project_pm: true, pm_include_plan: true, pm_include_structure: true, history: [] }
           );
-          homeOrchSend().catch((e) => alert(e));
+          homeOrchSend().catch((e) => pilotInlineHint("home-orch-hint", "Orchestrateur : " + e, true));
         });
       } catch (_) {}
       try {
@@ -4101,7 +4250,7 @@
               history: []
             }
           );
-          homeOrchSend().catch((e) => alert(e));
+          homeOrchSend().catch((e) => pilotInlineHint("home-orch-hint", "Orchestrateur : " + e, true));
         });
       } catch (_) {}
     } catch (_) {}
@@ -4155,7 +4304,7 @@
     try {
       document.getElementById("btn-lyra-step").addEventListener("click", function () {
         lyraStepOnce().catch(function (e) {
-          alert("Lyra: " + e);
+          pilotInlineHint("lyra-step-hint", "Lyra : " + e, true);
         });
       });
     } catch (_) {}
@@ -4170,8 +4319,9 @@
         }
         try {
           await lyraRunChaosLoop(8);
+          pilotInlineHint("lyra-step-hint", "Chaos : terminé", false);
         } catch (e) {
-          alert("Chaos loop: " + e);
+          pilotInlineHint("lyra-step-hint", "Chaos : " + e, true);
         } finally {
           if (btn) {
             btn.disabled = false;
