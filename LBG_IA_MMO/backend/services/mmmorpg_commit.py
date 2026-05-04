@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_ALLOWED_FLAG_KEYS: set[str] = {
     "quest_accepted",
+    "quest_completed",
     "quest_id",
     "quest_step",
     "mood",
@@ -20,6 +21,10 @@ _DEFAULT_ALLOWED_FLAG_KEYS: set[str] = {
     "aid_thirst_delta",
     "aid_fatigue_delta",
     "aid_reputation_delta",
+    # Inventaire joueur (session) : ``player_id`` requis côté HTTP interne / pont WS.
+    "player_item_id",
+    "player_item_qty_delta",
+    "player_item_label",
 }
 
 
@@ -113,6 +118,7 @@ async def try_commit_dialogue(
     trace_id: str,
     npc_id: str,
     flags: dict[str, Any] | None,
+    player_id: str | None = None,
 ) -> dict[str, Any] | None:
     """
     Tente d'appliquer un commit "dialogue" sur le serveur WS (mmmorpg) via son HTTP interne.
@@ -140,6 +146,9 @@ async def try_commit_dialogue(
         return {"ok": False, "attempted": True, "error": "invalid_commit_flags", "details": errors[:10]}
     if cleaned_flags is not None:
         payload["flags"] = cleaned_flags
+    pid = (player_id or "").strip()
+    if pid:
+        payload["player_id"] = pid
 
     url = f"{base}/internal/v1/npc/{npc_id}/dialogue-commit"
     try:

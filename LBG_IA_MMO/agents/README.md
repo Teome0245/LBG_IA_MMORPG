@@ -13,6 +13,7 @@ Le champ `output` renvoyé par l’orchestrator contient toujours :
 Quand `agent.dialogue` appelle le service HTTP dialogue, `dispatch` renvoie :
 - `agent: "http_dialogue"`
 - `remote`: **objet JSON** retourné par `POST /invoke` (contient typiquement `reply`, `lines`, `speaker`, `meta`, etc.)
+- `dialogue_profile_resolved` (optionnel) : copie de `remote.meta.dialogue_profile_resolved` lorsqu’elle est une chaîne non vide (pratique pour logs / tableau Pilot sans parcourir `remote`)
 - `lyra` (optionnel) : si `context.lyra` est présent, **même logique** que le fallback — pas de jauges `lyra_engine` si applicable (`lbg_agents.lyra_bridge`), puis copie dans la sortie pour `/pilot/`. Le corps `POST /invoke` reçoit un `context` où `lyra` est déjà **mis à jour** après ce pas (pour que le LLM voie l’état courant).
 
 Exemple (simplifié) :
@@ -21,11 +22,12 @@ Exemple (simplifié) :
 {
   "capability": "npc_dialogue",
   "agent": "http_dialogue",
+  "dialogue_profile_resolved": "professionnel",
   "remote": {
     "reply": "…",
     "lines": ["…"],
     "speaker": "Hagen le forgeron",
-    "meta": { "stub": false, "llm": true, "model": "phi4-mini:latest" }
+    "meta": { "stub": false, "llm": true, "model": "phi4-mini:latest", "dialogue_profile_resolved": "professionnel" }
   }
 }
 ```
@@ -128,6 +130,15 @@ Le backend applique une **whitelist** et des **limites** avant d’appeler l’H
 | `LBG_AGENT_PM_URL` | Si définie (ex. `http://127.0.0.1:8055`), le handler **`agent.pm`** envoie un `POST {url}/invoke`. Sinon : stub local **`pm_stub`** (brief jalons/risques déterministe). |
 | `LBG_AGENT_PM_TIMEOUT` | Secondes pour la réponse HTTP (défaut **45**). |
 | `LBG_AGENT_DESKTOP_URL` | Si définie (ex. `http://192.168.0.50:8060`), le handler **`agent.desktop`** envoie un `POST {url}/invoke`. Sinon : exécution locale **uniquement** (utile dev), mais en prod on vise un worker Windows. |
+| `LBG_OPENGAME_SANDBOX_DIR` | Racine des prototypes OpenGame (défaut `generated_games/opengame`). Toutes les cibles sont résolues sous ce dossier. |
+| `LBG_OPENGAME_DRY_RUN` | Dry-run OpenGame (`1` par défaut si non défini). Mettre `0` pour autoriser une tentative réelle. |
+| `LBG_OPENGAME_EXECUTION_ENABLED` | Garde supplémentaire pour l’exécution réelle (`0` par défaut). Doit valoir `1` en plus du dry-run désactivé. |
+| `LBG_OPENGAME_BIN` | Binaire CLI à lancer (défaut `opengame`, résolu via `PATH`). |
+| `LBG_OPENGAME_TIMEOUT_S` | Timeout d’exécution CLI, en secondes (défaut **900**, borné 30..7200). |
+| `LBG_OPENGAME_MAX_OUTPUT_CHARS` | Taille max capturée pour stdout/stderr dans la réponse (défaut **12000**). |
+| `LBG_OPENGAME_APPROVAL_TOKEN` | Si défini, une exécution réelle exige `context.opengame_approval`. |
+| `LBG_OPENGAME_AUDIT_LOG_PATH` | Fichier JSONL optionnel pour l’audit `agents.opengame.audit`. |
+| `LBG_OPENGAME_AUDIT_STDOUT` | Si `0` / `false`, coupe l’audit stdout OpenGame. |
 | `LBG_PM_PLAN_PATH` | Chemin absolu ou relatif vers le markdown du plan (prioritaire sur les chemins par défaut VM/dev). |
 | `LBG_PM_MILESTONES_MAX` | Nombre max de lignes datées conservées dans `brief.milestones` (défaut **8**, plafonné à 30). |
 | `LBG_PM_TASKS_MAX` | Nombre max d’entrées dans `brief.tasks` (défaut **12**, plafonné à 40). |
@@ -140,6 +151,43 @@ Le backend applique une **whitelist** et des **limites** avant d’appeler l’H
 - **Contexte** : `context.agent_site` (ex. `"core"`, `"mmo"`, `"dev"`) peut être propagé pour **étiqueter** la réponse (stub PM, futures métriques) ; le routage reste **déterministe** côté orchestrateur (`project_pm`, `devops_probe`, etc.).
 
 Unité systemd core : **`lbg-agent-pm.service`** (port **8055**), installée par **`deploy_vm.sh`** rôle **core** avec les autres agents HTTP.
+
+### OpenGame — forge de prototypes (`agent.opengame`)
+
+Capability orchestrateur : **`prototype_game`** → handler **`agent.opengame`**. Par design, on exige une action structurée via `context.opengame_action` ; un texte seul ne déclenche pas de génération.
+
+Action MVP :
+- `generate_prototype` : `{"kind":"generate_prototype","project_name":"snake","prompt":"Build a Snake clone"}`
+
+Garde-fous :
+- **Sandbox obligatoire** : cible sous `LBG_OPENGAME_SANDBOX_DIR`.
+- **Dry-run par défaut** : aucun appel CLI OpenGame tant que `LBG_OPENGAME_DRY_RUN` n’est pas à `0`.
+- **Double verrou d’exécution** : exécution réelle seulement si `LBG_OPENGAME_DRY_RUN=0` et `LBG_OPENGAME_EXECUTION_ENABLED=1`.
+- **Dossier cible vide** : l’agent refuse un `project_name` dont le dossier existe déjà avec du contenu.
+- **Pas de `--yolo`** : la commande utilise `--approval-mode auto-edit`, sans shell libre OpenGame.
+- **Pas de modification automatique du cœur MMO** : les prototypes restent isolés et sont promus manuellement.
+- **Audit JSONL/stdout** : événement `agents.opengame.audit` avec `trace_id`, `outcome`, `dry_run`, `sandbox_dir`, `target_dir`.
+- **Approval optionnelle** : si `LBG_OPENGAME_APPROVAL_TOKEN` est défini, fournir `context.opengame_approval`.
+
+Contrat de sortie minimal :
+
+```json
+{
+  "capability": "prototype_game",
+  "agent": "opengame_executor",
+  "handler": "opengame",
+  "ok": true,
+  "outcome": "dry_run",
+  "project_name": "snake",
+  "sandbox_dir": "generated_games/opengame",
+  "target_dir": "generated_games/opengame/snake",
+  "planned": {
+    "tool": "opengame",
+    "command": ["opengame", "-p", "<prompt>", "--approval-mode", "auto-edit"],
+    "timeout_s": 900
+  }
+}
+```
 
 ### DevOps — exécuteur à liste blanche (`agent.devops`)
 
@@ -173,12 +221,23 @@ Recette LAN (dry-run par défaut) : `bash infra/scripts/smoke_devops_systemd_lan
 
 ### Desktop — agent Windows hybride (`agent.desktop`)
 
+**Mode produit** : ce handler matérialise **`local_assistant`** (poste propriétaire), distinct du flux MMO — voir `docs/adr/0004-assistant-local-vs-persona-mmo.md`.
+
 Capability orchestrateur : **`desktop_control`** → handler **`agent.desktop`**. Par design, on n’exécute **rien**
 sur simple texte : il faut fournir une action structurée via `context.desktop_action` (priorité de routage).
 
 Actions MVP :
 - `open_url` : `{"kind":"open_url","url":"https://…"}`
+- `search_web_open` : `{"kind":"search_web_open","query":"…"}` — requiert `LBG_DESKTOP_WEB_SEARCH=1` (HTTPS vers DDG ou Google uniquement ; voir `docs/desktop_hybride.md`)
+- `mail_imap_preview` : `{"kind":"mail_imap_preview","from_contains":"…"}` et/ou `subject_contains` — requiert `LBG_DESKTOP_MAIL_ENABLED=1` + secrets IMAP sur le worker (voir `docs/desktop_hybride.md`)
 - `notepad_append` : `{"kind":"notepad_append","path":"C:\\…\\notes.txt","text":"…"}`
+- `open_app` : `{"kind":"open_app","app":"notepadpp","args":[]}`
+
+Actions Computer Use (UI) — **désactivées par défaut** (nécessite `LBG_DESKTOP_COMPUTER_USE_ENABLED=1`) :
+- `observe_screen`, `click_xy`, `move_xy`, `drag_xy`, `type_text`, `hotkey`, `scroll`, `wait_ms`
+
+Macro :
+- `run_steps` : exécute une liste d’étapes bornée ; options `stop_on_fail`, sortie `step_outputs[]` + `errors[]`
 
 Garde-fous :
 - **Allowlist URL** (match exact)
@@ -186,16 +245,35 @@ Garde-fous :
 - **Dry-run par défaut**
 - **Approval token** optionnel pour toute exécution réelle
 - **Audit JSONL** (stdout et/ou fichier)
+- **Computer Use** : feature flag, limites de taille screenshot, limites `type_text`, limites `run_steps`
 
 | Variable | Effet |
 |----------|--------|
 | `LBG_DESKTOP_URL_ALLOWLIST` | URLs **exactes** autorisées pour `open_url` (virgules). Vide → tout refusé. |
+| `LBG_DESKTOP_WEB_SEARCH` | Si `1`/`true` : autorise `search_web_open` (moteur DDG/Google, URL interne contrôlée). Défaut : désactivé. |
+| `LBG_DESKTOP_SEARCH_ENGINE` | `duckduckgo` (défaut) ou `google` — cible HTTPS unique pour `search_web_open`. |
+| `LBG_DESKTOP_MAIL_ENABLED` | Si `1`/`true` : autorise `mail_imap_preview` (IMAP lecture seule, INBOX). Défaut : désactivé. |
+| `LBG_DESKTOP_MAIL_IMAP_HOST` | Hôte IMAP (ex. `imap.gmail.com`). |
+| `LBG_DESKTOP_MAIL_IMAP_PORT` | Port IMAP TLS (défaut **993**). |
+| `LBG_DESKTOP_MAIL_IMAP_USER` | Identifiant compte. |
+| `LBG_DESKTOP_MAIL_IMAP_PASSWORD` | Mot de passe ou **app password** (ne pas commiter ; fichier `lbg.env` local uniquement). |
+| `LBG_DESKTOP_MAIL_IMAP_NO_SSL` | Si `1` : connexion sans TLS (lab seulement). |
 | `LBG_DESKTOP_FILE_ALLOWLIST_DIRS` | Répertoires parents autorisés pour `notepad_append` (virgules). Vide → tout refusé. |
 | `LBG_DESKTOP_DRY_RUN` | Si `1`/`true`/`yes`/`on` : aucune action réelle (défaut recommandé **1**). |
 | `context.desktop_dry_run` | Si `true` : force le dry-run pour cet appel (si l’env ne l’a pas déjà activé). |
 | `LBG_DESKTOP_APPROVAL_TOKEN` | Si défini : toute exécution réelle exige `context.desktop_approval` identique (comparaison constante). |
 | `LBG_DESKTOP_AUDIT_LOG_PATH` | Chemin fichier JSONL (append) pour l’audit. |
 | `LBG_DESKTOP_AUDIT_STDOUT` | Si `0`/`false` : n’écrit plus l’audit sur stdout. |
+| `LBG_DESKTOP_COMPUTER_USE_ENABLED` | Si `1`/`true` : active `observe_screen`/click/type/... et `run_steps`. Défaut : désactivé. |
+| `LBG_DESKTOP_OBSERVE_REQUIRES_APPROVAL` | Si `1`/`true` : exige un token sur `observe_screen` (recommandé). |
+| `LBG_DESKTOP_SCREENSHOT_DIR` | Dossier d’écriture des screenshots (`observe_screen`). |
+| `LBG_DESKTOP_SCREENSHOT_RETURN` | `path|base64|none` (défaut `path`). |
+| `LBG_DESKTOP_SCREENSHOT_MAX_WIDTH` | Largeur max (redimensionnement). |
+| `LBG_DESKTOP_SCREENSHOT_FORMAT` | `jpeg|png`. |
+| `LBG_DESKTOP_SCREENSHOT_JPEG_QUALITY` | Qualité JPEG (10..95). |
+| `LBG_DESKTOP_TYPE_MAX_CHARS` | Limite dure de caractères pour `type_text`. |
+| `LBG_DESKTOP_RUN_STEPS_MAX` | Nombre max d’étapes `run_steps`. |
+| `LBG_DESKTOP_RUN_STEPS_TIMEOUT_MS` | Timeout global `run_steps`. |
 
 
 **Prod** : compte **`lbg`** (sudoer, services non-root) — **`docs/ops_vm_user.md`** ; rotation JSONL / jeton — **`docs/ops_devops_audit.md`** (`infra/logrotate/lbg-devops-audit`).
@@ -237,6 +315,22 @@ En prod/LAN, ces valeurs sont en général définies via `/etc/lbg-ia-mmo.env` (
 | `LBG_DIALOGUE_LLM_TIMEOUT` | Secondes (défaut 120). |
 | `LBG_DIALOGUE_LLM_TEMPERATURE` | Défaut 0.7. |
 | `LBG_DIALOGUE_LLM_MAX_TOKENS` | Défaut 512. |
+| `context.dialogue_profile` / `LBG_DIALOGUE_PROFILE_DEFAULT` | Ton : `chaleureux`, `professionnel`, `pedagogue`, `creatif`, `mini-moi`, `hal`, `test`. Avec **`world_npc_id`** (PNJ MMO), chaque clé utilise une variante PNJ + `BASE_GUARDRAILS_MMO` (`MMO_PROFILE_TEMPLATES` dans `dialogue_llm.py`). **Sans** `dialogue_profile` explicite, le **`tone`** du registre (`npc_registry.json`) est résolu vers une clé connue, **y compris via alias** (`REGISTRY_TONE_ALIASES`, ex. `pragmatique` → `professionnel`, `direct` → `mini-moi`) ; sinon `LBG_DIALOGUE_PROFILE_DEFAULT`. |
+| `LBG_ORCHESTRATOR_DIALOGUE_TARGET_DEFAULT` | Décision orchestrateur pour les dialogues PNJ sans choix explicite (`fast` par défaut recommandé). Valeurs : `local`, `remote`, `fast`, **`auto`**. |
+| `context.dialogue_target` | `local`, `remote`, `fast` ou **`auto`** (`auto` = ordre `LBG_DIALOGUE_AUTO_ORDER`, budget optionnel pour paid). Si absent, l’orchestrateur peut injecter une valeur ; sinon l’agent utilise `LBG_DIALOGUE_TARGET_DEFAULT` (défaut `local`). |
+| `LBG_DIALOGUE_TARGET_DEFAULT` | Cible utilisée quand ni `context.dialogue_target` ni injection orchestrateur : `local` (défaut), `remote`, `fast`, **`auto`**. |
+| `LBG_DIALOGUE_AUTO_ORDER` | Liste CSV pour **`auto`** (défaut `local,fast,remote`). Le premier palier disponible gagne ; en **`auto`** seulement, les paliers `fast`/`remote` sont ignorés si le budget cumulé (`LBG_DIALOGUE_BUDGET_MAX_USD`) est atteint. |
+| `LBG_DIALOGUE_BUDGET_MAX_USD` | Plafond **soft** (défaut `0` = désactivé) sur la somme des coûts **estimés** des réponses réussies `fast`/`remote` pour le **process** ; n’affecte que le mode **`auto`**. |
+| `LBG_DIALOGUE_FAST_COST_IN_PER_1K` / `LBG_DIALOGUE_FAST_COST_OUT_PER_1K` | USD / 1K tokens pour estimer le coût **`fast`** (budget + champ `estimated_cost_usd` dans la trace). |
+| `LBG_DIALOGUE_FAST_ENABLED` | Active le provider rapide explicite pour `dialogue_target=fast`. Si désactivé/incomplet, fallback vers `remote` si activé, sinon `local`. |
+| `LBG_DIALOGUE_FAST_BASE_URL` / `LBG_DIALOGUE_FAST_MODEL` / `LBG_DIALOGUE_FAST_API_KEY` | Provider rapide OpenAI-compatible, typiquement Groq (`https://api.groq.com/openai/v1`, `llama-3.1-8b-instant`). |
+| `LBG_DIALOGUE_DESKTOP_PLAN` | Si `1` / `true` : permet le préfixe `DESKTOP_JSON` lorsque `context._desktop_plan` est vrai (Pilot *Proposer via IA*). Déjà reflété dans `GET /healthz` (`desktop_plan_env_enabled`). |
+
+### Multi‑LLM (`auto`) et base de suivi (trace)
+
+- **`dialogue_target=auto`** : parcourt `LBG_DIALOGUE_AUTO_ORDER` et choisit le premier palier configurable (local Ollama, Groq/fast, remote OpenAI-like). Détails dans `route_decision`, `auto_skip_detail`, `auto_tiers_tried` sur la route résolue (répliqués dans `meta.trace` côté `POST /invoke`).
+- **Budget** : si `LBG_DIALOGUE_BUDGET_MAX_USD` > 0, les paliers payants sont **sautés** en mode `auto` lorsque la somme cumulée des coûts estimés (tours `fast`/`remote` réussis) dépasse le plafond. Les cibles **explicites** `fast`/`remote` ne sont **pas** bloquées par ce plafond. Compteur exposé dans `GET /healthz` → `dialogue_budget`.
+- **Suivi** : chaque tour émet une ligne `agents.dialogue.trace` (stdout + fichier JSONL si `LBG_DIALOGUE_TRACE_LOG_PATH`) avec notamment : `trace_id`, `target`, `model`, `profile`, `prompt_tokens`, `completion_tokens`, `estimated_cost_usd`, `latency_ms`, `outcome` (`ok` \| `error` \| `cache_hit`), `player_text_preview`, `world_npc_id`, `invoke_actor_id`, `route_decision`, erreur si échec LLM.
 
 **Ollama (machine locale)** : `ollama serve` puis `ollama pull llama3.2`, puis (les exports sont optionnels grâce aux défauts) :
 
@@ -300,8 +394,17 @@ Notes :
 
 Module : `lbg_agents.dialogue_http_app` (FastAPI).
 
-- `GET /healthz` → JSON (`llm_configured`, `llm_model`, etc.).
-- `POST /invoke` → corps `InvokeIn` (`actor_id`, `text`, `context`). Réponse : `agent`, `reply`, `lines`, `speaker`, `player_text`, `meta` (`stub`, `llm`, `model`, évent. `llm_error` si le LLM est configuré mais l’appel échoue).
+- `GET /healthz` → JSON (`llm_configured`, `llm_model`, `dialogue_budget`, `dialogue_target_default`, `dialogue_auto_order`, etc.).
+- `POST /invoke` → corps `InvokeIn` (`actor_id`, `text`, `context`). Réponse : `agent`, `reply`, `lines`, `speaker`, `player_text`, `meta` (`stub`, `llm`, `model`, **`dialogue_profile_resolved`** — profil effectif après registre / alias ; **`lyra_engagement_resolved`** — `local_assistant` ou `mmo_persona` selon ADR 0004, évent. `llm_error` si le LLM est configuré mais l’appel échoue).
+- `GET /npc-registry` → registre PNJ (`npc_registry.json`), option `?npc_id=` pour une entrée. Chaque PNJ peut déclarer un **`tone`** aligné sur les profils dialogue (si `context.dialogue_profile` est absent à l’appel LLM, ce ton est appliqué automatiquement).
+- `GET /world-content` → inventaire **races + bestiaire** (JSON sous `content/world/`, surcharge par `LBG_WORLD_CONTENT_DIR`) ; inclut `race_ids`, `races_count`, `creatures_count` et la carte **`race_display`** (`race_id` → `display_name`) pour les clients légers (ex. HUD MMO web via proxy pilot).
+
+**Tests** (sans activer un venv projet, avec **uv**) :
+
+```bash
+cd LBG_IA_MMO/agents
+PYTHONPATH=src uv run --with pytest --with 'httpx>=0.26' --with 'fastapi>=0.110' python -m pytest tests/test_dialogue_http_app.py tests/test_world_content.py -q
+```
 
 ### Lancer en local (WSL), 4ᵉ terminal
 

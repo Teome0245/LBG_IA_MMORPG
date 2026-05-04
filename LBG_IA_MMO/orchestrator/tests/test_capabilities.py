@@ -15,4 +15,5 @@ def test_list_capabilities() -> None:
     assert "devops_probe" in names
     assert "project_pm" in names
     assert "desktop_control" in names
+    assert "prototype_game" in names
     assert "unknown" in names

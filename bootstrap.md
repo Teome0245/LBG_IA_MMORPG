@@ -93,6 +93,21 @@ Depuis `LBG_IA_MMO/` :
 bash infra/ci/test_pytest.sh
 ```
 
+**Sans recréer le venv CI** : depuis `LBG_IA_MMO/`, **uv** peut lancer des cibles ciblées (le `conftest.py` racine règle les imports monorepo) :
+
+```bash
+cd LBG_IA_MMO
+uv run --with pytest --with 'httpx>=0.26' --with 'fastapi>=0.110' python -m pytest backend/tests/test_pilot_proxy_agent_healthz.py -q
+uv run --with pytest --with 'httpx>=0.26' --with 'fastapi>=0.110' python -m pytest agents/tests/test_dialogue_http_app.py agents/tests/test_world_content.py -q
+uv run --with pytest --with 'websockets>=12' python -m pytest mmmorpg_server/tests/ -q
+```
+
+### Forge OpenGame (prototypes)
+
+La capability `prototype_game` / `agent.opengame` est documentée dans `LBG_IA_MMO/docs/opengame.md`.
+
+Par défaut, elle reste en dry-run. Pour générer réellement un prototype, il faut installer la CLI OpenGame hors monorepo, configurer `LBG_OPENGAME_*`, puis activer explicitement `LBG_OPENGAME_DRY_RUN=0` et `LBG_OPENGAME_EXECUTION_ENABLED=1`.
+
 **Prod LAN (trois VM)** — après déploiement et secrets : smoke SSH + systemd + Ollama sur **110** :
 
 ```bash
@@ -326,7 +341,14 @@ curl -sS http://127.0.0.1:8000/v1/pilot/agent-quests/healthz
 curl -sS http://127.0.0.1:8000/v1/pilot/agent-combat/healthz
 ```
 
-L’UI `/pilot/` utilise ces URLs pour les liens « healthz (proxy) ».
+**Lecture registre / catalogue (même principe proxy)** — sans appeler directement le port **8020** :
+
+```bash
+curl -sS "http://127.0.0.1:8000/v1/pilot/agent-dialogue/npc-registry?npc_id=npc:mayor"
+curl -sS http://127.0.0.1:8000/v1/pilot/agent-dialogue/world-content
+```
+
+L’UI `/pilot/` utilise ces URLs pour les liens « healthz (proxy) » et les panneaux *Registre PNJ* / *Catalogue monde*.
 
 **4. Navigateur** — une fois le `curl` OK :
 
@@ -529,6 +551,19 @@ curl -sS "http://192.168.0.140:8010/v1/capabilities"
 ```bash
 curl -sS "http://192.168.0.140:8000/v1/pilot/capabilities"
 ```
+
+#### GitHub sync — cas `GH001` (fichier > 100MB)
+
+Si `git push` est rejeté par GitHub avec `GH001` / `pre-receive hook declined`, ce n’est pas un “budget” : un fichier >100MB est présent dans l’historique poussé.
+
+Procédure recommandée :
+
+1) identifier le commit fautif (`git log --oneline <remote/main>..main`) ;
+2) retirer ce commit de l’historique local (rebase/cherry-pick propre) ;
+3) ajouter des garde-fous dans `.gitignore` (runtime/tooling local, `node_modules`, binaires lourds) ;
+4) retester avec `git push --dry-run` avant push réel.
+
+Note : ignorer un fichier **après** l’avoir commité ne suffit pas ; il faut le retirer de l’historique qui part au remote.
 
 #### Brain (autonomie) — recette opérateur (status / toggle / approve)
 

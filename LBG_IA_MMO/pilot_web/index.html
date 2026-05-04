@@ -31,6 +31,20 @@
     .panel-title { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; margin: 0 0 0.5rem 0; }
     .panel-title h2 { margin: 0; font-size: 1.1rem; }
     .panel-title .muted { margin: 0; }
+    .panel-drag-handle {
+      margin-left: auto;
+      font-size: 0.78rem;
+      color: #456;
+      border: 1px dashed #9bb6cf;
+      border-radius: 999px;
+      padding: 0.08rem 0.45rem;
+      background: #f7fbff;
+      cursor: grab;
+      user-select: none;
+    }
+    .panel-draggable { cursor: grab; }
+    .panel-draggable.panel-dragging { opacity: 0.65; }
+    .panel-dropzone.panel-drop-active { outline: 2px dashed #7aa7d8; outline-offset: 2px; border-radius: 8px; }
 
     .layout-controls {
       display: flex;
@@ -283,6 +297,8 @@
           <div class="lyra-controls">
             <button type="button" id="btn-lyra-step">Step (POST /v1/pilot/route)</button>
             <button type="button" id="btn-lyra-reset">Reset (0)</button>
+            <button type="button" id="btn-lyra-stress">Preset stress-test</button>
+            <button type="button" id="btn-lyra-chaos">Chaos loop x8</button>
             <label class="lyra-small"><input type="checkbox" id="lyra-auto" /> auto (5s)</label>
           </div>
           <div class="lyra-card" style="margin-top:0.85rem;background:#fafcff;border-color:#d8e6f6;">
@@ -312,8 +328,32 @@
           <div id="lyra-out-gauges"></div>
           <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Meta</h3>
           <pre id="lyra-out-meta" class="muted" style="font-size:0.82rem;max-height:10rem;">—</pre>
+          <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Journal régulation</h3>
+          <p style="margin:0.25rem 0 0.5rem 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <button type="button" id="btn-lyra-reg-clear">Clear log</button>
+            <select id="lyra-reg-filter">
+              <option value="all">ALL</option>
+              <option value="warn">WARN</option>
+              <option value="critical">CRITICAL</option>
+            </select>
+            <button type="button" id="btn-lyra-reg-export">Export .txt</button>
+            <span class="muted" id="lyra-reg-hint">—</span>
+          </p>
+          <pre id="lyra-reg-log" class="muted" style="font-size:0.82rem;max-height:10rem;">—</pre>
           <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Brut (JSON)</h3>
           <pre id="lyra-out-raw" class="muted" style="font-size:0.82rem;max-height:14rem;">—</pre>
+
+          <hr style="border:none;border-top:1px solid #ddd;margin:1rem 0" />
+          <h3 style="margin:0 0 0.35rem 0;font-size:1rem">Brain orchestrateur (monitoring)</h3>
+          <p class="lyra-small" style="margin:0 0 0.5rem 0">
+            Lecture seule depuis <code>GET /v1/pilot/orchestrator/brain/status</code> (pas d'impact sur Lyra ici).
+          </p>
+          <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+            <button type="button" id="btn-lyra-brain-refresh">Rafraîchir Brain</button>
+            <span class="muted" id="lyra-brain-summary">—</span>
+          </p>
+          <div id="lyra-brain-gauges" style="margin-top:0.65rem"></div>
+          <pre id="lyra-brain-raw" class="muted" style="font-size:0.82rem;max-height:10rem;">—</pre>
         </div>
       </div>
     </section>
@@ -325,11 +365,24 @@
       <p class="muted">
         Exécution PC via <strong>worker Windows</strong> (HTTP) derrière allowlists + dry-run + approval + audit.
         Le routage est forcé quand <code>context.desktop_action</code> est présent.
+        <strong>Proposer via IA</strong> appelle <code>POST /v1/pilot/agent-dialogue/invoke</code> ; relisez le JSON puis utilisez <strong>Envoyer</strong>.
+        Agent dialogue : activer <code>LBG_DIALOGUE_DESKTOP_PLAN=1</code>.
       </p>
     </header>
     <section>
+      <p class="muted" id="desktop-config-hint" style="margin:0.35rem 0 0 0;font-size:0.88rem;">—</p>
+
       <label for="desktop-text">Texte (trace / intention)</label>
       <textarea id="desktop-text" rows="2" style="font-family: inherit;">ouvre https://example.org dans le navigateur</textarea>
+
+      <label for="desktop-dictation" style="margin-top:0.75rem">Dictée (Web Speech API — Chromium recommandé, page en HTTPS ou localhost)</label>
+      <textarea id="desktop-dictation" rows="3" placeholder="Les segments reconnus (finalisés) s’ajoutent ici ; puis « Appliquer → notepad_append »." style="font-family: inherit;"></textarea>
+      <p class="muted" style="margin:0.35rem 0 0 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-desktop-dictation-start">Écouter</button>
+        <button type="button" id="btn-desktop-dictation-stop">Arrêter</button>
+        <button type="button" id="btn-desktop-dictation-apply">Appliquer → notepad_append</button>
+        <span id="desktop-dictation-hint">—</span>
+      </p>
 
       <label for="desktop-action" style="margin-top:0.75rem">desktop_action (JSON)</label>
       <textarea id="desktop-action" rows="6" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
@@ -342,6 +395,8 @@
   "desktop_dry_run": true,
   "history": []
 }</textarea>
+      <label for="desktop-mmo-summary" style="margin-top:0.75rem">Résumé MMO → assistant (<code>session_summary</code>, JSON optionnel, persistant navigateur)</label>
+      <textarea id="desktop-mmo-summary" rows="3" placeholder='Ex. {"player_note":"…","session_mood":"…"} — clés tracked_quest / last_npc priment côté serveur si tu parles au PNJ via le jeu.' style="font-family: ui-monospace, monospace; font-size: 0.85rem;"></textarea>
       <label for="desktop-approval" style="margin-top:0.75rem">Approval token (optionnel)</label>
       <input type="password" id="desktop-approval" placeholder="desktop_approval (stocké localement)" autocomplete="off" />
 
@@ -353,6 +408,7 @@
       </p>
 
       <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-desktop-propose-llm">Proposer via IA (dialogue)</button>
         <button type="button" id="btn-desktop-send">Envoyer (POST /v1/pilot/route)</button>
         <button type="button" id="btn-desktop-health">GET agent-desktop /healthz</button>
         <span class="muted" id="desktop-hint">—</span>
@@ -378,7 +434,7 @@
   <div class="dashboard" id="dashboard">
     <div class="col" id="col-left">
       <div data-pilot-screen="chat">
-      <section>
+      <section data-panel-id="chat-presets">
         <div class="panel-title">
           <h2>Gauche</h2>
           <p class="muted">réservé</p>
@@ -432,13 +488,55 @@
           <span class="muted">via <code>POST /v1/pilot/aid</code> + relecture <code>GET /v1/pilot/mmo-server/world-lyra</code></span>
         </p>
         <p class="muted">Astuce : tes champs, l’historique PNJ, l’état quête et l’état combat sont sauvegardés localement à chaque envoi. Le bloc <b>Lyra (output)</b> après envoi n’apparaît que si l’agent renvoie <code>output.lyra</code> — utilise le preset <b>Lyra (test)</b> (routage <code>agent.fallback</code>). Avec <b>Lyra + monde (MMO)</b>, le backend injecte <code>context.lyra</code> depuis le serveur monde si <code>LBG_MMO_SERVER_URL</code> est défini (voir <code>docs/lyra.md</code>).</p>
+
+        <hr style="border:none;border-top:1px solid #ddd;margin:0.9rem 0" />
+        <h3 style="margin:0 0 0.35rem 0;font-size:1rem">Registre PNJ (dialogue)</h3>
+        <p class="muted" style="margin:0 0 0.5rem 0">
+          Lecture seule via <code>GET /v1/pilot/agent-dialogue/npc-registry</code> et
+          <code>GET /v1/pilot/agent-dialogue/world-content</code> (proxy same-origin).
+        </p>
+        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <input type="text" id="npc-reg-id" placeholder="npc:innkeeper (optionnel)" style="max-width:16rem" />
+          <button type="button" id="btn-npc-reg-refresh">Charger</button>
+          <button type="button" id="btn-npc-reg-apply" disabled>Appliquer au context</button>
+          <span class="muted" id="npc-reg-hint">—</span>
+        </p>
+        <pre id="npc-reg-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:14rem;">—</pre>
+
+        <h3 style="margin:0.75rem 0 0.35rem 0;font-size:1rem">Catalogue monde (races + bestiaire)</h3>
+        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" id="btn-world-content-refresh">Charger world-content</button>
+          <span class="muted" id="world-content-hint">—</span>
+        </p>
+        <pre id="world-content-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:12rem;">—</pre>
+      </section>
+      </div>
+
+      <div data-pilot-screen="ops">
+      <section data-panel-id="ops-brain">
+        <div class="panel-title">
+          <h2>Brain (autonomie)</h2>
+          <p class="muted">orchestrator tick 30s</p>
+        </div>
+        <p class="muted" style="margin:0 0 0.5rem 0">
+          Contrôle du scheduler autonomie v0 : <code>selfcheck</code> + pings <code>/healthz</code> (safe).
+          <code>systemd_restart</code> ne peut être tenté qu’en opt-in + jeton côté orchestrator.
+        </p>
+        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" id="btn-brain-refresh">Status</button>
+          <button type="button" id="btn-brain-enable">Activer</button>
+          <button type="button" id="btn-brain-disable">Désactiver</button>
+          <span class="muted" id="brain-hint">—</span>
+        </p>
+        <div id="brain-approvals" class="muted" style="margin-top:0.5rem">—</div>
+        <pre id="brain-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:16rem;">—</pre>
       </section>
       </div>
     </div>
 
     <div class="col" id="col-center">
       <div data-pilot-screen="chat">
-      <section>
+      <section data-panel-id="chat-intent">
         <div class="panel-title">
           <h2>Chat (intention)</h2>
           <p class="muted">backend → orchestrator → agent</p>
@@ -492,7 +590,7 @@
       </div>
 
       <div data-pilot-screen="ops">
-      <section>
+      <section data-panel-id="ops-benchmark">
         <div class="panel-title">
           <h2>Benchmark (latence)</h2>
           <p class="muted">p50 / p95 (VM)</p>
@@ -509,12 +607,12 @@
         <pre id="bench-out">—</pre>
       </section>
 
-      <section>
+      <section data-panel-id="ops-cache">
         <div class="panel-title">
           <h2>Cache (latence)</h2>
           <p class="muted">p50 / p95 (hit vs miss)</p>
         </div>
-        <p class="muted">Statistiques locales (derniers envois) selon <code>remote.meta.cache_hit</code>.</p>
+        <p class="muted">Statistiques locales (derniers envois) selon <code>remote.meta.cache_hit</code> ; après réponse, la vue détaillée peut afficher <code>profil résolu</code> (<code>remote.meta.dialogue_profile_resolved</code>).</p>
         <p><button type="button" id="btn-cache-lat-reset">Reset stats cache</button></p>
         <pre id="cache-lat-out">—</pre>
       </section>
@@ -523,7 +621,7 @@
 
     <div class="col" id="col-right">
       <div data-pilot-screen="chat">
-      <section>
+      <section data-panel-id="chat-ws">
         <div class="panel-title">
           <h2>WS (test client minimal)</h2>
           <p class="muted">hello → npc_reply (placeholder remplacé)</p>
@@ -574,26 +672,7 @@
       </div>
 
       <div data-pilot-screen="ops">
-      <section>
-        <div class="panel-title">
-          <h2>Brain (autonomie)</h2>
-          <p class="muted">orchestrator tick 30s</p>
-        </div>
-        <p class="muted" style="margin:0 0 0.5rem 0">
-          Contrôle du scheduler autonomie v0 : <code>selfcheck</code> + pings <code>/healthz</code> (safe).
-          <code>systemd_restart</code> ne peut être tenté qu’en opt-in + jeton côté orchestrator.
-        </p>
-        <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-          <button type="button" id="btn-brain-refresh">Status</button>
-          <button type="button" id="btn-brain-enable">Activer</button>
-          <button type="button" id="btn-brain-disable">Désactiver</button>
-          <span class="muted" id="brain-hint">—</span>
-        </p>
-        <div id="brain-approvals" class="muted" style="margin-top:0.5rem">—</div>
-        <pre id="brain-out" class="muted" style="margin-top:0.5rem;font-size:0.8rem;max-height:16rem;">—</pre>
-      </section>
-
-      <section>
+      <section data-panel-id="ops-monitoring">
         <div class="panel-title">
           <h2>Monitoring</h2>
           <p class="muted">santé agrégée</p>
@@ -622,7 +701,7 @@
         <pre id="health-out">Chargement…</pre>
       </section>
 
-      <section>
+      <section data-panel-id="ops-capabilities">
         <div class="panel-title">
           <h2>Capabilities</h2>
           <p class="muted">via backend</p>
@@ -647,6 +726,9 @@
     const STORAGE_CACHE_LAT_KEY = "lbg_pilot_cache_lat_v1";
     const STORAGE_SERVICE_TOKEN_KEY = "lbg_pilot_service_token_v1";
     const STORAGE_METRICS_BEARER_KEY = "lbg_pilot_metrics_bearer_v1";
+    const STORAGE_LYRA_REG_LOG_KEY = "lbg_pilot_lyra_reg_log_v1";
+    const STORAGE_LYRA_REG_FILTER_KEY = "lbg_pilot_lyra_reg_filter_v1";
+    const STORAGE_PANEL_LAYOUT_KEY = "lbg_pilot_panel_layout_v1";
 
     function getBase() {
       const el = document.getElementById("api-base");
@@ -808,6 +890,143 @@
         localStorage.setItem(STORAGE_CHAT_KEY, JSON.stringify(st));
       } catch (_) {}
       try { refreshLyraContextPreview(); } catch (_) {}
+    }
+
+    function panelLayoutLoad() {
+      try {
+        const raw = localStorage.getItem(STORAGE_PANEL_LAYOUT_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === "object" ? parsed : {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function panelLayoutSave(next) {
+      try { localStorage.setItem(STORAGE_PANEL_LAYOUT_KEY, JSON.stringify(next || {})); } catch (_) {}
+    }
+
+    function panelGetColumnKeyFromEl(el) {
+      const col = el && el.closest ? el.closest(".col") : null;
+      if (!col) return "";
+      if (col.id === "col-left") return "left";
+      if (col.id === "col-center") return "center";
+      if (col.id === "col-right") return "right";
+      return "";
+    }
+
+    function panelSaveScreenLayout(screen) {
+      const layout = panelLayoutLoad();
+      const out = { left: [], center: [], right: [] };
+      const wraps = document.querySelectorAll('#dashboard .col [data-pilot-screen="' + screen + '"]');
+      wraps.forEach(function (w) {
+        const colKey = panelGetColumnKeyFromEl(w);
+        if (!colKey || !out[colKey]) return;
+        out[colKey] = Array.from(w.querySelectorAll("section[data-panel-id]"))
+          .map(function (s) { return s.getAttribute("data-panel-id") || ""; })
+          .filter(Boolean);
+      });
+      layout[screen] = out;
+      panelLayoutSave(layout);
+    }
+
+    function panelApplyScreenLayout(screen) {
+      const layout = panelLayoutLoad();
+      const conf = layout && layout[screen] && typeof layout[screen] === "object" ? layout[screen] : null;
+      if (!conf) return;
+      const wraps = {
+        left: document.querySelector('#col-left [data-pilot-screen="' + screen + '"]'),
+        center: document.querySelector('#col-center [data-pilot-screen="' + screen + '"]'),
+        right: document.querySelector('#col-right [data-pilot-screen="' + screen + '"]'),
+      };
+      ["left", "center", "right"].forEach(function (key) {
+        const wrap = wraps[key];
+        const ids = Array.isArray(conf[key]) ? conf[key] : [];
+        if (!wrap) return;
+        ids.forEach(function (id) {
+          const panel = document.querySelector('section[data-panel-id="' + id + '"]');
+          if (!panel) return;
+          const sc = panel.parentElement && panel.parentElement.getAttribute
+            ? panel.parentElement.getAttribute("data-pilot-screen")
+            : null;
+          if (sc !== screen) return;
+          wrap.appendChild(panel);
+        });
+      });
+    }
+
+    function panelApplyStoredLayout() {
+      panelApplyScreenLayout("chat");
+      panelApplyScreenLayout("ops");
+    }
+
+    function panelInitDnD() {
+      let dragPanelId = null;
+      const panels = document.querySelectorAll("#dashboard section[data-panel-id]");
+      panels.forEach(function (panel) {
+        panel.classList.add("panel-draggable");
+        panel.setAttribute("draggable", "true");
+        const title = panel.querySelector(".panel-title");
+        if (title && !title.querySelector(".panel-drag-handle")) {
+          const h = document.createElement("span");
+          h.className = "panel-drag-handle";
+          h.textContent = "↕ déplacer";
+          title.appendChild(h);
+        }
+        panel.addEventListener("dragstart", function (ev) {
+          dragPanelId = panel.getAttribute("data-panel-id");
+          panel.classList.add("panel-dragging");
+          try {
+            if (ev.dataTransfer) {
+              ev.dataTransfer.setData("text/plain", dragPanelId || "");
+              ev.dataTransfer.effectAllowed = "move";
+            }
+          } catch (_) {}
+        });
+        panel.addEventListener("dragend", function () {
+          panel.classList.remove("panel-dragging");
+          dragPanelId = null;
+          document.querySelectorAll(".panel-dropzone").forEach(function (z) { z.classList.remove("panel-drop-active"); });
+        });
+      });
+
+      const zones = document.querySelectorAll("#dashboard [data-pilot-screen]");
+      zones.forEach(function (zone) {
+        zone.classList.add("panel-dropzone");
+        zone.addEventListener("dragover", function (ev) {
+          const pid = dragPanelId || (ev.dataTransfer ? ev.dataTransfer.getData("text/plain") : "");
+          if (!pid) return;
+          const panel = document.querySelector('section[data-panel-id="' + pid + '"]');
+          if (!panel) return;
+          const panelScreen = panel.parentElement && panel.parentElement.getAttribute
+            ? panel.parentElement.getAttribute("data-pilot-screen")
+            : "";
+          const zoneScreen = zone.getAttribute("data-pilot-screen") || "";
+          if (panelScreen !== zoneScreen) return;
+          ev.preventDefault();
+          zone.classList.add("panel-drop-active");
+          try { if (ev.dataTransfer) ev.dataTransfer.dropEffect = "move"; } catch (_) {}
+        });
+        zone.addEventListener("dragleave", function () {
+          zone.classList.remove("panel-drop-active");
+        });
+        zone.addEventListener("drop", function (ev) {
+          ev.preventDefault();
+          zone.classList.remove("panel-drop-active");
+          const pid = dragPanelId || (ev.dataTransfer ? ev.dataTransfer.getData("text/plain") : "");
+          if (!pid) return;
+          const panel = document.querySelector('section[data-panel-id="' + pid + '"]');
+          if (!panel) return;
+          const panelScreen = panel.parentElement && panel.parentElement.getAttribute
+            ? panel.parentElement.getAttribute("data-pilot-screen")
+            : "";
+          const zoneScreen = zone.getAttribute("data-pilot-screen") || "";
+          if (panelScreen !== zoneScreen) return;
+          zone.appendChild(panel);
+          panelSaveScreenLayout(zoneScreen);
+        });
+      });
     }
 
     function healthStateClass(state) {
@@ -1416,6 +1635,9 @@
       if (res && res.routed_to) addKV("routed_to", res.routed_to);
       if (res && typeof res.confidence === "number") addKV("confidence", res.confidence);
       if (out && out.agent) addKV("agent", out.agent);
+      if (out && out.dialogue_profile_resolved) {
+        addKV("dialogue_profile_resolved", out.dialogue_profile_resolved);
+      }
       if (root && root.commit_result && typeof root.commit_result === "object") {
         const cr = root.commit_result;
         const attempted = cr.attempted === true ? "yes" : "no";
@@ -1488,8 +1710,17 @@
           "</div>";
         }
         const rmeta = remote.meta;
-        if (rmeta && typeof rmeta === "object" && rmeta.cache_hit != null) {
-          html += "<div class=\"muted\" style=\"margin-top:0.35rem\">cache_hit: <code>" + escapeHtml(String(rmeta.cache_hit)) + "</code></div>";
+        if (rmeta && typeof rmeta === "object") {
+          const bits = [];
+          if (rmeta.cache_hit != null) {
+            bits.push("cache_hit: <code>" + escapeHtml(String(rmeta.cache_hit)) + "</code>");
+          }
+          if (rmeta.dialogue_profile_resolved != null && String(rmeta.dialogue_profile_resolved).trim() !== "") {
+            bits.push("profil résolu: <code>" + escapeHtml(String(rmeta.dialogue_profile_resolved)) + "</code>");
+          }
+          if (bits.length) {
+            html += "<div class=\"muted\" style=\"margin-top:0.35rem\">" + bits.join(" · ") + "</div>";
+          }
         }
         if (Array.isArray(remote.lines) && remote.lines.length) {
           html += "<div style=\"margin-top:0.5rem\" class=\"muted\">lines: " + escapeHtml(remote.lines.join(" | ")) + "</div>";
@@ -1992,6 +2223,85 @@
       return { status: r.status, json: j, text: t };
     }
 
+    async function worldContentRefresh() {
+      const base = getBase();
+      const out = document.getElementById("world-content-out");
+      const hint = document.getElementById("world-content-hint");
+      if (hint) hint.textContent = "chargement…";
+      try {
+        const url = base + "/v1/pilot/agent-dialogue/world-content";
+        const r = await fetch(url);
+        const t = await r.text();
+        let j = null;
+        try { j = t ? JSON.parse(t) : null; } catch (_) {}
+        if (out) out.textContent = j ? JSON.stringify(j, null, 2) : (t || "—");
+        if (hint) hint.textContent = r.status === 200 ? "ok" : ("HTTP " + r.status);
+      } catch (e) {
+        if (out) out.textContent = String(e);
+        if (hint) hint.textContent = "erreur";
+      }
+    }
+
+    async function npcRegistryRefresh() {
+      const base = getBase();
+      const out = document.getElementById("npc-reg-out");
+      const hint = document.getElementById("npc-reg-hint");
+      const idEl = document.getElementById("npc-reg-id");
+      const applyBtn = document.getElementById("btn-npc-reg-apply");
+      const npcId = idEl ? String(idEl.value || "").trim() : "";
+      if (hint) hint.textContent = "chargement…";
+      try { window.__npc_reg_last_entry = null; } catch (_) {}
+      if (applyBtn) applyBtn.disabled = true;
+      try {
+        const url = base + "/v1/pilot/agent-dialogue/npc-registry" + (npcId ? ("?npc_id=" + encodeURIComponent(npcId)) : "");
+        const r = await fetch(url);
+        const t = await r.text();
+        let j = null;
+        try { j = t ? JSON.parse(t) : null; } catch (_) {}
+        if (out) out.textContent = j ? JSON.stringify(j, null, 2) : (t || "—");
+        if (hint) hint.textContent = r.status === 200 ? "ok" : ("HTTP " + r.status);
+        // Activer "Appliquer" uniquement si une entrée PNJ unique est chargée.
+        try {
+          let entry = null;
+          if (j && typeof j === "object") {
+            if (j.npc && typeof j.npc === "object") entry = j.npc;
+            else if (Array.isArray(j.npcs) && j.npcs.length === 1 && j.npcs[0] && typeof j.npcs[0] === "object") entry = j.npcs[0];
+          }
+          window.__npc_reg_last_entry = entry;
+          if (applyBtn) applyBtn.disabled = !entry;
+        } catch (_) {}
+      } catch (e) {
+        if (out) out.textContent = String(e);
+        if (hint) hint.textContent = "erreur";
+      }
+    }
+
+    function npcRegistryApplyToContext() {
+      const entry = window.__npc_reg_last_entry;
+      if (!entry || typeof entry !== "object") {
+        alert("Aucune fiche PNJ chargée.");
+        return;
+      }
+      const npcId = entry.id ? String(entry.id) : "";
+      if (!npcId.trim()) {
+        alert("Fiche PNJ invalide (id manquant).");
+        return;
+      }
+      const npcName = entry.name ? String(entry.name) : "";
+      const tone = entry.tone ? String(entry.tone) : "";
+
+      let ctx = {};
+      try { ctx = JSON.parse(document.getElementById("context-json").value || "{}"); } catch (_) { ctx = {}; }
+      const next = { ...(ctx || {}), world_npc_id: npcId.trim() };
+      if (npcName.trim()) next.npc_name = npcName.trim();
+      if (tone.trim()) next.dialogue_profile = tone.trim().toLowerCase();
+      if (!Array.isArray(next.history)) next.history = [];
+
+      document.getElementById("context-json").value = JSON.stringify(next, null, 2);
+      saveChatState();
+      try { refreshLyraContextPreview(); } catch (_) {}
+    }
+
     function pilotParseRoute() {
       const raw = (location.hash || "").replace(/^#/, "").replace(/^\//, "");
       const seg = raw.split("/").filter(function (s) { return s; })[0] || "";
@@ -2018,6 +2328,11 @@
       if (pm) pm.hidden = r !== "pm";
       if (ly) ly.hidden = r !== "lyra";
       if (de) de.hidden = r !== "desktop";
+      if (r === "desktop") {
+        try { pilotDesktopRefreshConfigHint(); } catch (_) {}
+        try { pilotDesktopLoadMmoSummaryFromStorage(); } catch (_) {}
+        try { pilotDesktopSetupSpeech(); } catch (_) {}
+      }
       const title = document.getElementById("pilot-work-title");
       const sub = document.getElementById("pilot-work-sub");
       if (title && sub && (r === "chat" || r === "ops")) {
@@ -2382,6 +2697,137 @@
       return null;
     }
 
+    function lyraRegLogLoad() {
+      try {
+        const raw = localStorage.getItem(STORAGE_LYRA_REG_LOG_KEY);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function lyraRegLogSave(entries) {
+      try { localStorage.setItem(STORAGE_LYRA_REG_LOG_KEY, JSON.stringify(Array.isArray(entries) ? entries : [])); } catch (_) {}
+    }
+
+    function lyraRegFilterLoad() {
+      try {
+        const v = String(localStorage.getItem(STORAGE_LYRA_REG_FILTER_KEY) || "all").toLowerCase();
+        if (v === "warn" || v === "critical" || v === "all") return v;
+      } catch (_) {}
+      return "all";
+    }
+
+    function lyraRegFilterSave(v) {
+      try {
+        const x = String(v || "all").toLowerCase();
+        localStorage.setItem(STORAGE_LYRA_REG_FILTER_KEY, x);
+      } catch (_) {}
+    }
+
+    function lyraRegMatchesFilter(entry, filter) {
+      const f = String(filter || "all").toLowerCase();
+      if (f === "all") return true;
+      const sev = String((entry && entry.severity) || "info").toLowerCase();
+      if (f === "critical") return sev === "critical";
+      if (f === "warn") return sev === "warn" || sev === "warning";
+      return true;
+    }
+
+    function lyraRegLogLines(entries) {
+      return entries.map(function (e) {
+        const ts = e && e.ts ? String(e.ts) : "-";
+        const sev = e && e.severity ? String(e.severity).toUpperCase() : "INFO";
+        const mode = e && e.mode ? String(e.mode) : "lyra";
+        const action = e && e.action ? String(e.action) : "none";
+        const reason = e && e.reason ? String(e.reason) : "";
+        const applied = e && e.applied === true ? "applique" : "skip";
+        return "[" + ts + "] [" + sev + "] " + mode + " :: " + action + " (" + applied + ")" + (reason ? " - " + reason : "");
+      });
+    }
+
+    function lyraRegLogRender() {
+      const out = document.getElementById("lyra-reg-log");
+      const hint = document.getElementById("lyra-reg-hint");
+      const filterSel = document.getElementById("lyra-reg-filter");
+      if (!out) return;
+      const entries = lyraRegLogLoad();
+      const filter = filterSel ? String(filterSel.value || "all").toLowerCase() : lyraRegFilterLoad();
+      const filtered = entries.filter(function (e) { return lyraRegMatchesFilter(e, filter); });
+      if (!filtered.length) {
+        out.textContent = "—";
+      } else {
+        // Rendu lisible avec badge couleur par sévérité.
+        const htmlLines = filtered.map(function (e) {
+          const ts = e && e.ts ? String(e.ts) : "-";
+          const sevRaw = e && e.severity ? String(e.severity) : "info";
+          const sev = sevRaw.toUpperCase();
+          const sevLower = sevRaw.toLowerCase();
+          const mode = e && e.mode ? String(e.mode) : "lyra";
+          const action = e && e.action ? String(e.action) : "none";
+          const reason = e && e.reason ? String(e.reason) : "";
+          const applied = e && e.applied === true ? "applique" : "skip";
+
+          let color = "#6b7280"; // INFO / défaut
+          if (sevLower === "warn" || sevLower === "warning") color = "#f97316";
+          if (sevLower === "critical") color = "#dc2626";
+
+          const badge =
+            '<span style="display:inline-block;min-width:70px;padding:0 4px;border-radius:3px;font-weight:600;color:white;background:' +
+            color +
+            ';">' +
+            escapeHtmlPm(sev) +
+            "</span>";
+
+          const main =
+            "[" +
+            escapeHtmlPm(ts) +
+            "] " +
+            badge +
+            " " +
+            escapeHtmlPm(mode) +
+            " :: " +
+            escapeHtmlPm(action) +
+            " (" +
+            escapeHtmlPm(applied) +
+            ")" +
+            (reason ? " - " + escapeHtmlPm(reason) : "");
+
+          return main;
+        });
+        out.innerHTML = htmlLines.join("\n");
+      }
+      if (hint) hint.textContent = entries.length ? (filtered.length + "/" + entries.length + " entrées") : "0 entrée";
+    }
+
+    function lyraRegExportTxt() {
+      const entries = lyraRegLogLoad();
+      const filterSel = document.getElementById("lyra-reg-filter");
+      const filter = filterSel ? String(filterSel.value || "all").toLowerCase() : lyraRegFilterLoad();
+      const filtered = entries.filter(function (e) { return lyraRegMatchesFilter(e, filter); });
+      const lines = lyraRegLogLines(filtered);
+      const txt = lines.length ? lines.join("\n") + "\n" : "Journal vide.\n";
+      const stamp = new Date().toISOString().replace(/[:]/g, "-");
+      const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "lyra-regulation-log-" + filter + "-" + stamp + ".txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+    }
+
+    function lyraRegLogAppend(entry) {
+      if (!entry || typeof entry !== "object") return;
+      const arr = lyraRegLogLoad();
+      arr.unshift(entry);
+      lyraRegLogSave(arr.slice(0, 30));
+      lyraRegLogRender();
+    }
+
     function lyraRenderIn() {
       const { st, ctx } = lyraBuildContext();
       const mode = lyraGetMode();
@@ -2430,6 +2876,79 @@
       }
       const meta = out.meta && typeof out.meta === "object" ? out.meta : {};
       if (metaEl) metaEl.textContent = JSON.stringify(meta, null, 2);
+      const reg = meta.lyra_regulation && typeof meta.lyra_regulation === "object" ? meta.lyra_regulation : null;
+      if (reg) {
+        lyraRegLogAppend({
+          ts: new Date().toISOString(),
+          mode: out.kind || "npc_world",
+          action: reg.action || null,
+          applied: reg.applied === true,
+          reason: reg.reason || null,
+          severity: reg.severity || null,
+          detail: reg,
+        });
+      }
+    }
+
+    function lyraRenderBrainGauges(gauges) {
+      const el = document.getElementById("lyra-brain-gauges");
+      if (!el) return;
+      const g = gauges && typeof gauges === "object" ? gauges : {};
+      const items = [
+        ["confidence", "Confiance"],
+        ["stress", "Stress"],
+        ["fatigue", "Fatigue"],
+        ["curiosity", "Curiosité"],
+      ];
+      el.innerHTML = items
+        .map(function (it) {
+          const key = it[0];
+          const label = it[1];
+          const v = clamp0100(g[key] != null ? g[key] : 0, 0);
+          const pct = Math.round(v);
+          const bar = "<div class=\"lyra-bar\"><div style=\"width:" + pct + "%;background:" + lyraGaugeColor(v / 100.0) + "\"></div></div>";
+          return (
+            "<div class=\"lyra-gauge\">" +
+            "<div class=\"lyra-gauge-head\"><strong>" + escapeHtmlPm(label) + "</strong><span class=\"muted\">" + escapeHtmlPm(key) + "</span></div>" +
+            bar +
+            "<div class=\"lyra-controls\"><span class=\"muted\">" + pct + "%</span></div>" +
+            "</div>"
+          );
+        })
+        .join("");
+    }
+
+    function lyraRenderBrainStatus(data) {
+      const sum = document.getElementById("lyra-brain-summary");
+      const raw = document.getElementById("lyra-brain-raw");
+      if (raw) raw.textContent = data ? JSON.stringify(data, null, 2) : "—";
+      if (!data || typeof data !== "object") {
+        if (sum) sum.textContent = "—";
+        lyraRenderBrainGauges({});
+        return;
+      }
+      lyraRenderBrainGauges(data.gauges);
+      if (sum) {
+        const on = data.enabled === true ? "actif" : "inactif";
+        const intent = data.intent ? String(data.intent) : "monitor";
+        const nar = data.narrative ? String(data.narrative) : "";
+        sum.innerHTML =
+          "<strong>" + escapeHtmlPm(on) + "</strong>" +
+          " · intent <code>" + escapeHtmlPm(intent) + "</code>" +
+          (nar ? " · " + escapeHtmlPm(nar) : "");
+      }
+    }
+
+    async function lyraRefreshBrain() {
+      const base = getBase();
+      try {
+        const r = await fetch(base + "/v1/pilot/orchestrator/brain/status");
+        const j = await r.json();
+        if (j && j.ok === true) lyraRenderBrainStatus(j);
+        else lyraRenderBrainStatus(j || null);
+      } catch (e) {
+        lyraRenderBrainStatus({ error: String(e) });
+      }
     }
 
     async function lyraStepOnce() {
@@ -2472,6 +2991,45 @@
       const cEl = document.getElementById("lyra-confiance");
       if (cEl) cEl.value = String(st.confiance_100);
       lyraRenderIn();
+    }
+
+    function lyraApplyStressPreset() {
+      const st = lyraLoadState();
+      const mode = lyraGetMode();
+      if (mode === "assistant") {
+        st.assistant_gauges_100 = {
+          ...st.assistant_gauges_100,
+          chaleur: 40,
+          energie: 20,
+          patience: 35,
+          confiance: 30,
+        };
+        st.confiance_100 = clamp0100(st.assistant_gauges_100.confiance, 30);
+      } else {
+        st.gauges = {
+          ...st.gauges,
+          hunger: 85,
+          thirst: 70,
+          fatigue: 90,
+        };
+      }
+      lyraSaveState(st);
+      const cEl = document.getElementById("lyra-confiance");
+      if (cEl) cEl.value = String(st.confiance_100);
+      lyraRenderIn();
+    }
+
+    function lyraSleep(ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    async function lyraRunChaosLoop(steps) {
+      const n = Number(steps) > 0 ? Math.min(20, Math.floor(Number(steps))) : 8;
+      lyraApplyStressPreset();
+      for (let i = 0; i < n; i += 1) {
+        await lyraStepOnce();
+        if (i < n - 1) await lyraSleep(220);
+      }
     }
 
     function lyraBindControls() {
@@ -2576,6 +3134,204 @@
       }
     }
 
+    const LBG_PILOT_MMO_SUMMARY_KEY = "lbg_pilot_mmo_session_summary_json";
+    const LBG_PILOT_DESKTOP_NOTEPAD_DEFAULT = "C:\\\\Users\\\\Public\\\\lbg_desktop.txt";
+
+    let pilotDesktopRecog = null;
+
+    function pilotDesktopSetupSpeech() {
+      const dh = document.getElementById("desktop-dictation-hint");
+      const dta = document.getElementById("desktop-dictation");
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        if (dh) dh.textContent = "SpeechRecognition indisponible.";
+        return;
+      }
+      const start = document.getElementById("btn-desktop-dictation-start");
+      const stop = document.getElementById("btn-desktop-dictation-stop");
+      const apply = document.getElementById("btn-desktop-dictation-apply");
+      if (start)
+        start.addEventListener("click", function () {
+          try {
+            if (pilotDesktopRecog) pilotDesktopRecog.stop();
+          } catch (_) {}
+          pilotDesktopRecog = new SR();
+          pilotDesktopRecog.lang = "fr-FR";
+          pilotDesktopRecog.continuous = true;
+          pilotDesktopRecog.interimResults = false;
+          pilotDesktopRecog.onresult = function (ev) {
+            if (!dta) return;
+            for (let i = ev.resultIndex; i < ev.results.length; i++) {
+              if (!ev.results[i].isFinal) continue;
+              const piece = String(ev.results[i][0].transcript || "").trim();
+              if (!piece) continue;
+              const sep = dta.value && !/[ \n]$/.test(dta.value) ? " " : "";
+              dta.value = (dta.value || "") + sep + piece;
+            }
+          };
+          pilotDesktopRecog.onerror = function (e) {
+            if (dh) dh.textContent = "Reconnaissance : " + (e && e.error ? e.error : "?");
+          };
+          pilotDesktopRecog.onend = function () {
+            pilotDesktopRecog = null;
+          };
+          try {
+            pilotDesktopRecog.start();
+            if (dh) dh.textContent = "Écoute…";
+          } catch (err) {
+            if (dh) dh.textContent = "Démarr.err : " + err;
+          }
+        });
+      if (stop)
+        stop.addEventListener("click", function () {
+          try {
+            if (pilotDesktopRecog) pilotDesktopRecog.stop();
+          } catch (_) {}
+          pilotDesktopRecog = null;
+          if (dh) dh.textContent = "Arrêt.";
+        });
+      if (apply)
+        apply.addEventListener("click", function () {
+          const raw = dta ? String(dta.value || "").trim() : "";
+          if (!raw) {
+            if (dh) dh.textContent = "Dictée vide.";
+            return;
+          }
+          const aEl = document.getElementById("desktop-action");
+          const tEl = document.getElementById("desktop-text");
+          let path = LBG_PILOT_DESKTOP_NOTEPAD_DEFAULT;
+          try {
+            const cur = aEl && aEl.value ? JSON.parse(aEl.value) : null;
+            if (cur && cur.kind === "notepad_append" && typeof cur.path === "string" && cur.path.trim())
+              path = cur.path.trim();
+          } catch (_) {}
+          const textLine = raw.endsWith("\n") ? raw : raw + "\n";
+          const action = { kind: "notepad_append", path: path, text: textLine };
+          if (aEl) aEl.value = JSON.stringify(action, null, 2);
+          if (tEl) tEl.value = "notepad_append : " + raw.slice(0, 200);
+          try {
+            desktopTrySyncActionFromText();
+          } catch (_) {}
+          if (dh) dh.textContent = "Action notepad_append mise à jour.";
+        });
+    }
+
+    function pilotDesktopMergeMmoSummaryIntoContext(ctx) {
+      if (!ctx || typeof ctx !== "object") return;
+      const ta = document.getElementById("desktop-mmo-summary");
+      const raw = ta && ta.value ? String(ta.value).trim() : "";
+      try {
+        if (raw) {
+          const o = JSON.parse(raw);
+          if (o && typeof o === "object" && !Array.isArray(o)) {
+            ctx.session_summary = o;
+          }
+        }
+      } catch (e) {
+        console.warn("session_summary JSON invalide (desktop)", e);
+      }
+      try {
+        if (ta) localStorage.setItem(LBG_PILOT_MMO_SUMMARY_KEY, ta.value || "");
+      } catch (_) {}
+    }
+
+    function pilotDesktopLoadMmoSummaryFromStorage() {
+      try {
+        const ta = document.getElementById("desktop-mmo-summary");
+        if (!ta || (ta.value && String(ta.value).trim())) return;
+        const v = localStorage.getItem(LBG_PILOT_MMO_SUMMARY_KEY);
+        if (v) ta.value = v;
+      } catch (_) {}
+    }
+
+    async function pilotDesktopRefreshConfigHint() {
+      const el = document.getElementById("desktop-config-hint");
+      if (!el) return;
+      const base = getBase();
+      el.textContent = "Santé dialogue…";
+      try {
+        const r = await fetch(base + "/v1/pilot/status");
+        const t = await r.text();
+        let j = null;
+        try { j = t ? JSON.parse(t) : null; } catch (_) {}
+        if (!j || typeof j !== "object") {
+          el.textContent = "Statut pilot indisponible (HTTP " + r.status + ").";
+          return;
+        }
+        const st = j.agent_dialogue;
+        const info = j.agent_dialogue_info;
+        const dpe = info && typeof info.desktop_plan_env_enabled === "boolean" ? info.desktop_plan_env_enabled : null;
+        const llm = info && typeof info.llm_configured === "boolean" ? info.llm_configured : null;
+        if (st === "skipped") {
+          el.textContent =
+            "Dialogue : non configuré côté backend (LBG_AGENT_DIALOGUE_URL). « Proposer via IA » ne fonctionnera pas.";
+          return;
+        }
+        if (st !== "ok") {
+          el.textContent = "Dialogue : état « " + String(st || "?") + " » — vérifier l’agent (8020) et " + (j.agent_dialogue_detail || "réseau") + ".";
+          return;
+        }
+        const parts = [];
+        if (llm === false) parts.push("LLM non configuré sur l’agent (LBG_DIALOGUE_LLM_BASE_URL)");
+        if (dpe === false) parts.push("Mode DESKTOP_JSON désactivé sur l’agent (LBG_DIALOGUE_DESKTOP_PLAN=1 requis pour les propositions structur.)");
+        if (!parts.length) {
+          el.textContent = "Dialogue : OK — LLM + plan desktop (env) actifs côté agent.";
+        } else {
+          el.textContent = "Dialogue : reachable mais — " + parts.join(" ; ") + ".";
+        }
+      } catch (e) {
+        el.textContent = "Statut pilot : " + e;
+      }
+    }
+
+    async function pilotDesktopProposeLlm() {
+      const base = getBase();
+      const hint = document.getElementById("desktop-hint");
+      const rawEl = document.getElementById("desktop-raw");
+      const prettyEl = document.getElementById("desktop-pretty");
+      const aEl = document.getElementById("desktop-action");
+      if (hint) hint.textContent = "…";
+
+      let text = (document.getElementById("desktop-text") && document.getElementById("desktop-text").value) || "";
+      text = String(text || "").trim();
+      if (!text) text = "Proposition d’action desktop";
+
+      let ctx;
+      try {
+        ctx = JSON.parse((document.getElementById("desktop-context") && document.getElementById("desktop-context").value) || "{}");
+      } catch (_) {
+        alert("context JSON invalide");
+        if (hint) hint.textContent = "context invalide";
+        return;
+      }
+      if (!ctx || typeof ctx !== "object") ctx = {};
+      ctx._desktop_plan = true;
+      if (!ctx.npc_name && !ctx.speaker) ctx.npc_name = "Assistant desktop";
+      pilotDesktopMergeMmoSummaryIntoContext(ctx);
+
+      const payload = { actor_id: "ui:desktop_llm", text: text, context: ctx };
+      const out = await postJson(base + "/v1/pilot/agent-dialogue/invoke", payload);
+      if (rawEl) rawEl.textContent = out.json ? JSON.stringify(out.json, null, 2) : ("HTTP " + out.status + "\n" + (out.text || ""));
+      if (prettyEl) {
+        try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
+      }
+      if (out.status !== 200) {
+        if (hint) hint.textContent = "invoke → HTTP " + out.status;
+        return;
+      }
+      const prop =
+        out.json && out.json.meta && typeof out.json.meta === "object"
+          ? out.json.meta.desktop_action_proposal
+          : null;
+      if (prop && typeof prop === "object" && aEl) {
+        aEl.value = JSON.stringify(prop, null, 2);
+        try { desktopTrySyncTextFromAction(); } catch (_) {}
+        if (hint) hint.textContent = "OK — JSON proposé (relire puis Envoyer)";
+      } else {
+        if (hint) hint.textContent = "OK — pas de DESKTOP_JSON valide (voir réponse brute)";
+      }
+    }
+
     async function pilotDesktopSend() {
       const base = getBase();
       const hint = document.getElementById("desktop-hint");
@@ -2616,6 +3372,7 @@
         if (v && !ctx.desktop_approval) ctx.desktop_approval = v;
       } catch (_) {}
       ctx.desktop_action = action;
+      pilotDesktopMergeMmoSummaryIntoContext(ctx);
 
       const payload = { actor_id: "ui:desktop", text: text, context: ctx };
       const out = await postJson(base + "/v1/pilot/route", payload);
@@ -2990,6 +3747,9 @@
 
     document.getElementById("btn-aid-help").addEventListener("click", () => aidHelp());
     document.getElementById("btn-aid-reset").addEventListener("click", () => aidResetGaugesToZero());
+    try { document.getElementById("btn-npc-reg-refresh").addEventListener("click", npcRegistryRefresh); } catch (_) {}
+    try { document.getElementById("btn-world-content-refresh").addEventListener("click", worldContentRefresh); } catch (_) {}
+    try { document.getElementById("btn-npc-reg-apply").addEventListener("click", npcRegistryApplyToContext); } catch (_) {}
 
     // WS buttons
     try { document.getElementById("btn-ws-connect").addEventListener("click", wsConnect); } catch (_) {}
@@ -3106,6 +3866,13 @@
     } catch (_) {}
 
     // Desktop page bindings
+    try {
+      document.getElementById("btn-desktop-propose-llm").addEventListener("click", function () {
+        pilotDesktopProposeLlm().catch(function (e) {
+          alert("Desktop LLM: " + e);
+        });
+      });
+    } catch (_) {}
     try {
       document.getElementById("btn-desktop-send").addEventListener("click", function () {
         pilotDesktopSend().catch(function (e) {
@@ -3290,12 +4057,16 @@
 
     // Lyra page bindings
     try { lyraBindControls(); } catch (_) {}
+    try { panelApplyStoredLayout(); } catch (_) {}
+    try { panelInitDnD(); } catch (_) {}
     try {
       const st = lyraLoadState();
       const dtEl = document.getElementById("lyra-dt");
       if (dtEl) dtEl.value = String(st.dt_s || 60);
       const cEl = document.getElementById("lyra-confiance");
       if (cEl) cEl.value = String(st.confiance_100 != null ? st.confiance_100 : 70);
+      const fEl = document.getElementById("lyra-reg-filter");
+      if (fEl) fEl.value = lyraRegFilterLoad();
       // restore mode
       try {
         const m = localStorage.getItem(STORAGE_LYRA_MODE_KEY);
@@ -3303,6 +4074,8 @@
       } catch (_) {}
       lyraRenderIn();
       lyraRenderOut(null);
+      lyraRegLogRender();
+      lyraRefreshBrain().catch(function () {});
     } catch (_) {}
     try {
       const cEl = document.getElementById("lyra-confiance");
@@ -3335,7 +4108,47 @@
         });
       });
     } catch (_) {}
+    try { document.getElementById("btn-lyra-stress").addEventListener("click", lyraApplyStressPreset); } catch (_) {}
+    try {
+      document.getElementById("btn-lyra-chaos").addEventListener("click", async function () {
+        const btn = document.getElementById("btn-lyra-chaos");
+        const prev = btn ? btn.textContent : "";
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = "Chaos en cours…";
+        }
+        try {
+          await lyraRunChaosLoop(8);
+        } catch (e) {
+          alert("Chaos loop: " + e);
+        } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = prev || "Chaos loop x8";
+          }
+        }
+      });
+    } catch (_) {}
+    try {
+      document.getElementById("btn-lyra-brain-refresh").addEventListener("click", function () {
+        lyraRefreshBrain().catch(function () {});
+      });
+    } catch (_) {}
     try { document.getElementById("btn-lyra-reset").addEventListener("click", lyraReset); } catch (_) {}
+    try {
+      document.getElementById("btn-lyra-reg-clear").addEventListener("click", function () {
+        lyraRegLogSave([]);
+        lyraRegLogRender();
+      });
+    } catch (_) {}
+    try {
+      document.getElementById("lyra-reg-filter").addEventListener("change", function (ev) {
+        const v = ev && ev.target ? ev.target.value : "all";
+        lyraRegFilterSave(v);
+        lyraRegLogRender();
+      });
+    } catch (_) {}
+    try { document.getElementById("btn-lyra-reg-export").addEventListener("click", lyraRegExportTxt); } catch (_) {}
     try {
       document.getElementById("lyra-auto").addEventListener("change", function (ev) {
         const on = !!(ev.target && ev.target.checked);

@@ -20,3 +20,10 @@ def test_classifier_detects_devops_probe() -> None:
     assert intent == "devops_probe"
     assert 0.0 <= conf <= 1.0
 
+
+def test_classifier_detects_opengame_prototype() -> None:
+    c = DeterministicIntentClassifier()
+    intent, conf = c.classify("prépare un prototype jeu avec OpenGame")
+    assert intent == "prototype_game"
+    assert 0.0 <= conf <= 1.0
+

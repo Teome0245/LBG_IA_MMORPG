@@ -16,7 +16,9 @@
       "type": "object",
       "properties": {
         "_require_action_json": { "type": "boolean" },
-        "_no_cache": { "type": "boolean" }
+        "_no_cache": { "type": "boolean" },
+        "_world_action_kind": { "type": "string", "enum": ["aid", "quest"] },
+        "_active_quest_id": { "type": "string", "minLength": 1, "maxLength": 80 }
       },
       "additionalProperties": true
     }

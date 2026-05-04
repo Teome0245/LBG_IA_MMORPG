@@ -6,6 +6,7 @@ Le thread de simulation tourne en arrière-plan ; les endpoints ne font que lire
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -15,12 +16,14 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from entities.npc import Npc
 from simulation.loop import SimulationLoop
 from world.persistence import load_world_state, save_world_state
 from world.state import WorldState
+from world.village_grid import load_village_grid_optional, village_grid_meta
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +107,7 @@ async def _lifespan(app: FastAPI):
     thread.start()
     app.state.world = world
     app.state.world_lock = world_lock
+    app.state.village_grid = load_village_grid_optional()
     app.state._stop_sim = stop
     app.state._persist = persist
     app.state._state_path = state_path
@@ -120,6 +124,16 @@ async def _lifespan(app: FastAPI):
 
 app = FastAPI(title="LBG MMO Server", lifespan=_lifespan)
 
+_cors_origins = [o.strip() for o in os.environ.get("LBG_MMO_CORS_ORIGINS", "").split(",") if o.strip()]
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_credentials=False,
+        allow_methods=["GET", "HEAD", "OPTIONS"],
+        allow_headers=["*"],
+    )
+
 
 class HealthResponse(BaseModel):
     ok: bool = True
@@ -129,6 +143,64 @@ class HealthResponse(BaseModel):
 @app.get("/healthz", response_model=HealthResponse)
 def healthz() -> HealthResponse:
     return HealthResponse()
+
+
+@app.get("/v1/world/collision")
+def get_world_collision_meta() -> dict[str, Any]:
+    """
+    Méta grille collisions (lecture seule). Pas de token : infos géométriques uniquement.
+    """
+    g = getattr(app.state, "village_grid", None)
+    if g is None:
+        return {"loaded": False}
+    meta = village_grid_meta(g)
+    return {"loaded": True, **meta}
+
+
+@app.get("/v1/world/collision-grid")
+def get_world_collision_grid() -> dict[str, Any]:
+    """
+    Grille complète `watabou_grid_v1` (lecture seule) pour alignement client / prédiction locale.
+    Même fichier que la méta `GET /v1/world/collision` ; volumineux selon la carte.
+    """
+    g = getattr(app.state, "village_grid", None)
+    if g is None or not g.source_path:
+        return {"loaded": False}
+    path = Path(g.source_path)
+    if not path.is_file():
+        return {"loaded": False}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"loaded": False}
+    if not isinstance(data, dict) or data.get("kind") != "watabou_grid_v1":
+        return {"loaded": False}
+    out = dict(data)
+    out["loaded"] = True
+    return out
+
+
+@app.get("/internal/v1/world/collision-probe")
+def get_internal_collision_probe(
+    x: float = Query(..., description="Position monde x (m)"),
+    z: float = Query(..., description="Position monde z (m)"),
+    x_lbg_service_token: str | None = Header(default=None, alias="X-LBG-Service-Token"),
+) -> dict[str, Any]:
+    """
+    Teste si (x,z) est franchissable sur la grille village (token interne si configuré).
+    """
+    _require_mmo_internal_token(x_lbg_service_token)
+    g = getattr(app.state, "village_grid", None)
+    if g is None:
+        return {"loaded": False, "walkable": False, "reason": "no_grid"}
+    ch, gx, gz = g.terrain_at_world_m(x, z)
+    return {
+        "loaded": True,
+        "x": x,
+        "z": z,
+        "walkable": g.is_walkable_world_m(x, z),
+        "tile": {"gx": gx, "gz": gz, "char": ch},
+    }
 
 
 @app.get("/v1/world/lyra")

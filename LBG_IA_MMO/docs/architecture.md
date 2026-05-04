@@ -24,7 +24,22 @@ Construire un framework complet permettant :
 - Fallbacks déterministes (graceful degradation).
 - **Lyra (futur)** : le contrat d’état optionnel `context.lyra` / `output.lyra` est décrit dans `lyra.md` ; **`lbg_agents.lyra_bridge`** applique un pas sur **`lyra_engine.gauges`** (si **`mmo_server`** dans le venv) pour **`agent.fallback`** et pour **`agent.dialogue`** avant l’appel HTTP à l’agent dialogue.
 - Après routage, appelle le paquet **`agents/`** (`lbg_agents.dispatch.invoke_after_route`) pour enrichir le champ `output`. Le dialogue peut cibler un **agent HTTP** (`LBG_AGENT_DIALOGUE_URL`, port **8020** en prod systemd, voir `agents/README.md`). L’intention **`devops_probe`** déclenche **`agent.devops`** : GET HTTP et lecture de fichiers **uniquement** via listes blanches d’environnement (`agents/README.md`) ; dry-run **`LBG_DEVOPS_DRY_RUN`** ; garde **`LBG_DEVOPS_APPROVAL_TOKEN`** + `context.devops_approval` ; audit JSON **`agents.devops.audit`** (champ `ts`) sur stdout et/ou fichier **`LBG_DEVOPS_AUDIT_LOG_PATH`** (JSONL).
+- **Forge de prototypes OpenGame (cadrage)** : si OpenGame est intégré, il reste une capability expérimentale orchestrée (`agent.opengame`) pour générer des prototypes isolés ; l’orchestrateur reste maître du déclenchement, et le code généré ne modifie pas le cœur MMO automatiquement. Décision : `docs/adr/0003-opengame-forge-prototypes.md`.
+- **Assistant poste vs persona MMO** : deux modes produit (`local_assistant` ↔ **`desktop_control`/`agent.desktop`** + worker ; `mmo_persona` ↔ dialogue/WS MMO), isolation des secrets et routage ; pas d’exécution OS sensible depuis le flux MMO sans pont dédié. Décision : `docs/adr/0004-assistant-local-vs-persona-mmo.md`.
 - Introspection : **`GET /v1/capabilities`** (liste des `CapabilitySpec`). Le backend expose **`GET /v1/pilot/capabilities`** en proxy pour l’UI `/pilot/`.
+
+#### Dialogue orchestré multi‑LLM (cadrage backlog)
+
+Objectif : permettre à l’orchestrateur d’orienter les requêtes de dialogue vers plusieurs LLM (locaux et distants) avec un arbitrage explicite **coût / latence / qualité**.
+
+Périmètre à couvrir :
+- **Router dialogue** : sélection de modèle selon intent, contexte, budget, SLA et fallback.
+- **Profils de style** : base `guardrails` commune + profils nominaux (assistant et MMO/PNJ), injectés de manière traçable dans le prompt système.
+- **Registre PNJ** : source de vérité des PNJ (contexte narratif + contraintes comportementales) pour enrichir le prompt MMO.
+- **Suivi et pilotage coût** : journal par échange (trace_id, routeur, modèle, profil, tokens in/out, coût estimé, latence, issue) pour observation et optimisation.
+
+Contrainte produit :
+- le routage vers modèles distants doit rester **opt-in**, plafonné par budget et observable (pas d’explosion de coût silencieuse).
 
 #### Brain (autonomie) — v1 (conscience + motivation)
 
@@ -61,6 +76,25 @@ Variables d’environnement (orchestrator) :
 - `LBG_BRAIN_STATE_PATH` : chemin du fichier de persistance (défaut `/var/lib/lbg/brain/state.json`)
 - `LBG_BRAIN_MAX_ACTIONS_PER_TICK` : budget d’actions par tick (défaut `3`)
 - `LBG_BRAIN_RESTART_COOLDOWN_S` : cooldown restart systemd (défaut `600`)
+- `LBG_BRAIN_LYRA_BRIDGE_ENABLED` : `1|0` (défaut `0`) — active l’influence Brain -> `context.lyra` côté backend
+- `LBG_BRAIN_LYRA_WORLD_SCALE` : coefficient max de nudging des besoins monde (défaut `0.03`, borné `[0,0.25]`)
+- `LBG_BRAIN_LYRA_ASSISTANT_SCALE` : coefficient max de nudging des jauges assistant (défaut `5`, borné `[0,25]`)
+
+Règles de sécurité du bridge Brain -> Lyra :
+- influence **faible et bornée** (pas de saut massif de jauges),
+- activable uniquement par feature flag,
+- désactivable par requête via `context.lyra.meta.skip_brain_bridge=true`.
+
+Régulateur Lyra (safe, orienté “but”) :
+- applique au plus **une micro-action** par tick (ex. réduire `hunger` dominante, restaurer `energie` assistant),
+- cooldown configurable (évite la sur-réaction),
+- aucune action infra destructive ; uniquement ajustement borné des jauges Lyra.
+
+Variables régulateur :
+- `LBG_LYRA_REGULATOR_ENABLED` : `1|0` (défaut `1`)
+- `LBG_LYRA_REGULATOR_COOLDOWN_S` : cooldown entre actions (défaut `60`)
+- `LBG_LYRA_REGULATOR_WORLD_WARNING` : seuil warning monde (défaut `0.55`)
+- `LBG_LYRA_REGULATOR_WORLD_CRITICAL` : seuil critique monde (défaut `0.75`)
 
 #### DevOps — exécution des remédiations (phase 3 produit)
 
@@ -72,6 +106,10 @@ Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure de
 - NPC gouvernés par `lyra_engine/` (comportements + jauges).
 - **HTTP** (`http_app`, uvicorn typiquement **8050**) : tick en thread d’arrière-plan ; **`GET /v1/world/lyra`** expose les jauges PNJ pour **`context.lyra`** (voir `docs/lyra.md`, variable **`LBG_MMO_SERVER_URL`** côté backend). En **prod systemd** (`lbg-mmo-server`), l’écoute est **`0.0.0.0:8050`** pour permettre au **backend sur une autre VM** d’appeler le LAN (`192.168.x.x:8050`) ; en local, **`127.0.0.1`** reste recommandé. Persistance **`WorldState`** en JSON (chargement au boot, sauvegarde périodique + arrêt) — **`LBG_MMO_STATE_PATH`**, **`LBG_MMO_SAVE_INTERVAL_S`** (`mmo_server/README.md`).
 
+### Catalogue monde (`content/world/`) — races & bestiaire
+
+Données **data-driven** versionnées dans le monorepo : `LBG_IA_MMO/content/world/races.json`, `creatures.json`. **Consommateurs** : `lbg_agents.world_content` (enrichissement des prompts dialogue ; `GET /world-content` sur l’agent HTTP), `npc_registry.json` des agents (**`race_id`** par PNJ), `mmmorpg_server.world_catalog` + champ **`Entity.race_id`** / snapshot Lyra (`meta.race_id`, `meta.race_display`). **Pilot** : proxy same-origin **`GET /v1/pilot/agent-dialogue/world-content`**. Surcharge de répertoire : **`LBG_WORLD_CONTENT_DIR`**. Fil documentaire : `docs/plan_de_route.md` (section *Fil produit ↔ documentation*, Historique), `docs/plan_mmorpg.md`, `agents/README.md`, `pilot_web/README.md`.
+
 ### Frontend et Pilotage (`pilot_web/` et `web_client/`)
 - **Routage unifié (Nginx, port 8080)** : La VM 110 centralise l'accès utilisateur.
     - `http://<IP>:8080/` : Interface **Lyra / Pilotage** (Originale).
@@ -79,8 +117,15 @@ Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure de
     - `http://<IP>:8080/v1/` : Proxy vers le backend API (VM 140:8000).
 - **Déploiement** : 
     - Le rôle `front` de `deploy_vm.sh` gère Lyra.
-    - `deploy_web_client.sh` gère le MMO (build avec `--base=/mmo/` et déploiement dans le sous-dossier).
+    - `deploy_web_client.sh` gère le MMO (build avec `--base=/mmo/` et déploiement dans le sous-dossier). Variable **`LBG_MMO_WEB_DEPLOY_LOCAL_ONLY=1`** : build + vérifs + copie vers `pilot_web/mmo/` sans SSH VM.
 - **Note** : Le serveur Python sur le port **8081** est déprécié et supprimé.
+
+#### Notes opérationnelles (client MMO `/mmo/`)
+
+- **Bundle “stable” vs rebuild** : le sous-dossier servi par Nginx est **`pilot_web/mmo/`** (copie de `web_client/dist/`). Un rebuild Vite **remplace** `index.html` + `assets/*` et peut casser le rendu si l’on mélange des fichiers d’époques différentes (mismatch *HTML → assets*).
+- **HUD (barres HP/MP/Énergie)** : le client met à jour les barres à partir de `entity.stats` reçu via WS. Le serveur WS (`mmmorpg_server`) doit donc inclure `stats` dans `Entity.to_snapshot()` (sinon HUD figé).
+- **Décor / bâtiments** : les bâtiments affichés proviennent des `locations` inclus dans `welcome` et `world_tick` (chargés depuis le seed `world_initial.json` côté serveur WS). Si les bâtiments semblent “non gérés”, vérifier que le seed est bien présent/lu sur la VM MMO.
+- **Attention aux modules legacy** : dans `mmmorpg_server/src/`, il existe aussi des fichiers `src/entities/*` et `src/game_state.py` historiques. Le serveur WS utilise le namespace paquet **`mmmorpg_server.*`** (ex. `mmmorpg_server/entities/entity.py`). En cas de correctif, modifier la version sous `mmmorpg_server/` (pas le legacy).
 
 ## Exécution
 
@@ -129,7 +174,10 @@ Recommandation pour **cette** machine : **déploiement via systemd** (voir `../.
 - `fusion_spec_monde.md` / `fusion_pont_jeu_ia.md` : sources de vérité monde et pont IA
 - `vision_projet.md` : vision globale / agents / auto‑évolution
 - `lyra.md` : jauges & IA incarnée
+- `opengame.md` : forge de prototypes OpenGame orchestrée (`prototype_game` / `agent.opengame`)
 - `plan_mmorpg.md` : plan serveur MMO (modules cibles)
 - `ops_devops_audit.md` : VM — audit DevOps JSONL (logrotate), rotation du jeton d’approbation
 - `ops_vm_user.md` : compte **`lbg`** (sudoer, SSH, `User=` systemd, `/opt`, secrets `640 root:lbg`)
+- `adr/0003-opengame-forge-prototypes.md` : OpenGame comme forge de prototypes orchestrée et sandboxée
+- `adr/0004-assistant-local-vs-persona-mmo.md` : assistant poste de travail (`local_assistant`) vs incarnation MMO (`mmo_persona`)
 

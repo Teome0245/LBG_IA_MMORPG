@@ -17,9 +17,11 @@ registry/in_memory.py
 router/__init__.py
 router/v1.py
 router/routes/__init__.py
+router/routes/brain.py
 router/routes/capabilities.py
 router/routes/route_intent.py
 services/__init__.py
+services/brain.py
 services/metrics.py
 tests/test_capabilities.py
 tests/test_classifier.py

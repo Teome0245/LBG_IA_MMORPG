@@ -29,5 +29,10 @@ include = ["world*", "entities*", "lyra_engine*", "simulation*"]
 exclude = ["tests*"]
 
 [tool.setuptools.package-data]
-world = ["seed_data/world_initial.json", "seed_data/README.md"]
+world = [
+  "seed_data/world_initial.json",
+  "seed_data/README.md",
+  "seed_data/pixie_seat.grid.json",
+  "seed_data/pixie_seat.layout.json",
+]
 

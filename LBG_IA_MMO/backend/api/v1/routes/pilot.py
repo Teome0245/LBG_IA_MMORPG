@@ -5,9 +5,11 @@ import uuid
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from models.intents import IntentRequest, IntentResponse
+from services.brain_lyra_sync import merge_brain_lyra_if_configured
+from services.lyra_regulator import regulate_lyra_if_configured
 from services import metrics as svc_metrics
 from services.mmo_lyra_sync import merge_mmo_lyra_if_configured
 from services.mmmorpg_commit import try_commit_dialogue
@@ -28,6 +30,21 @@ class _TokenBucket:
 
 
 _internal_rl_buckets: dict[str, _TokenBucket] = {}
+
+
+def _mmmorpg_player_id_from_pilot(payload: IntentRequest) -> str | None:
+    """Identifiant joueur sur le serveur WS (UUID session), pour commits inventaire / quête côté joueur."""
+    ctx = payload.context if isinstance(payload.context, dict) else {}
+    for key in ("mmmorpg_player_id", "player_id"):
+        v = ctx.get(key)
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    aid = (payload.actor_id or "").strip()
+    if aid.lower().startswith("player:"):
+        rest = aid.split(":", 1)[-1].strip()
+        if rest:
+            return rest
+    return None
 
 
 def _internal_rate_limit_allow(*, key: str) -> bool:
@@ -74,6 +91,8 @@ async def _pilot_route_impl(*, payload: IntentRequest, trace_id: str) -> dict[st
     svc_metrics.inc("pilot_route_requests_total")
     payload.context.setdefault("_trace_id", trace_id)
     await merge_mmo_lyra_if_configured(payload.context)
+    await merge_brain_lyra_if_configured(payload.context)
+    await regulate_lyra_if_configured(payload.context)
     lyra_after_merge = payload.context.get("lyra") if isinstance(payload.context, dict) else None
     try:
         client = OrchestratorClient.from_env()
@@ -103,6 +122,7 @@ async def _pilot_route_impl(*, payload: IntentRequest, trace_id: str) -> dict[st
                     trace_id=trace_id,
                     npc_id=npc_id,
                     flags=flags,
+                    player_id=_mmmorpg_player_id_from_pilot(payload),
                 )
                 if commit_result is not None:
                     out["commit_result"] = commit_result
@@ -368,6 +388,94 @@ async def pilot_proxy_agent_dialogue_healthz() -> dict[str, object]:
         return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+@router.get("/agent-dialogue/npc-registry", tags=["pilot"])
+async def pilot_proxy_agent_dialogue_npc_registry(npc_id: str | None = None) -> dict[str, object]:
+    """
+    Proxy same-origin vers `GET agent-dialogue /npc-registry`.
+    Option : `?npc_id=npc:...` pour filtrer une entrée.
+    """
+    base = os.environ.get("LBG_AGENT_DIALOGUE_URL", "").strip().rstrip("/")
+    if not base:
+        return {"ok": False, "skipped": True, "detail": "LBG_AGENT_DIALOGUE_URL non défini"}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"{base}/npc-registry", params={"npc_id": npc_id} if npc_id else None)
+        if r.status_code != 200:
+            return {"ok": False, "error": f"HTTP {r.status_code}", "body": r.text[:800]}
+        try:
+            data = r.json()
+        except ValueError:
+            return {"ok": False, "error": "corps non JSON", "body": r.text[:800]}
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/agent-dialogue/world-content", tags=["pilot"])
+async def pilot_proxy_agent_dialogue_world_content() -> dict[str, object]:
+    """
+    Proxy same-origin vers `GET agent-dialogue /world-content` (inventaire races + bestiaire).
+    """
+    base = os.environ.get("LBG_AGENT_DIALOGUE_URL", "").strip().rstrip("/")
+    if not base:
+        return {"ok": False, "skipped": True, "detail": "LBG_AGENT_DIALOGUE_URL non défini"}
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            r = await client.get(f"{base}/world-content")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"HTTP {r.status_code}", "body": r.text[:800]}
+        try:
+            data = r.json()
+        except ValueError:
+            return {"ok": False, "error": "corps non JSON", "body": r.text[:800]}
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+class AgentDialogueInvokeBody(BaseModel):
+    """Corps pour `POST agent-dialogue /invoke` (même forme que l’agent HTTP dialogue)."""
+
+    actor_id: str
+    text: str
+    context: dict[str, object] = Field(default_factory=dict)
+
+
+@router.post("/agent-dialogue/invoke", tags=["pilot"])
+async def pilot_proxy_agent_dialogue_invoke(body: AgentDialogueInvokeBody) -> dict[str, object]:
+    """
+    Proxy same-origin vers `POST {LBG_AGENT_DIALOGUE_URL}/invoke` (LLM dialogue + meta).
+
+    Utile pour le Pilot (ex. proposition `DESKTOP_JSON` → édition humaine → `/v1/pilot/route`).
+    """
+    base = os.environ.get("LBG_AGENT_DIALOGUE_URL", "").strip().rstrip("/")
+    if not base:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "bad_request", "hint": "LBG_AGENT_DIALOGUE_URL non défini"},
+        )
+    url = f"{base}/invoke"
+    payload = {"actor_id": body.actor_id, "text": body.text, "context": body.context}
+    try:
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            r = await client.post(url, json=payload)
+    except Exception as e:
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "upstream_unreachable", "detail": str(e)},
+        ) from e
+    try:
+        data = r.json()
+    except ValueError:
+        raise HTTPException(
+            status_code=502,
+            detail={"error": "upstream_non_json", "body": r.text[:800]},
+        )
+    if r.status_code != 200:
+        raise HTTPException(status_code=r.status_code, detail=data if isinstance(data, dict) else {"body": r.text[:800]})
+    return data if isinstance(data, dict) else {"payload": data}
 
 
 @router.get("/agent-quests/healthz", tags=["pilot"])

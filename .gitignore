@@ -15,3 +15,15 @@ godot_client/Models/*.fbx
 godot_client/Models/*.blend
 godot_client/Models/*.glb
 web_client/node_modules/
+
+# Sauvegardes locales pilot / client MMO
+**/pilot_web/.mmo_backup/
+
+# Fichiers uv.lock générés localement par `uv run` (pas de politique lock monorepo unifiée pour l'instant)
+LBG_IA_MMO/agents/uv.lock
+LBG_IA_MMO/backend/uv.lock
+LBG_IA_MMO/mmmorpg_server/uv.lock
+
+# Artefacts / exports locaux (ne pas versionner par défaut)
+Villages/
+**/*:Zone.Identifier

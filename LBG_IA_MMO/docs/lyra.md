@@ -4,6 +4,10 @@ Ce document synthétise `Lyra 20260409.txt` et l’intègre au projet.
 
 **Fusion (phase B)** : alignement assistant vs PNJ, enveloppe `kind`, plages — voir **`fusion_spec_lyra.md`** (ne remplace pas ce fichier pour le comportement **actuel** du code).
 
+**Périmètre « même esprit, deux mondes »** (assistant PC vs persona MMO) : voir **`docs/adr/0004-assistant-local-vs-persona-mmo.md`** — modes `local_assistant` / `mmo_persona`, pas de fuite automatique entre vie privée et session joueur.
+
+**Rang 2 (implémentation)** : le pont WebSocket jeu → IA force `lyra_engagement=mmo_persona` ; le client peut envoyer un `session_summary` sanitisé (`ia_context`) pour enrichir le prompt PNJ sans données poste ; **le serveur jeu enrichit et fusionne** ce résumé avec l’état quête joueur et l’interlocuteur courant ; l’agent dialogue expose `meta.lyra_engagement_resolved` sur `POST /invoke`. Le Pilot `#/desktop` permet de coller un JSON `session_summary` (localStorage) pour l’assistant local.
+
 ## Nommage / version
 
 - Version : **Lyra 2.0**

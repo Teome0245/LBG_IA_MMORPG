@@ -1,4 +1,5 @@
 import json
+import os
 import time
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -27,6 +28,21 @@ class RouteResponse(BaseModel):
 _classifier = DeterministicIntentClassifier()
 
 
+def _dialogue_context_for_route(context: dict[str, object]) -> dict[str, object]:
+    """Ajoute les préférences LLM décidées par l'orchestrateur, sans écraser un choix explicite."""
+    ctx = dict(context)
+    if not isinstance(ctx.get("dialogue_target"), str) or not str(ctx.get("dialogue_target")).strip():
+        target = os.environ.get("LBG_ORCHESTRATOR_DIALOGUE_TARGET_DEFAULT", "fast").strip().lower()
+        if target not in ("local", "remote", "fast", "auto"):
+            target = "fast"
+        ctx["dialogue_target"] = target
+    if not isinstance(ctx.get("dialogue_profile"), str) or not str(ctx.get("dialogue_profile")).strip():
+        profile = os.environ.get("LBG_ORCHESTRATOR_DIALOGUE_PROFILE_DEFAULT", "").strip()
+        if profile:
+            ctx["dialogue_profile"] = profile
+    return ctx
+
+
 @router.post("/route", response_model=RouteResponse)
 def route_intent(payload: RouteRequest) -> RouteResponse:
     t0 = time.perf_counter()
@@ -42,12 +58,23 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
     # Desktop (hybride) : priorité explicite via action structurée (évite les faux positifs).
     elif isinstance(ctx.get("desktop_action"), dict):
         intent, confidence = ("desktop_control", 1.0)
+    # OpenGame : génération de prototype uniquement via action structurée et sandboxée.
+    elif isinstance(ctx.get("opengame_action"), dict):
+        intent, confidence = ("prototype_game", 1.0)
     # Chef de projet : priorité explicite (payload ou drapeau).
     elif ctx.get("pm_focus") is True or isinstance(ctx.get("project_pm"), dict):
         intent, confidence = ("project_pm", 1.0)
     # Gameplay monde (v1) : commit aid déterministe
     elif isinstance(ctx.get("world_action"), dict):
         intent, confidence = ("world_aid", 1.0)
+    # Action monde demandée via dialogue PNJ : garder le flux LLM dialogue même si le texte parle de quête.
+    elif (
+        isinstance(ctx.get("world_npc_id"), str)
+        and str(ctx.get("world_npc_id")).strip()
+        and isinstance(ctx.get("_world_action_kind"), str)
+        and str(ctx.get("_world_action_kind")).strip().lower() in ("aid", "quest")
+    ):
+        intent, confidence = ("npc_dialogue", 1.0)
     else:
         # Priorité : si le texte exprime clairement une quête/mission/etc., respecter le classifieur
         # même si un PNJ est ciblé (ex: une quête donnée par un PNJ).
@@ -59,12 +86,13 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
             intent, confidence = ("npc_dialogue", 0.9)
     cap = capability_registry.get(intent) or capability_registry.get("unknown")
     assert cap is not None
+    ctx_for_agent = _dialogue_context_for_route(ctx) if cap.routed_to == "agent.dialogue" else payload.context
     try:
         agent_out = invoke_after_route(
             cap.routed_to,
             actor_id=payload.actor_id,
             text=payload.text,
-            context=payload.context,
+            context=ctx_for_agent,
         )
     except Exception:
         svc_metrics.inc("orchestrator_route_errors_total")

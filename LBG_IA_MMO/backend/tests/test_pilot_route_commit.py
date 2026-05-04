@@ -167,3 +167,53 @@ def test_pilot_route_commit_rejected_when_flag_value_type_invalid(monkeypatch: p
     assert cr.get("error") == "invalid_commit_flags"
     assert called["post"] == 0
 
+
+def test_pilot_route_commit_passes_player_id_for_inventory(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Le backend envoie ``player_id`` au commit interne pour les flags ``player_item_*``."""
+    monkeypatch.setenv("LBG_MMMORPG_INTERNAL_HTTP_URL", "http://127.0.0.1:8773")
+    monkeypatch.delenv("LBG_MMO_SERVER_URL", raising=False)
+    monkeypatch.delenv("LBG_MMMORPG_INTERNAL_HTTP_TOKEN", raising=False)
+
+    captured: dict[str, object] = {}
+
+    class _Client(_FakeAsyncClient):
+        async def post(self, url: str, json: object | None = None, headers: object | None = None) -> _FakeResp:  # type: ignore[override]
+            captured["json"] = json
+            return _FakeResp()
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda *a, **k: _Client())
+
+    class _OrchInv:
+        async def route_intent(self, payload: object) -> IntentResponse:
+            return IntentResponse(
+                intent="npc_dialogue",
+                confidence=0.9,
+                routed_to="agent.dialogue",
+                output={
+                    "commit": {
+                        "npc_id": "npc:merchant",
+                        "flags": {"player_item_id": "item:x", "player_item_qty_delta": 1},
+                    },
+                },
+            )
+
+    monkeypatch.setattr(pilot_mod.OrchestratorClient, "from_env", lambda: _OrchInv())
+
+    from backend.main import app
+
+    pid = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+    client = TestClient(app)
+    r = client.post(
+        "/v1/pilot/route",
+        json={
+            "actor_id": f"player:{pid}",
+            "text": "Donne-moi un objet",
+            "context": {"world_npc_id": "npc:merchant"},
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data.get("commit_result", {}).get("ok") is True
+    sent = captured.get("json")
+    assert isinstance(sent, dict)
+    assert sent.get("player_id") == pid

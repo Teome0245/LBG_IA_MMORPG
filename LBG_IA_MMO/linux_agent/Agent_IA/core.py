@@ -160,6 +160,43 @@ def url_is_allowed(url: str) -> bool:
     return url_allowed_by_host(url)
 
 
+def web_search_enabled() -> bool:
+    return truthy(get_cfg("LBG_LINUX_WEB_SEARCH"))
+
+
+def linux_search_engine() -> str:
+    v = get_cfg("LBG_LINUX_SEARCH_ENGINE").strip().lower()
+    if v in ("google",):
+        return "google"
+    return "duckduckgo"
+
+
+def build_web_search_url(query: str) -> tuple[str | None, str | None]:
+    from urllib.parse import quote_plus
+
+    q = (query or "").strip()
+    if not q:
+        return None, "requête vide"
+    if len(q) > 220:
+        q = q[:220]
+    if linux_search_engine() == "google":
+        return "https://www.google.com/search?q=" + quote_plus(q), None
+    return "https://duckduckgo.com/?q=" + quote_plus(q), None
+
+
+def web_search_url_trusted(url: str) -> bool:
+    try:
+        p = urlparse(url)
+    except Exception:
+        return False
+    if p.scheme != "https":
+        return False
+    host = (p.hostname or "").lower()
+    if linux_search_engine() == "google":
+        return host in ("www.google.com", "google.com")
+    return host in ("duckduckgo.com", "www.duckduckgo.com", "lite.duckduckgo.com")
+
+
 def file_allowlist_dirs() -> list[Path]:
     raw = get_cfg("LBG_LINUX_FILE_ALLOWLIST_DIRS").strip()
     if not raw:
@@ -245,6 +282,62 @@ def persist_learned_app(app_id: str, exe_path: str) -> tuple[bool, str | None]:
 
 def popen_quiet(argv: list[str]) -> None:
     subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def mail_imap_enabled() -> bool:
+    return truthy(get_cfg("LBG_LINUX_MAIL_ENABLED"))
+
+
+def mail_imap_credentials() -> tuple[str, int, str, str, bool]:
+    host = get_cfg("LBG_LINUX_MAIL_IMAP_HOST").strip()
+    pr = (get_cfg("LBG_LINUX_MAIL_IMAP_PORT").strip() or "993")
+    try:
+        port = int(pr) if pr else 993
+    except ValueError:
+        port = 993
+    user = get_cfg("LBG_LINUX_MAIL_IMAP_USER").strip()
+    password = get_cfg("LBG_LINUX_MAIL_IMAP_PASSWORD").strip()
+    use_ssl = not truthy(get_cfg("LBG_LINUX_MAIL_IMAP_NO_SSL").strip())
+    return host, port, user, password, use_ssl
+
+
+def _mail_imap_parse_int_local(action: dict[str, Any], key: str, default: int, lo: int, hi: int) -> int:
+    v = action.get(key, default)
+    if isinstance(v, bool):
+        return default
+    if isinstance(v, int):
+        n = v
+    elif isinstance(v, str) and v.strip().lstrip("-").isdigit():
+        try:
+            n = int(v.strip())
+        except ValueError:
+            return default
+    else:
+        try:
+            n = int(v)  # type: ignore[arg-type]
+        except Exception:
+            return default
+    return max(lo, min(hi, n))
+
+
+def mail_imap_parse_action(action: dict[str, Any]) -> tuple[str, str, int, int, int, str | None]:
+    fc = action.get("from_contains")
+    sc = action.get("subject_contains")
+    fc_s = fc.strip() if isinstance(fc, str) else ""
+    sc_s = sc.strip() if isinstance(sc, str) else ""
+    if len(fc_s) > 80:
+        fc_s = fc_s[:80]
+    if len(sc_s) > 120:
+        sc_s = sc_s[:120]
+    if not fc_s and not sc_s:
+        return "", "", 0, 0, 0, "Champs `from_contains` et/ou `subject_contains` requis"
+    fold = action.get("folder")
+    if isinstance(fold, str) and fold.strip() and fold.strip().upper() != "INBOX":
+        return "", "", 0, 0, 0, "Dossier non supporté (MVP : INBOX seulement)"
+    max_m = _mail_imap_parse_int_local(action, "max_messages", 3, 1, 10)
+    max_b = _mail_imap_parse_int_local(action, "max_body_chars", 800, 0, 4000)
+    max_sc = _mail_imap_parse_int_local(action, "max_scan", 200, 10, 500)
+    return fc_s, sc_s, max_m, max_b, max_sc, None
 
 
 def which(exe: str) -> str:

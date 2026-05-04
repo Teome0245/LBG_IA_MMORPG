@@ -1,0 +1,17 @@
+{
+  "kind": "watabou_grid_v1",
+  "source": { "generator": "fixture", "version": "test" },
+  "scale": { "tile_m": 2.0 },
+  "bounds_world_m": { "min_x": -5.0, "min_z": -5.0, "max_x": 5.0, "max_z": 5.0 },
+  "grid": {
+    "w": 5,
+    "h": 5,
+    "rows": [
+      ".....",
+      ".....",
+      "..T..",
+      ".....",
+      "....."
+    ]
+  }
+}

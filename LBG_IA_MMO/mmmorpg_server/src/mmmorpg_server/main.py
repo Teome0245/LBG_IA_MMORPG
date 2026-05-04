@@ -15,7 +15,11 @@ import httpx
 from websockets.asyncio.server import ServerConnection, serve
 
 from mmmorpg_server import config
-from mmmorpg_server.game_state import GameState
+from mmmorpg_server.game_state import GameState, NPC_CONVERSATION_RESUME_DELAY_S
+from mmmorpg_server.ia_context_sanitize import (
+    build_server_session_summary_parts,
+    merge_session_summaries,
+)
 from mmmorpg_server.internal_http import start_internal_http
 from mmmorpg_server.persistence import load_state, save_state
 from mmmorpg_server.protocol import (
@@ -25,6 +29,46 @@ from mmmorpg_server.protocol import (
 )
 
 LOG = logging.getLogger("mmmorpg")
+PendingReply = tuple[str, str, dict[str, Any] | None]
+
+
+def _player_quest_state(game: GameState, player_id: str) -> dict[str, Any] | None:
+    ent = game.entities.get(player_id)
+    if not ent or getattr(ent, "kind", None) != "player":
+        return None
+    st = ent.stats if isinstance(ent.stats, dict) else {}
+    qs = st.get("quest_state")
+    return qs if isinstance(qs, dict) else None
+
+
+def _persist_game_state(game: GameState, raw_path: str, *, source: str) -> bool:
+    """Sauvegarde l'état monde persistant sans interrompre la boucle WS."""
+    path_text = (raw_path or "").strip()
+    if not path_text:
+        return False
+    try:
+        seen, flags, rep, gauges = game.export_commit_state()
+        save_state(Path(path_text), seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep, npc_gauges=gauges)
+        LOG.info(
+            "état mmmorpg sauvegardé vers %s (source=%s commits=%s, npcs=%s)",
+            path_text,
+            source,
+            len(seen),
+            len(flags),
+        )
+        return True
+    except Exception as e:
+        LOG.warning("impossible de sauvegarder l’état mmmorpg vers %s (source=%s) : %s", path_text, source, e)
+        return False
+
+
+def _format_ia_placeholder(template: str, npc_name: str | None) -> str:
+    """Rend le placeholder IA plus incarné sans attendre le LLM."""
+    raw = (template or "").strip()
+    if not raw:
+        return ""
+    name = npc_name.strip() if isinstance(npc_name, str) and npc_name.strip() else "Le PNJ"
+    return raw.replace("{npc_name}", name).replace("Le PNJ", name)
 
 
 def _parse_move_world_commit(data: dict[str, Any]) -> dict[str, Any] | None | str:
@@ -54,11 +98,86 @@ def _parse_move_world_commit(data: dict[str, Any]) -> dict[str, Any] | None | st
     return {"npc_id": npc_id.strip(), "trace_id": trace_id.strip(), "flags": flags if isinstance(flags, dict) else None}
 
 
+def _extract_ia_dialogue_commit(
+    route_response: dict[str, Any],
+    *,
+    target_npc_id: str,
+) -> tuple[dict[str, Any] | None, str | None]:
+    """
+    Extrait un commit monde produit par l'agent dialogue.
+
+    Le serveur WS reste autoritaire : seul le PNJ ciblé par la conversation peut
+    être modifié, et les flags seront revalidés par `GameState.commit_dialogue`.
+    """
+    target = (target_npc_id or "").strip()
+    if not target or not isinstance(route_response, dict):
+        return None, None
+
+    result = route_response.get("result")
+    output = result.get("output") if isinstance(result, dict) else None
+    if not isinstance(output, dict):
+        return None, None
+
+    raw_commit = output.get("commit")
+    if not isinstance(raw_commit, dict):
+        remote = output.get("remote")
+        raw_commit = remote.get("commit") if isinstance(remote, dict) else None
+    if not isinstance(raw_commit, dict):
+        return None, None
+
+    raw_npc_id = raw_commit.get("npc_id")
+    npc_id = raw_npc_id.strip() if isinstance(raw_npc_id, str) and raw_npc_id.strip() else target
+    if npc_id != target:
+        return None, f"commit npc mismatch: {npc_id!r} != {target!r}"
+
+    flags = raw_commit.get("flags")
+    if flags is not None and not isinstance(flags, dict):
+        return None, "commit flags invalid"
+    return {"npc_id": npc_id, "flags": flags if isinstance(flags, dict) else None}, None
+
+
+def _dialogue_commit_world_event(
+    *,
+    commit: dict[str, Any],
+    trace_id: str,
+    reason: str,
+) -> dict[str, Any]:
+    """Construit l'événement client associé à un commit monde accepté."""
+    npc_id = str(commit.get("npc_id") or "").strip()
+    flags = commit.get("flags")
+    flags_out = dict(flags) if isinstance(flags, dict) else {}
+    summary = "État PNJ mis à jour."
+    if any(str(k).startswith("aid_") for k in flags_out):
+        summary = "Aide appliquée."
+    elif flags_out.get("quest_completed") is True:
+        qid = flags_out.get("quest_id")
+        summary = (
+            f"Quête accomplie: {qid.strip()}"
+            if isinstance(qid, str) and qid.strip()
+            else "Quête accomplie."
+        )
+    elif isinstance(flags_out.get("quest_id"), str):
+        summary = f"Quête mise à jour: {flags_out['quest_id']}"
+    elif "reputation_delta" in flags_out:
+        summary = "Réputation mise à jour."
+    return {
+        "type": "dialogue_commit",
+        "npc_id": npc_id,
+        "trace_id": trace_id,
+        "status": "accepted",
+        "reason": reason,
+        "flags": flags_out,
+        "summary": summary,
+    }
+
+
 def _queue_ia_bridge(
     *,
+    game: GameState,
     ws: ServerConnection,
-    pending_replies: dict[ServerConnection, tuple[str, str] | None],
+    pending_replies: dict[ServerConnection, PendingReply | None],
     actor_id: str,
+    player_id: str,
     text0: str,
     world_npc_id: str,
     npc_name: str | None,
@@ -75,20 +194,49 @@ def _queue_ia_bridge(
     # On génère un trace_id une fois, on le réutilise pour l'appel backend, et on met le même trace_id
     # sur le placeholder pour que le client puisse le remplacer.
     trace_id = uuid.uuid4().hex
+    npc_id = world_npc_id.strip()
+    game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
 
-    if config.IA_PLACEHOLDER_ENABLED and config.IA_PLACEHOLDER_REPLY:
-        pending_replies[ws] = (config.IA_PLACEHOLDER_REPLY, trace_id)
-
-    ctx: dict[str, Any] = {"world_npc_id": world_npc_id.strip(), "history": []}
+    ctx: dict[str, Any] = {"world_npc_id": npc_id, "history": []}
+    # Rang 2 (ADR 0004) : persona MMO explicite côté pont WS — le client ne peut pas forcer local_assistant ici.
+    ctx["lyra_engagement"] = "mmo_persona"
     if isinstance(npc_name, str) and npc_name.strip():
         ctx["npc_name"] = npc_name.strip()
+    if config.IA_PLACEHOLDER_ENABLED and config.IA_PLACEHOLDER_REPLY:
+        placeholder = _format_ia_placeholder(config.IA_PLACEHOLDER_REPLY, ctx.get("npc_name") if isinstance(ctx.get("npc_name"), str) else None)
+        if placeholder:
+            pending_replies[ws] = (placeholder, trace_id, None)
+    # Résumé session : toujours construire la partie serveur (quête + PNJ + mémoire monde légère),
+    # même si le client n'envoie pas d'ia_context.
+    server_ssum = build_server_session_summary_parts(
+        quest_state=_player_quest_state(game, player_id),
+        npc_id=npc_id,
+        npc_name=npc_name,
+        npc_flags=game.get_npc_commit_flags(npc_id),
+    )
+    client_raw = ia_context.get("session_summary") if isinstance(ia_context, dict) else None
+    ssum_merged = merge_session_summaries(
+        server_parts=server_ssum,
+        client_raw=client_raw,
+    )
+    if ssum_merged:
+        ctx["session_summary"] = ssum_merged
     # Permet aux clients/outils d'injecter un mini contexte vers l'IA (borné).
     # Important: ne pas permettre d'écraser `world_npc_id` ni d'injecter des structures arbitraires.
     if isinstance(ia_context, dict) and ia_context:
         for k, v in ia_context.items():
+            if k == "session_summary":
+                continue
             if k in ("_require_action_json", "_no_cache"):
                 if isinstance(v, bool):
                     ctx[k] = v
+            elif k == "_world_action_kind":
+                if isinstance(v, str) and v.strip().lower() in ("aid", "quest"):
+                    ctx[k] = v.strip().lower()
+            elif k == "_active_quest_id":
+                vid = v.strip() if isinstance(v, str) else ""
+                if vid and len(vid) <= 80:
+                    ctx[k] = vid
     payload = {"actor_id": actor_id, "text": text0.strip(), "context": ctx}
 
     async def _fetch_and_queue() -> None:
@@ -111,7 +259,7 @@ def _queue_ia_bridge(
                 "Pont IA: appel backend (source=%s actor_id=%s npc_id=%s trace_id=%s)",
                 source,
                 actor_id,
-                world_npc_id.strip(),
+                npc_id,
                 tid,
             )
             async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
@@ -130,7 +278,8 @@ def _queue_ia_bridge(
                     source,
                 )
                 # UX: remplacer le placeholder par une fin explicite (sinon le joueur reste bloqué).
-                pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
+                pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid, None)
+                game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
                 return
             j = r.json()
             if not isinstance(j, dict):
@@ -140,15 +289,51 @@ def _queue_ia_bridge(
                     tid,
                     source,
                 )
-                pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
+                pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid, None)
+                game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
                 return
             tid = j.get("trace_id") or tid
             res = j.get("result")
             out = res.get("output") if isinstance(res, dict) else None
             remote = out.get("remote") if isinstance(out, dict) else None
             rep = remote.get("reply") if isinstance(remote, dict) else None
+            world_event: dict[str, Any] | None = None
+            commit, commit_err = _extract_ia_dialogue_commit(j, target_npc_id=npc_id)
+            if commit_err:
+                LOG.warning("Pont IA: commit ignoré (%s trace_id=%s source=%s)", commit_err, tid, source)
+            elif commit is not None and isinstance(tid, str) and tid.strip():
+                ok, reason = game.commit_dialogue(
+                    npc_id=commit["npc_id"],
+                    trace_id=tid.strip(),
+                    flags=commit.get("flags"),
+                    player_id=player_id,
+                )
+                if ok:
+                    if not config.PERSIST_DISABLE:
+                        _persist_game_state(game, config.STATE_PATH, source=f"ia:{source}")
+                    LOG.info(
+                        "Pont IA: commit appliqué (npc_id=%s trace_id=%s reason=%s source=%s)",
+                        commit["npc_id"],
+                        tid.strip(),
+                        reason,
+                        source,
+                    )
+                    world_event = _dialogue_commit_world_event(
+                        commit=commit,
+                        trace_id=tid.strip(),
+                        reason=reason,
+                    )
+                else:
+                    LOG.warning(
+                        "Pont IA: commit refusé (npc_id=%s trace_id=%s reason=%s source=%s)",
+                        commit["npc_id"],
+                        tid.strip(),
+                        reason,
+                        source,
+                    )
             if isinstance(rep, str) and rep.strip() and isinstance(tid, str) and tid.strip():
-                pending_replies[ws] = (rep.strip(), tid.strip())
+                pending_replies[ws] = (rep.strip(), tid.strip(), world_event)
+                game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
                 elapsed_ms = int((time.perf_counter() - t0) * 1000)
                 LOG.info(
                     "Pont IA: reply en file (trace_id=%s elapsed_ms=%s source=%s)",
@@ -162,10 +347,12 @@ def _queue_ia_bridge(
                     isinstance(rep, str) and bool(rep.strip()),
                     isinstance(tid, str) and bool(tid.strip()),
                 )
-                pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
+                pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid, world_event)
+                game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
         except Exception:
             LOG.exception("Pont IA: exception pendant l'appel backend (source=%s)", source)
-            pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid)
+            pending_replies[ws] = ("Désolé, je ne peux pas t'aider maintenant.", tid, None)
+            game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
             return
 
     asyncio.create_task(_fetch_and_queue())
@@ -174,7 +361,7 @@ def _queue_ia_bridge(
 async def game_loop_broadcast(
     game: GameState,
     clients: set[ServerConnection],
-    pending_replies: dict[ServerConnection, tuple[str, str] | None],
+    pending_replies: dict[ServerConnection, PendingReply | None],
 ) -> None:
     dt = 1.0 / config.TICK_RATE_HZ
     try:
@@ -188,13 +375,16 @@ async def game_loop_broadcast(
                     extra = pending_replies.get(ws)
                     npc_reply = extra[0] if extra else None
                     trace_id = extra[1] if extra else None
+                    world_event = extra[2] if extra else None
                     payload = json.dumps(
                         msg_world_tick(
                             world_time_s=game.time.world_time_s,
                             day_fraction=game.time.day_fraction,
                             entities=game.entity_snapshots(),
+                            locations=game.locations,
                             npc_reply=npc_reply,
                             trace_id=trace_id,
+                            world_event=world_event,
                         )
                     )
                     await ws.send(payload)
@@ -231,7 +421,7 @@ async def client_handler(
     ws: ServerConnection,
     game: GameState,
     clients: set[ServerConnection],
-    pending_replies: dict[ServerConnection, tuple[str, str] | None],
+    pending_replies: dict[ServerConnection, PendingReply | None],
 ) -> None:
     player_id: str | None = None
     last_move_at: float = 0.0
@@ -281,9 +471,11 @@ async def client_handler(
                     npc_name = data.get("npc_name")
                     ia_context = data.get("ia_context")
                     _queue_ia_bridge(
+                        game=game,
                         ws=ws,
                         pending_replies=pending_replies,
                         actor_id=f"player:{ent.id}",
+                        player_id=ent.id,
                         text0=text0 if isinstance(text0, str) else "",
                         world_npc_id=world_npc_id if isinstance(world_npc_id, str) else "",
                         npc_name=npc_name if isinstance(npc_name, str) else None,
@@ -314,17 +506,22 @@ async def client_handler(
                         npc_id=wc_payload["npc_id"],
                         trace_id=wc_payload["trace_id"],
                         flags=wc_payload.get("flags"),
+                        player_id=player_id,
                     )
                     if not ok:
                         await ws.send(json.dumps(msg_error(f"world_commit refusé: {reason}")))
                         continue
+                    if not config.PERSIST_DISABLE:
+                        _persist_game_state(game, config.STATE_PATH, source="world_commit")
 
                 if has_ia:
                     # Pont IA via `move` (sans nouveau type) : ne pas être bloqué par l'anti-spam `move`.
                     _queue_ia_bridge(
+                        game=game,
                         ws=ws,
                         pending_replies=pending_replies,
                         actor_id=f"player:{player_id}",
+                        player_id=player_id,
                         text0=text_ia,
                         world_npc_id=world_npc_id,
                         npc_name=npc_name if isinstance(npc_name, str) else None,
@@ -399,7 +596,7 @@ async def run_server(
                 game.import_commit_state(seen_trace_ids=seen, npc_flags=flags, npc_reputation=rep, npc_gauges=gauges)
                 LOG.info("état mmmorpg chargé depuis %s (commits=%s, npcs=%s)", raw_path, len(seen), len(flags))
     clients: set[ServerConnection] = set()
-    pending_replies: dict[ServerConnection, tuple[str, str] | None] = {}
+    pending_replies: dict[ServerConnection, PendingReply | None] = {}
     tick_task = asyncio.create_task(game_loop_broadcast(game, clients, pending_replies))
     internal_http = None
     if config.INTERNAL_HTTP_PORT and config.INTERNAL_HTTP_PORT > 0:

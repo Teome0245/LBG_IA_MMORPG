@@ -1,17 +1,15 @@
+"""Fixtures pytest : grille village minimale (CI sans `mmo_server/.../pixie_seat.grid.json`)."""
+
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
+import pytest
 
-def _prepend(path: Path) -> None:
-    p = str(path)
-    if p not in sys.path:
-        sys.path.insert(0, p)
+FIXTURE_MINIMAL_VILLAGE_GRID = Path(__file__).resolve().parent / "fixtures" / "minimal_village.grid.json"
 
 
-# Prioriser le package "src layout" : évite que le dossier `mmmorpg_server/` (namespace)
-# ne masque `mmmorpg_server/src/mmmorpg_server` quand on lance plusieurs suites ensemble.
-ROOT = Path(__file__).resolve().parents[1]
-_prepend(ROOT / "src")
-
+@pytest.fixture
+def minimal_village_grid_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert FIXTURE_MINIMAL_VILLAGE_GRID.is_file(), f"fichier manquant : {FIXTURE_MINIMAL_VILLAGE_GRID}"
+    monkeypatch.setenv("MMMORPG_VILLAGE_GRID_JSON", str(FIXTURE_MINIMAL_VILLAGE_GRID))

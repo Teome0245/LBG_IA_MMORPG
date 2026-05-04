@@ -13,6 +13,7 @@ from typing import Any
 from urllib.parse import unquote
 
 from mmmorpg_server.game_state import GameState
+from mmmorpg_server.world_catalog import race_display_name
 
 LOG = logging.getLogger("mmmorpg.internal_http")
 
@@ -122,6 +123,10 @@ def build_lyra_snapshot(*, game: GameState, npc_id: str, trace_id: str | None = 
             "reputation": {"value": int(game.get_npc_reputation(npc_id))},
         },
     }
+    rid = getattr(npc, "race_id", "") if npc else ""
+    if isinstance(rid, str) and rid.strip():
+        lyra["meta"]["race_id"] = rid.strip()
+        lyra["meta"]["race_display"] = race_display_name(rid.strip())
     if flags:
         lyra["meta"]["world_flags"] = flags
     if isinstance(trace_id, str) and trace_id.strip():
@@ -365,6 +370,10 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
                     return
                 trace_id = body.get("trace_id")
                 flags = body.get("flags")
+                pid_raw = body.get("player_id")
+                player_id_sess: str | None = None
+                if isinstance(pid_raw, str) and pid_raw.strip():
+                    player_id_sess = pid_raw.strip()
                 if not isinstance(trace_id, str):
                     self._send_json(HTTPStatus.BAD_REQUEST, {"error": "bad_request", "detail": "trace_id requis"})
                     return
@@ -372,6 +381,7 @@ def start_internal_http(*, host: str, port: int, game: GameState, token: str = "
                     npc_id=npc_id,
                     trace_id=trace_id,
                     flags=flags if isinstance(flags, dict) else None,
+                    player_id=player_id_sess,
                 )
                 if ok:
                     LOG.info(

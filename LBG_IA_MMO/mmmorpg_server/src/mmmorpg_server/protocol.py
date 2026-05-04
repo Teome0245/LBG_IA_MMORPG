@@ -48,6 +48,7 @@ def msg_world_tick(
     locations: list[dict[str, Any]] | None = None,
     npc_reply: str | None = None,
     trace_id: str | None = None,
+    world_event: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     msg: dict[str, Any] = {
         "proto": PROTO,
@@ -61,4 +62,6 @@ def msg_world_tick(
         msg["npc_reply"] = npc_reply.strip()
     if isinstance(trace_id, str) and trace_id.strip():
         msg["trace_id"] = trace_id.strip()
+    if isinstance(world_event, dict) and world_event:
+        msg["world_event"] = world_event
     return msg

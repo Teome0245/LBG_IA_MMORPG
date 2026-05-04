@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from mmmorpg_server.game_state import GameState
+from mmmorpg_server.main import _persist_game_state
 from mmmorpg_server.persistence import load_state, save_state
 
 
@@ -24,4 +26,30 @@ def test_save_load_roundtrip(tmp_path: Path) -> None:
 def test_load_missing_returns_none(tmp_path: Path) -> None:
     p = tmp_path / "missing.json"
     assert load_state(p) is None
+
+
+def test_persist_game_state_after_dialogue_commit(tmp_path: Path) -> None:
+    p = tmp_path / "mmmorpg_state.json"
+    game = GameState()
+    ok, reason = game.commit_dialogue(
+        npc_id="npc:merchant",
+        trace_id="persist-immediate-1",
+        flags={
+            "quest_accepted": True,
+            "quest_id": "q:persist",
+            "aid_hunger_delta": 0.25,
+            "aid_reputation_delta": 3,
+        },
+    )
+    assert ok, reason
+
+    assert _persist_game_state(game, str(p), source="test")
+
+    loaded = load_state(p)
+    assert loaded is not None
+    seen, flags, rep, gauges = loaded
+    assert "persist-immediate-1" in seen
+    assert flags["npc:merchant"]["quest_id"] == "q:persist"
+    assert rep["npc:merchant"] == 3
+    assert gauges["npc:merchant"]["hunger"] == 0.25
 

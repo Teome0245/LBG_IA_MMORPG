@@ -8,7 +8,9 @@ Framework modulaire pour orchestrer des agents IA (locaux + API), piloter un mon
 - `orchestrator/`: orchestrateur multi-agents (registry, router, introspection, fallback).
 - `agents/`: stubs d’agents invoqués après routage (`lbg_agents.dispatch`).
 - `mmo_server/`: moteur de simulation MMORPG headless (world, entities, quests, lyra_engine).
-- `pilot_web/`: UI minimale de pilotage (servie par le backend sous `/pilot/`).
+- `mmmorpg_server/`: serveur **WebSocket** temps réel (entités, collisions village, pont IA ↔ jeu, commits dialogue).
+- `pilot_web/`: UI minimale de pilotage (servie par le backend sous `/pilot/`), build MMO statique sous `/mmo/`.
+- `web_client/` (à la racine du workspace Git parent, ex. `LBG_IA_MMORPG/web_client/`): client MMO **Vite** (canvas, HUD, chat PNJ) ; sortie build synchronisable vers `pilot_web/mmo/`.
 - `infra/`: Docker, systemd, scripts, configuration ; secrets locaux **`infra/secrets/lbg.env`** (non versionné, voir `lbg.env.example`) ; pilot sur VM front : **`infra/scripts/install_nginx_pilot_110.sh`** + **`infra/nginx/pilot_web_110.conf.example`**.
 - `docs/`: documentation et schémas.
 
@@ -49,6 +51,7 @@ Dans `docs/` :
 - `docs/lyra.md` : spécification Lyra 2.0 (jauges, intégrations)
 - `docs/plan_mmorpg.md` : plan d’architecture serveur MMO multivers
 - `docs/plan_de_route.md` : priorités 0–3, fusion LBG_IA, suivi des jalons
+- `docs/carte_plan_global.md` : alignement plan large (`.cursor/rules`) ↔ modules réels et backlog
 - `docs/plan_fusion_lbg_ia.md` : fusion progressive (**LBG_IA**, **`~/projects/mmmorpg`**, ce monorepo — phases, tronc, pont MMO)
 - `docs/fusion_env_lan.md` : **IPs 140 / 245 / 110**, variables `LBG_*`, `deploy_vm.sh`, option front sur 110
 - `docs/ops_devops_audit.md` : VM — audit DevOps JSONL (logrotate), rotation du jeton d’approbation

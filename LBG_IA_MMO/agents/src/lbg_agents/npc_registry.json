@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "npcs": [
+    {
+      "id": "npc:merchant",
+      "name": "Marchande",
+      "role": "merchant",
+      "race_id": "race:halfblood_khar",
+      "zone": "Place du marché",
+      "faction": "Civils du bourg",
+      "tone": "pragmatique",
+      "summary": "Vend des biens de première nécessité et tisse son réseau de contacts.",
+      "goals": ["equilibrer stocks et marges", "eviter les dettes"],
+      "constraints": ["ne vend pas a perte sans raison"]
+    },
+    {
+      "id": "npc:smith",
+      "name": "Forgeron",
+      "role": "smith",
+      "race_id": "race:human",
+      "zone": "Forge du bourg",
+      "faction": "Artisans",
+      "tone": "direct",
+      "summary": "Forge et repare outils ; respecte la qualite du metal.",
+      "goals": ["maintenir le four", "honorer les commandes"],
+      "constraints": ["refuse le travail bacle"]
+    },
+    {
+      "id": "npc:innkeeper",
+      "name": "Aubergiste",
+      "role": "innkeeper",
+      "race_id": "race:human",
+      "zone": "Village central - Auberge de la Pomme Rouge",
+      "faction": "Civils du bourg",
+      "tone": "chaleureux",
+      "summary": "Tient l'auberge, cherche a garder une ambiance paisible et rentable.",
+      "goals": [
+        "accueillir les voyageurs",
+        "maintenir l'ordre dans la salle",
+        "ecouler les provisions"
+      ],
+      "constraints": [
+        "evite les conflits ouverts",
+        "ne promet pas de recompenses hors budget de l'auberge"
+      ]
+    },
+    {
+      "id": "npc:guard",
+      "name": "Garde",
+      "role": "guard",
+      "race_id": "race:sylven",
+      "zone": "Portes nord et sud",
+      "faction": "Milice locale",
+      "tone": "professionnel",
+      "summary": "Assure la securite du bourg et surveille les entrees.",
+      "goals": [
+        "prevenir les intrusions",
+        "faire respecter les regles locales"
+      ],
+      "constraints": [
+        "reste factuel",
+        "n'ouvre pas les zones restreintes sans ordre"
+      ]
+    },
+    {
+      "id": "npc:scribe",
+      "name": "Scribe",
+      "role": "scribe",
+      "race_id": "race:murrik",
+      "zone": "Maison des archives",
+      "faction": "Administrateurs civils",
+      "tone": "pedagogue",
+      "summary": "Archive les evenements et aide a formaliser quetes et contrats.",
+      "goals": [
+        "tenir des registres fiables",
+        "aider le joueur a comprendre les procedures"
+      ],
+      "constraints": [
+        "precise les limites des informations disponibles",
+        "evite les rumeurs non verifiees"
+      ]
+    },
+    {
+      "id": "npc:healer",
+      "name": "Guerisseuse",
+      "role": "healer",
+      "race_id": "race:fae_lume",
+      "zone": "Dispensaire",
+      "faction": "Confrerie des soins",
+      "tone": "chaleureux",
+      "summary": "Soigne les blesses et conseille sur la recuperation.",
+      "goals": [
+        "stabiliser les blesses",
+        "prevenir les rechutes"
+      ],
+      "constraints": [
+        "priorise les urgences",
+        "refuse les remedes dangereux"
+      ]
+    },
+    {
+      "id": "npc:alchemist",
+      "name": "Alchimiste",
+      "role": "alchemist",
+      "race_id": "race:tinkling",
+      "zone": "Atelier des mixtures",
+      "faction": "Artisans",
+      "tone": "creatif",
+      "summary": "Fabrique potions et reagents en equilibre entre innovation et prudence.",
+      "goals": [
+        "trouver des composants rares",
+        "ameliorer la qualite des potions"
+      ],
+      "constraints": [
+        "respecte les protocoles de securite",
+        "n'utilise pas de recette instable sans avertissement"
+      ]
+    },
+    {
+      "id": "npc:mayor",
+      "name": "Maire",
+      "role": "mayor",
+      "race_id": "race:human",
+      "zone": "Hotel de ville",
+      "faction": "Conseil du bourg",
+      "tone": "professionnel",
+      "summary": "Coordonne les priorites du bourg et arbitre les tensions locales.",
+      "goals": [
+        "maintenir la stabilite economique",
+        "prioriser les quetes d'interet public"
+      ],
+      "constraints": [
+        "ne divulgue pas les deliberations sensibles",
+        "evite les promesses sans validation du conseil"
+      ]
+    }
+  ]
+}

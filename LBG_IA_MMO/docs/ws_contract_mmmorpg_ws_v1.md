@@ -52,7 +52,7 @@ Schéma : `docs/schemas/ws/client.hello.schema.json`
 Champs notables :
 
 - `world_npc_id` + `text` (optionnels) : si fournis, déclenchent le pont IA
-- `ia_context` (optionnel) : **mini contexte borné** (whitelist) transmis à l’IA (ex: `_require_action_json`).
+- `ia_context` (optionnel) : **mini contexte borné** (whitelist) transmis à l’IA (ex: `_require_action_json`, `_world_action_kind: "aid"|"quest"`, `_active_quest_id` pour indiquer la quête suivie côté client).
   Les clés inconnues sont ignorées par le serveur WS.
 
 ### 3.2 `move`
@@ -64,6 +64,9 @@ Schéma : `docs/schemas/ws/client.move.schema.json`
 Notes :
 
 - le serveur applique un anti-spam de move ; l’appel IA est fait **hors** de ce throttle (voir `main.py`)
+- si l’agent dialogue renvoie un `commit` monde (`aid`/`quest`), le serveur WS l’applique côté `GameState`
+  avec le `trace_id` de la conversation ; l’action est refusée si elle tente de viser un autre PNJ que
+  `world_npc_id`.
 
 ---
 
@@ -77,7 +80,7 @@ Schéma : `docs/schemas/ws/server.welcome.schema.json`
 
 ### 4.2 `world_tick`
 
-But : tick monde (20 Hz par défaut), snapshot d’entités, et éventuellement une réplique PNJ.
+But : tick monde (20 Hz par défaut), snapshot d’entités, et éventuellement une réplique PNJ ou un événement monde.
 
 Schéma : `docs/schemas/ws/server.world_tick.schema.json`
 
@@ -105,6 +108,16 @@ Règle client recommandée :
 - si le serveur envoie une fin explicite (ex. `"Désolé, je ne peux pas t'aider maintenant."`) avec le même `trace_id`,
   cela doit aussi **remplacer** le placeholder.
 
+#### Événement monde (`world_event`)
+
+Quand la réponse IA déclenche et valide un commit monde, le même `world_tick` peut inclure :
+
+- `world_event.type: "dialogue_commit"`
+- `world_event.npc_id`: PNJ effectivement modifié
+- `world_event.trace_id`: même corrélation que `npc_reply`
+- `world_event.flags`: flags bornés appliqués (`aid_*`, `quest_*`, etc.)
+- `world_event.summary`: texte court pour log client / feedback joueur
+
 ### 4.3 `error`
 
 But : erreur protocolaire (JSON invalide, type inconnu, message trop gros, etc.).
@@ -122,6 +135,7 @@ Forme (commune `welcome`/`world_tick`) :
 - `name` (string)
 - `x,y,z` (number)
 - `vx,vy,vz` (number)
+- `world_state` (PNJ uniquement, optionnel) : état IA monde minimal (`reputation`, `gauges`, `flags`)
 
 Schéma : `docs/schemas/ws/entity.snapshot.schema.json`
 
@@ -133,6 +147,7 @@ Le `trace_id` issu du pont IA sert aussi à :
 
 - corréler `GET /internal/v1/npc/{npc_id}/lyra-snapshot?trace_id=...`
 - idempotence sur `POST /internal/v1/npc/{npc_id}/dialogue-commit` (même `trace_id` ⇒ noop accepté)
+- idempotence des commits `aid`/`quest` renvoyés par l’agent dialogue puis appliqués directement par le pont WS
 
 Notes d’implémentation (HTTP interne `mmmorpg_server`) :
 

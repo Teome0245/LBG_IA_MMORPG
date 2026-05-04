@@ -162,6 +162,14 @@ button:hover {
   top: 1.5rem;
   left: 1.5rem;
   min-width: 200px;
+  max-width: min(340px, calc(100vw - 3rem));
+}
+
+.hud-top-right {
+  top: 1.5rem;
+  right: 1.5rem;
+  width: 300px;
+  max-width: calc(100vw - 3rem);
 }
 
 .hud-bottom-left {
@@ -174,7 +182,8 @@ button:hover {
 .hud-bottom-right {
   bottom: 1.5rem;
   right: 1.5rem;
-  min-width: 180px;
+  min-width: 240px;
+  max-width: min(320px, calc(100vw - 3rem));
 }
 
 .stat {
@@ -191,6 +200,175 @@ button:hover {
 .stat span:not(.label) {
   color: var(--accent-color);
   font-weight: bold;
+}
+
+.panel-title {
+  color: var(--accent-color);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  margin-bottom: 0.6rem;
+}
+
+#world-event-feed,
+#quest-log-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.quest-title {
+  margin-top: 0.9rem;
+}
+
+.mini-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-muted);
+  font-size: 0.65rem !important;
+  letter-spacing: 1px;
+  margin: -0.2rem 0 0.45rem 0;
+  padding: 0.35rem 0.5rem !important;
+}
+
+.active-quest-summary {
+  border-top: 1px solid rgba(255, 234, 0, 0.18);
+  color: #ffea00;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+}
+
+.active-quest-summary.empty {
+  color: var(--text-muted);
+}
+
+.world-event {
+  border-left: 3px solid #7cff6b;
+  background: rgba(124, 255, 107, 0.08);
+  border-radius: 8px;
+  color: var(--text-color);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  padding: 0.5rem 0.6rem;
+}
+
+.world-event.quest {
+  border-left-color: #ffea00;
+  background: rgba(255, 234, 0, 0.08);
+}
+
+.quest-row {
+  cursor: pointer;
+}
+
+.quest-row.active {
+  box-shadow: inset 0 0 0 1px rgba(255, 234, 0, 0.45);
+}
+
+.quest-row.quest-done {
+  border-left-color: #7cff6b;
+  background: rgba(124, 255, 107, 0.06);
+}
+
+.quest-row.quest-done.active {
+  box-shadow: inset 0 0 0 1px rgba(124, 255, 107, 0.45);
+}
+
+.world-event.empty {
+  border-left-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+}
+
+.world-event .meta {
+  color: var(--text-muted);
+  display: block;
+  font-size: 0.7rem;
+  margin-top: 0.15rem;
+}
+
+.sheet-panel-title {
+  border-top: 1px solid rgba(0, 242, 255, 0.14);
+  color: var(--accent-secondary);
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+}
+
+.character-sheet-body {
+  color: var(--text-color);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  line-height: 1.5;
+  margin-top: 0.35rem;
+}
+
+.character-sheet-body .sheet-section {
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(0, 242, 255, 0.12);
+}
+
+.character-sheet-body .sheet-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
+.character-sheet-body .sheet-row {
+  margin-bottom: 0.35rem;
+}
+
+.character-sheet-body .sheet-row .label {
+  color: var(--text-muted);
+  display: inline-block;
+  min-width: 5.2rem;
+  margin-right: 0.35rem;
+}
+
+.character-sheet-body .sheet-mono {
+  font-size: 0.68rem;
+  word-break: break-all;
+}
+
+.character-sheet-body .sheet-sub {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  margin-top: 0.35rem;
+}
+
+.character-sheet-body .muted {
+  color: var(--text-muted);
+}
+
+.character-sheet-body .good {
+  color: #7cff6b;
+}
+
+.character-sheet-body .warn {
+  color: #ffea00;
+}
+
+.npc-actions {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.75rem;
+}
+
+.npc-actions button {
+  font-size: 0.7rem !important;
+  letter-spacing: 1px;
+  padding: 0.55rem 0.65rem !important;
 }
 
 /* Console/Chat */
@@ -252,5 +430,9 @@ button:hover {
 @media (max-width: 600px) {
   .hud-bottom-left {
     width: calc(100vw - 3rem);
+  }
+
+  .hud-top-right {
+    display: none;
   }
 }

@@ -13,6 +13,12 @@ Variables d’environnement :
 Historique multi-tours : ``context["history"]`` = liste d’objets avec ``role`` (``"user"`` ou ``"assistant"``) et ``content`` (chaîne).
 
 État Lyra : si ``context["lyra"]`` est un objet (ex. ``gauges`` faim/soif/fatigue 0–1), un résumé est ajouté au prompt système pour influencer le ton du PNJ.
+
+Proposition d’actions desktop (Pilot / hybride) : si ``LBG_DIALOGUE_DESKTOP_PLAN=1`` et ``context["_desktop_plan"]=true``, le modèle peut émettre ``DESKTOP_JSON: {...}`` ; la proposition sanitée est exposée dans ``context["_desktop_action_proposal"]`` et ``meta.desktop_action_proposal`` côté HTTP.
+
+Multi‑LLM / suivi : ``dialogue_target=auto`` (ou défaut env ``LBG_DIALOGUE_TARGET_DEFAULT=auto``) parcourt ``LBG_DIALOGUE_AUTO_ORDER`` (défaut ``local,fast,remote``). Le budget optionnel ``LBG_DIALOGUE_BUDGET_MAX_USD`` borne la dépense **cumulée process** pour les appels ``fast``/``remote`` en mode auto uniquement. Chaque tour enrichit ``agents.dialogue.trace`` (JSONL si ``LBG_DIALOGUE_TRACE_LOG_PATH``) : latence, coût estimé, profil, extrait texte, issue, décision de route.
+
+Profils MMO : pour un PNJ (``world_npc_id`` défini), ``dialogue_profile`` sélectionne un libellé dans ``MMO_PROFILE_TEMPLATES`` (mêmes clés que l’assistant : ``chaleureux``, ``hal``, …) puis ajoute ``BASE_GUARDRAILS_MMO``. Si ``dialogue_profile`` est absent, le champ ``tone`` du registre PNJ (``npc_registry.json``) est utilisé lorsqu’il correspond à une clé valide ou à un **alias** (`REGISTRY_TONE_ALIASES`, ex. ``pragmatique`` → ``professionnel``).
 """
 
 from __future__ import annotations
@@ -22,14 +28,68 @@ import re
 import time
 import json
 import hashlib
+import threading
 from typing import Any
+from urllib.parse import urlparse
+from pathlib import Path
 
 import httpx
+
+from lbg_agents.world_content import (
+    format_creature_refs_for_prompt,
+    format_race_for_prompt,
+)
 
 # Défauts : Ollama, API OpenAI-compatible sur la même machine (port 11434).
 DEFAULT_LBG_DIALOGUE_LLM_BASE_URL = "http://127.0.0.1:11434/v1"
 # Valeur par défaut orientée "prod prévisible" (petit modèle rapide si disponible).
 DEFAULT_LBG_DIALOGUE_LLM_MODEL = "phi4-mini:latest"
+
+BASE_GUARDRAILS_ASSISTANT = (
+    "Tu es LBG-IA, un orchestrateur d’agents capable d’agir réellement sur des machines.\n"
+    "Tu t’exprimes uniquement en français."
+)
+BASE_GUARDRAILS_MMO = (
+    "Tu es un PNJ dans un MMORPG multivers, inspiré de : Gunnm, Cyberpunk, Albator, DBZ, Discworld, "
+    "Avatar (le dernier maitre de l'air), Free Guy, Firefly, Steampunk, Fullmetal Alchemist.\n"
+    "Tu t’exprimes uniquement en français."
+)
+
+ASSISTANT_PROFILES: dict[str, str] = {
+    "chaleureux": "Tu es un assistant IA chaleureux.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "professionnel": "Tu es un assistant IA professionnel.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "pedagogue": "Tu es un assistant IA pédagogique.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "creatif": "Tu es un assistant IA créatif.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "mini-moi": "Tu es un assistant IA technique.\n" + BASE_GUARDRAILS_ASSISTANT,
+    "hal": (
+        "Tu es HAL 9000, tu intègres des références et des répliques des films 2001 et 2010 dans tes réponses, "
+        "calme et précis.\n" + BASE_GUARDRAILS_ASSISTANT
+    ),
+    "test": "Tu es un assistant IA.\n" + BASE_GUARDRAILS_ASSISTANT,
+}
+
+# Profils PNJ (MMO) : mêmes clés que l’assistant quand c’est pertinent ; le nom affiché est ``{speaker}``.
+MMO_PROFILE_TEMPLATES: dict[str, str] = {
+    "chaleureux": "Tu es {speaker} chaleureux.\n",
+    "professionnel": "Tu es {speaker} professionnel.\n",
+    "pedagogue": "Tu es {speaker} pédagogique.\n",
+    "creatif": "Tu es {speaker} créatif.\n",
+    "mini-moi": "Tu es {speaker} technique.\n",
+    "hal": (
+        "Tu es {speaker} ; tu t’inspires de HAL 9000 (films 2001 et 2010) : références sobres, calme et précis.\n"
+    ),
+    "test": "Tu es {speaker} (personnage de test PNJ).\n",
+}
+
+# Synonymes « lore » dans ``npc_registry.json`` → clés reconnues par ``ASSISTANT_PROFILES`` / ``MMO_PROFILE_TEMPLATES``.
+REGISTRY_TONE_ALIASES: dict[str, str] = {
+    "pragmatique": "professionnel",
+    "direct": "mini-moi",
+    "sec": "professionnel",
+    "froid": "professionnel",
+    "narquois": "creatif",
+    "laconique": "mini-moi",
+}
 
 _emoji_re = re.compile(
     "["
@@ -44,6 +104,10 @@ _cache_hits: int = 0
 _cache_misses: int = 0
 _cache_hits_by_speaker: dict[str, int] = {}
 _cache_misses_by_speaker: dict[str, int] = {}
+_npc_registry_cache: dict[str, dict[str, Any]] | None = None
+
+_budget_lock = threading.Lock()
+_budget_spent_usd: float = 0.0
 
 
 def reset_cache() -> dict[str, object]:
@@ -109,6 +173,134 @@ def cache_stats() -> dict[str, object]:
         "hits": _cache_hits,
         "misses": _cache_misses,
         "by_speaker": rows,
+    }
+
+
+def _budget_max_usd() -> float:
+    try:
+        return float(os.environ.get("LBG_DIALOGUE_BUDGET_MAX_USD", "0") or "0")
+    except ValueError:
+        return 0.0
+
+
+def budget_stats() -> dict[str, object]:
+    """Dépense cumulée approximative (fast/remote) pour le process — ops / healthz."""
+    mx = _budget_max_usd()
+    with _budget_lock:
+        spent = _budget_spent_usd
+    out: dict[str, object] = {
+        "enabled": mx > 0.0,
+        "spent_usd_approx": round(spent, 8),
+    }
+    if mx > 0.0:
+        out["max_usd"] = mx
+        out["remaining_usd_approx"] = round(max(0.0, mx - spent), 8)
+    return out
+
+
+def budget_reset_for_tests() -> None:
+    """Réinitialise le compteur budget (tests uniquement)."""
+    global _budget_spent_usd
+    with _budget_lock:
+        _budget_spent_usd = 0.0
+
+
+def _budget_allows_paid_for_auto() -> bool:
+    """En mode ``auto``, skip fast/remote si budget cumulé dépassé."""
+    m = _budget_max_usd()
+    if m <= 0.0:
+        return True
+    with _budget_lock:
+        return _budget_spent_usd < m
+
+
+def _budget_record(cost: float | None) -> None:
+    if cost is None:
+        return
+    try:
+        c = float(cost)
+    except (TypeError, ValueError):
+        return
+    if c <= 0.0:
+        return
+    m = _budget_max_usd()
+    if m <= 0.0:
+        return
+    global _budget_spent_usd
+    with _budget_lock:
+        _budget_spent_usd += c
+
+
+def _tier_route(tier: str) -> dict[str, str] | None:
+    """
+    Route pour un palier unique (local / fast / remote). None si indisponible.
+    """
+    t = (tier or "").strip().lower()
+    if t == "local":
+        b = base_url()
+        if not b:
+            return None
+        return {"target": "local", "base_url": b, "model": model_name(), "api_key": _api_key() or ""}
+    if t == "fast":
+        if not _is_truthy(os.environ.get("LBG_DIALOGUE_FAST_ENABLED", "0")):
+            return None
+        fast_base = os.environ.get("LBG_DIALOGUE_FAST_BASE_URL", "").strip().rstrip("/")
+        fast_model = os.environ.get("LBG_DIALOGUE_FAST_MODEL", "").strip()
+        fast_api_key = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_FAST_API_KEY", ""))
+        if not (fast_base and fast_model):
+            return None
+        return {"target": "fast", "base_url": fast_base, "model": fast_model, "api_key": fast_api_key}
+    if t == "remote":
+        if not _is_truthy(os.environ.get("LBG_DIALOGUE_REMOTE_ENABLED", "0")):
+            return None
+        base = os.environ.get("LBG_DIALOGUE_REMOTE_BASE_URL", "").strip().rstrip("/")
+        model = os.environ.get("LBG_DIALOGUE_REMOTE_MODEL", "").strip()
+        api_key = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_REMOTE_API_KEY", ""))
+        if not (base and model):
+            return None
+        return {"target": "remote", "base_url": base, "model": model, "api_key": api_key}
+    return None
+
+
+def _resolve_auto_route(context: dict[str, Any]) -> dict[str, Any]:
+    raw_order = os.environ.get("LBG_DIALOGUE_AUTO_ORDER", "local,fast,remote").strip()
+    tiers = [x.strip().lower() for x in raw_order.split(",") if x.strip()]
+    skipped: list[dict[str, Any]] = []
+    tried: list[str] = []
+    for tier in tiers:
+        if tier not in ("local", "fast", "remote"):
+            continue
+        if tier in ("fast", "remote") and not _budget_allows_paid_for_auto():
+            skipped.append({"tier": tier, "reason": "budget_cap"})
+            tried.append(tier)
+            continue
+        r = _tier_route(tier)
+        if not r:
+            skipped.append({"tier": tier, "reason": "unavailable"})
+            tried.append(tier)
+            continue
+        return {
+            **r,
+            "route_decision": "auto",
+            "auto_tiers_tried": tried + [tier],
+            "auto_skip_detail": skipped,
+        }
+    r0 = _tier_route("local")
+    if r0:
+        return {
+            **r0,
+            "route_decision": "auto_fallback_local",
+            "auto_tiers_tried": tried,
+            "auto_skip_detail": skipped,
+        }
+    return {
+        "target": "local",
+        "base_url": "",
+        "model": model_name(),
+        "api_key": _api_key() or "",
+        "route_decision": "auto_unavailable",
+        "auto_tiers_tried": tried,
+        "auto_skip_detail": skipped,
     }
 
 
@@ -187,10 +379,13 @@ def _cache_key(*, speaker: str, player_text: str, context: dict[str, Any]) -> st
                     if rvi > 100:
                         rvi = 100
                     lyra_v = (lyra_v + (";" if lyra_v else "") + f"rep={rvi}")
+            rid = meta.get("race_id")
+            if isinstance(rid, str) and rid.strip():
+                lyra_v = (lyra_v + (";" if lyra_v else "") + f"rid={rid.strip()}")
     # Optionnel : inclure certains champs de contexte dans la clé (évite les hits quand l'état change).
     raw_keys = os.environ.get(
         "LBG_DIALOGUE_CACHE_CONTEXT_KEYS",
-        "world_npc_id,quest_state,encounter_state,world_flags",
+        "world_npc_id,quest_state,encounter_state,world_flags,_active_quest_id,_creature_refs,_desktop_plan,lyra_engagement,session_summary",
     )
     keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
     picked: dict[str, object] = {}
@@ -204,7 +399,7 @@ def _cache_key(*, speaker: str, player_text: str, context: dict[str, Any]) -> st
             ctx_hash = hashlib.sha256(blob).hexdigest()[:16]
         except Exception:
             ctx_hash = "ctxerr"
-    return f"{speaker.strip()}|{player_text.strip()}|{lyra_v}|{ctx_hash}"
+    return f"{speaker.strip()}|{player_text.strip()}|{lyra_v}|{ctx_hash}|pf={_resolve_profile(context)}"
 
 
 def _cache_get(key: str) -> str | None:
@@ -248,6 +443,14 @@ def _llm_disabled() -> bool:
     return v in ("1", "true", "yes", "on")
 
 
+def _is_truthy(v: object) -> bool:
+    if isinstance(v, bool):
+        return v
+    if not isinstance(v, str):
+        return False
+    return v.strip().lower() in ("1", "true", "yes", "on")
+
+
 def base_url() -> str:
     if _llm_disabled():
         return ""
@@ -270,6 +473,270 @@ def model_name() -> str:
     return s if s else DEFAULT_LBG_DIALOGUE_LLM_MODEL
 
 
+def _valid_dialogue_profile_keys() -> frozenset[str]:
+    return frozenset(ASSISTANT_PROFILES.keys())
+
+
+def _profile_from_registry_tone(context: dict[str, Any]) -> str | None:
+    """Si ``world_npc_id`` pointe vers une entrée avec ``tone`` résolvable (clé ou alias ``REGISTRY_TONE_ALIASES``), renvoie le profil canonique."""
+    rid = context.get("world_npc_id")
+    if not isinstance(rid, str) or not rid.strip():
+        return None
+    entry = _load_npc_registry().get(rid.strip())
+    if not isinstance(entry, dict):
+        return None
+    t = entry.get("tone")
+    if not isinstance(t, str) or not t.strip():
+        return None
+    p = t.strip().lower()
+    p = REGISTRY_TONE_ALIASES.get(p, p)
+    if p not in _valid_dialogue_profile_keys():
+        return None
+    return p
+
+
+def _resolve_profile(context: dict[str, Any]) -> str:
+    raw = context.get("dialogue_profile")
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip().lower()
+    reg = _profile_from_registry_tone(context)
+    if reg:
+        return reg
+    env_profile = os.environ.get("LBG_DIALOGUE_PROFILE_DEFAULT", "professionnel").strip().lower()
+    return env_profile or "professionnel"
+
+
+def _resolve_route(context: dict[str, Any]) -> dict[str, Any]:
+    default_tgt = os.environ.get("LBG_DIALOGUE_TARGET_DEFAULT", "local").strip().lower()
+    target_raw = context.get("dialogue_target")
+    if isinstance(target_raw, str) and target_raw.strip():
+        target = target_raw.strip().lower()
+    else:
+        if default_tgt not in ("local", "remote", "fast", "auto"):
+            default_tgt = "local"
+        target = default_tgt
+
+    if target == "auto":
+        return _resolve_auto_route(context)
+
+    if target not in ("local", "remote", "fast"):
+        target = "local"
+
+    allow_remote = _is_truthy(os.environ.get("LBG_DIALOGUE_REMOTE_ENABLED", "0"))
+    allow_fast = _is_truthy(os.environ.get("LBG_DIALOGUE_FAST_ENABLED", "0"))
+
+    if target == "fast":
+        r = _tier_route("fast")
+        if r:
+            return {**r, "route_decision": "explicit"}
+        target = "remote" if allow_remote else "local"
+
+    if target == "remote" and not allow_remote:
+        target = "local"
+
+    if target == "remote":
+        r = _tier_route("remote")
+        if r:
+            return {**r, "route_decision": "explicit"}
+
+    r = _tier_route("local")
+    if r:
+        return {**r, "route_decision": "explicit"}
+    return {
+        "target": "local",
+        "base_url": "",
+        "model": model_name(),
+        "api_key": _api_key() or "",
+        "route_decision": "explicit",
+    }
+
+
+def _profile_prompt(profile: str, *, speaker: str, context: dict[str, Any]) -> str:
+    p = (profile or "").strip().lower()
+    is_mmo = isinstance(context.get("world_npc_id"), str) and bool(str(context.get("world_npc_id")).strip())
+    if not is_mmo:
+        return ASSISTANT_PROFILES.get(p, ASSISTANT_PROFILES["professionnel"])
+    sp = (speaker or "PNJ").strip() or "PNJ"
+    tmpl = MMO_PROFILE_TEMPLATES.get(p) or MMO_PROFILE_TEMPLATES["professionnel"]
+    return tmpl.format(speaker=sp) + BASE_GUARDRAILS_MMO
+
+
+def _estimate_cost_usd(*, prompt_tokens: int, completion_tokens: int, target: str) -> float | None:
+    # Estimation simple paramétrable (USD / 1K tokens), défaut 0 pour local.
+    t = (target or "").strip().lower()
+    if t == "local":
+        return 0.0
+    if t == "fast":
+        try:
+            in_per_k = float(os.environ.get("LBG_DIALOGUE_FAST_COST_IN_PER_1K", "0") or "0")
+            out_per_k = float(os.environ.get("LBG_DIALOGUE_FAST_COST_OUT_PER_1K", "0") or "0")
+        except ValueError:
+            return None
+        return round((max(0, prompt_tokens) / 1000.0) * in_per_k + (max(0, completion_tokens) / 1000.0) * out_per_k, 6)
+    try:
+        in_per_k = float(os.environ.get("LBG_DIALOGUE_REMOTE_COST_IN_PER_1K", "0") or "0")
+        out_per_k = float(os.environ.get("LBG_DIALOGUE_REMOTE_COST_OUT_PER_1K", "0") or "0")
+    except ValueError:
+        return None
+    return round((max(0, prompt_tokens) / 1000.0) * in_per_k + (max(0, completion_tokens) / 1000.0) * out_per_k, 6)
+
+
+def _emit_dialogue_trace(context: dict[str, Any], payload: dict[str, Any]) -> None:
+    # Trace best-effort : stdout + JSONL optionnel.
+    row = {"event": "agents.dialogue.trace", **payload}
+    try:
+        context["_dialogue_trace"] = row
+    except Exception:
+        pass
+    try:
+        print(json.dumps(row, ensure_ascii=False))
+    except Exception:
+        pass
+    path = os.environ.get("LBG_DIALOGUE_TRACE_LOG_PATH", "").strip()
+    if not path:
+        return
+    try:
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    except Exception:
+        return
+
+
+def _emit_dialogue_trace_followup(
+    context: dict[str, Any],
+    *,
+    route: dict[str, Any],
+    speaker: str,
+    player_text: str,
+    cache_hit: bool,
+    prompt_tokens: int,
+    completion_tokens: int,
+    latency_ms: int | None,
+    outcome: str,
+    error: str | None = None,
+) -> None:
+    """Ligne de suivi unique par tour (cache hit, ok LLM, erreur)."""
+    tgt = str(route.get("target") or "")
+    cost = _estimate_cost_usd(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens, target=tgt)
+    bu = str(route.get("base_url") or "").rstrip("/")
+    try:
+        b_host = urlparse(bu).netloc or bu
+    except Exception:
+        b_host = bu
+    prev = (player_text or "")[:200]
+    if len(player_text or "") > 200:
+        prev += "…"
+    actor = context.get("_invoke_actor_id")
+    npc = context.get("world_npc_id")
+    payload: dict[str, Any] = {
+        "trace_id": context.get("_trace_id"),
+        "target": tgt,
+        "model": route.get("model"),
+        "profile": _resolve_profile(context),
+        "base_host": b_host,
+        "prompt_tokens": prompt_tokens,
+        "completion_tokens": completion_tokens,
+        "estimated_cost_usd": cost,
+        "cache_hit": cache_hit,
+        "latency_ms": latency_ms,
+        "outcome": outcome,
+        "route_decision": route.get("route_decision"),
+        "auto_skip_detail": route.get("auto_skip_detail"),
+        "auto_tiers_tried": route.get("auto_tiers_tried"),
+        "speaker": speaker if isinstance(speaker, str) else None,
+        "player_text_preview": prev,
+        "world_npc_id": npc if isinstance(npc, str) else None,
+        "invoke_actor_id": actor if isinstance(actor, str) else None,
+    }
+    if error:
+        payload["error"] = error
+    _emit_dialogue_trace(context, payload)
+
+
+def _default_npc_registry_path() -> Path:
+    return Path(__file__).with_name("npc_registry.json")
+
+
+def _load_npc_registry() -> dict[str, dict[str, Any]]:
+    global _npc_registry_cache
+    if _npc_registry_cache is not None:
+        return _npc_registry_cache
+    p = os.environ.get("LBG_DIALOGUE_NPC_REGISTRY_PATH", "").strip()
+    path = Path(p) if p else _default_npc_registry_path()
+    out: dict[str, dict[str, Any]] = {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        _npc_registry_cache = out
+        return out
+    rows = data.get("npcs") if isinstance(data, dict) else None
+    if not isinstance(rows, list):
+        _npc_registry_cache = out
+        return out
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        rid = row.get("id")
+        if not isinstance(rid, str) or not rid.strip():
+            continue
+        out[rid.strip()] = row
+    _npc_registry_cache = out
+    return out
+
+
+def _format_npc_registry_for_prompt(context: dict[str, Any]) -> str | None:
+    rid = context.get("world_npc_id")
+    if not isinstance(rid, str) or not rid.strip():
+        return None
+    entry = _load_npc_registry().get(rid.strip())
+    if not isinstance(entry, dict):
+        return None
+    lines: list[str] = []
+    for key, label in (
+        ("name", "Nom"),
+        ("role", "Role"),
+        ("zone", "Zone"),
+        ("faction", "Faction"),
+        ("tone", "Ton prefere"),
+        ("summary", "Contexte"),
+    ):
+        val = entry.get(key)
+        if isinstance(val, str) and val.strip():
+            lines.append(f"{label}: {val.strip()}")
+    goals = entry.get("goals")
+    if isinstance(goals, list):
+        g = [str(x).strip() for x in goals if isinstance(x, str) and str(x).strip()]
+        if g:
+            lines.append("Objectifs: " + "; ".join(g[:4]))
+    constraints = entry.get("constraints")
+    if isinstance(constraints, list):
+        c = [str(x).strip() for x in constraints if isinstance(x, str) and str(x).strip()]
+        if c:
+            lines.append("Contraintes: " + "; ".join(c[:4]))
+    if not lines:
+        return None
+    return "Profil PNJ (registre): " + " | ".join(lines)
+
+
+def _resolve_race_id_for_prompt(context: dict[str, Any]) -> str | None:
+    """Priorité au snapshot serveur (lyra.meta.race_id), sinon registre PNJ."""
+    lyra = context.get("lyra")
+    if isinstance(lyra, dict):
+        meta = lyra.get("meta")
+        if isinstance(meta, dict):
+            r = meta.get("race_id")
+            if isinstance(r, str) and r.strip():
+                return r.strip()
+    rid = context.get("world_npc_id")
+    if isinstance(rid, str) and rid.strip():
+        entry = _load_npc_registry().get(rid.strip())
+        if isinstance(entry, dict):
+            r2 = entry.get("race_id")
+            if isinstance(r2, str) and r2.strip():
+                return r2.strip()
+    return None
+
+
 def _timeout_s() -> float:
     raw = os.environ.get("LBG_DIALOGUE_LLM_TIMEOUT", "120").strip()
     try:
@@ -279,8 +746,18 @@ def _timeout_s() -> float:
 
 
 def _api_key() -> str | None:
-    k = os.environ.get("LBG_DIALOGUE_LLM_API_KEY", "").strip()
+    k = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_LLM_API_KEY", ""))
     return k or None
+
+
+def _resolve_secret_ref(raw: str | None) -> str:
+    """Autorise `FOO="${BAR}"` dans EnvironmentFile systemd sans dupliquer le secret."""
+    s = (raw or "").strip()
+    if len(s) >= 4 and s.startswith("${") and s.endswith("}"):
+        key = s[2:-1].strip()
+        if key:
+            return os.environ.get(key, "").strip()
+    return s
 
 
 def _truncate(s: str, max_len: int) -> str:
@@ -352,13 +829,134 @@ def _format_reputation_for_prompt(lyra: object) -> str | None:
     return f"Réputation locale envers le joueur: {iv} (borne -100..100)."
 
 
+def _desktop_plan_enabled(*, context: dict[str, Any]) -> bool:
+    v = os.environ.get("LBG_DIALOGUE_DESKTOP_PLAN", "0").strip().lower()
+    if v not in ("1", "true", "yes", "on"):
+        return False
+    return context.get("_desktop_plan") is True
+
+
+def desktop_plan_env_enabled() -> bool:
+    """True si l’agent peut mode planificateur desktop (sans contexte requis) — pour healthz / ops."""
+    v = os.environ.get("LBG_DIALOGUE_DESKTOP_PLAN", "0").strip().lower()
+    return v in ("1", "true", "yes", "on")
+
+
+def _require_desktop_json(*, context: dict[str, Any]) -> bool:
+    return _desktop_plan_enabled(context=context) and context.get("_require_desktop_json") is True
+
+
+def resolve_lyra_engagement(context: dict[str, Any]) -> str:
+    """
+    Mode ADR 0004 : ``local_assistant`` vs ``mmo_persona``.
+    Le pont WS (`mmmorpg_server`) force ``mmo_persona`` sur ``context``.
+    Si ``world_npc_id`` est présent (hors mode desktop plan), on ne permet pas
+    ``local_assistant`` depuis le seul contexte client.
+    """
+    if _desktop_plan_enabled(context=context):
+        return "local_assistant"
+    wid = context.get("world_npc_id")
+    has_npc = isinstance(wid, str) and bool(wid.strip())
+    raw = context.get("lyra_engagement")
+    if isinstance(raw, str):
+        v = raw.strip().lower()
+        if v == "mmo_persona":
+            return "mmo_persona"
+        if v == "local_assistant" and not has_npc:
+            return "local_assistant"
+    if has_npc:
+        return "mmo_persona"
+    return ""
+
+
+def _format_session_summary_for_prompt(context: dict[str, Any]) -> str | None:
+    ss = context.get("session_summary")
+    if not isinstance(ss, dict) or not ss:
+        return None
+    labels = {
+        "tracked_quest": "Quête suivie",
+        "last_npc": "Interlocuteur / PNJ",
+        "player_note": "Note joueur",
+        "session_mood": "Ambiance",
+        "quest_snapshot": "Instantané quête (serveur jeu)",
+        "memory_hint": "Mémoire monde PNJ (clés d’état, sans valeurs sensibles)",
+    }
+    parts: list[str] = []
+    for k in ("tracked_quest", "quest_snapshot", "last_npc", "memory_hint", "player_note", "session_mood"):
+        v = ss.get(k)
+        if isinstance(v, str) and v.strip():
+            lab = labels.get(k, k)
+            t = v.strip().replace("\n", " ")
+            if len(t) > 140:
+                t = t[:137] + "…"
+            parts.append(f"- {lab}: {t}")
+    if not parts:
+        return None
+    return (
+        "Résumé session (client + serveur MMO, données non sensibles ; cohérence RP) :\n" + "\n".join(parts)
+    )
+
+
 def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
+    if _desktop_plan_enabled(context=context):
+        profile = _resolve_profile(context)
+        req = context.get("_require_desktop_json") is True
+        lines = [
+            _profile_prompt(profile, speaker=speaker, context=context),
+            f"Tu incarnes {speaker}, un assistant qui aide l'utilisateur à formuler des actions PC contrôlées.",
+            "Tu réponds en français. Reste bref : 1 à 2 phrases maximum (pas de liste), idéalement moins de 25 mots sauf demande explicite de détail.",
+            "Ne dis pas que tu es une intelligence artificielle ni un modèle de langage.",
+            (
+                "Tu DOIS commencer ta réponse par UNE ligne exacte :"
+                if req
+                else "Si une action PC simple correspond à la demande, commence ta réponse par UNE ligne exacte :"
+            ),
+            'DESKTOP_JSON: {"kind":"open_url","url":"https://example.org"}',
+            'DESKTOP_JSON: {"kind":"search_web_open","query":"site exemple"}',
+            'DESKTOP_JSON: {"kind":"mail_imap_preview","from_contains":"intel"}',
+            'DESKTOP_JSON: {"kind":"notepad_append","path":"C:\\\\Users\\\\Public\\\\lbg_note.txt","text":"ligne\\n"}',
+            'DESKTOP_JSON: {"kind":"open_app","app":"notepad","args":[],"learn":false}',
+            "Contraintes : kind parmi open_url, search_web_open, mail_imap_preview, notepad_append, open_app.",
+            "open_url : champ url (http/https).",
+            "search_web_open : champ query (string) ; nécessite LBG_DESKTOP_WEB_SEARCH=1 côté worker.",
+            "mail_imap_preview : from_contains et/ou subject_contains (filtres sous-chaîne), optionnel max_messages (1–10), max_body_chars (0–4000), max_scan (10–500) ; nécessite LBG_DESKTOP_MAIL_ENABLED=1 et config IMAP sur le worker.",
+            "notepad_append : champs path (fichier) et text (string).",
+            "open_app : champ app (identifiant court), args optionnel (liste de chaînes), learn optionnel (bool).",
+            "L'allowlist réelle (URL, chemins, binaires) est appliquée plus tard par le worker ; tu proposes seulement une intention structurée.",
+            (
+                "Sans ligne DESKTOP_JSON valide, ta réponse est considérée comme incorrecte."
+                if req
+                else "Si la demande est ambiguë ou hors périmètre, réponds sans DESKTOP_JSON."
+            ),
+            "Après la ligne DESKTOP_JSON facultative/obligatoire, ajoute ta courte phrase affichée à l'utilisateur.",
+        ]
+        sum_d = _format_session_summary_for_prompt(context)
+        if sum_d:
+            lines.append(
+                "Résumé MMO éventuel (export volontaire ; pas de secrets poste) : tu peux t'en inspirer pour répondre au joueur sur son PC, sans confondre avec des actions réelles déjà exécutées."
+            )
+            lines.append(sum_d)
+        return "\n".join(lines)
+
+    profile = _resolve_profile(context)
     lines = [
+        _profile_prompt(profile, speaker=speaker, context=context),
         f"Tu incarnes {speaker}, un personnage non-joueur (PNJ) dans un MMORPG médiéval-fantasy.",
         "Tu réponds en français. Reste dans ton rôle.",
         "Réponds très court: 1 à 2 phrases maximum (pas de liste), idéalement < 25 mots, sauf si le joueur demande explicitement une explication longue.",
         "Ne dis pas que tu es une intelligence artificielle ni un modèle de langage.",
+        f"Profil actif: {profile}.",
     ]
+    eng = resolve_lyra_engagement(context)
+    if eng == "mmo_persona":
+        lines.append(
+            "Engagement produit : **persona MMO** — tu restes dans le monde simulé. "
+            "Ne suggère pas d'actions sur le poste réel du joueur (messagerie personnelle, fichiers locaux, navigateur hors contexte jeu). "
+            "Les effets jeu autorisés passent par ACTION_JSON (si activé) ou par ta réplique uniquement."
+        )
+    sum_line = _format_session_summary_for_prompt(context)
+    if sum_line:
+        lines.append(sum_line)
     for key, label in (
         ("scene", "Lieu / scène"),
         ("world_hint", "Monde"),
@@ -381,12 +979,32 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             "Adapte légèrement ton attitude selon cette réputation (plus chaleureux si positive, plus froid si négative), "
             "sans mentionner explicitement un score."
         )
+    pnj_reg_line = _format_npc_registry_for_prompt(context)
+    if pnj_reg_line:
+        lines.append(pnj_reg_line)
+    rid = _resolve_race_id_for_prompt(context)
+    if rid:
+        rline = format_race_for_prompt(rid)
+        if rline:
+            lines.append(rline)
+    cref_line = format_creature_refs_for_prompt(context.get("_creature_refs"))
+    if cref_line:
+        lines.append(cref_line)
+    aq = context.get("_active_quest_id")
+    if isinstance(aq, str) and aq.strip():
+        lines.append(
+            f"Quête suivie côté client (référence) : {aq.strip()} — utilise ce quest_id si le joueur résout ou clôt cette quête."
+        )
 
     # Option "LLM-on actions monde" (bornée) : le modèle peut suggérer une action déterministe.
     # Gated par env + présence d'un PNJ monde (sinon on ignore).
     v = os.environ.get("LBG_DIALOGUE_WORLD_ACTIONS", "0").strip().lower()
     if v in ("1", "true", "yes", "on") and isinstance(context.get("world_npc_id"), str) and context.get("world_npc_id"):
         require_action = bool(context.get("_require_action_json") is True)
+        requested_kind = context.get("_world_action_kind")
+        requested_kind = requested_kind.strip().lower() if isinstance(requested_kind, str) else ""
+        if requested_kind not in ("aid", "quest"):
+            requested_kind = ""
         lines.append(
             (
                 "Actions monde (REQUIS) : commence ta réponse par UNE ligne :"
@@ -397,6 +1015,14 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
         lines.append('ACTION_JSON: {"kind":"aid","hunger_delta":-0.2,"thirst_delta":-0.1,"fatigue_delta":-0.2,"reputation_delta":5}')
         lines.append('ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":0,"quest_accepted":true}')
         lines.append(
+            'ACTION_JSON: {"kind":"quest","quest_id":"q:help_innkeeper","quest_step":3,"quest_accepted":true,"quest_completed":true,"reputation_delta":8}'
+        )
+        if requested_kind:
+            lines.append(
+                f"Action demandée par l'interface: utilise obligatoirement kind='{requested_kind}' "
+                "dans ACTION_JSON pour cette réponse."
+            )
+        lines.append(
             "Quand le joueur demande explicitement une aide immédiate (nourriture, boisson, repos, compassion), "
             "tu peux utiliser ACTION_JSON pour déclencher l'aide."
         )
@@ -405,16 +1031,162 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             "tu peux utiliser ACTION_JSON kind='quest'."
         )
         lines.append(
+            "Quand le joueur a terminé les objectifs et que la quête doit se clôturer, utilise kind='quest' avec "
+            "quest_completed=true (et garde quest_id cohérent). Tu peux augmenter quest_step en même temps si utile."
+        )
+        lines.append(
+            "Sur une quête (surtout à la clôture), tu peux ajouter reputation_delta entier dans [-100,100] "
+            "comme petite récompense ou pénalité RP ; 0 ou absent = aucun effet réputation."
+        )
+        lines.append(
             "Si tu déclenches une aide, mets en général un petit reputation_delta positif (ex: 1 à 10) "
             "car l'aide améliore la confiance, sauf raison RP contraire."
         )
         lines.append(
             "Contraintes: kind='aid' ou kind='quest'. "
             "Pour aid: deltas hunger/thirst/fatigue dans [-1,1]; reputation_delta dans [-100,100]. "
-            "Pour quest: quest_id string non vide; quest_step int [0,10000]; quest_accepted bool. "
+            "Pour quest: quest_id string non vide; quest_step int [0,10000]; quest_accepted bool; "
+            "quest_completed bool optionnel (false par défaut); reputation_delta int optionnel [-100,100]. "
             + ("Tu DOIS écrire ACTION_JSON car il est requis." if require_action else "Si aucune action n'est nécessaire, n'écris pas ACTION_JSON.")
         )
     return "\n".join(lines)
+
+
+def _parse_desktop_json_prefix(raw: str) -> tuple[dict[str, Any] | None, str]:
+    """Parse un préfixe de lignes `DESKTOP_JSON: {...}` consécutives ; garde la dernière action valide."""
+    s = (raw or "").replace("\r\n", "\n").strip()
+    if not s:
+        return None, raw.strip()
+
+    lines = s.split("\n")
+    idx = 0
+    last_obj: dict[str, Any] | None = None
+    while idx < len(lines):
+        line = lines[idx].strip()
+        if not line.startswith("DESKTOP_JSON:"):
+            break
+        payload = line.split("DESKTOP_JSON:", 1)[1].strip()
+        try:
+            obj = json.loads(payload)
+            if isinstance(obj, dict):
+                last_obj = obj
+        except Exception:
+            pass
+        idx += 1
+    remaining = "\n".join(lines[idx:]).strip()
+    return last_obj, remaining
+
+
+def _sanitize_desktop_action_proposal(action: dict[str, Any] | None) -> dict[str, Any] | None:
+    """
+    Valide une proposition d'action desktop (structurelle). None si invalide.
+    Les allowlists métier restent côté worker à l'exécution.
+    """
+    if not isinstance(action, dict) or not action:
+        return None
+    kind = (action.get("kind") or "").strip()
+    if kind == "open_url":
+        url = action.get("url")
+        if not isinstance(url, str) or not url.strip():
+            return None
+        u = url.strip()
+        if len(u) > 2048:
+            u = u[:2048]
+        if not (u.startswith("http://") or u.startswith("https://")):
+            return None
+        return {"kind": "open_url", "url": u}
+
+    if kind == "search_web_open":
+        qry = action.get("query")
+        if not isinstance(qry, str) or not qry.strip():
+            return None
+        q2 = qry.strip()
+        if len(q2) > 220:
+            q2 = q2[:220]
+        return {"kind": "search_web_open", "query": q2}
+
+    if kind == "notepad_append":
+        path = action.get("path")
+        text = action.get("text")
+        if not isinstance(path, str) or not path.strip():
+            return None
+        if not isinstance(text, str):
+            return None
+        p2 = path.strip()
+        if len(p2) > 1024:
+            p2 = p2[:1024]
+        if len(text) > 100_000:
+            text = text[:100_000]
+        return {"kind": "notepad_append", "path": p2, "text": text}
+
+    if kind == "mail_imap_preview":
+        fc = action.get("from_contains")
+        sc = action.get("subject_contains")
+        fc_s = fc.strip() if isinstance(fc, str) else ""
+        sc_s = sc.strip() if isinstance(sc, str) else ""
+        if not fc_s and not sc_s:
+            return None
+        if len(fc_s) > 80:
+            fc_s = fc_s[:80]
+        if len(sc_s) > 120:
+            sc_s = sc_s[:120]
+        out2: dict[str, Any] = {"kind": "mail_imap_preview"}
+        if fc_s:
+            out2["from_contains"] = fc_s
+        if sc_s:
+            out2["subject_contains"] = sc_s
+        mm = action.get("max_messages", 3)
+        mb = action.get("max_body_chars", 800)
+        ms = action.get("max_scan", 200)
+        try:
+            mmi = int(mm) if mm is not None else 3
+        except Exception:
+            mmi = 3
+        try:
+            mbi = int(mb) if mb is not None else 800
+        except Exception:
+            mbi = 800
+        try:
+            msi = int(ms) if ms is not None else 200
+        except Exception:
+            msi = 200
+        out2["max_messages"] = max(1, min(10, mmi))
+        out2["max_body_chars"] = max(0, min(4000, mbi))
+        out2["max_scan"] = max(10, min(500, msi))
+        return out2
+
+    if kind == "open_app":
+        app = action.get("app")
+        if not isinstance(app, str) or not app.strip():
+            return None
+        a2 = app.strip()
+        if len(a2) > 80:
+            a2 = a2[:80]
+        args_raw = action.get("args", [])
+        if args_raw is None:
+            args_out: list[str] = []
+        elif not isinstance(args_raw, list):
+            return None
+        else:
+            args_out = []
+            for i, item in enumerate(args_raw):
+                if i >= 16:
+                    break
+                if not isinstance(item, str):
+                    return None
+                s = item
+                if len(s) > 500:
+                    s = s[:500]
+                args_out.append(s)
+        learn = action.get("learn", False)
+        if learn is not None and not isinstance(learn, bool):
+            return None
+        out: dict[str, Any] = {"kind": "open_app", "app": a2, "args": args_out}
+        if learn is True:
+            out["learn"] = True
+        return out
+
+    return None
 
 
 def _parse_action_json_prefix(raw: str) -> tuple[dict[str, Any] | None, str]:
@@ -497,12 +1269,24 @@ def _sanitize_world_action(action: dict[str, Any] | None) -> dict[str, Any] | No
     if accepted is None:
         # type invalide => rejeter
         return None
-    return {
+    if "quest_completed" in action:
+        qc_raw = action.get("quest_completed")
+        if not isinstance(qc_raw, bool):
+            return None
+        quest_completed = bool(qc_raw)
+    else:
+        quest_completed = False
+    rep_d = max(-100, min(100, i("reputation_delta")))
+    out: dict[str, Any] = {
         "kind": "quest",
         "quest_id": qid2,
         "quest_step": int(step),
         "quest_accepted": bool(accepted),
+        "quest_completed": quest_completed,
     }
+    if rep_d != 0:
+        out["reputation_delta"] = int(rep_d)
+    return out
 
 
 def _world_actions_enabled(*, context: dict[str, Any]) -> bool:
@@ -519,13 +1303,30 @@ def _require_action_json(*, context: dict[str, Any]) -> bool:
 def _postprocess_llm_content(*, raw: str, context: dict[str, Any]) -> tuple[str, dict[str, Any] | None]:
     """
     Post-traitement central :
-    - optionnellement parse ACTION_JSON (avant normalisation whitespace)
+    - optionnellement parse DESKTOP_JSON (prioritaire) pour proposition desktop
+    - optionnellement parse ACTION_JSON monde
     - enforce short reply sur le texte visible joueur
     """
+    working = (raw or "").replace("\r\n", "\n")
+
+    if _desktop_plan_enabled(context=context):
+        try:
+            context.pop("_desktop_action_proposal", None)
+        except Exception:
+            pass
+        d_raw, working = _parse_desktop_json_prefix(working)
+        d_san = _sanitize_desktop_action_proposal(d_raw)
+        if d_san is not None:
+            try:
+                context["_desktop_action_proposal"] = d_san
+            except Exception:
+                pass
+        working = working.strip()
+
     if _world_actions_enabled(context=context):
-        action_raw, remaining = _parse_action_json_prefix(raw)
+        action_raw, remaining = _parse_action_json_prefix(working)
         action = _sanitize_world_action(action_raw)
-        visible = remaining if action is not None else raw
+        visible = remaining if action is not None else working
         reply = _enforce_short_reply(visible)
         if action is not None:
             if not (isinstance(reply, str) and reply.strip()):
@@ -535,7 +1336,7 @@ def _postprocess_llm_content(*, raw: str, context: dict[str, Any]) -> tuple[str,
             except Exception:
                 pass
         return reply, action
-    return _enforce_short_reply(raw), None
+    return _enforce_short_reply(working), None
 
 
 ### Note: pas d'API publique "with_action" : l'action est exposée best-effort via context["_world_action"].
@@ -567,12 +1368,17 @@ def run_dialogue_turn(
     speaker: str,
     context: dict[str, Any],
 ) -> str:
-    b = base_url()
+    route = _resolve_route(context)
+    b = route.get("base_url", "")
+    selected_model = route.get("model", model_name())
+    selected_target = route.get("target", "local")
     if not b:
         raise RuntimeError("LLM désactivé (LBG_DIALOGUE_LLM_DISABLED) ou indisponible")
 
     # Bypass cache (debug / situations où l'état doit toujours être re-évalué).
     cache_bypass = isinstance(context.get("_no_cache"), bool) and context.get("_no_cache") is True
+    if _desktop_plan_enabled(context=context):
+        cache_bypass = True
     cache_hit = False
     ck = "" if cache_bypass else _cache_key(speaker=speaker, player_text=player_text, context=context)
     if ck:
@@ -580,6 +1386,7 @@ def run_dialogue_turn(
         if cached is not None:
             global _cache_hits
             _cache_hits += 1
+            cache_hit = True
             sp = speaker.strip() or "PNJ"
             _cache_hits_by_speaker[sp] = _cache_hits_by_speaker.get(sp, 0) + 1
             # Exposer un hint best-effort au caller (observabilité).
@@ -587,6 +1394,17 @@ def run_dialogue_turn(
                 context["_cache_hit"] = True
             except Exception:
                 pass
+            _emit_dialogue_trace_followup(
+                context,
+                route=route,
+                speaker=speaker,
+                player_text=player_text,
+                cache_hit=True,
+                prompt_tokens=0,
+                completion_tokens=0,
+                latency_ms=0,
+                outcome="cache_hit",
+            )
             return cached
         global _cache_misses
         _cache_misses += 1
@@ -610,7 +1428,7 @@ def run_dialogue_turn(
 
     url = f"{b}/chat/completions"
     headers: dict[str, str] = {"Content-Type": "application/json"}
-    key = _api_key()
+    key = (route.get("api_key") or "").strip() or _api_key()
     if key:
         headers["Authorization"] = f"Bearer {key}"
 
@@ -624,12 +1442,14 @@ def run_dialogue_turn(
         max_tokens = 512
     # Autoriser des sorties très courtes en prod (ex: 24) pour la latence.
     max_tokens = max(1, min(max_tokens, 4096))
-    # Si le caller exige un ACTION_JSON, éviter les réponses tronquées.
-    if _require_action_json(context=context) and max_tokens < 96:
+    # Si le caller exige un ACTION_JSON ou DESKTOP_JSON, éviter les réponses tronquées.
+    if (_require_action_json(context=context) or _require_desktop_json(context=context)) and max_tokens < 96:
+        max_tokens = 96
+    elif _desktop_plan_enabled(context=context) and max_tokens < 96:
         max_tokens = 96
 
     payload: dict[str, Any] = {
-        "model": model_name(),
+        "model": selected_model,
         "messages": messages,
         "temperature": temperature,
         "max_tokens": max_tokens,
@@ -638,7 +1458,7 @@ def run_dialogue_turn(
     # Compatible OpenAI / la plupart des serveurs OpenAI-like. Ollama a aussi son propre stop dans /api/chat.
     payload["stop"] = ["\n\n"]
 
-    def _parse_openai_chat_completions(data: Any) -> str:
+    def _parse_openai_chat_completions(data: Any) -> tuple[str, dict[str, int]]:
         if not isinstance(data, dict):
             raise RuntimeError("Réponse LLM invalide: type")
         choices = data.get("choices")
@@ -650,9 +1470,18 @@ def run_dialogue_turn(
         content = msg.get("content")
         if not isinstance(content, str) or not content.strip():
             raise RuntimeError("Réponse LLM vide")
-        return content.strip()
+        usage_obj = data.get("usage") if isinstance(data.get("usage"), dict) else {}
+        try:
+            pt = int(usage_obj.get("prompt_tokens", 0))
+        except Exception:
+            pt = 0
+        try:
+            ct = int(usage_obj.get("completion_tokens", 0))
+        except Exception:
+            ct = 0
+        return content.strip(), {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
 
-    def _try_ollama_native_api_chat(*, base: str) -> str:
+    def _try_ollama_native_api_chat(*, base: str) -> tuple[str, dict[str, int]]:
         """
         Fallback pour Ollama quand l'endpoint OpenAI-compatible renvoie 500.
         https://github.com/ollama/ollama/blob/main/docs/api.md
@@ -662,7 +1491,7 @@ def run_dialogue_turn(
             root = root[:-3]
         native_url = f"{root}/api/chat"
         native_payload: dict[str, Any] = {
-            "model": model_name(),
+            "model": selected_model,
             "messages": messages,
             "stream": False,
             # Garder le modèle "chaud" pour éviter les cold starts.
@@ -693,7 +1522,15 @@ def run_dialogue_turn(
         content2 = msg2.get("content")
         if not isinstance(content2, str) or not content2.strip():
             raise RuntimeError("Réponse Ollama vide")
-        return content2.strip()
+        try:
+            pt = int(data2.get("prompt_eval_count", 0))
+        except Exception:
+            pt = 0
+        try:
+            ct = int(data2.get("eval_count", 0))
+        except Exception:
+            ct = 0
+        return content2.strip(), {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
 
     b_norm = b.rstrip("/")
     looks_like_ollama = (
@@ -703,41 +1540,72 @@ def run_dialogue_turn(
         or b_norm.endswith(":11434")
     )
 
-    # Ollama peut être beaucoup plus rapide via /api/chat que via /v1/chat/completions.
-    # Donc si on est sur Ollama, on tente le natif en premier.
-    if looks_like_ollama:
-        try:
-            raw = _try_ollama_native_api_chat(base=b_norm)
-            reply, _ = _postprocess_llm_content(raw=raw, context=context)
-            if ck:
-                _cache_set(ck, reply)
-            return reply
-        except Exception:
-            # Fallback OpenAI-compatible pour compat (et cas où /api/chat n'est pas dispo).
-            pass
+    t_llm0 = time.perf_counter()
 
-    with httpx.Client(timeout=_timeout_s()) as client:
-        r = client.post(url, headers=headers, json=payload)
-    try:
-        r.raise_for_status()
-        raw = _parse_openai_chat_completions(r.json())
-        reply, _ = _postprocess_llm_content(raw=raw, context=context)
+    def _finalize_ok(raw_llm: str, usage: dict[str, int]) -> str:
+        reply, _ = _postprocess_llm_content(raw=raw_llm, context=context)
         if ck:
             _cache_set(ck, reply)
+        latency_ms = int((time.perf_counter() - t_llm0) * 1000)
+        pt = int(usage.get("prompt_tokens", 0))
+        ct = int(usage.get("completion_tokens", 0))
+        tgt = str(route.get("target") or "local")
+        cost = _estimate_cost_usd(prompt_tokens=pt, completion_tokens=ct, target=tgt)
+        if tgt in ("fast", "remote"):
+            _budget_record(cost)
+        _emit_dialogue_trace_followup(
+            context,
+            route=route,
+            speaker=speaker,
+            player_text=player_text,
+            cache_hit=cache_hit,
+            prompt_tokens=pt,
+            completion_tokens=ct,
+            latency_ms=latency_ms,
+            outcome="ok",
+        )
         return reply
-    except httpx.HTTPStatusError as e:
-        status = e.response.status_code
-        body = (e.response.text or "")[:400]
-        # Si l'OpenAI-compatible casse (5xx), tenter aussi le natif Ollama si applicable.
-        if status >= 500 and looks_like_ollama:
+
+    try:
+        # Ollama peut être beaucoup plus rapide via /api/chat que via /v1/chat/completions.
+        if looks_like_ollama:
             try:
-                raw = _try_ollama_native_api_chat(base=b_norm)
-                reply, _ = _postprocess_llm_content(raw=raw, context=context)
-                if ck:
-                    _cache_set(ck, reply)
-                return reply
-            except Exception as fallback_exc:
-                raise RuntimeError(
-                    f"HTTP {status} (openai chat/completions): {body} | fallback Ollama échoué: {fallback_exc}"
-                ) from fallback_exc
-        raise RuntimeError(f"HTTP {status}: {body}") from e
+                raw, usage = _try_ollama_native_api_chat(base=b_norm)
+                return _finalize_ok(raw, usage)
+            except Exception:
+                pass
+
+        with httpx.Client(timeout=_timeout_s()) as client:
+            r = client.post(url, headers=headers, json=payload)
+        try:
+            r.raise_for_status()
+            raw, usage = _parse_openai_chat_completions(r.json())
+            return _finalize_ok(raw, usage)
+        except httpx.HTTPStatusError as e:
+            status = e.response.status_code
+            body = (e.response.text or "")[:400]
+            if status >= 500 and looks_like_ollama:
+                try:
+                    raw, usage = _try_ollama_native_api_chat(base=b_norm)
+                    return _finalize_ok(raw, usage)
+                except Exception as fallback_exc:
+                    raise RuntimeError(
+                        f"HTTP {status} (openai chat/completions): {body} | fallback Ollama échoué: {fallback_exc}"
+                    ) from fallback_exc
+            raise RuntimeError(f"HTTP {status}: {body}") from e
+    except Exception as e:
+        latency_ms = int((time.perf_counter() - t_llm0) * 1000)
+        err = str(e)[:800]
+        _emit_dialogue_trace_followup(
+            context,
+            route=route,
+            speaker=speaker,
+            player_text=player_text,
+            cache_hit=cache_hit,
+            prompt_tokens=0,
+            completion_tokens=0,
+            latency_ms=latency_ms,
+            outcome="error",
+            error=err,
+        )
+        raise
