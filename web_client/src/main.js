@@ -680,8 +680,32 @@ class App {
 
     _availableQuestsForNpc(npcId) {
         const id = String(npcId || "").trim();
-        const qs = Array.isArray(this.gameData.quests) ? this.gameData.quests : [];
-        return qs.filter((q) => q && q.giver_npc_id === id);
+        const all = Array.isArray(this.gameData.quests) ? this.gameData.quests : [];
+        const byNpc = all.filter((q) => q && q.giver_npc_id === id);
+        if (!byNpc.length) return [];
+
+        // Ordre déterministe : champ "order" si présent, sinon par id.
+        byNpc.sort((a, b) => {
+            const ao = Number.isFinite(Number(a.order)) ? Number(a.order) : 0;
+            const bo = Number.isFinite(Number(b.order)) ? Number(b.order) : 0;
+            if (ao !== bo) return ao - bo;
+            const aid = typeof a.id === "string" ? a.id : "";
+            const bid = typeof b.id === "string" ? b.id : "";
+            return aid.localeCompare(bid);
+        });
+
+        // Règle : un PNJ ne propose qu'une quête à la fois.
+        // On renvoie la première quête de la chaîne qui n'est pas encore complétée.
+        for (const q of byNpc) {
+            const qid = typeof q.id === "string" ? q.id.trim() : "";
+            if (!qid) continue;
+            const log = this.questLogById.get(qid);
+            if (!log || !log.completed) {
+                return [q];
+            }
+        }
+        // Toutes les quêtes de ce PNJ sont complétées : rien à proposer.
+        return [];
     }
 
     _pickNearestResourceId() {
