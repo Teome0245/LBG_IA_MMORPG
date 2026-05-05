@@ -2040,6 +2040,9 @@ class GameState:
             return
         if timers_only:
             return
+        # Routine sommeil (v1): aller à la maison si fatigue haute, dormir, puis ressortir.
+        if self._npc_sleep_routine_step(npc, dt):
+            return
         # PNJ basiques : micro-routines (v1) — errance bornée mais *avec* grille (évite les murs).
         if npc.stats is None:
             npc.stats = {}
@@ -2077,6 +2080,108 @@ class GameState:
             return
         sp = 1.6
         self._npc_apply_smoothed_steering(npc, dx=dx, dz=dz, speed=sp, dt=float(dt))
+
+    def _npc_sleep_routine_step(self, npc: Entity, dt: float) -> bool:
+        """Retourne True si la routine a pris la main (pas de wander)."""
+        if npc.stats is None:
+            npc.stats = {}
+        role = str(getattr(npc, "role", "") or "").strip().lower()
+        if role in ("mob", "monster"):
+            return False
+        home = str(npc.stats.get("home_location_id") or "").strip()
+        if not home:
+            return False
+
+        needs = npc.stats.get("needs")
+        if not isinstance(needs, dict):
+            return False
+        fatigue = float(needs.get("fatigue", 0.0) or 0.0)
+
+        zone = str(npc.stats.get("zone") or "village").strip() or "village"
+        home_zone = f"interior:{home}"
+
+        # Timers état sommeil
+        sleep_t = float(npc.stats.get("sleep_t", 0.0) or 0.0)
+        sleep_t = max(0.0, sleep_t - float(dt))
+        npc.stats["sleep_t"] = sleep_t
+
+        # Seuils simples
+        want_sleep = fatigue >= 0.72
+        ok_exit = fatigue <= 0.22
+
+        # Cas 1: déjà à la maison (dans son intérieur)
+        if zone == home_zone:
+            # Dormir (immobile) pendant un petit moment, puis sortir quand récupéré.
+            self._npc_clear_horizontal_steering(npc)
+            npc.vx = npc.vz = 0.0
+            if sleep_t <= 0.0:
+                # (re)lancer une micro-sieste tant que la fatigue est haute
+                npc.stats["sleep_t"] = 6.0 if not ok_exit else 0.0
+            if ok_exit and sleep_t <= 0.0:
+                # Sortir: téléport vers le village près de la porte.
+                self._npc_set_zone(npc, "village")
+                self._npc_teleport_outside_home(npc, home)
+            return True
+
+        # Cas 2: dehors et fatigué -> aller à la porte de la maison
+        if not want_sleep:
+            return False
+
+        # Aller vers la porte extérieure
+        door_id = f"door:{home}"
+        door = next((l for l in self.locations if isinstance(l, dict) and str(l.get("id") or "") == door_id), None)
+        if not isinstance(door, dict):
+            return False
+        tx = float(door.get("x", 0.0) or 0.0)
+        tz = float(door.get("z", 0.0) or 0.0)
+
+        # A* si grille dispo
+        if self._village_tile_grid is not None:
+            step = self._village_tile_grid.next_step_towards_world_m(from_x=npc.x, from_z=npc.z, to_x=tx, to_z=tz)
+            if step is not None:
+                tx, tz = float(step[0]), float(step[1])
+
+        dx = tx - float(npc.x)
+        dz = tz - float(npc.z)
+        dist = math.sqrt(dx * dx + dz * dz)
+        if dist <= 1.6:
+            # Entrer: téléport spawn intérieur
+            self._npc_set_zone(npc, home_zone)
+            self._npc_teleport_inside_home(npc, home)
+            npc.stats["sleep_t"] = 6.0
+            return True
+
+        self._npc_apply_smoothed_steering(npc, dx=dx, dz=dz, speed=1.4, dt=float(dt))
+        return True
+
+    def _npc_set_zone(self, npc: Entity, zone_id: str) -> None:
+        if npc.stats is None:
+            npc.stats = {}
+        npc.stats["zone"] = str(zone_id or "village")
+
+    def _npc_teleport_inside_home(self, npc: Entity, home_location_id: str) -> None:
+        zid = f"interior:{str(home_location_id).strip()}"
+        interior = self._interiors.get(zid)
+        if not isinstance(interior, dict):
+            return
+        npc.x = float(interior.get("spawn_x", interior.get("cx", npc.x)))
+        npc.z = float(interior.get("spawn_z", interior.get("cz", npc.z)))
+        npc.vx = npc.vz = 0.0
+
+    def _npc_teleport_outside_home(self, npc: Entity, home_location_id: str) -> None:
+        loc_id = str(home_location_id).strip()
+        ext_door_id = f"door:{loc_id}"
+        ext = next((l for l in self.locations if isinstance(l, dict) and str(l.get("id") or "") == ext_door_id), None)
+        if not isinstance(ext, dict):
+            return
+        tx = float(ext.get("x", 0.0) or 0.0)
+        tz = float(ext.get("z", 0.0) or 0.0)
+        odx = float(ext.get("door_dx", 0.0) or 0.0)
+        odz = float(ext.get("door_dz", 0.0) or 0.0)
+        norm = math.hypot(odx, odz) or 1.0
+        npc.x = tx + (odx / norm) * 1.2
+        npc.z = tz + (odz / norm) * 1.2
+        npc.vx = npc.vz = 0.0
 
     def _npc_guard_patrol_point_ids(self, npc: Entity) -> list[str]:
         """Identifiants de lieux servant d’étapes de ronde ; priorité au seed courant (`world_initial`)."""

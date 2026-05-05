@@ -25,6 +25,8 @@ export class Renderer {
         this.cameraX = 0;
         this.cameraY = 0;
         this.cameraZ = 0;
+        // Zone/instance courante (v1 intérieurs): "village" ou "interior:<location_id>".
+        this.zoneId = "village";
         // BBox monde (m) de la carte village, si connue (depuis collision-grid).
         this.villageMapBounds = null;
         // Correction orientation/échelle du fond Watabou (image “jolie”) pour coller à la grille collisions.
@@ -197,6 +199,11 @@ export class Renderer {
         const z = Number(dz);
         this.villageMapOverlayOffsetX = Number.isFinite(x) ? x : 0.0;
         this.villageMapOverlayOffsetZ = Number.isFinite(z) ? z : 0.0;
+    }
+
+    setZone(zoneId) {
+        const z = typeof zoneId === "string" ? zoneId.trim() : "";
+        this.zoneId = z || "village";
     }
 
     getEntityScreenInfo(ent) {
@@ -493,21 +500,29 @@ export class Renderer {
             const h = (loc.h || 2) * scale;
             const rot = Number.isFinite(Number(loc.rotation_rad)) ? Number(loc.rotation_rad) : 0;
             const color = loc.type === "room" ? "255, 150, 0" : "0, 242, 255";
-            if (loc.id === "auberge_salle_commune" && this.assets.tavern.complete) {
-                ctx.save();
-                ctx.translate(pos.x, pos.y);
-                if (rot) ctx.rotate(rot);
-                ctx.drawImage(this.assets.tavern, -w / 2, -h / 2, w, h);
-                ctx.restore();
-            } else if (loc.id === "forge" && this.assets.forge.complete) {
-                ctx.save();
-                ctx.translate(pos.x, pos.y);
-                if (rot) ctx.rotate(rot);
-                ctx.drawImage(this.assets.forge, -w / 2, -h / 2, w, h);
-                ctx.restore();
-                ctx.strokeStyle = `rgba(${color}, 0.3)`;
-                ctx.lineWidth = 1;
-                ctx.strokeRect(pos.x - w / 2, pos.y - h / 2, w, h);
+            if (loc.type === "interior") {
+                const bid = typeof loc.for_location_id === "string" ? loc.for_location_id : "";
+                if (bid === "auberge_salle_commune" && this.assets.tavern.complete) {
+                    ctx.save();
+                    ctx.translate(pos.x, pos.y);
+                    if (rot) ctx.rotate(rot);
+                    ctx.drawImage(this.assets.tavern, -w / 2, -h / 2, w, h);
+                    ctx.restore();
+                } else if (bid === "forge" && this.assets.forge.complete) {
+                    ctx.save();
+                    ctx.translate(pos.x, pos.y);
+                    if (rot) ctx.rotate(rot);
+                    ctx.drawImage(this.assets.forge, -w / 2, -h / 2, w, h);
+                    ctx.restore();
+                } else {
+                    ctx.save();
+                    ctx.fillStyle = "rgba(0, 242, 255, 0.05)";
+                    ctx.strokeStyle = `rgba(${color}, 0.22)`;
+                    ctx.lineWidth = 1;
+                    ctx.fillRect(pos.x - w / 2, pos.y - h / 2, w, h);
+                    ctx.strokeRect(pos.x - w / 2, pos.y - h / 2, w, h);
+                    ctx.restore();
+                }
             } else if (loc.type === "resource") {
                 ctx.save();
                 ctx.strokeStyle = "rgba(0, 242, 255, 0.55)";
@@ -732,9 +747,17 @@ export class Renderer {
             this.updateCamera();
             this.pruneDialogueBubbles();
 
-            this.drawWorldMap();
-            this.drawVillageMap();
-            this.drawPlanetLabel();
+            const inInterior = typeof this.zoneId === "string" && this.zoneId.startsWith("interior:");
+            if (!inInterior) {
+                this.drawWorldMap();
+                this.drawVillageMap();
+                this.drawPlanetLabel();
+            } else {
+                ctx.save();
+                ctx.fillStyle = "rgba(6, 8, 16, 1.0)";
+                ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                ctx.restore();
+            }
             const player = this.interpolatedEntities.get(this.playerId);
             const floorY = Math.floor(((player && player.y) || 0) / 4) * 4;
             this.drawFloor(floorY);

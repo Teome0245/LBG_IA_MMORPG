@@ -1076,6 +1076,13 @@ class App {
             if (me.name) {
                 document.getElementById('stat-name').textContent = me.name;
             }
+            // Zone/instance (intérieurs v1): informer le renderer pour masquer le fond monde/village.
+            try {
+                const z = me.stats && typeof me.stats === "object" ? me.stats.zone : "";
+                this.renderer.setZone(typeof z === "string" ? z : "village");
+            } catch (_) {
+                this.renderer.setZone("village");
+            }
         }
         this.renderPlayerSheet(me || null);
         this.updateDialogueTargetHUD();
