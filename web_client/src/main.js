@@ -498,10 +498,10 @@ class App {
                 .then((g) => {
                     this.collisionGrid = g;
                     if (g) {
-                        // La grille collisions inclut souvent un padding (tuiles) autour de l'earth Watabou.
-                        // L'image Watabou exportée est généralement cadrée sur l'earth (sans padding) :
-                        // on retire donc `padding_tiles * tile_m` sur chaque bord pour caler le fond.
-                        const padM = (Number(g.paddingTiles) || 0) * (Number(g.tileM) || 2.0);
+                        // IMPORTANT: on n'applique plus de correction automatique de padding ici.
+                        // Selon la chaîne d'export, l'image peut déjà inclure le padding (et la soustraction
+                        // crée un décalage visuel → "murs invisibles").
+                        const padM = 0;
                         this.renderer.setVillageMapBounds({
                             min_x: g.originX + padM,
                             min_z: g.originZ + padM,
