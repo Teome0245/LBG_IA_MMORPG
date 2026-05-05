@@ -85,7 +85,12 @@ async def _run_integration(port: int) -> None:
             assert isinstance(tok, str) and len(tok) > 0
             # Portes v1: le seed doit générer au moins une location type=door.
             locs = welcome.get("locations", [])
-            assert any(isinstance(l, dict) and l.get("type") == "door" for l in locs)
+            doors = [l for l in locs if isinstance(l, dict) and l.get("type") == "door" and isinstance(l.get("id"), str)]
+            assert len(doors) > 0
+            door0 = doors[0]
+            door_id = door0["id"]
+            door_x = float(door0.get("x", 0.0) or 0.0)
+            door_z = float(door0.get("z", 0.0) or 0.0)
 
             await ws.send(
                 json.dumps(
@@ -109,6 +114,39 @@ async def _run_integration(port: int) -> None:
                 if msg2["type"] == "world_tick":
                     assert "npc_reply" not in msg2
                     break
+
+            # Utiliser une porte: se placer à proximité puis demander "door/use" et vérifier déplacement.
+            await ws.send(json.dumps({"type": "move", "x": door_x, "y": 0.0, "z": door_z}))
+            # Lire un tick pour intégrer le move (best-effort)
+            for _ in range(5):
+                rawm = await asyncio.wait_for(ws.recv(), timeout=3.0)
+                msgm = json.loads(rawm)
+                if msgm.get("type") == "world_tick":
+                    break
+
+            await ws.send(json.dumps({"type": "door", "action": "use", "door_id": door_id, "x": door_x, "y": 0.0, "z": door_z}))
+            moved = False
+            for _ in range(8):
+                rawd = await asyncio.wait_for(ws.recv(), timeout=3.0)
+                msgd = json.loads(rawd)
+                if msgd.get("type") != "world_tick":
+                    continue
+                ents = msgd.get("entities", [])
+                me = next((e for e in ents if isinstance(e, dict) and e.get("id") == pid), None)
+                if not me:
+                    continue
+                mx = float(me.get("x", 0.0) or 0.0)
+                mz = float(me.get("z", 0.0) or 0.0)
+                dx = mx - door_x
+                dz = mz - door_z
+                if (dx * dx + dz * dz) > 4.0:
+                    moved = True
+                we = msgd.get("world_event")
+                if isinstance(we, dict) and we.get("type") == "door":
+                    moved = True
+                if moved:
+                    break
+            assert moved, "door/use n'a pas déplacé le joueur ou n'a pas émis d'event"
 
         # Reconnexion : reprendre le même player_id via resume_token.
         async with connect(uri) as ws2:

@@ -194,6 +194,17 @@ class App {
         };
         window.addEventListener("keydown", this._onKeyPickup);
 
+        this._onKeyDoor = (e) => {
+            if (!e || e.code !== "KeyF" || e.repeat) return;
+            const gameEl = document.getElementById("game-container");
+            if (!gameEl || gameEl.classList.contains("hidden")) return;
+            const chatEl = document.getElementById("chat-msg");
+            if (document.activeElement === chatEl) return;
+            e.preventDefault();
+            this.tryUseDoor();
+        };
+        window.addEventListener("keydown", this._onKeyDoor);
+
         this._onKeyTrade = (e) => {
             if (!e || e.repeat) return;
             const gameEl = document.getElementById("game-container");
@@ -557,6 +568,12 @@ class App {
             this.handleJobEvent(event);
             return;
         }
+        if (event.type === "door") {
+            const status = typeof event.status === "string" ? event.status : "";
+            const loc = typeof event.for_location_id === "string" ? event.for_location_id : "";
+            this.addLog(`Porte : ${status || "ok"}${loc ? ` (${loc})` : ""}.`, "system");
+            return;
+        }
         if (event.type !== "dialogue_commit") {
             return;
         }
@@ -728,6 +745,34 @@ class App {
         const rid = this._pickNearestResourceId();
         const p = this.playerLocalPos;
         this.network.sendJob({ action: "gather", kind: "brindille", resourceId: rid, position: p });
+    }
+
+    _pickNearestDoorId(maxDistanceM = 10.0) {
+        const locs = Array.isArray(this.renderer.locations) ? this.renderer.locations : [];
+        const px = Number(this.playerLocalPos.x || 0);
+        const pz = Number(this.playerLocalPos.z || 0);
+        const max = Number(maxDistanceM);
+        const max2 = Number.isFinite(max) && max > 0 ? max * max : 100;
+        let best = null;
+        for (const loc of locs) {
+            if (!loc || loc.type !== "door") continue;
+            const dx = px - Number(loc.x || 0);
+            const dz = pz - Number(loc.z || 0);
+            const d2 = dx * dx + dz * dz;
+            if (d2 > max2) continue;
+            if (!best || d2 < best.d2) best = { id: loc.id, d2 };
+        }
+        return best ? best.id : "";
+    }
+
+    tryUseDoor() {
+        const did = this._pickNearestDoorId(10.0);
+        if (!did) {
+            this.addLog("Porte : aucune porte à proximité (≤ 10 m).", "system");
+            return;
+        }
+        this.network.sendDoorUse({ doorId: did, position: this.playerLocalPos });
+        this.addLog(`Porte : passage via ${did}.`, "system");
     }
 
     tryTrade(side) {

@@ -442,9 +442,98 @@ class GameState:
                     "w": 2.0,
                     "h": 2.0,
                     "for_location_id": lid,
+                    # Vecteur "extérieur → intérieur" (approx.) pour calculer le point opposé.
+                    # Sert à traverser le bâtiment sans se retrouver dans l'obstacle.
+                    "door_dx": float(dx),
+                    "door_dz": float(dz),
                 }
             )
             seen.add(door_id)
+
+    def use_door(self, *, player_id: str, door_id: str, player_x: float | None, player_z: float | None) -> tuple[bool, str]:
+        """Traverse une porte: téléporte le joueur de l'autre côté du bâtiment (sans entrer dans l'obstacle)."""
+        pid = (player_id or "").strip()
+        did = (door_id or "").strip()
+        if not pid or not did:
+            return False, "paramètres invalides"
+        ent = self.entities.get(pid)
+        if not ent or ent.kind != "player":
+            return False, "joueur introuvable"
+
+        door = None
+        for l in self.locations:
+            if isinstance(l, dict) and str(l.get("id") or "") == did and str(l.get("type") or "") == "door":
+                door = l
+                break
+        if not door:
+            return False, "porte inconnue"
+
+        try:
+            import mmmorpg_server.config as mm_cfg
+            max_d = float(getattr(mm_cfg, "ITEM_INTERACT_MAX_DISTANCE_M", 12.0))
+        except Exception:
+            max_d = 12.0
+
+        px = float(player_x) if player_x is not None else float(getattr(ent, "x", 0.0) or 0.0)
+        pz = float(player_z) if player_z is not None else float(getattr(ent, "z", 0.0) or 0.0)
+        dxp = px - float(door.get("x", 0.0) or 0.0)
+        dzp = pz - float(door.get("z", 0.0) or 0.0)
+        if dxp * dxp + dzp * dzp > max_d * max_d:
+            return False, "trop loin de la porte"
+
+        loc_id = str(door.get("for_location_id") or "").strip()
+        base = None
+        for l in self.locations:
+            if isinstance(l, dict) and str(l.get("id") or "") == loc_id:
+                base = l
+                break
+        if not base:
+            return False, "bâtiment introuvable"
+
+        cx = float(base.get("x", 0.0) or 0.0)
+        cz = float(base.get("z", 0.0) or 0.0)
+        odx = float(door.get("door_dx", 0.0) or 0.0)
+        odz = float(door.get("door_dz", 0.0) or 0.0)
+
+        # Point opposé (autre côté du volume).
+        tx = cx - odx
+        tz = cz - odz
+
+        # Snapping walkable si possible.
+        g = getattr(self, "_village_tile_grid", None)
+        if g is not None:
+            try:
+                snapped = g.nearest_walkable_tile_center_world_m(float(tx), float(tz))
+            except Exception:
+                snapped = None
+            if snapped is not None:
+                tx, tz = float(snapped[0]), float(snapped[1])
+
+        # Eviter l'intérieur d'une boîte d'obstacle.
+        for obs in self.obstacles:
+            if obs.is_inside(tx, tz, margin=0.5):
+                # Reculer davantage dans la même direction.
+                tx = cx - odx * 1.35
+                tz = cz - odz * 1.35
+                break
+
+        # Appliquer directement la position (autorité serveur).
+        from_x, from_z = float(ent.x), float(ent.z)
+        ent.x = float(tx)
+        ent.z = float(tz)
+        ent.vx = ent.vz = 0.0
+        self._queue_player_event(
+            pid,
+            {
+                "type": "door",
+                "status": "used",
+                "door_id": did,
+                "for_location_id": loc_id,
+                "from": {"x": from_x, "z": from_z},
+                "to": {"x": float(tx), "z": float(tz)},
+            },
+        )
+        return True, "ok"
 
     def _ensure_resources_v1(self) -> None:
         """Ajoute des locations 'resource' stables pour la récolte positionnelle."""

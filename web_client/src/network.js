@@ -228,6 +228,18 @@ export class NetworkManager {
         });
     }
 
+    sendDoorUse({ doorId, position }) {
+        const pos = position || {};
+        this.send({
+            type: "door",
+            action: "use",
+            door_id: typeof doorId === "string" ? doorId : "",
+            x: Number.isFinite(Number(pos.x)) ? Number(pos.x) : 0,
+            y: Number.isFinite(Number(pos.y)) ? Number(pos.y) : 0,
+            z: Number.isFinite(Number(pos.z)) ? Number(pos.z) : 0,
+        });
+    }
+
     disconnect() {
         this._manualClose = true;
         if (this._reconnectTimer) {

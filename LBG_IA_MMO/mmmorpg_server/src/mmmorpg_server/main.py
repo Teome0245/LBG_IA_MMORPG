@@ -744,6 +744,20 @@ async def client_handler(
                         await ws.send(json.dumps(msg_error(f"job refusé: {reason}")))
                 else:
                     await ws.send(json.dumps(msg_error("job.action invalide (gather|craft)")))
+            elif msg_type == "door" and player_id:
+                action = (data.get("action") or "").strip().lower()
+                door_id = data.get("door_id")
+                if action and action not in ("use", "open", "enter", "toggle"):
+                    await ws.send(json.dumps(msg_error("door.action invalide (use)")))
+                    continue
+                ok, reason = game.use_door(
+                    player_id=player_id,
+                    door_id=door_id if isinstance(door_id, str) else "",
+                    player_x=float(data.get("x", 0.0)) if "x" in data else None,
+                    player_z=float(data.get("z", 0.0)) if "z" in data else None,
+                )
+                if not ok:
+                    await ws.send(json.dumps(msg_error(f"door refusé: {reason}")))
             else:
                 await ws.send(json.dumps(msg_error(f"type inconnu: {msg_type!r}")))
     finally:
