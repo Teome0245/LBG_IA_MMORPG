@@ -207,6 +207,15 @@ class GameState:
                 "outputs": {"item:iron_ingot": 1},
             }
         }
+
+        # Ressources (nodes) v1
+        self._resources: list[dict[str, Any]] = [
+            {"id": "res:wood_1", "name": "Tas de bois", "x": 18.0, "z": -6.0, "radius_m": 8.0, "item_id": "item:brindille", "qty": 1, "cooldown_s": 3.0},
+            {"id": "res:wood_2", "name": "Tas de bois", "x": -8.0, "z": 6.0, "radius_m": 8.0, "item_id": "item:brindille", "qty": 1, "cooldown_s": 3.0},
+            {"id": "res:wood_3", "name": "Tas de bois", "x": 6.0, "z": -26.0, "radius_m": 8.0, "item_id": "item:brindille", "qty": 1, "cooldown_s": 3.0},
+        ]
+        # Cooldown par joueur et res_id
+        self._res_last_harvest_mono: dict[tuple[str, str], float] = {}
         
         # Obstacles du décor
         self.obstacles: list[StaticObstacle] = []
@@ -360,6 +369,55 @@ class GameState:
 
         # Même si on est passé par _seed_npcs, s'assurer que les mobs v1 existent.
         self._ensure_mobs_v1()
+        self._ensure_resources_v1()
+
+    def _ensure_resources_v1(self) -> None:
+        """Ajoute des locations 'resource' stables pour la récolte positionnelle."""
+        # Évite doublons si rechargé.
+        seen = {str(l.get("id")) for l in self.locations if isinstance(l, dict) and "id" in l}
+        for r in self._resources:
+            rid = str(r.get("id") or "").strip()
+            if not rid or rid in seen:
+                continue
+            self.locations.append(
+                {
+                    "id": rid,
+                    "name": str(r.get("name") or "Ressource"),
+                    "type": "resource",
+                    "x": float(r.get("x", 0.0)),
+                    "y": 0.0,
+                    "z": float(r.get("z", 0.0)),
+                    "w": float(r.get("radius_m", 6.0)) * 2.0,
+                    "h": float(r.get("radius_m", 6.0)) * 2.0,
+                    "resource_item_id": str(r.get("item_id") or "").strip(),
+                    "resource_qty": int(r.get("qty", 1) or 1),
+                    "cooldown_s": float(r.get("cooldown_s", 3.0) or 3.0),
+                }
+            )
+            seen.add(rid)
+
+    def game_data_snapshot(self) -> dict[str, Any]:
+        """Données gameplay statiques, envoyées au client au welcome."""
+        quests = []
+        for qid, q in self._quests.items():
+            quests.append(
+                {
+                    "id": qid,
+                    "title": q.get("title", qid),
+                    "kind": q.get("kind", ""),
+                    "giver_npc_id": q.get("giver_npc_id", ""),
+                    "target_kind": q.get("target_kind", ""),
+                    "count": q.get("count", 0),
+                    "item_id": q.get("item_id", ""),
+                    "qty": q.get("qty", 0),
+                    "recipe_id": q.get("recipe_id", ""),
+                    "reward": q.get("reward", {}),
+                }
+            )
+        recipes = []
+        for rid, r in self._recipes.items():
+            recipes.append({"id": rid, "title": r.get("title", rid), "inputs": r.get("inputs", {}), "outputs": r.get("outputs", {})})
+        return {"quests": quests, "recipes": recipes}
 
     def _ensure_mobs_v1(self) -> None:
         """Ajoute des mobs v1 si absents (ne dépend pas du seed)."""
@@ -1134,18 +1192,38 @@ class GameState:
         self._queue_player_event(pid, {"type": "quest_complete", "quest_id": qid, "title": qs.get("title"), "reward": reward})
         return True, "completed"
 
-    def job_gather(self, *, player_id: str, kind: str) -> tuple[bool, str]:
-        """Récolte v1 (stub) : donne une brindille."""
+    def job_gather(self, *, player_id: str, kind: str, resource_id: str | None = None, player_x: float | None = None, player_z: float | None = None) -> tuple[bool, str]:
+        """Récolte v1 : positionnelle si `resource_id` fourni."""
         pid = (player_id or "").strip()
         if kind != "brindille":
             return False, "gather kind inconnu"
+        # Positionnel : resource_id doit être proche.
+        rid = (resource_id or "").strip()
+        if rid:
+            res = next((r for r in self._resources if str(r.get("id") or "").strip() == rid), None)
+            if not res:
+                return False, "ressource inconnue"
+            if player_x is None or player_z is None:
+                return False, "position requise"
+            rx = float(res.get("x", 0.0))
+            rz = float(res.get("z", 0.0))
+            rad = float(res.get("radius_m", 8.0))
+            if self._distance2(float(player_x), float(player_z), rx, rz) > rad * rad:
+                return False, "trop loin de la ressource"
+            cd = float(res.get("cooldown_s", 3.0))
+            now = time.monotonic()
+            key = (pid, rid)
+            last = float(self._res_last_harvest_mono.get(key, 0.0))
+            if now - last < cd:
+                return False, "ressource en cooldown"
+            self._res_last_harvest_mono[key] = now
         inv = self._player_inventory_list(pid)
         if inv is None:
             return False, "inventaire introuvable"
         cur = _inv_get_qty(inv, "item:brindille")
         _inv_set_qty(inv, "item:brindille", cur + 1, label="Brindille")
         self._set_player_inventory_list(pid, inv)
-        self._queue_player_event(pid, {"type": "job", "kind": "gather", "item_id": "item:brindille", "qty": 1})
+        self._queue_player_event(pid, {"type": "job", "kind": "gather", "item_id": "item:brindille", "qty": 1, "resource_id": rid})
         return True, "gathered"
 
     def job_craft(self, *, player_id: str, recipe_id: str) -> tuple[bool, str]:

@@ -508,6 +508,16 @@ export class Renderer {
                 ctx.strokeStyle = `rgba(${color}, 0.3)`;
                 ctx.lineWidth = 1;
                 ctx.strokeRect(pos.x - w / 2, pos.y - h / 2, w, h);
+            } else if (loc.type === "resource") {
+                ctx.save();
+                ctx.strokeStyle = "rgba(0, 242, 255, 0.55)";
+                ctx.fillStyle = "rgba(0, 242, 255, 0.08)";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.ellipse(pos.x, pos.y, Math.max(6, w / 2), Math.max(6, h / 2), 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
             }
             if (this.zoom > 0.01) {
                 ctx.fillStyle = "rgba(255, 255, 255, 0.8)";

@@ -563,6 +563,7 @@ async def client_handler(
                         msg_welcome(
                             player_id=ent.id,
                             session_token=sess,
+                            game_data=game.game_data_snapshot(),
                             planet_id=game.planet.id,
                             world_time_s=game.time.world_time_s,
                             day_fraction=game.time.day_fraction,
@@ -726,7 +727,14 @@ async def client_handler(
                 action = (data.get("action") or "").strip().lower()
                 if action in ("gather",):
                     kind = (data.get("kind") or "").strip().lower()
-                    ok, reason = game.job_gather(player_id=player_id, kind=kind)
+                    resource_id = data.get("resource_id")
+                    ok, reason = game.job_gather(
+                        player_id=player_id,
+                        kind=kind,
+                        resource_id=resource_id if isinstance(resource_id, str) else None,
+                        player_x=float(data.get("x", 0.0)),
+                        player_z=float(data.get("z", 0.0)),
+                    )
                     if not ok:
                         await ws.send(json.dumps(msg_error(f"job refusé: {reason}")))
                 elif action in ("craft",):

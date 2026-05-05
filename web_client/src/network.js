@@ -214,12 +214,17 @@ export class NetworkManager {
         });
     }
 
-    sendJob({ action, kind, recipeId }) {
+    sendJob({ action, kind, recipeId, resourceId, position }) {
+        const pos = position || {};
         this.send({
             type: "job",
             action: typeof action === "string" ? action : "",
             kind: typeof kind === "string" ? kind : "",
             recipe_id: typeof recipeId === "string" ? recipeId : "",
+            resource_id: typeof resourceId === "string" ? resourceId : "",
+            x: Number.isFinite(Number(pos.x)) ? Number(pos.x) : 0,
+            y: Number.isFinite(Number(pos.y)) ? Number(pos.y) : 0,
+            z: Number.isFinite(Number(pos.z)) ? Number(pos.z) : 0,
         });
     }
 

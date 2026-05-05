@@ -59,6 +59,8 @@ class App {
         this.raceDisplayById = Object.create(null);
         /** @type {import('./villageCollisionGrid.js').VillageCollisionGrid | null} */
         this.collisionGrid = null;
+        this.gameData = { quests: [], recipes: [] };
+        this.selectedQuestId = "";
         // Valeurs calibrées pour Pixie Seat : on corrige le PNG Watabou (fond “joli”) pour qu'il colle à la grille collisions.
         this._villageMapPrettyFlipZ = true;
         this._villageMapPrettyScale = 1 / 1.4;
@@ -160,7 +162,7 @@ class App {
         }
         if (questAcceptBtn) questAcceptBtn.addEventListener("click", () => this.tryQuestAccept());
         if (questTurninBtn) questTurninBtn.addEventListener("click", () => this.tryQuestTurnin());
-        if (jobGatherBtn) jobGatherBtn.addEventListener("click", () => this.network.sendJob({ action: "gather", kind: "brindille" }));
+        if (jobGatherBtn) jobGatherBtn.addEventListener("click", () => this.tryGather());
         if (jobCraftBtn) jobCraftBtn.addEventListener("click", () => this.network.sendJob({ action: "craft", recipeId: "recipe:iron_ingot" }));
 
         if (tradeBuyBtn) {
@@ -222,7 +224,7 @@ class App {
                 this.tryQuestTurnin();
             } else if (e.code === "KeyG") {
                 e.preventDefault();
-                this.network.sendJob({ action: "gather", kind: "brindille" });
+                this.tryGather();
             } else if (e.code === "KeyC") {
                 e.preventDefault();
                 this.network.sendJob({ action: "craft", recipeId: "recipe:iron_ingot" });
@@ -502,6 +504,11 @@ class App {
     }
 
     handleMessage(msg) {
+        if (msg.type === "welcome" && msg.game_data) {
+            if (msg.game_data && typeof msg.game_data === "object") {
+                this.gameData = msg.game_data;
+            }
+        }
         if (msg.type === "world_tick") {
             this.renderer.updateState(msg.entities, msg.world_time_s, msg.day_fraction);
             this.syncPlayerQuestFromServer(msg.entities || [], this.network.playerId);
@@ -664,6 +671,34 @@ class App {
         const npcId = target && target.id ? target.id : "";
         const p = this.playerLocalPos;
         this.network.sendQuest({ action: "turnin", questId: "", npcId, position: p });
+    }
+
+    _availableQuestsForNpc(npcId) {
+        const id = String(npcId || "").trim();
+        const qs = Array.isArray(this.gameData.quests) ? this.gameData.quests : [];
+        return qs.filter((q) => q && q.giver_npc_id === id);
+    }
+
+    _pickNearestResourceId() {
+        const locs = Array.isArray(this.renderer.locations) ? this.renderer.locations : [];
+        const px = Number(this.playerLocalPos.x || 0);
+        const pz = Number(this.playerLocalPos.z || 0);
+        let best = null;
+        for (const loc of locs) {
+            if (!loc || loc.type !== "resource") continue;
+            const dx = px - Number(loc.x || 0);
+            const dz = pz - Number(loc.z || 0);
+            const d2 = dx * dx + dz * dz;
+            if (!best || d2 < best.d2) best = { id: loc.id, d2 };
+        }
+        return best ? best.id : "";
+    }
+
+    // Override gather button to be positionnel
+    tryGather() {
+        const rid = this._pickNearestResourceId();
+        const p = this.playerLocalPos;
+        this.network.sendJob({ action: "gather", kind: "brindille", resourceId: rid, position: p });
     }
 
     tryTrade(side) {

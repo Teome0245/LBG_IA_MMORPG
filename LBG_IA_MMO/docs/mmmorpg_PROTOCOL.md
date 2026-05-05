@@ -193,10 +193,10 @@ Le serveur met à jour `entities[].stats.quest_state` et envoie des `world_event
 
 ### `job` (métiers v1 — gather/craft)
 
-Récolte (stub) :
+Récolte (positionnelle v1) :
 
 ```json
-{ "type": "job", "action": "gather", "kind": "brindille" }
+{ "type": "job", "action": "gather", "kind": "brindille", "resource_id": "res:wood_1", "x": 0, "y": 0, "z": 0 }
 ```
 
 Craft (stub) :
@@ -227,6 +227,7 @@ Pilot / backend : lors d’un `POST /v1/pilot/route`, le backend transmet `playe
 {
   "type": "welcome",
   "player_id": "uuid",
+  "game_data": { "quests": [], "recipes": [] },
   "session_token": "token",
   "planet_id": "terre1",
   "world_time_s": 123.45,

@@ -16,6 +16,7 @@ def msg_welcome(
     *,
     player_id: str,
     session_token: str | None = None,
+    game_data: dict[str, Any] | None = None,
     planet_id: str,
     world_time_s: float,
     day_fraction: float,
@@ -34,6 +35,8 @@ def msg_welcome(
         "entities": entities,
         "locations": locations or [],
     }
+    if isinstance(game_data, dict) and game_data:
+        msg["game_data"] = game_data
     if isinstance(session_token, str) and session_token.strip():
         msg["session_token"] = session_token.strip()
     if isinstance(npc_reply, str) and npc_reply.strip():
