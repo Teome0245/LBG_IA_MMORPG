@@ -62,6 +62,14 @@ class Entity:
         )
 
     def to_snapshot(self) -> dict:
+        raw_stats = self.stats or {}
+        stats_out: dict = {}
+        if isinstance(raw_stats, dict):
+            stats_out = {
+                k: v
+                for k, v in raw_stats.items()
+                if not (isinstance(k, str) and k.startswith("_sm_"))
+            }
         snap = {
             "id": self.id,
             "kind": self.kind,
@@ -75,7 +83,7 @@ class Entity:
             "vz": self.vz,
             "ry": self.ry,
             "scale": self.scale,
-            "stats": self.stats or {},
+            "stats": stats_out,
         }
         if isinstance(self.race_id, str) and self.race_id.strip():
             snap["race_id"] = self.race_id.strip()

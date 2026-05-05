@@ -124,7 +124,7 @@ def test_tick_blocks_move_outside_tile_grid(minimal_village_grid_env: None) -> N
 
 
 def test_npc_tick_blocked_by_tile_grid_like_player(minimal_village_grid_env: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(GameState, "_npc_step", lambda self, npc, dt: None)
+    monkeypatch.setattr(GameState, "_npc_step", lambda self, npc, dt, **kwargs: None)
     gs = GameState()
     g = gs._village_tile_grid
     assert g is not None

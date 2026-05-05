@@ -34,6 +34,26 @@ class TestNpcConversationPause(unittest.TestCase):
         game.tick(NPC_CONVERSATION_RESUME_DELAY_S)
         self.assertLessEqual(npc.busy_timer, 0.0)
 
+    def test_guard_wait_timer_keeps_advancing_while_busy(self) -> None:
+        """Pendant freeze_npc (dialogue), wait_timer doit quand même décroître (sinon état stats figé)."""
+        game = GameState()
+        player = game.add_player("GardeDial")
+        npc = game.get_npc("npc:guard")
+        self.assertIsNotNone(npc)
+        assert npc is not None
+
+        npc.stats = npc.stats or {}
+        npc.stats["patrol_idx"] = 0
+        npc.stats["wait_timer"] = 10.0
+        npc.stats["path_type"] = "standard"
+
+        game.freeze_npc_and_face("npc:guard", player.id)
+        self.assertGreater(npc.busy_timer, 0.0)
+
+        game.tick(2.5)
+        self.assertAlmostEqual(float(npc.stats.get("wait_timer", 999.0)), 7.5, places=5)
+        self.assertEqual((npc.vx, npc.vz), (0.0, 0.0))
+
 
 if __name__ == "__main__":
     unittest.main()

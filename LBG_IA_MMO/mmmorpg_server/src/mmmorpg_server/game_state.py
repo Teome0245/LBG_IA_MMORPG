@@ -70,6 +70,9 @@ class StaticObstacle:
 MAX_SPEED_UNITS_PER_S = 15.0
 BOUNDS_HALF = 60000.0 # Augmenté pour le continent (102km)
 NPC_CONVERSATION_RESUME_DELAY_S = 120.0
+# Lissage vitesse / cap PNJ (zigzag A* + amorti global sur joueurs seulement)
+NPC_STEER_VEL_TAU_S = 0.14
+NPC_STEER_YAW_MAX_RAD_S = 7.0
 
 
 def _default_player_inventory() -> list[dict[str, Any]]:
@@ -948,9 +951,9 @@ class GameState:
         # En Godot/Maths standards, atan2(dx, dz) donne l'angle sur le plan horizontal
         npc.ry = math.atan2(dx, dz)
         npc.busy_timer = duration
-        
-        # Stopper net la vitesse pour éviter que l'inertie ne continue
-        npc.vx = npc.vy = npc.vz = 0.0
+
+        npc.vy = 0.0
+        self._npc_clear_horizontal_steering(npc)
 
     def export_commit_state(self) -> tuple[set[str], dict[str, dict[str, Any]], dict[str, int], dict[str, dict[str, float]]]:
         return (
@@ -1381,11 +1384,18 @@ class GameState:
             if bt > 0:
                 ent.busy_timer = bt - float(dt)
                 if ent.kind == "npc":
+                    ent.vy = 0.0
+                    self._npc_clear_horizontal_steering(ent)
+                else:
                     ent.vx = ent.vy = ent.vz = 0.0
             
-            if ent.kind == "npc" and float(getattr(ent, "busy_timer", 0.0) or 0.0) <= 0.0:
+            npc_busy = ent.kind == "npc" and float(getattr(ent, "busy_timer", 0.0) or 0.0) > 0.0
+            if ent.kind == "npc" and not npc_busy:
                 self._npc_step(ent, dt)
-            
+            elif ent.kind == "npc" and npc_busy and ("Garde" in ent.name or getattr(ent, "role", "") == "guard"):
+                # Pause dialogue : pas de déplacement, mais wait_timer (patrouille) continue à décroître.
+                self._npc_step(ent, dt, timers_only=True)
+
             # Gestion des escaliers (Rampes)
             for ramp in self.vertical_ramps:
                 if (ramp["x"] - ramp["w"]/2 <= ent.x <= ramp["x"] + ramp["w"]/2 and
@@ -1419,8 +1429,11 @@ class GameState:
                 ent.z = nz
             else:
                 # En cas de blocage, on annule la vitesse pour ne pas forcer
-                ent.vx = 0.0
-                ent.vz = 0.0
+                if ent.kind == "npc":
+                    self._npc_clear_horizontal_steering(ent)
+                else:
+                    ent.vx = 0.0
+                    ent.vz = 0.0
 
             ent.y += ent.vy * dt
             # World Wrap Horizontal (X) - 102.4km
@@ -1433,9 +1446,11 @@ class GameState:
             ent.z = max(-25600, min(25600, ent.z))
             # Clamp Altitude (Y)
             ent.y = max(-50.0, min(50.0, ent.y))
-            ent.vx *= 0.6
             ent.vy *= 0.6
-            ent.vz *= 0.6
+            # Amorti horizontal réservé aux joueurs ; les PNJ portent leur propre lissage (steering).
+            if ent.kind != "npc":
+                ent.vx *= 0.6
+                ent.vz *= 0.6
 
         # Combat v1 : résolution après mouvement (portée recalculée sur positions tick).
         try:
@@ -1566,49 +1581,138 @@ class GameState:
                 cmb["target_id"] = ""
             cmb["cd"] = float(tick_s)
 
-    def _npc_step(self, npc: Entity, dt: float) -> None:
+    def _npc_clear_horizontal_steering(self, npc: Entity) -> None:
+        """Remet vx/vz et supprime l'état de lissage (collision, attente patrouille, dialogue)."""
+        if npc.stats is not None:
+            npc.stats.pop("_sm_vx", None)
+            npc.stats.pop("_sm_vz", None)
+        npc.vx = 0.0
+        npc.vz = 0.0
+
+    def _npc_apply_smoothed_steering(
+        self,
+        npc: Entity,
+        *,
+        dx: float,
+        dz: float,
+        speed: float,
+        dt: float,
+    ) -> None:
+        """Fait converger vx/vz vers la direction cible (lissage : pas A* orthogonal chaque tick)."""
+        dist = math.hypot(float(dx), float(dz))
+        if dist < 1e-6:
+            self._npc_clear_horizontal_steering(npc)
+            return
+        if npc.stats is None:
+            npc.stats = {}
+        st = npc.stats
+        ux = float(dx) / dist
+        uz = float(dz) / dist
+        tvx = ux * speed
+        tvz = uz * speed
+        tau = max(1e-4, float(NPC_STEER_VEL_TAU_S))
+        blend = min(1.0, float(dt) / (tau + float(dt)))
+        svx = float(st.get("_sm_vx", tvx))
+        svz = float(st.get("_sm_vz", tvz))
+        svx += (tvx - svx) * blend
+        svz += (tvz - svz) * blend
+        st["_sm_vx"], st["_sm_vz"] = svx, svz
+        npc.vx = svx
+        npc.vz = svz
+
+        yaw_rate = float(NPC_STEER_YAW_MAX_RAD_S)
+        spd = math.hypot(svx, svz)
+        if spd < 0.07:
+            return
+        target_ry = math.atan2(svx, svz)
+        cur = float(npc.ry)
+        delta = target_ry - cur
+        while delta > math.pi:
+            delta -= 2.0 * math.pi
+        while delta < -math.pi:
+            delta += 2.0 * math.pi
+        step = yaw_rate * float(dt)
+        if abs(delta) <= step:
+            npc.ry = target_ry
+        else:
+            npc.ry = cur + math.copysign(step, delta)
+
+    def _npc_step(self, npc: Entity, dt: float, *, timers_only: bool = False) -> None:
         # Comportements spécialisés par rôle ou nom
         if "Garde" in npc.name or npc.role == "guard":
-            self._guard_behavior(npc, dt)
-        else:
-            # PNJ basiques : micro-routines (v1) — errance bornée mais *avec* grille (évite les murs).
-            if npc.stats is None:
-                npc.stats = {}
-            if "wander_t" not in npc.stats:
-                npc.stats["wander_t"] = 0.0
-                npc.stats["wander_tx"] = float(npc.x)
-                npc.stats["wander_tz"] = float(npc.z)
-            npc.stats["wander_t"] = float(npc.stats.get("wander_t", 0.0) or 0.0) - float(dt)
-            if npc.stats["wander_t"] <= 0.0:
-                npc.stats["wander_t"] = 4.0 + (sum(ord(c) for c in npc.id) % 6) * 0.5
-                # Nouvelle cible : proche, puis snap walkable.
-                seed = sum(ord(c) for c in npc.id) % 1000
-                ang = (self.time.world_time_s * 0.4 + seed) % (2 * math.pi)
-                r = 8.0 + (seed % 5)
-                tx = float(npc.x) + math.cos(ang) * r
-                tz = float(npc.z) + math.sin(ang) * r
-                if self._village_tile_grid is not None:
-                    sn = self._village_tile_grid.nearest_walkable_tile_center_world_m(tx, tz)
-                    if sn is not None:
-                        tx, tz = float(sn[0]), float(sn[1])
-                npc.stats["wander_tx"] = tx
-                npc.stats["wander_tz"] = tz
-
-            tx = float(npc.stats.get("wander_tx", npc.x) or npc.x)
-            tz = float(npc.stats.get("wander_tz", npc.z) or npc.z)
+            self._guard_behavior(npc, dt, timers_only=timers_only)
+            return
+        if timers_only:
+            return
+        # PNJ basiques : micro-routines (v1) — errance bornée mais *avec* grille (évite les murs).
+        if npc.stats is None:
+            npc.stats = {}
+        if "wander_t" not in npc.stats:
+            npc.stats["wander_t"] = 0.0
+            npc.stats["wander_tx"] = float(npc.x)
+            npc.stats["wander_tz"] = float(npc.z)
+        npc.stats["wander_t"] = float(npc.stats.get("wander_t", 0.0) or 0.0) - float(dt)
+        if npc.stats["wander_t"] <= 0.0:
+            npc.stats["wander_t"] = 4.0 + (sum(ord(c) for c in npc.id) % 6) * 0.5
+            # Nouvelle cible : proche, puis snap walkable.
+            seed = sum(ord(c) for c in npc.id) % 1000
+            ang = (self.time.world_time_s * 0.4 + seed) % (2 * math.pi)
+            r = 8.0 + (seed % 5)
+            tx = float(npc.x) + math.cos(ang) * r
+            tz = float(npc.z) + math.sin(ang) * r
             if self._village_tile_grid is not None:
-                step = self._village_tile_grid.next_step_towards_world_m(from_x=npc.x, from_z=npc.z, to_x=tx, to_z=tz)
-                if step is not None:
-                    tx, tz = float(step[0]), float(step[1])
-            dx = tx - float(npc.x)
-            dz = tz - float(npc.z)
-            dist = math.sqrt(dx * dx + dz * dz)
-            if dist < 0.5:
-                npc.vx = npc.vz = 0.0
-                return
-            sp = 1.6
-            npc.vx = dx / dist * sp
-            npc.vz = dz / dist * sp
+                sn = self._village_tile_grid.nearest_walkable_tile_center_world_m(tx, tz)
+                if sn is not None:
+                    tx, tz = float(sn[0]), float(sn[1])
+            npc.stats["wander_tx"] = tx
+            npc.stats["wander_tz"] = tz
+
+        tx = float(npc.stats.get("wander_tx", npc.x) or npc.x)
+        tz = float(npc.stats.get("wander_tz", npc.z) or npc.z)
+        if self._village_tile_grid is not None:
+            step = self._village_tile_grid.next_step_towards_world_m(from_x=npc.x, from_z=npc.z, to_x=tx, to_z=tz)
+            if step is not None:
+                tx, tz = float(step[0]), float(step[1])
+        dx = tx - float(npc.x)
+        dz = tz - float(npc.z)
+        dist = math.sqrt(dx * dx + dz * dz)
+        if dist < 0.5:
+            self._npc_clear_horizontal_steering(npc)
+            return
+        sp = 1.6
+        self._npc_apply_smoothed_steering(npc, dx=dx, dz=dz, speed=sp, dt=float(dt))
+
+    def _npc_guard_patrol_point_ids(self, npc: Entity) -> list[str]:
+        """Identifiants de lieux servant d’étapes de ronde ; priorité au seed courant (`world_initial`)."""
+        have = {
+            str(l.get("id", "")).strip()
+            for l in self.locations
+            if isinstance(l, dict) and str(l.get("id", "") or "").strip()
+        }
+        if npc.id == "npc:guard_1":
+            for pair in (
+                ["hotel_de_ville", "marche"],
+                ["hotel_de_ville", "forge"],
+                ["hotel_de_ville", "auberge_salle_commune"],
+            ):
+                if all(pid in have for pid in pair):
+                    return pair
+
+        pixie_like = ["hotel_de_ville", "marche", "forge", "auberge_salle_commune"]
+        found = [pid for pid in pixie_like if pid in have]
+        if len(found) >= 2:
+            return found
+
+        return [
+            "porte_nord",
+            "place_d_armes",
+            "muraille_est",
+            "place_d_armes",
+            "muraille_ouest",
+            "place_d_armes",
+            "porte_sud",
+            "place_d_armes",
+        ]
 
     def _get_location_coords(self, loc_id: str) -> tuple[float, float]:
         """Retourne les coordonnées (x, z) d'un lieu par son ID."""
@@ -1628,13 +1732,8 @@ class GameState:
         }
         return defaults.get(loc_id, (0.0, 0.0))
 
-    def _guard_behavior(self, npc: Entity, dt: float) -> None:
-        # Configuration des patrouilles (dynamique via IDs de lieux)
-        patrol_points = ["porte_nord", "place_d_armes", "muraille_est", "place_d_armes", "muraille_ouest", "place_d_armes", "porte_sud", "place_d_armes"]
-        
-        # Cas spécial pour le Capitaine (npc:guard_1) : il reste souvent près de l'Hôtel de Ville
-        if npc.id == "npc:guard_1":
-            patrol_points = ["hotel_de_ville", "place_d_armes"]
+    def _guard_behavior(self, npc: Entity, dt: float, *, timers_only: bool = False) -> None:
+        patrol_points = self._npc_guard_patrol_point_ids(npc)
 
         if "patrol_idx" not in npc.stats:
             # Attribution d'un point de départ aléatoire dans la ronde pour éviter les "trains" de gardes
@@ -1644,46 +1743,54 @@ class GameState:
 
         if npc.stats["wait_timer"] > 0:
             npc.stats["wait_timer"] -= dt
-            npc.vx = npc.vz = 0
+            self._npc_clear_horizontal_steering(npc)
             return
 
-        # Cible actuelle
-        loc_id = patrol_points[npc.stats["patrol_idx"]]
-        tx, tz = self._get_location_coords(loc_id)
-        if self._village_tile_grid is not None and not self._village_tile_grid.is_walkable_world_m(tx, tz):
-            sn = self._village_tile_grid.nearest_preferred_or_walkable_tile_center_world_m(tx, tz)
-            if sn is not None:
-                tx, tz = float(sn[0]), float(sn[1])
-        
-        # Pathfinding grille : au lieu d'aller en ligne droite (qui tape les maisons),
-        # prendre le prochain pas A* sur tuiles walkables.
-        if self._village_tile_grid is not None:
-            step = self._village_tile_grid.next_step_towards_world_m(from_x=npc.x, from_z=npc.z, to_x=tx, to_z=tz)
-            if step is not None:
-                tx, tz = float(step[0]), float(step[1])
+        if timers_only:
+            self._npc_clear_horizontal_steering(npc)
+            return
 
-        dx, dz = tx - npc.x, tz - npc.z
-        dist = math.sqrt(dx*dx + dz*dz)
-        
-        if dist < 3.0:
-            # Arrivé au point.
-            # Temps d'attente au point
+        # Étapes : `goal_*` = centre du lieu de patrouille (SNAPPÉ sur tuile marchable si besoin) ;
+        # `step_*` = prochain pas grille (≤ une tuile) — NE PAS tester l'arrivée sur `step_*` ( faux positif ).
+        loc_id = patrol_points[npc.stats["patrol_idx"]]
+        goal_x, goal_z = self._get_location_coords(loc_id)
+        if self._village_tile_grid is not None and not self._village_tile_grid.is_walkable_world_m(goal_x, goal_z):
+            sn = self._village_tile_grid.nearest_preferred_or_walkable_tile_center_world_m(goal_x, goal_z)
+            if sn is not None:
+                goal_x, goal_z = float(sn[0]), float(sn[1])
+
+        step_x, step_z = goal_x, goal_z
+        if self._village_tile_grid is not None:
+            ast = self._village_tile_grid.next_step_towards_world_m(
+                from_x=npc.x, from_z=npc.z, to_x=goal_x, to_z=goal_z
+            )
+            if ast is not None:
+                step_x, step_z = float(ast[0]), float(ast[1])
+
+        dist_goal = math.hypot(goal_x - npc.x, goal_z - npc.z)
+
+        if dist_goal < 3.0:
             wait = 5.0
             if "porte" in loc_id:
-                wait = 20.0 # Temps de garde à la porte
+                wait = 20.0
+            elif "auberge" in loc_id:
+                wait = 14.0
             elif "hotel" in loc_id:
-                wait = 60.0 # Le Capitaine reste longtemps à l'Hôtel de Ville
-            
+                wait = 60.0
+
             npc.stats["wait_timer"] = wait
             npc.stats["patrol_idx"] = (npc.stats["patrol_idx"] + 1) % len(patrol_points)
-        else:
-            # On avance vers la cible
-            # Vitesse de marche (un peu plus lent pour les gardes pour paraître discipliné)
-            speed = 3.5 
-            npc.vx = (dx / dist) * speed
-            npc.vz = (dz / dist) * speed
-            # Rotation vers la cible
-            npc.ry = math.atan2(dx, dz)
+            self._npc_clear_horizontal_steering(npc)
+            return
+
+        dx, dz = step_x - npc.x, step_z - npc.z
+        dist_step = math.sqrt(dx * dx + dz * dz)
+        if dist_step < 1e-5:
+            self._npc_clear_horizontal_steering(npc)
+            return
+
+        speed = 3.5
+        self._npc_apply_smoothed_steering(npc, dx=dx, dz=dz, speed=speed, dt=float(dt))
 
     def entity_snapshots(self) -> list[dict]:
         out: list[dict] = []
