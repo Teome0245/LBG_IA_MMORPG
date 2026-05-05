@@ -697,6 +697,45 @@ async def client_handler(
                 )
                 if not ok:
                     await ws.send(json.dumps(msg_error(f"trade refusé: {reason}")))
+            elif msg_type == "quest" and player_id:
+                action = (data.get("action") or "").strip().lower()
+                quest_id = data.get("quest_id")
+                npc_id = data.get("npc_id")
+                if action in ("accept", "start"):
+                    ok, reason = game.quest_accept(
+                        player_id=player_id,
+                        quest_id=quest_id if isinstance(quest_id, str) else "",
+                        npc_id=npc_id if isinstance(npc_id, str) else None,
+                        player_x=float(data.get("x", 0.0)),
+                        player_z=float(data.get("z", 0.0)),
+                    )
+                    if not ok:
+                        await ws.send(json.dumps(msg_error(f"quest refusé: {reason}")))
+                elif action in ("turnin", "complete"):
+                    ok, reason = game.quest_turnin(
+                        player_id=player_id,
+                        npc_id=npc_id if isinstance(npc_id, str) else None,
+                        player_x=float(data.get("x", 0.0)),
+                        player_z=float(data.get("z", 0.0)),
+                    )
+                    if not ok:
+                        await ws.send(json.dumps(msg_error(f"quest refusé: {reason}")))
+                else:
+                    await ws.send(json.dumps(msg_error("quest.action invalide (accept|turnin)")))
+            elif msg_type == "job" and player_id:
+                action = (data.get("action") or "").strip().lower()
+                if action in ("gather",):
+                    kind = (data.get("kind") or "").strip().lower()
+                    ok, reason = game.job_gather(player_id=player_id, kind=kind)
+                    if not ok:
+                        await ws.send(json.dumps(msg_error(f"job refusé: {reason}")))
+                elif action in ("craft",):
+                    rid = data.get("recipe_id")
+                    ok, reason = game.job_craft(player_id=player_id, recipe_id=rid if isinstance(rid, str) else "")
+                    if not ok:
+                        await ws.send(json.dumps(msg_error(f"job refusé: {reason}")))
+                else:
+                    await ws.send(json.dumps(msg_error("job.action invalide (gather|craft)")))
             else:
                 await ws.send(json.dumps(msg_error(f"type inconnu: {msg_type!r}")))
     finally:

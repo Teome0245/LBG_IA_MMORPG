@@ -170,6 +170,43 @@ class GameState:
                 "sell": {},
             },
         }
+
+        # --- Quêtes v1 (gameplay) ---
+        # Quest state reste côté player.stats.quest_state (session WS).
+        self._quests: dict[str, dict[str, Any]] = {
+            "quest:boars": {
+                "title": "Réguler les sangliers",
+                "kind": "kill",
+                "target_kind": "mob",
+                "count": 2,
+                "giver_npc_id": "npc:guard",
+                "reward": {"coins": 10},
+            },
+            "quest:brindilles": {
+                "title": "Apporter des brindilles",
+                "kind": "deliver",
+                "item_id": "item:brindille",
+                "qty": 3,
+                "giver_npc_id": "npc:merchant",
+                "reward": {"coins": 8, "item_id": "item:iron_ingot", "item_qty": 1},
+            },
+            "quest:forge_ingot": {
+                "title": "Forger un lingot",
+                "kind": "craft",
+                "recipe_id": "recipe:iron_ingot",
+                "giver_npc_id": "npc:smith",
+                "reward": {"coins": 6},
+            },
+        }
+
+        # --- Métiers v1 (gather/craft) ---
+        self._recipes: dict[str, dict[str, Any]] = {
+            "recipe:iron_ingot": {
+                "title": "Lingot de fer",
+                "inputs": {"item:brindille": 2},
+                "outputs": {"item:iron_ingot": 1},
+            }
+        }
         
         # Obstacles du décor
         self.obstacles: list[StaticObstacle] = []
@@ -313,11 +350,32 @@ class GameState:
                     if isinstance(r0, str) and r0.strip():
                         npc.race_id = r0.strip()
                     self.entities[npc.id] = npc
+                # Mobs v1 (combat/quête) : garantir des cibles même si le seed n'en contient pas.
+                self._ensure_mobs_v1()
             except Exception as e:
                 print(f"Erreur chargement seed: {e}")
                 self._seed_npcs()
         else:
             self._seed_npcs()
+
+        # Même si on est passé par _seed_npcs, s'assurer que les mobs v1 existent.
+        self._ensure_mobs_v1()
+
+    def _ensure_mobs_v1(self) -> None:
+        """Ajoute des mobs v1 si absents (ne dépend pas du seed)."""
+        for npc_id, name, xz in (
+            ("npc:boar_1", "Sanglier", (6.0, -14.0)),
+            ("npc:boar_2", "Sanglier", (10.0, -18.0)),
+        ):
+            if npc_id in self.entities:
+                continue
+            px, pz = float(xz[0]), float(xz[1])
+            if self._village_tile_grid is not None:
+                sn = self._village_tile_grid.nearest_walkable_tile_center_world_m(px, pz)
+                if sn is not None:
+                    px, pz = float(sn[0]), float(sn[1])
+            mob = Entity.new_npc(name, px, pz, npc_id=npc_id, scale=1.1, role="mob")
+            self.entities[mob.id] = mob
 
     def get_npc_commit_flags(self, npc_id: str) -> dict[str, Any]:
         npc_id = (npc_id or "").strip()
@@ -490,6 +548,8 @@ class GameState:
         for npc_id, name, xz, scale, race_id in (
             ("npc:merchant", "Marchand civile", (12.0, -5.0), 1.0, "race:halfblood_khar"),
             ("npc:guard", "Garde poste", (-20.0, 8.0), 1.0, "race:sylven"),
+            ("npc:boar_1", "Sanglier", (6.0, -14.0), 1.1, "race:boar"),
+            ("npc:boar_2", "Sanglier", (10.0, -18.0), 1.1, "race:boar"),
             ("npc:mayor", "Maire", (4.0, 14.0), 1.1, "race:human"),
             ("npc:healer", "Guérisseuse", (-6.0, 10.0), 0.9, "race:fae_lume"),
             ("npc:alchemist", "Alchimiste", (18.0, 9.0), 1.0, "race:tinkling"),
@@ -502,7 +562,10 @@ class GameState:
                 sn = self._village_tile_grid.nearest_walkable_tile_center_world_m(px, pz)
                 if sn is not None:
                     px, pz = float(sn[0]), float(sn[1])
-            npc = Entity.new_npc(name, px, pz, npc_id=npc_id, scale=scale)
+            role = "mob" if npc_id.startswith("npc:boar_") else "civil"
+            if npc_id == "npc:guard":
+                role = "guard"
+            npc = Entity.new_npc(name, px, pz, npc_id=npc_id, scale=scale, role=role)
             if race_id:
                 npc.race_id = race_id
             self.entities[npc.id] = npc
@@ -950,6 +1013,179 @@ class GameState:
         if len(q) > 20:
             del q[:-20]
 
+    def _player_quest_state(self, player_id: str) -> dict[str, Any]:
+        pid = (player_id or "").strip()
+        ent = self.entities.get(pid) if pid else None
+        if not ent or ent.kind != "player":
+            return {}
+        if ent.stats is None:
+            ent.stats = {}
+        qs = ent.stats.get("quest_state")
+        return dict(qs) if isinstance(qs, dict) else {}
+
+    def _set_player_quest_state(self, player_id: str, qs: dict[str, Any]) -> None:
+        pid = (player_id or "").strip()
+        ent = self.entities.get(pid) if pid else None
+        if not ent or ent.kind != "player":
+            return
+        if ent.stats is None:
+            ent.stats = {}
+        ent.stats["quest_state"] = qs
+
+    def quest_accept(self, *, player_id: str, quest_id: str, npc_id: str | None, player_x: float | None, player_z: float | None) -> tuple[bool, str]:
+        pid = (player_id or "").strip()
+        qid = (quest_id or "").strip()
+        if qid not in self._quests:
+            return False, "quête inconnue"
+        qdef = self._quests[qid]
+        giver = str(qdef.get("giver_npc_id") or "").strip()
+        if giver and npc_id:
+            nid = (npc_id or "").strip()
+            if nid and nid != giver:
+                return False, "mauvais PNJ"
+        # distance si on connaît la position
+        if giver and player_x is not None and player_z is not None:
+            npc = self.get_npc(giver)
+            if npc is not None:
+                try:
+                    import mmmorpg_server.config as mm_cfg
+                    max_d = float(getattr(mm_cfg, "TRADE_MAX_DISTANCE_M", 12.0))
+                except Exception:
+                    max_d = 12.0
+                if self._distance2(float(player_x), float(player_z), float(npc.x), float(npc.z)) > max_d * max_d:
+                    return False, "trop loin du PNJ"
+        qs = {
+            "quest_id": qid,
+            "quest_step": 0,
+            "quest_accepted": True,
+            "quest_completed": False,
+            "kind": str(qdef.get("kind") or ""),
+            "title": str(qdef.get("title") or qid),
+            "progress": {},
+        }
+        if giver:
+            qs["giver_npc_id"] = giver
+        self._set_player_quest_state(pid, qs)
+        self._queue_player_event(pid, {"type": "quest_update", "status": "accepted", "quest_id": qid, "title": qs["title"]})
+        return True, "accepted"
+
+    def quest_turnin(self, *, player_id: str, npc_id: str | None, player_x: float | None, player_z: float | None) -> tuple[bool, str]:
+        pid = (player_id or "").strip()
+        qs = self._player_quest_state(pid)
+        qid = str(qs.get("quest_id") or "").strip()
+        if not qid or qid not in self._quests:
+            return False, "pas de quête active"
+        if qs.get("quest_completed") is True:
+            return False, "déjà complétée"
+        qdef = self._quests[qid]
+        giver = str(qdef.get("giver_npc_id") or "").strip()
+        if giver and npc_id:
+            nid = (npc_id or "").strip()
+            if nid and nid != giver:
+                return False, "mauvais PNJ"
+        # distance si on connaît la position
+        if giver and player_x is not None and player_z is not None:
+            npc = self.get_npc(giver)
+            if npc is not None:
+                try:
+                    import mmmorpg_server.config as mm_cfg
+                    max_d = float(getattr(mm_cfg, "TRADE_MAX_DISTANCE_M", 12.0))
+                except Exception:
+                    max_d = 12.0
+                if self._distance2(float(player_x), float(player_z), float(npc.x), float(npc.z)) > max_d * max_d:
+                    return False, "trop loin du PNJ"
+        kind = str(qdef.get("kind") or "")
+        prog = qs.get("progress") if isinstance(qs.get("progress"), dict) else {}
+        ok = False
+        if kind == "kill":
+            want = int(qdef.get("count") or 0)
+            have = int(prog.get("kills", 0) or 0)
+            ok = have >= want and want > 0
+        elif kind == "deliver":
+            iid = str(qdef.get("item_id") or "")
+            want = int(qdef.get("qty") or 0)
+            inv = self._player_inventory_list(pid) or []
+            have = _inv_get_qty(inv, iid)
+            if have >= want and want > 0:
+                _inv_set_qty(inv, iid, have - want)
+                self._set_player_inventory_list(pid, inv)
+                ok = True
+        elif kind == "craft":
+            # craft : on attend un flag "crafted": True dans progress
+            ok = prog.get("crafted") is True
+        if not ok:
+            return False, "objectifs non remplis"
+        # Rewards
+        inv = self._player_inventory_list(pid) or []
+        reward = qdef.get("reward") if isinstance(qdef.get("reward"), dict) else {}
+        coins = int(reward.get("coins") or 0)
+        if coins:
+            cur = _inv_get_qty(inv, "item:bronze_coin")
+            _inv_set_qty(inv, "item:bronze_coin", cur + coins, label="Pièces de bronze")
+        rid = reward.get("item_id")
+        rqty = int(reward.get("item_qty") or 0)
+        if isinstance(rid, str) and rid.strip() and rqty > 0:
+            cur = _inv_get_qty(inv, rid.strip())
+            lab = self._item_catalog.get(rid.strip(), {}).get("label") if isinstance(self._item_catalog.get(rid.strip()), dict) else None
+            _inv_set_qty(inv, rid.strip(), cur + rqty, label=str(lab) if isinstance(lab, str) else rid.strip())
+        self._set_player_inventory_list(pid, inv)
+        qs["quest_completed"] = True
+        self._set_player_quest_state(pid, qs)
+        self._queue_player_event(pid, {"type": "quest_complete", "quest_id": qid, "title": qs.get("title"), "reward": reward})
+        return True, "completed"
+
+    def job_gather(self, *, player_id: str, kind: str) -> tuple[bool, str]:
+        """Récolte v1 (stub) : donne une brindille."""
+        pid = (player_id or "").strip()
+        if kind != "brindille":
+            return False, "gather kind inconnu"
+        inv = self._player_inventory_list(pid)
+        if inv is None:
+            return False, "inventaire introuvable"
+        cur = _inv_get_qty(inv, "item:brindille")
+        _inv_set_qty(inv, "item:brindille", cur + 1, label="Brindille")
+        self._set_player_inventory_list(pid, inv)
+        self._queue_player_event(pid, {"type": "job", "kind": "gather", "item_id": "item:brindille", "qty": 1})
+        return True, "gathered"
+
+    def job_craft(self, *, player_id: str, recipe_id: str) -> tuple[bool, str]:
+        pid = (player_id or "").strip()
+        rid = (recipe_id or "").strip()
+        rec = self._recipes.get(rid)
+        if not isinstance(rec, dict):
+            return False, "recette inconnue"
+        inv = self._player_inventory_list(pid)
+        if inv is None:
+            return False, "inventaire introuvable"
+        inputs = rec.get("inputs") if isinstance(rec.get("inputs"), dict) else {}
+        outputs = rec.get("outputs") if isinstance(rec.get("outputs"), dict) else {}
+        for iid, need in inputs.items():
+            have = _inv_get_qty(inv, str(iid))
+            if have < int(need):
+                return False, "ingrédients insuffisants"
+        # consume
+        for iid, need in inputs.items():
+            have = _inv_get_qty(inv, str(iid))
+            _inv_set_qty(inv, str(iid), have - int(need))
+        # produce
+        for oid, outq in outputs.items():
+            cur = _inv_get_qty(inv, str(oid))
+            lab = self._item_catalog.get(str(oid), {}).get("label") if isinstance(self._item_catalog.get(str(oid)), dict) else None
+            _inv_set_qty(inv, str(oid), cur + int(outq), label=str(lab) if isinstance(lab, str) else str(oid))
+        self._set_player_inventory_list(pid, inv)
+        # if active craft quest expects this recipe, mark progress
+        qs = self._player_quest_state(pid)
+        if str(qs.get("kind") or "") == "craft" and str(qs.get("quest_id") or "") in self._quests:
+            qdef = self._quests[str(qs.get("quest_id"))]
+            if str(qdef.get("recipe_id") or "") == rid:
+                prog = qs.get("progress") if isinstance(qs.get("progress"), dict) else {}
+                prog["crafted"] = True
+                qs["progress"] = prog
+                self._set_player_quest_state(pid, qs)
+                self._queue_player_event(pid, {"type": "quest_update", "status": "progress", "quest_id": qs.get("quest_id"), "progress": prog})
+        self._queue_player_event(pid, {"type": "job", "kind": "craft", "recipe_id": rid})
+        return True, "crafted"
+
     def pop_next_player_event(self, player_id: str) -> dict[str, Any] | None:
         pid = (player_id or "").strip()
         q = self._player_events.get(pid)
@@ -1211,6 +1447,20 @@ class GameState:
                         "target_id": tid,
                     },
                 )
+                # Quêtes v1 : progression kill (si quête active kill: mob).
+                qs = self._player_quest_state(pl.id)
+                qid = str(qs.get("quest_id") or "").strip()
+                if qid in self._quests:
+                    qdef = self._quests[qid]
+                    if str(qdef.get("kind") or "") == "kill":
+                        tgt_role = str(getattr(tgt, "role", "") or "")
+                        want_kind = str(qdef.get("target_kind") or "")
+                        if want_kind and tgt_role == want_kind:
+                            prog = qs.get("progress") if isinstance(qs.get("progress"), dict) else {}
+                            prog["kills"] = int(prog.get("kills", 0) or 0) + 1
+                            qs["progress"] = prog
+                            self._set_player_quest_state(pl.id, qs)
+                            self._queue_player_event(pl.id, {"type": "quest_update", "status": "progress", "quest_id": qid, "progress": prog})
                 # Loot v1 : crédite directement l'inventaire du joueur.
                 try:
                     loot_coins = 2 + (abs(hash(tid)) % 3)

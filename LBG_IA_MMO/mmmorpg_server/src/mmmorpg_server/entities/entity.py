@@ -47,6 +47,8 @@ class Entity:
         stats = {"hp": 40, "hp_max": 40}
         if role.strip().lower() == "guard":
             stats = {"hp": 70, "hp_max": 70}
+        if role.strip().lower() in ("mob", "monster"):
+            stats = {"hp": 30, "hp_max": 30}
         return Entity(
             id=(npc_id.strip() if isinstance(npc_id, str) and npc_id.strip() else str(uuid.uuid4())),
             kind="npc",

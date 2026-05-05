@@ -83,6 +83,10 @@ class App {
         const quickQuestBtn = document.getElementById('quick-quest-btn');
         const quickQuestCompleteBtn = document.getElementById('quick-quest-complete-btn');
         const stubPickupBtn = document.getElementById('stub-pickup-btn');
+        const questAcceptBtn = document.getElementById('quest-accept-btn');
+        const questTurninBtn = document.getElementById('quest-turnin-btn');
+        const jobGatherBtn = document.getElementById('job-gather-btn');
+        const jobCraftBtn = document.getElementById('job-craft-btn');
         const tradeBuyBtn = document.getElementById('trade-buy-btn');
         const tradeSellBtn = document.getElementById('trade-sell-btn');
         const clearQuestsBtn = document.getElementById('clear-quests-btn');
@@ -154,6 +158,10 @@ class App {
         if (stubPickupBtn) {
             stubPickupBtn.addEventListener('click', () => this.tryStubPickupFromNpc());
         }
+        if (questAcceptBtn) questAcceptBtn.addEventListener("click", () => this.tryQuestAccept());
+        if (questTurninBtn) questTurninBtn.addEventListener("click", () => this.tryQuestTurnin());
+        if (jobGatherBtn) jobGatherBtn.addEventListener("click", () => this.network.sendJob({ action: "gather", kind: "brindille" }));
+        if (jobCraftBtn) jobCraftBtn.addEventListener("click", () => this.network.sendJob({ action: "craft", recipeId: "recipe:iron_ingot" }));
 
         if (tradeBuyBtn) {
             tradeBuyBtn.addEventListener("click", () => this.tryTrade("buy"));
@@ -199,6 +207,28 @@ class App {
             }
         };
         window.addEventListener("keydown", this._onKeyTrade);
+
+        this._onKeyQuest = (e) => {
+            if (!e || e.repeat) return;
+            const gameEl = document.getElementById("game-container");
+            if (!gameEl || gameEl.classList.contains("hidden")) return;
+            const chatEl = document.getElementById("chat-msg");
+            if (document.activeElement === chatEl) return;
+            if (e.code === "KeyQ") {
+                e.preventDefault();
+                this.tryQuestAccept();
+            } else if (e.code === "KeyT") {
+                e.preventDefault();
+                this.tryQuestTurnin();
+            } else if (e.code === "KeyG") {
+                e.preventDefault();
+                this.network.sendJob({ action: "gather", kind: "brindille" });
+            } else if (e.code === "KeyC") {
+                e.preventDefault();
+                this.network.sendJob({ action: "craft", recipeId: "recipe:iron_ingot" });
+            }
+        };
+        window.addEventListener("keydown", this._onKeyQuest);
 
         if (clearQuestsBtn) {
             clearQuestsBtn.addEventListener('click', () => {
@@ -512,6 +542,14 @@ class App {
             this.handleEconEvent(event);
             return;
         }
+        if (event.type === "quest_update" || event.type === "quest_complete") {
+            this.handleQuestEvent(event);
+            return;
+        }
+        if (event.type === "job") {
+            this.handleJobEvent(event);
+            return;
+        }
         if (event.type !== "dialogue_commit") {
             return;
         }
@@ -586,6 +624,46 @@ class App {
             const money = total != null ? ` (${total} bronze)` : "";
             this.addLog(`${verb} : ${qty}× ${itemId}${money}`, "system");
         }
+    }
+
+    handleQuestEvent(event) {
+        const type = event.type;
+        const qid = typeof event.quest_id === "string" ? event.quest_id : "";
+        const title = typeof event.title === "string" ? event.title : "";
+        if (type === "quest_update") {
+            const status = typeof event.status === "string" ? event.status : "";
+            this.addLog(`Quête ${status}: ${title || qid}`, "system");
+        } else if (type === "quest_complete") {
+            this.addLog(`Quête accomplie: ${title || qid}`, "system");
+        }
+    }
+
+    handleJobEvent(event) {
+        const kind = typeof event.kind === "string" ? event.kind : "";
+        if (kind === "gather") {
+            this.addLog("Récolte: +1 brindille.", "system");
+        } else if (kind === "craft") {
+            this.addLog("Craft: recette exécutée.", "system");
+        }
+    }
+
+    tryQuestAccept() {
+        const target = this.getDialogueTarget();
+        const npcId = target && target.id ? target.id : "";
+        const p = this.playerLocalPos;
+        // Stub v1 : selon PNJ, proposer une quête fixe.
+        let questId = "quest:brindilles";
+        if (npcId === "npc:guard") questId = "quest:boars";
+        else if (npcId === "npc:smith") questId = "quest:forge_ingot";
+        else if (npcId === "npc:merchant") questId = "quest:brindilles";
+        this.network.sendQuest({ action: "accept", questId, npcId, position: p });
+    }
+
+    tryQuestTurnin() {
+        const target = this.getDialogueTarget();
+        const npcId = target && target.id ? target.id : "";
+        const p = this.playerLocalPos;
+        this.network.sendQuest({ action: "turnin", questId: "", npcId, position: p });
     }
 
     tryTrade(side) {

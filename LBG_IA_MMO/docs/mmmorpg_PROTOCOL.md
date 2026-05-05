@@ -175,6 +175,36 @@ Règles v1 :
 - distance max joueur ↔ PNJ : `MMMORPG_TRADE_MAX_DISTANCE_M`
 - les items et prix sont définis côté serveur (shops PNJ)
 
+### `quest` (quêtes gameplay v1)
+
+Accepter une quête (le PNJ donneur dépend du `quest_id`) :
+
+```json
+{ "type": "quest", "action": "accept", "quest_id": "quest:brindilles", "npc_id": "npc:merchant", "x": 0, "y": 0, "z": 0 }
+```
+
+Rendre une quête (turn-in) :
+
+```json
+{ "type": "quest", "action": "turnin", "npc_id": "npc:merchant", "x": 0, "y": 0, "z": 0 }
+```
+
+Le serveur met à jour `entities[].stats.quest_state` et envoie des `world_event` `quest_update` / `quest_complete`.
+
+### `job` (métiers v1 — gather/craft)
+
+Récolte (stub) :
+
+```json
+{ "type": "job", "action": "gather", "kind": "brindille" }
+```
+
+Craft (stub) :
+
+```json
+{ "type": "job", "action": "craft", "recipe_id": "recipe:iron_ingot" }
+```
+
 ### HTTP interne — `POST /internal/v1/npc/{npc_id}/dialogue-commit`
 
 Corps JSON :
