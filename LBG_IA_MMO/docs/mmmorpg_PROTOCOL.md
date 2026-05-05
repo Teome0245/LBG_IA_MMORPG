@@ -71,6 +71,9 @@ pour déclencher une réplique PNJ **après** `hello` (même mécanisme que `hel
 
 `ia_context` (objet optionnel) : seules les clés listées ci‑dessous sont transmises au backend / agent dialogue ; le serveur fixe **`lyra_engagement":"mmo_persona"`** dans le `context` (le client ne peut pas forcer l’assistant poste sur ce pont).
 
+Notes :
+- Les PNJ de rôle **`mob`** / **`monster`** ne parlent pas via ce pont : le serveur renvoie un message fixe (combat).
+
 | Clé | Rôle |
 |-----|------|
 | `session_summary` | Objet **sanitisé** : `tracked_quest`, `last_npc`, `player_note`, `session_mood`, `quest_snapshot`, `memory_hint` (valeurs courtes ; `memory_hint` = liste bornée de **clés** de flags PNJ côté serveur, sans exposer les valeurs). Le **serveur** fusionne un résumé autoritatif (quête joueur + PNJ courant + indice flags) : il **prime** sur `tracked_quest`, `quest_snapshot`, `last_npc` et `memory_hint` ; le client peut compléter avec `player_note` / `session_mood`. Le serveur construit ce merge **même si** `ia_context` est absent ou vide (hors `session_summary` client). |
@@ -204,6 +207,18 @@ Craft (stub) :
 ```json
 { "type": "job", "action": "craft", "recipe_id": "recipe:iron_ingot" }
 ```
+
+### `door` (intérieurs v1 — entrer/sortir)
+
+Interaction “porte” (extérieur ↔ intérieur).
+
+```json
+{ "type": "door", "action": "use", "door_id": "door:auberge_salle_commune", "x": 0, "y": 0, "z": 0 }
+```
+
+Notes :
+- La porte exige une proximité joueur ↔ porte (garde-fou côté serveur).
+- Le serveur bascule `entities[].stats.zone` entre **`village`** et **`interior:<location_id>`**, et filtre `entities`/`locations` sur cette zone.
 
 ### HTTP interne — `POST /internal/v1/npc/{npc_id}/dialogue-commit`
 
