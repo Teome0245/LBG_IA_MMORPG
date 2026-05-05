@@ -30,6 +30,11 @@ function formatSheetId(id) {
     return `${s.slice(0, 10)}…${s.slice(-8)}`;
 }
 
+function isMobLikeRole(role) {
+    const r = String(role || "").trim().toLowerCase();
+    return r === "mob" || r === "monster";
+}
+
 class App {
     constructor() {
         this.network = new NetworkManager(
@@ -350,6 +355,10 @@ class App {
         const clean = typeof text === "string" ? text.trim() : "";
         if (!clean) return;
         const target = this.getDialogueTarget();
+        if (isMobLikeRole(target.role)) {
+            this.addLog(`${target.name} ne parle pas (créature sauvage). Utilisez le combat (A).`, "system");
+            return;
+        }
         this.lastDialogueTarget = target;
         const merged = {};
         if (iaContext && typeof iaContext === "object") {
@@ -807,6 +816,14 @@ class App {
         const target = this.getDialogueTarget();
         if (!target || !target.id) {
             this.addLog("Combat : aucune cible PNJ.", "system");
+            return;
+        }
+        // Ne pas tenter de combattre une cible déjà morte (UX).
+        const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
+        const npc = entities.find((e) => e && e.id === target.id && e.kind === "npc");
+        const hp = Number(npc && npc.stats && typeof npc.stats === "object" ? npc.stats.hp : NaN);
+        if (Number.isFinite(hp) && hp <= 0) {
+            this.addLog(`Combat : ${target.name} est déjà vaincu.`, "system");
             return;
         }
         if (this.isAttacking) {
@@ -1352,11 +1369,12 @@ class App {
 
         const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
         const npcs = entities.filter((ent) => ent && ent.kind === "npc" && typeof ent.id === "string");
-        if (!npcs.length) {
+        const talkables = npcs.filter((ent) => !isMobLikeRole(ent.role));
+        if (!talkables.length) {
             return { id: "npc:merchant", name: "Marchand", role: "merchant" };
         }
 
-        const nearest = npcs
+        const nearest = talkables
             .map((ent) => {
                 const dx = Number(ent.x || 0) - Number(this.playerLocalPos.x || 0);
                 const dz = Number(ent.z || 0) - Number(this.playerLocalPos.z || 0);
@@ -1385,6 +1403,11 @@ class App {
         const npc = this.renderer.getNpcAtScreen(x, y);
 
         if (!npc) {
+            return;
+        }
+        // Mob mort: ne pas sélectionner (évite "cible déjà vaincue" + UX confus).
+        const hp = Number(npc.stats && typeof npc.stats === "object" ? npc.stats.hp : NaN);
+        if (Number.isFinite(hp) && hp <= 0) {
             return;
         }
 

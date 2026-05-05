@@ -196,6 +196,19 @@ def _queue_ia_bridge(
     # sur le placeholder pour que le client puisse le remplacer.
     trace_id = uuid.uuid4().hex
     npc_id = world_npc_id.strip()
+
+    # Mobs: pas de dialogue IA (évite sangliers "courtois").
+    npc_ent = game.get_npc(npc_id)
+    if npc_ent is not None:
+        role = str(getattr(npc_ent, "role", "") or "").strip().lower()
+        if role in ("mob", "monster"):
+            pending_replies[ws] = (
+                "Les créatures sauvages ne parlent pas — utilisez le combat (touche A).",
+                trace_id,
+                None,
+            )
+            return
+
     game.freeze_npc_and_face(npc_id, player_id, duration=NPC_CONVERSATION_RESUME_DELAY_S)
 
     ctx: dict[str, Any] = {"world_npc_id": npc_id, "history": []}
