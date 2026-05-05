@@ -16,6 +16,14 @@ Authentification minimale (Phase 1 : `player_name` seulement).
 { "type": "hello", "player_name": "NomDuJoueur" }
 ```
 
+#### Reconnexion (session)
+
+Le serveur renvoie un `session_token` dans `welcome`. Pour reprendre la même session (même `player_id`) après une déconnexion, renvoyer ce token dans `hello` :
+
+```json
+{ "type": "hello", "player_name": "NomDuJoueur", "resume_token": "<session_token>" }
+```
+
 #### Option (pont jeu → IA, sans nouveau `type`)
 
 Si `MMMORPG_IA_BACKEND_URL` est défini côté serveur, `hello` peut inclure des champs optionnels
@@ -131,6 +139,7 @@ Pilot / backend : lors d’un `POST /v1/pilot/route`, le backend transmet `playe
 {
   "type": "welcome",
   "player_id": "uuid",
+  "session_token": "token",
   "planet_id": "terre1",
   "world_time_s": 123.45,
   "day_fraction": 0.25,
@@ -205,3 +214,8 @@ Les chaînes réseau sont échappées à l’affichage. **Libellés de races** :
 ```json
 { "type": "error", "message": "..." }
 ```
+
+Notes :
+
+- Anti-spam move : un client qui envoie trop de `move` peut recevoir `message="rate_limited: move"` (en plus du drop silencieux) ; régler côté serveur via `MMMORPG_MOVE_MIN_INTERVAL_S`.
+- Inventaire via `world_commit.player_item_*` : le serveur peut exiger une proximité joueur ↔ PNJ (garde-fou gameplay) — `MMMORPG_ITEM_INTERACT_MAX_DISTANCE_M`.
