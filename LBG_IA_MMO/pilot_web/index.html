@@ -380,6 +380,7 @@
         Exécution PC via <strong>worker Windows</strong> (HTTP) derrière allowlists + dry-run + approval + audit.
         Le routage est forcé quand <code>context.desktop_action</code> est présent.
         <strong>Proposer via IA</strong> appelle <code>POST /v1/pilot/agent-dialogue/invoke</code> ; relisez le JSON puis utilisez <strong>Envoyer</strong>.
+        Si le LLM est indisponible, <strong>Déduire du texte</strong> remplit <code>desktop_action</code> pour des formulations du type « ouvre l’application <em>x</em> (learn) » ou une URL.
         Agent dialogue : activer <code>LBG_DIALOGUE_DESKTOP_PLAN=1</code>.
         Autre modèle ou infra lente : sur l’agent (8020), <code>LBG_DIALOGUE_LLM_MODEL</code> (ex. <code>phi4-mini:latest</code>, voir <code>ollama list</code>) et <code>LBG_DIALOGUE_LLM_TIMEOUT</code> ; option Groq/OpenAI : variables <code>LBG_DIALOGUE_FAST_*</code> / <code>LBG_DIALOGUE_REMOTE_*</code> puis <code>"dialogue_target":"fast"</code> ou <code>"remote"</code> dans le JSON <strong>context</strong> ci‑dessous. Le proxy Pilot utilise <code>LBG_PILOT_AGENT_DIALOGUE_INVOKE_TIMEOUT</code> (doit dépasser le timeout LLM).
       </p>
@@ -431,6 +432,7 @@
 
       <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
         <button type="button" id="btn-desktop-propose-llm">Proposer via IA (dialogue)</button>
+        <button type="button" id="btn-desktop-infer-text" title="Sans LLM : open_app / open_url depuis le champ « Texte »">Déduire du texte</button>
         <button type="button" id="btn-desktop-send">Envoyer (POST /v1/pilot/route)</button>
         <button type="button" id="btn-desktop-health">GET agent-desktop /healthz</button>
         <span class="muted" id="desktop-hint">—</span>
@@ -3414,8 +3416,34 @@
         try { desktopTrySyncTextFromAction(); } catch (_) {}
         pilotDesktopUiHint("OK — JSON proposé (relire puis Envoyer)", false);
       } else {
-        pilotDesktopUiHint("OK — pas de DESKTOP_JSON valide (voir réponse brute)", false);
+        const inferred = pilotDesktopInferActionFromText(text);
+        if (inferred && aEl) {
+          aEl.value = JSON.stringify(inferred, null, 2);
+          try { desktopTrySyncTextFromAction(); } catch (_) {}
+          pilotDesktopUiHint("LLM sans proposition valide — action déduite du texte (relire puis Envoyer)", false);
+        } else {
+          pilotDesktopUiHint("OK — pas de DESKTOP_JSON ni déduction possible (voir réponse brute)", false);
+        }
       }
+    }
+
+    function pilotDesktopInferFromTextOnly() {
+      const tEl = document.getElementById("desktop-text");
+      const aEl = document.getElementById("desktop-action");
+      const text = String((tEl && tEl.value) || "").trim();
+      pilotDesktopUiHint("…", false);
+      if (!text) {
+        pilotDesktopUiHint("Texte vide — saisir une intention ou une URL", true);
+        return;
+      }
+      const inferred = pilotDesktopInferActionFromText(text);
+      if (!inferred || !aEl) {
+        pilotDesktopUiHint("Impossible de déduire open_app / open_url à partir de ce texte", true);
+        return;
+      }
+      aEl.value = JSON.stringify(inferred, null, 2);
+      try { desktopTrySyncTextFromAction(); } catch (_) {}
+      pilotDesktopUiHint("Action déduite — relire puis Envoyer", false);
     }
 
     async function pilotDesktopSend() {
@@ -3471,6 +3499,53 @@
       return m ? m[0] : "";
     }
 
+    /**
+     * Heuristique locale : même intention que DESKTOP_JSON open_app / open_url pour les formulations courantes,
+     * lorsque le dialogue LLM ne renvoie pas meta.desktop_action_proposal.
+     */
+    function pilotDesktopInferActionFromText(rawText) {
+      const text = String(rawText || "").trim();
+      if (!text) return null;
+      const learn = /\(\s*learn\s*\)|\blearn\b/i.test(text);
+      const wantsOpenVerb = /\b(ouvre|ouvrir|ouvrez|open|lance|lancer|lances|d[ée]marre|demarrer|start)\b/i.test(text);
+      const mentionsAppWord = /\b(?:l['']|d[''])?(?:application|appli)\b/i.test(text);
+
+      const url = _extractFirstHttpUrl(text);
+      if (url && wantsOpenVerb) {
+        if (!mentionsAppWord) {
+          return { kind: "open_url", url: url };
+        }
+        const beforeUrl = text.slice(0, text.indexOf(url));
+        if (!/\b(?:l['']|d[''])?(?:application|appli)\b/i.test(beforeUrl)) {
+          return { kind: "open_url", url: url };
+        }
+      }
+
+      let appId = null;
+      let m = text.match(/\b(?:l['']|d[''])?(?:application|appli)\s+([A-Za-z0-9_.-]+)\b/i);
+      if (m) appId = m[1];
+      if (!appId) {
+        m = text.match(
+          /\b(?:ouvre|ouvrir|ouvrez|open|lance|lancer|d[ée]marre|demarrer|start)\s+(?:l['']|d[''])?(?:application|appli)\s+([A-Za-z0-9_.-]+)\b/i
+        );
+        if (m) appId = m[1];
+      }
+      if (!appId) {
+        m = text.match(/\bopen\s+app\s+([A-Za-z0-9_.-]+)\b/i);
+        if (m) appId = m[1];
+      }
+      if (appId) {
+        const act = { kind: "open_app", app: appId, args: [] };
+        if (learn) act.learn = true;
+        return act;
+      }
+
+      if (url && wantsOpenVerb) {
+        return { kind: "open_url", url: url };
+      }
+      return null;
+    }
+
     function desktopTrySyncActionFromText() {
       const tEl = document.getElementById("desktop-text");
       const aEl = document.getElementById("desktop-action");
@@ -3492,12 +3567,13 @@
           aEl.value = JSON.stringify(act, null, 2);
         }
       } else if (kind === "open_app") {
-        // Heuristique: "ouvre l'application X" / "open app X"
-        const m = text.match(/\b(?:application|app)\s+([A-Za-z0-9_.-]+)\b/i);
-        if (m && m[1]) {
-          const appId = m[1];
-          if (act.app !== appId) {
-            act.app = appId;
+        const inferred = pilotDesktopInferActionFromText(text);
+        if (inferred && inferred.kind === "open_app" && inferred.app) {
+          const learnNext = inferred.learn === true;
+          if (act.app !== inferred.app || Boolean(act.learn) !== learnNext) {
+            act.app = inferred.app;
+            if (learnNext) act.learn = true;
+            else delete act.learn;
             aEl.value = JSON.stringify(act, null, 2);
           }
         }
@@ -4011,6 +4087,9 @@
           pilotDesktopUiHint("Desktop LLM : " + e, true);
         });
       });
+    } catch (_) {}
+    try {
+      document.getElementById("btn-desktop-infer-text").addEventListener("click", pilotDesktopInferFromTextOnly);
     } catch (_) {}
     try {
       document.getElementById("btn-desktop-send").addEventListener("click", function () {

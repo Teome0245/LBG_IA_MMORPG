@@ -40,7 +40,7 @@ Pour rapprocher le flux du MMO (`ACTION_JSON`) sans exécuter à l’aveugle :
 1. Sur l’agent dialogue HTTP : activer **`LBG_DIALOGUE_DESKTOP_PLAN=1`** (avec un LLM configuré).
 2. Un appel `POST /invoke` avec **`context._desktop_plan`: true** utilise un prompt « planificateur desktop » ; le modèle peut émettre une première ligne **`DESKTOP_JSON: {"kind":...}`**.
 3. Le serveur parse et sanitise la proposition, puis l’expose dans **`meta.desktop_action_proposal`** (les allowlists réelles restent au worker lors du routage). L’agent dialogue annonce **`desktop_plan_env_enabled`** dans **`GET /healthz`** (utile pour le bandeau diagnostique sur `#/desktop` via `GET /v1/pilot/status`).
-4. Le Pilot (`#/desktop`) peut appeler **`POST /v1/pilot/agent-dialogue/invoke`** (proxy même origine), remplir le textarea `desktop_action`, puis l’opérateur clique **Envoyer** (`/v1/pilot/route`) après relecture.
+4. Le Pilot (`#/desktop`) peut appeler **`POST /v1/pilot/agent-dialogue/invoke`** (proxy même origine), remplir le textarea `desktop_action`, puis l’opérateur clique **Envoyer** (`/v1/pilot/route`) après relecture. **Sans LLM** (ou si `meta.desktop_action_proposal` est absent), le bouton **Déduire du texte** reconstruit un `open_app` / `open_url` minimal à partir du champ *Texte* (ex. « ouvre l’application vlc (learn) »).
 
 #### Dépannage « Proposer via IA » (`stub`, `llm_error`, pas de `desktop_action_proposal`)
 
