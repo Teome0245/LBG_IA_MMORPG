@@ -70,31 +70,33 @@
                     </div>
                 </div>
 
-                <div class="hud-bottom-left glass-panel">
-                    <div id="console-logs">
-                        <div class="log system">Initialisation du système...</div>
+                <div class="hud-bottom-bar">
+                    <div class="hud-bottom-left glass-panel">
+                        <div id="console-logs">
+                            <div class="log system">Initialisation du système...</div>
+                        </div>
+                        <div class="chat-input-group">
+                            <input type="text" id="chat-msg" placeholder="Parler aux PNJ...">
+                            <button id="send-chat-btn">ENVOYER</button>
+                        </div>
                     </div>
-                    <div class="chat-input-group">
-                        <input type="text" id="chat-msg" placeholder="Parler aux PNJ...">
-                        <button id="send-chat-btn">ENVOYER</button>
-                    </div>
-                </div>
 
-                <div class="hud-bottom-right glass-panel">
-                    <div class="panel-title">PNJ</div>
-                    <div class="stat">
-                        <span class="label">CIBLE :</span>
-                        <span id="dialogue-target">?</span>
-                    </div>
-                    <div class="panel-title sheet-panel-title">Fiche PNJ</div>
-                    <div id="npc-sheet-body" class="character-sheet-body">
-                        <span class="muted">Sélectionnez un PNJ sur la carte.</span>
-                    </div>
-                    <div class="npc-actions">
-                        <button id="quick-aid-btn" type="button">DEMANDER AIDE</button>
-                        <button id="quick-quest-btn" type="button">PROPOSER QUÊTE</button>
-                        <button id="quick-quest-complete-btn" type="button">TERMINER QUÊTE</button>
-                        <button id="stub-pickup-btn" type="button" title="Sans LLM : world_commit player_item (touche E)">RAMASSER (E)</button>
+                    <div class="hud-bottom-right glass-panel">
+                        <div class="panel-title">PNJ</div>
+                        <div class="stat">
+                            <span class="label">CIBLE :</span>
+                            <span id="dialogue-target">?</span>
+                        </div>
+                        <div class="panel-title sheet-panel-title">Fiche PNJ</div>
+                        <div id="npc-sheet-body" class="character-sheet-body">
+                            <span class="muted">Sélectionnez un PNJ sur la carte.</span>
+                        </div>
+                        <div class="npc-actions">
+                            <button id="quick-aid-btn" type="button">DEMANDER AIDE</button>
+                            <button id="quick-quest-btn" type="button">PROPOSER QUÊTE</button>
+                            <button id="quick-quest-complete-btn" type="button">TERMINER QUÊTE</button>
+                            <button id="stub-pickup-btn" type="button" title="Sans LLM : world_commit player_item (touche E)">RAMASSER (E)</button>
+                        </div>
                     </div>
                 </div>
             </div>

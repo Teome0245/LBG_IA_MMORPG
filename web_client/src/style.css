@@ -152,7 +152,8 @@ button:hover {
   border-image: radial-gradient(circle, rgba(0, 242, 255, 0.1) 0%, transparent 70%) 1;
 }
 
-#hud > div {
+/* Par défaut, les panneaux HUD sont absolus. Le bas utilise une barre flex dédiée. */
+#hud > .glass-panel {
   position: absolute;
   pointer-events: auto;
   padding: 1rem;
@@ -163,6 +164,9 @@ button:hover {
   left: 1.5rem;
   min-width: 200px;
   max-width: min(340px, calc(100vw - 3rem));
+  max-height: calc(50vh - 2rem);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .hud-top-right {
@@ -170,20 +174,44 @@ button:hover {
   right: 1.5rem;
   width: 300px;
   max-width: calc(100vw - 3rem);
+  max-height: calc(50vh - 2rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* Rangée du bas: évite les superpositions (chat + fiche PNJ). */
+.hud-bottom-bar {
+  position: absolute;
+  left: 1.5rem;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.hud-bottom-bar > .glass-panel {
+  position: relative;
+  inset: auto;
+  pointer-events: auto;
+  padding: 1rem;
+  flex: 1 1 auto;
+  min-width: min(280px, 100%);
+  max-width: min(420px, calc(50vw - 2.5rem));
+  max-height: calc(45vh - 2rem);
+  overflow: hidden;
 }
 
 .hud-bottom-left {
-  bottom: 1.5rem;
-  left: 1.5rem;
-  width: 400px;
-  max-width: calc(100vw - 3rem);
+  width: 100%;
 }
 
 .hud-bottom-right {
-  bottom: 1.5rem;
-  right: 1.5rem;
-  min-width: 240px;
-  max-width: min(320px, calc(100vw - 3rem));
+  min-width: 260px;
 }
 
 .stat {
@@ -428,11 +456,21 @@ button:hover {
 }
 
 @media (max-width: 600px) {
-  .hud-bottom-left {
-    width: calc(100vw - 3rem);
-  }
-
   .hud-top-right {
     display: none;
+  }
+
+  .hud-top-left {
+    max-height: calc(42vh - 2rem);
+  }
+}
+
+@media (max-width: 900px) {
+  .hud-bottom-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .hud-bottom-bar > .glass-panel {
+    max-width: none;
   }
 }
