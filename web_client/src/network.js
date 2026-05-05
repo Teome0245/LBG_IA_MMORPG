@@ -171,6 +171,21 @@ export class NetworkManager {
         this.send(payload);
     }
 
+    sendCombatStart(targetNpcId) {
+        this.send({
+            type: "combat",
+            action: "start",
+            target_id: typeof targetNpcId === "string" ? targetNpcId : "",
+        });
+    }
+
+    sendCombatStop() {
+        this.send({
+            type: "combat",
+            action: "stop",
+        });
+    }
+
     disconnect() {
         this._manualClose = true;
         if (this._reconnectTimer) {

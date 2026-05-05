@@ -22,6 +22,11 @@ SESSION_TTL_S: float = float(os.environ.get("MMMORPG_SESSION_TTL_S", "900"))
 # Interaction inventaire v1 (ramasser/déposer) : distance max joueur ↔ PNJ lors d'un world_commit player_item_*.
 ITEM_INTERACT_MAX_DISTANCE_M: float = float(os.environ.get("MMMORPG_ITEM_INTERACT_MAX_DISTANCE_M", "12"))
 
+# Combat v1 (auto-attack)
+COMBAT_TICK_S: float = float(os.environ.get("MMMORPG_COMBAT_TICK_S", "0.8"))
+COMBAT_RANGE_M: float = float(os.environ.get("MMMORPG_COMBAT_RANGE_M", "14"))
+COMBAT_BASE_DAMAGE: int = int(os.environ.get("MMMORPG_COMBAT_BASE_DAMAGE", "5"))
+
 # Champ de vision (serveur WS) : filtre les entités renvoyées par `world_tick`.
 FOV_RANGE_M: float = float(os.environ.get("MMMORPG_FOV_RANGE_M", "140"))
 FOV_LOS_ENABLED: bool = os.environ.get("MMMORPG_FOV_LOS", "").strip().lower() in ("1", "true", "yes", "on")

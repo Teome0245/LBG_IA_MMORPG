@@ -390,6 +390,11 @@ async def game_loop_broadcast(
                     if pid:
                         entities = _filter_entities_for_player(game, pid, entities)
                         locations = _filter_locations_for_player(game, pid, locations)
+                        # Combat/events gameplay : une entrée max par tick (best-effort).
+                        if world_event is None:
+                            wev = game.pop_next_player_event(pid)
+                            if isinstance(wev, dict) and wev:
+                                world_event = wev
                     payload = json.dumps(
                         msg_world_tick(
                             world_time_s=game.time.world_time_s,
@@ -523,6 +528,7 @@ async def client_handler(
     player_id: str | None = None
     last_move_at: float = 0.0
     last_rate_limit_err_at: float = 0.0
+    last_combat_at: float = 0.0
     try:
         async for raw in ws:
             text, err = _inbound_to_utf8(raw)
@@ -654,6 +660,21 @@ async def client_handler(
                 )
             elif msg_type == "move" and not player_id:
                 await ws.send(json.dumps(msg_error("hello requis avant move")))
+            elif msg_type == "combat" and player_id:
+                now = time.monotonic()
+                if now - last_combat_at < 0.05:
+                    continue
+                last_combat_at = now
+                action = (data.get("action") or "").strip().lower()
+                target_id = data.get("target_id")
+                if action in ("start", "on", "1", "true"):
+                    ok, reason = game.set_player_combat(player_id=player_id, active=True, target_id=target_id if isinstance(target_id, str) else None)
+                    if not ok:
+                        await ws.send(json.dumps(msg_error(f"combat refusé: {reason}")))
+                elif action in ("stop", "off", "0", "false"):
+                    game.set_player_combat(player_id=player_id, active=False)
+                else:
+                    await ws.send(json.dumps(msg_error("combat.action invalide (start|stop)")))
             else:
                 await ws.send(json.dumps(msg_error(f"type inconnu: {msg_type!r}")))
     finally:

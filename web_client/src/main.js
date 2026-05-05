@@ -41,6 +41,7 @@ class App {
         
         this.playerLocalPos = { x: 0, y: 0, z: 0 };
         this.isMoving = false;
+        this.isAttacking = false;
         this._lastConnect = { serverHost: null, name: null };
         this.selectedDialogueTarget = null;
         this.lastDialogueTarget = null;
@@ -151,6 +152,17 @@ class App {
         if (stubPickupBtn) {
             stubPickupBtn.addEventListener('click', () => this.tryStubPickupFromNpc());
         }
+
+        this._onKeyAttack = (e) => {
+            if (!e || e.code !== "KeyA" || e.repeat) return;
+            const gameEl = document.getElementById("game-container");
+            if (!gameEl || gameEl.classList.contains("hidden")) return;
+            const chatEl = document.getElementById("chat-msg");
+            if (document.activeElement === chatEl) return;
+            e.preventDefault();
+            this.toggleAttackOnTarget();
+        };
+        window.addEventListener("keydown", this._onKeyAttack);
 
         this._onKeyPickup = (e) => {
             if (!e || e.code !== "KeyE" || e.repeat) return;
@@ -464,7 +476,14 @@ class App {
     }
 
     handleWorldEvent(event, traceId) {
-        if (!event || event.type !== "dialogue_commit") {
+        if (!event || typeof event.type !== "string") {
+            return;
+        }
+        if (event.type === "combat_hit" || event.type === "combat_kill") {
+            this.handleCombatEvent(event);
+            return;
+        }
+        if (event.type !== "dialogue_commit") {
             return;
         }
         const target = this.resolveDialogueTarget(event.trace_id || traceId);
@@ -480,6 +499,61 @@ class App {
         });
         this.recordWorldEvent(event, target, summary);
         this.addLog(`Action monde (${target.name}): ${summary}`, 'system');
+    }
+
+    handleCombatEvent(event) {
+        const type = event.type;
+        const targetId = typeof event.target_id === "string" ? event.target_id : "";
+        const entities = Array.isArray(this.renderer.entities) ? this.renderer.entities : [];
+        const tgt = entities.find((e) => e && e.id === targetId);
+        const targetName = tgt && tgt.name ? tgt.name : (targetId || "cible");
+        if (type === "combat_hit") {
+            const amt = Number.isFinite(Number(event.amount)) ? Number(event.amount) : 0;
+            const hpLeft = Number.isFinite(Number(event.hp_left)) ? Number(event.hp_left) : null;
+            const hpMax = Number.isFinite(Number(event.hp_max)) ? Number(event.hp_max) : null;
+            const hpTxt = (hpLeft != null && hpMax != null) ? ` (${hpLeft}/${hpMax})` : "";
+            const summary = `Coup sur ${targetName} : -${amt} HP${hpTxt}`;
+            this.addLog(summary, "system");
+            if (targetId) {
+                this.renderer.setDialogueBubble(targetId, `-${amt} HP`, {
+                    speaker: "Combat",
+                    traceId: "",
+                    kind: "world_event",
+                    ttlMs: 1200,
+                    subtitle: this._formatRoleSubtitle({ id: targetId }),
+                });
+            }
+        } else if (type === "combat_kill") {
+            const summary = `${targetName} est vaincu.`;
+            this.addLog(summary, "system");
+            if (targetId) {
+                this.renderer.setDialogueBubble(targetId, "Vaincu", {
+                    speaker: "Combat",
+                    traceId: "",
+                    kind: "world_event",
+                    ttlMs: 2200,
+                    subtitle: this._formatRoleSubtitle({ id: targetId }),
+                });
+            }
+            this.isAttacking = false;
+        }
+    }
+
+    toggleAttackOnTarget() {
+        const target = this.getDialogueTarget();
+        if (!target || !target.id) {
+            this.addLog("Combat : aucune cible PNJ.", "system");
+            return;
+        }
+        if (this.isAttacking) {
+            this.network.sendCombatStop();
+            this.isAttacking = false;
+            this.addLog("Combat : arrêt.", "system");
+            return;
+        }
+        this.network.sendCombatStart(target.id);
+        this.isAttacking = true;
+        this.addLog(`Combat : attaque sur ${target.name}.`, "system");
     }
 
     recordWorldEvent(event, target, summary) {

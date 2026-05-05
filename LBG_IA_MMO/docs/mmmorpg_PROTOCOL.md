@@ -117,6 +117,27 @@ Champs :
 
 Recette LAN : `infra/scripts/smoke_ws_move_commit_snapshot_lan.sh`.
 
+### `combat` (combat v1 — auto-attack)
+
+Démarre / arrête un combat “auto-attack” côté serveur. Le serveur applique périodiquement des dégâts si la cible est en portée.
+
+Start :
+
+```json
+{ "type": "combat", "action": "start", "target_id": "npc:merchant" }
+```
+
+Stop :
+
+```json
+{ "type": "combat", "action": "stop" }
+```
+
+Notes :
+
+- paramètres serveur : `MMMORPG_COMBAT_TICK_S`, `MMMORPG_COMBAT_RANGE_M`, `MMMORPG_COMBAT_BASE_DAMAGE`
+- la cible doit être un PNJ vivant (HP > 0)
+
 ### HTTP interne — `POST /internal/v1/npc/{npc_id}/dialogue-commit`
 
 Corps JSON :
@@ -179,6 +200,27 @@ Champs optionnels (pont jeu → IA) :
 
 - `npc_reply` : réplique PNJ (placeholder ou final)
 - `trace_id` : identifiant de corrélation stable placeholder → final
+
+Champs optionnels (combat v1 / gameplay) :
+
+- `world_event` : objet événement (ex. `combat_hit`, `combat_kill`, `dialogue_commit`, etc.)
+
+Exemples :
+
+```json
+{
+  "type": "combat_hit",
+  "source_id": "<player_id>",
+  "target_id": "npc:merchant",
+  "amount": 5,
+  "hp_left": 35,
+  "hp_max": 40
+}
+```
+
+```json
+{ "type": "combat_kill", "source_id": "<player_id>", "target_id": "npc:merchant" }
+```
 
 ### `entity_snapshot`
 

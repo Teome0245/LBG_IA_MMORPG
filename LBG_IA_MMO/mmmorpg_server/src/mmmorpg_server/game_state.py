@@ -109,6 +109,10 @@ class GameState:
         self._session_token_by_player_id: dict[str, str] = {}
         self._player_connected: set[str] = set()
         self._player_last_seen_mono: dict[str, float] = {}
+
+        # --- Combat v1 (auto-attack) ---
+        # Events asynchrones (best-effort) envoyés au joueur via world_tick.world_event.
+        self._player_events: dict[str, list[dict[str, Any]]] = {}
         
         # Obstacles du décor
         self.obstacles: list[StaticObstacle] = []
@@ -729,6 +733,10 @@ class GameState:
         )
         logger.info("%s", log_line)
         _ensure_player_inventory(p)
+        if p.stats is not None:
+            p.stats.setdefault("hp", 100)
+            p.stats.setdefault("hp_max", 100)
+            p.stats.setdefault("combat", {"active": False, "target_id": "", "cd": 0.0})
         self.ensure_player_session(p.id)
         self.mark_player_connected(p.id)
         return p
@@ -743,6 +751,66 @@ class GameState:
             self._player_id_by_session_token.pop(tok, None)
         self._player_connected.discard(pid)
         self._player_last_seen_mono.pop(pid, None)
+        self._player_events.pop(pid, None)
+
+    def _queue_player_event(self, player_id: str, ev: dict[str, Any]) -> None:
+        pid = (player_id or "").strip()
+        if not pid or not isinstance(ev, dict) or not ev:
+            return
+        q = self._player_events.get(pid)
+        if q is None:
+            q = []
+            self._player_events[pid] = q
+        q.append(ev)
+        # borne simple : éviter accumulation infinie si client ne consomme pas
+        if len(q) > 20:
+            del q[:-20]
+
+    def pop_next_player_event(self, player_id: str) -> dict[str, Any] | None:
+        pid = (player_id or "").strip()
+        q = self._player_events.get(pid)
+        if not q:
+            return None
+        return q.pop(0)
+
+    def set_player_combat(self, *, player_id: str, active: bool, target_id: str | None = None) -> tuple[bool, str]:
+        pid = (player_id or "").strip()
+        if not pid:
+            return False, "player_id invalide"
+        pl = self.entities.get(pid)
+        if not pl or pl.kind != "player":
+            return False, "joueur introuvable"
+        if pl.stats is None:
+            pl.stats = {}
+        cmb = pl.stats.get("combat")
+        if not isinstance(cmb, dict):
+            cmb = {"active": False, "target_id": "", "cd": 0.0}
+            pl.stats["combat"] = cmb
+        if not active:
+            cmb["active"] = False
+            cmb["target_id"] = ""
+            cmb["cd"] = 0.0
+            return True, "stopped"
+        tid = (target_id or "").strip()
+        if not tid:
+            return False, "target_id requis"
+        tgt = self.entities.get(tid)
+        if not tgt or tgt.kind != "npc":
+            return False, "cible introuvable"
+        # Interdire de taper un PNJ déjà mort (hp<=0) — v1.
+        st = tgt.stats if isinstance(tgt.stats, dict) else {}
+        try:
+            hp = int(st.get("hp", 0))
+        except Exception:
+            hp = 0
+        if hp <= 0:
+            return False, "cible déjà vaincue"
+        cmb["active"] = True
+        cmb["target_id"] = tid
+        # cool-down initial minimal
+        if "cd" not in cmb:
+            cmb["cd"] = 0.0
+        return True, "started"
 
     def apply_player_move(self, player_id: str, x: float, y: float, z: float) -> None:
         ent = self.entities.get(player_id)
@@ -870,6 +938,98 @@ class GameState:
             ent.vx *= 0.6
             ent.vy *= 0.6
             ent.vz *= 0.6
+
+        # Combat v1 : résolution après mouvement (portée recalculée sur positions tick).
+        try:
+            import mmmorpg_server.config as mm_cfg
+            tick_s = float(getattr(mm_cfg, "COMBAT_TICK_S", 0.8))
+            rng = float(getattr(mm_cfg, "COMBAT_RANGE_M", 14.0))
+            dmg = int(getattr(mm_cfg, "COMBAT_BASE_DAMAGE", 5))
+        except Exception:
+            tick_s, rng, dmg = 0.8, 14.0, 5
+        if tick_s <= 0:
+            tick_s = 0.8
+        if rng <= 0:
+            rng = 14.0
+        if dmg <= 0:
+            dmg = 1
+        rng2 = rng * rng
+        for pl in list(self.entities.values()):
+            if pl.kind != "player":
+                continue
+            if pl.stats is None:
+                continue
+            cmb = pl.stats.get("combat")
+            if not isinstance(cmb, dict) or not cmb.get("active"):
+                continue
+            tid = str(cmb.get("target_id") or "").strip()
+            if not tid:
+                cmb["active"] = False
+                continue
+            tgt = self.entities.get(tid)
+            if not tgt or tgt.kind != "npc":
+                cmb["active"] = False
+                cmb["target_id"] = ""
+                continue
+            # cooldown
+            try:
+                cd = float(cmb.get("cd", 0.0) or 0.0) - float(dt)
+            except Exception:
+                cd = -1.0
+            if cd > 0.0:
+                cmb["cd"] = cd
+                continue
+            cmb["cd"] = 0.0
+            dx = float(pl.x) - float(tgt.x)
+            dz = float(pl.z) - float(tgt.z)
+            if dx * dx + dz * dz > rng2:
+                # hors portée : ne pas frapper, garder active (le joueur peut se rapprocher).
+                cmb["cd"] = float(tick_s)
+                continue
+            if not isinstance(tgt.stats, dict):
+                tgt.stats = {}
+            try:
+                hp = int(tgt.stats.get("hp", 0))
+            except Exception:
+                hp = 0
+            try:
+                hp_max = int(tgt.stats.get("hp_max", 0))
+            except Exception:
+                hp_max = 0
+            if hp_max <= 0:
+                hp_max = 40
+            if hp <= 0:
+                cmb["active"] = False
+                cmb["target_id"] = ""
+                continue
+            hp2 = hp - int(dmg)
+            if hp2 < 0:
+                hp2 = 0
+            tgt.stats["hp"] = hp2
+            tgt.stats["hp_max"] = hp_max
+            self._queue_player_event(
+                pl.id,
+                {
+                    "type": "combat_hit",
+                    "source_id": pl.id,
+                    "target_id": tid,
+                    "amount": int(dmg),
+                    "hp_left": int(hp2),
+                    "hp_max": int(hp_max),
+                },
+            )
+            if hp2 <= 0:
+                self._queue_player_event(
+                    pl.id,
+                    {
+                        "type": "combat_kill",
+                        "source_id": pl.id,
+                        "target_id": tid,
+                    },
+                )
+                cmb["active"] = False
+                cmb["target_id"] = ""
+            cmb["cd"] = float(tick_s)
 
     def _npc_step(self, npc: Entity, dt: float) -> None:
         # Comportements spécialisés par rôle ou nom

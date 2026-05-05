@@ -44,6 +44,9 @@ class Entity:
         scale: float = 1.0,
         role: str = "civil",
     ) -> Entity:
+        stats = {"hp": 40, "hp_max": 40}
+        if role.strip().lower() == "guard":
+            stats = {"hp": 70, "hp_max": 70}
         return Entity(
             id=(npc_id.strip() if isinstance(npc_id, str) and npc_id.strip() else str(uuid.uuid4())),
             kind="npc",
@@ -53,7 +56,7 @@ class Entity:
             y=0.0,
             z=z,
             scale=float(scale) if isinstance(scale, (int, float)) else 1.0,
-            stats={},
+            stats=stats,
         )
 
     def to_snapshot(self) -> dict:
