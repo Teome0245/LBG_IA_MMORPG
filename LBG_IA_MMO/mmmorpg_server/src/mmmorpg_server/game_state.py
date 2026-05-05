@@ -432,16 +432,53 @@ class GameState:
         seen = {str(l.get("id")) for l in self.locations if isinstance(l, dict) and "id" in l}
         g = getattr(self, "_village_tile_grid", None)
 
-        def _snap_prefer_road(x: float, z: float) -> tuple[float, float]:
+        def _road_door_from_grid(cx: float, cz: float) -> tuple[float, float] | None:
+            """Trouve une porte côté route en s'appuyant sur la grille (plus robuste que la géométrie seed)."""
             if g is None:
-                return (x, z)
+                return None
+            # 1) route la plus proche du centre
             try:
-                snapped = g.nearest_preferred_or_walkable_tile_center_world_m(float(x), float(z))
+                road = g.nearest_preferred_or_walkable_tile_center_world_m(float(cx), float(cz))
             except Exception:
-                snapped = None
-            if snapped is None:
-                return (x, z)
-            return (float(snapped[0]), float(snapped[1]))
+                road = None
+            if road is None:
+                return None
+            rx, rz = float(road[0]), float(road[1])
+            tr = g.world_to_tile(rx, rz)
+            tc = g.world_to_tile(float(cx), float(cz))
+            if tr is None or tc is None:
+                return (rx, rz)
+            r_gx, r_gz = int(tr[0]), int(tr[1])
+            c_gx, c_gz = int(tc[0]), int(tc[1])
+
+            # 2) marcher vers le centre jusqu'à toucher une tuile bloquée (bâtiment/arbres)
+            gx, gz = r_gx, r_gz
+            for _ in range(64):
+                # prochain pas (greedy Manhattan) vers centre
+                dx = c_gx - gx
+                dz = c_gz - gz
+                if dx == 0 and dz == 0:
+                    break
+                step_x, step_z = 0, 0
+                if abs(dx) >= abs(dz):
+                    step_x = 1 if dx > 0 else -1
+                else:
+                    step_z = 1 if dz > 0 else -1
+                nx, nz = gx + step_x, gz + step_z
+                if not g.is_walkable_tile(int(nx), int(nz)):
+                    # on est au contact du bâtiment: la porte = notre tuile actuelle
+                    wx = g.origin_x + (gx + 0.5) * g.tile_m
+                    wz = g.origin_z + (gz + 0.5) * g.tile_m
+                    return (float(wx), float(wz))
+                gx, gz = nx, nz
+            return (rx, rz)
+
+        def _upsert_door(door_id: str, payload: dict[str, Any]) -> None:
+            for i, l in enumerate(self.locations):
+                if isinstance(l, dict) and str(l.get("id") or "") == door_id:
+                    self.locations[i] = payload
+                    return
+            self.locations.append(payload)
 
         for loc in list(self.locations):
             if not isinstance(loc, dict):
@@ -453,79 +490,35 @@ class GameState:
             if not lid:
                 continue
             door_id = f"door:{lid}"
-            if door_id in seen:
-                continue
+            # Recalculer si déjà présent (portes mal placées sur un ancien build).
 
             cx = float(loc.get("x", 0.0) or 0.0)
             cz = float(loc.get("z", 0.0) or 0.0)
-            w = float(loc.get("w", 8.0) or 8.0)
-            h = float(loc.get("h", 8.0) or 8.0)
-            rot = None
-            try:
-                rr = loc.get("rotation_rad", None)
-                rot = float(rr) if rr is not None else None
-            except Exception:
-                rot = None
 
-            # Candidates autour du périmètre (4 côtés) ; choisir le snap le plus proche
-            # du point d'entrée (et hors obstacle).
-            pad = 2.5
-            candidates = [
-                (0.0, (h / 2.0) + pad),
-                (0.0, -((h / 2.0) + pad)),
-                ((w / 2.0) + pad, 0.0),
-                (-((w / 2.0) + pad), 0.0),
-            ]
-            best: dict[str, float] | None = None
-            for dx0, dz0 in candidates:
-                if rot is not None:
-                    c = math.cos(rot)
-                    s = math.sin(rot)
-                    dx = dx0 * c - dz0 * s
-                    dz = dx0 * s + dz0 * c
-                else:
-                    dx, dz = dx0, dz0
-                want_x = cx + dx
-                want_z = cz + dz
-                sx, sz = _snap_prefer_road(want_x, want_z)
-                inside = False
-                for obs in self.obstacles:
-                    if obs.is_inside(sx, sz, margin=0.5):
-                        inside = True
-                        break
-                if inside:
-                    continue
-                d2 = (sx - want_x) ** 2 + (sz - want_z) ** 2
-                if best is None or d2 < best.get("d2", 1e18):
-                    best = {"x": float(sx), "z": float(sz), "dx": float(sx - cx), "dz": float(sz - cz), "d2": float(d2)}
-            if best is None:
-                dx0, dz0 = 0.0, (h / 2.0) + pad
-                if rot is not None:
-                    c = math.cos(rot)
-                    s = math.sin(rot)
-                    dx = dx0 * c - dz0 * s
-                    dz = dx0 * s + dz0 * c
-                else:
-                    dx, dz = dx0, dz0
-                sx, sz = _snap_prefer_road(cx + dx, cz + dz)
-                best = {"x": float(sx), "z": float(sz), "dx": float(sx - cx), "dz": float(sz - cz)}
-            self.locations.append(
+            pos = _road_door_from_grid(cx, cz)
+            if pos is None:
+                # Fallback : porte au centre (grille absente/ratée)
+                x, z = cx, cz
+            else:
+                x, z = pos
+            dx = float(x) - cx
+            dz = float(z) - cz
+            _upsert_door(
+                door_id,
                 {
                     "id": door_id,
                     "name": f"Porte — {str(loc.get('name') or lid)}",
                     "type": "door",
-                    "x": float(best["x"]),
+                    "x": float(x),
                     "y": 0.0,
-                    "z": float(best["z"]),
+                    "z": float(z),
                     "w": 2.0,
                     "h": 2.0,
                     "for_location_id": lid,
-                    # Vecteur "extérieur → intérieur" (approx.) pour calculer le point opposé.
-                    # Sert à traverser le bâtiment sans se retrouver dans l'obstacle.
-                    "door_dx": float(best["dx"]),
-                    "door_dz": float(best["dz"]),
+                    "door_dx": float(dx),
+                    "door_dz": float(dz),
                     "zone": "village",
-                }
+                },
             )
             seen.add(door_id)
 
