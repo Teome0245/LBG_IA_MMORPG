@@ -1814,7 +1814,10 @@ class GameState:
                     blocked = True
 
                 # Vérification des obstacles (seed / boîtes)
-                if not blocked:
+                # IMPORTANT: si la grille Watabou est chargée, elle encode déjà bâtiments/arbres.
+                # Les boîtes "obstacles" issues du seed peuvent être légèrement décalées (rotation/scale),
+                # créant des "murs invisibles". On les applique uniquement si aucune grille n'est chargée.
+                if not blocked and self._village_tile_grid is None:
                     for obs in self.obstacles:
                         if obs.is_inside(nx, nz, margin=0.5):
                             blocked = True
