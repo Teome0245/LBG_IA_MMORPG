@@ -522,6 +522,7 @@ async def client_handler(
 ) -> None:
     player_id: str | None = None
     last_move_at: float = 0.0
+    last_rate_limit_err_at: float = 0.0
     try:
         async for raw in ws:
             text, err = _inbound_to_utf8(raw)
@@ -540,14 +541,22 @@ async def client_handler(
                     await ws.send(json.dumps(msg_error("hello déjà enregistré")))
                     continue
                 name = str(data.get("player_name") or "Voyageur").strip() or "Voyageur"
-                ent = game.add_player(name)
+                resume_token = data.get("resume_token")
+                ent = None
+                if isinstance(resume_token, str) and resume_token.strip():
+                    ent = game.resume_player_by_token(resume_token)
+                if ent is None:
+                    ent = game.add_player(name)
                 player_id = ent.id
                 setattr(ws, "player_id", player_id)
+                game.mark_player_connected(player_id)
+                sess = game.ensure_player_session(player_id)
 
                 await ws.send(
                     json.dumps(
                         msg_welcome(
                             player_id=ent.id,
+                            session_token=sess,
                             planet_id=game.planet.id,
                             world_time_s=game.time.world_time_s,
                             day_fraction=game.time.day_fraction,
@@ -605,6 +614,8 @@ async def client_handler(
                         trace_id=wc_payload["trace_id"],
                         flags=wc_payload.get("flags"),
                         player_id=player_id,
+                        player_x=float(data.get("x", 0.0)),
+                        player_z=float(data.get("z", 0.0)),
                     )
                     if not ok:
                         await ws.send(json.dumps(msg_error(f"world_commit refusé: {reason}")))
@@ -629,6 +640,10 @@ async def client_handler(
 
                 now = time.monotonic()
                 if now - last_move_at < config.MOVE_MIN_INTERVAL_S:
+                    # Erreur au plus 1/s (sinon spam) — le client peut adapter son sendMove.
+                    if now - last_rate_limit_err_at > 1.0:
+                        last_rate_limit_err_at = now
+                        await ws.send(json.dumps(msg_error("rate_limited: move")))
                     continue
                 last_move_at = now
                 game.apply_player_move(
@@ -643,7 +658,7 @@ async def client_handler(
                 await ws.send(json.dumps(msg_error(f"type inconnu: {msg_type!r}")))
     finally:
         if player_id:
-            game.remove_player(player_id)
+            game.mark_player_disconnected(player_id)
         clients.discard(ws)
 
 

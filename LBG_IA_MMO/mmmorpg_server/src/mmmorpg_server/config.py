@@ -15,6 +15,13 @@ MAX_WS_INBOUND_BYTES: int = int(os.environ.get("MMMORPG_MAX_WS_INBOUND_BYTES", s
 # Anti-spam sur `move` (secondes entre deux commandes appliquées).
 MOVE_MIN_INTERVAL_S: float = float(os.environ.get("MMMORPG_MOVE_MIN_INTERVAL_S", "0.02"))
 
+# Reconnexion : durée pendant laquelle un joueur déconnecté peut reprendre sa session
+# (token renvoyé au welcome, puis renvoyé par le client dans `hello.resume_token`).
+SESSION_TTL_S: float = float(os.environ.get("MMMORPG_SESSION_TTL_S", "900"))
+
+# Interaction inventaire v1 (ramasser/déposer) : distance max joueur ↔ PNJ lors d'un world_commit player_item_*.
+ITEM_INTERACT_MAX_DISTANCE_M: float = float(os.environ.get("MMMORPG_ITEM_INTERACT_MAX_DISTANCE_M", "12"))
+
 # Champ de vision (serveur WS) : filtre les entités renvoyées par `world_tick`.
 FOV_RANGE_M: float = float(os.environ.get("MMMORPG_FOV_RANGE_M", "140"))
 FOV_LOS_ENABLED: bool = os.environ.get("MMMORPG_FOV_LOS", "").strip().lower() in ("1", "true", "yes", "on")

@@ -37,6 +37,11 @@ Exemple : `...?overlay=1&alpha=0.45` (le fond est corrigé automatiquement).
 
 Touche **E** ou bouton **RAMASSER** (HUD PNJ) : envoi d’un `move` avec `world_commit` (`player_item_*`) vers le PNJ sélectionné si le joueur est assez proche. Sans LLM — voir `LBG_IA_MMO/docs/mmmorpg_PROTOCOL.md`.
 
+## Reconnexion (session WS)
+
+Le client stocke `welcome.session_token` et le renvoie automatiquement au reconnect dans `hello.resume_token`.
+Cela permet de reprendre le même `player_id` (si `MMMORPG_SESSION_TTL_S` n’est pas expiré côté serveur).
+
 ## Dialogue — mémoire de conversation (multi-tours)
 
 Le client envoie `ia_context.history` (tours précédents **user** / **assistant**, par PNJ) au serveur ; le pont fusionne avec le résumé session. L’historique est **local à la session** (perdu à la déconnexion). Pour que le PNJ tienne compte des contradictions du joueur, le prompt agent inclut une consigne de cohérence (pas de persistance LLM hors fil de messages).

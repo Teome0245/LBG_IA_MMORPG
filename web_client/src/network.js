@@ -49,9 +49,17 @@ export class NetworkManager {
                 
                 this.ws.onopen = () => {
                     console.log("Connecté au serveur WebSocket");
+                    let resumeToken = null;
+                    try {
+                        resumeToken = window.localStorage.getItem("lbg-mmo.ws.sessionToken.v1");
+                    } catch (_) {
+                        resumeToken = null;
+                    }
                     this.send({
                         type: "hello",
                         player_name: playerName
+                        ,
+                        resume_token: (typeof resumeToken === "string" && resumeToken.trim()) ? resumeToken.trim() : undefined
                     });
                 };
 
@@ -60,6 +68,13 @@ export class NetworkManager {
                     
                     if (data.type === "welcome") {
                         this.playerId = data.player_id;
+                        if (typeof data.session_token === "string" && data.session_token.trim()) {
+                            try {
+                                window.localStorage.setItem("lbg-mmo.ws.sessionToken.v1", data.session_token.trim());
+                            } catch (_) {
+                                // ignore
+                            }
+                        }
                         this._reconnectAttempt = 0;
                         clearWelcomeTimer();
                         resolve(data);

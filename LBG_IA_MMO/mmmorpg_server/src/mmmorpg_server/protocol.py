@@ -15,6 +15,7 @@ def msg_error(message: str) -> dict[str, Any]:
 def msg_welcome(
     *,
     player_id: str,
+    session_token: str | None = None,
     planet_id: str,
     world_time_s: float,
     day_fraction: float,
@@ -33,6 +34,8 @@ def msg_welcome(
         "entities": entities,
         "locations": locations or [],
     }
+    if isinstance(session_token, str) and session_token.strip():
+        msg["session_token"] = session_token.strip()
     if isinstance(npc_reply, str) and npc_reply.strip():
         msg["npc_reply"] = npc_reply.strip()
     if isinstance(trace_id, str) and trace_id.strip():

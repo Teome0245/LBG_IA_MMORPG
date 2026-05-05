@@ -81,6 +81,8 @@ async def _run_integration(port: int) -> None:
             pid = welcome["player_id"]
             assert isinstance(pid, str) and len(pid) > 0
             assert any(e.get("id") == pid for e in welcome.get("entities", []))
+            tok = welcome.get("session_token")
+            assert isinstance(tok, str) and len(tok) > 0
 
             await ws.send(
                 json.dumps(
@@ -104,6 +106,15 @@ async def _run_integration(port: int) -> None:
                 if msg2["type"] == "world_tick":
                     assert "npc_reply" not in msg2
                     break
+
+        # Reconnexion : reprendre le même player_id via resume_token.
+        async with connect(uri) as ws2:
+            await ws2.send(json.dumps({"type": "hello", "player_name": "integration2", "resume_token": tok}))
+            raw3 = await asyncio.wait_for(ws2.recv(), timeout=3.0)
+            w2 = json.loads(raw3)
+            assert w2["type"] == "welcome"
+            assert w2["player_id"] == pid
+            assert w2.get("session_token") == tok
 
         stop.set()
         await asyncio.wait_for(server_task, timeout=5.0)

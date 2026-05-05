@@ -43,6 +43,7 @@ async def _run_case(*, ws_port: int, http_port: int, expect_conflict_error: bool
         "MMMORPG_INTERNAL_HTTP_HOST",
         "MMMORPG_INTERNAL_HTTP_PORT",
         "MMMORPG_INTERNAL_HTTP_TOKEN",
+        "MMMORPG_MOVE_MIN_INTERVAL_S",
     )
     saved_env: dict[str, str | None] = {k: os.environ.get(k) for k in env_keys}
     for k in env_keys:
@@ -50,6 +51,7 @@ async def _run_case(*, ws_port: int, http_port: int, expect_conflict_error: bool
     os.environ["MMMORPG_DISABLE_PERSIST"] = "1"
     os.environ["MMMORPG_INTERNAL_HTTP_HOST"] = "127.0.0.1"
     os.environ["MMMORPG_INTERNAL_HTTP_PORT"] = str(http_port)
+    os.environ["MMMORPG_MOVE_MIN_INTERVAL_S"] = "0"
 
     import mmmorpg_server.config as mm_cfg
     import mmmorpg_server.main as mm_main
@@ -179,6 +181,7 @@ async def _run_player_item_via_ws(*, ws_port: int, http_port: int) -> None:
         "MMMORPG_INTERNAL_HTTP_HOST",
         "MMMORPG_INTERNAL_HTTP_PORT",
         "MMMORPG_INTERNAL_HTTP_TOKEN",
+        "MMMORPG_MOVE_MIN_INTERVAL_S",
     )
     saved_env: dict[str, str | None] = {k: os.environ.get(k) for k in env_keys}
     for k in env_keys:
@@ -186,6 +189,7 @@ async def _run_player_item_via_ws(*, ws_port: int, http_port: int) -> None:
     os.environ["MMMORPG_DISABLE_PERSIST"] = "1"
     os.environ["MMMORPG_INTERNAL_HTTP_HOST"] = "127.0.0.1"
     os.environ["MMMORPG_INTERNAL_HTTP_PORT"] = str(http_port)
+    os.environ["MMMORPG_MOVE_MIN_INTERVAL_S"] = "0"
 
     import mmmorpg_server.config as mm_cfg
     import mmmorpg_server.main as mm_main
@@ -213,14 +217,20 @@ async def _run_player_item_via_ws(*, ws_port: int, http_port: int) -> None:
             w = json.loads(raw)
             assert w["type"] == "welcome"
             pid = w["player_id"]
+            ents0 = w.get("entities") or []
+            merchant = next((e for e in ents0 if isinstance(e, dict) and e.get("id") == "npc:merchant"), None)
+            mx = float(merchant.get("x", 0.0)) if isinstance(merchant, dict) else 0.0
+            mz = float(merchant.get("z", 0.0)) if isinstance(merchant, dict) else 0.0
             tid = "ws-player-item-1"
+            # Aller au contact du marchand : l'interaction inventaire exige une proximité (anti-abus).
+            await ws.send(json.dumps({"type": "move", "x": mx, "y": 0.0, "z": mz}))
             await ws.send(
                 json.dumps(
                     {
                         "type": "move",
-                        "x": 1.0,
+                        "x": mx,
                         "y": 0.0,
-                        "z": 0.0,
+                        "z": mz,
                         "world_commit": {
                             "npc_id": "npc:merchant",
                             "trace_id": tid,

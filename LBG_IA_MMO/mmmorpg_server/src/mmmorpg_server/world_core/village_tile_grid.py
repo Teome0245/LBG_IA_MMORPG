@@ -178,6 +178,88 @@ class VillageTileGrid:
                 return wx, wz
         return None
 
+    def next_step_towards_world_m(
+        self,
+        *,
+        from_x: float,
+        from_z: float,
+        to_x: float,
+        to_z: float,
+        max_nodes: int = 900,
+    ) -> tuple[float, float] | None:
+        """
+        Retourne le prochain centre de tuile (x,z) sur un chemin 4-connexe (A*) entre `from` et `to`.
+
+        - Source de vérité : `is_walkable_tile` (.`/`R`)
+        - Retourne None si pas de chemin ou entrée hors grille
+        """
+        start = self.world_to_tile(float(from_x), float(from_z))
+        goal = self.world_to_tile(float(to_x), float(to_z))
+        if start is None or goal is None:
+            return None
+        sx, sz = start
+        gx, gz = goal
+        if (sx, sz) == (gx, gz):
+            return None
+        if not self.is_walkable_tile(sx, sz):
+            # Si le départ est bloqué (spawn mal calé), on tente un départ franchissable proche.
+            near = self._first_walkable_from_tile_origin(sx, sz)
+            if near is None:
+                return None
+            start2 = self.world_to_tile(float(near[0]), float(near[1]))
+            if start2 is None:
+                return None
+            sx, sz = start2
+        if not self.is_walkable_tile(gx, gz):
+            # Le but peut être un POI bloqué : caller doit snapper avant, sinon pas de chemin.
+            return None
+
+        def h(x: int, z: int) -> int:
+            return abs(x - gx) + abs(z - gz)
+
+        open_heap: list[tuple[int, int, int, int]] = []
+        gscore: dict[tuple[int, int], int] = {(sx, sz): 0}
+        came: dict[tuple[int, int], tuple[int, int]] = {}
+        seen = 0
+        import heapq
+
+        heapq.heappush(open_heap, (h(sx, sz), 0, sx, sz))
+        while open_heap:
+            _, cost, x, z = heapq.heappop(open_heap)
+            seen += 1
+            if seen > max_nodes:
+                return None
+            if (x, z) == (gx, gz):
+                # Reconstruire : on veut l'étape immédiatement après start.
+                cur = (x, z)
+                path = [cur]
+                while cur in came:
+                    cur = came[cur]
+                    path.append(cur)
+                path.reverse()
+                if len(path) < 2:
+                    return None
+                nx, nz = path[1]
+                wx = self.origin_x + (nx + 0.5) * self.tile_m
+                wz = self.origin_z + (nz + 0.5) * self.tile_m
+                return wx, wz
+
+            for dx, dz in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                xx = x + dx
+                zz = z + dz
+                if xx < 0 or zz < 0 or xx >= self.w or zz >= self.h:
+                    continue
+                if not self.is_walkable_tile(xx, zz):
+                    continue
+                ncost = cost + 1
+                key = (xx, zz)
+                if ncost >= gscore.get(key, 1_000_000_000):
+                    continue
+                gscore[key] = ncost
+                came[key] = (x, z)
+                heapq.heappush(open_heap, (ncost + h(xx, zz), ncost, xx, zz))
+        return None
+
 
 def _candidate_paths() -> list[Path]:
     out: list[Path] = []

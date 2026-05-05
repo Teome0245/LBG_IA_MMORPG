@@ -6,6 +6,8 @@ import json
 import logging
 import math
 import os
+import time
+import uuid
 from typing import Any
 
 from mmmorpg_server.entities.entity import Entity
@@ -100,6 +102,13 @@ class GameState:
         self._npc_reputation: dict[str, int] = {}
         # Gameplay (v1+) : jauges PNJ modifiables via commits (bornées 0–1), persistées.
         self._npc_gauges: dict[str, dict[str, float]] = {}
+
+        # --- Reconnexion WS (session token -> player_id) ---
+        # Un joueur peut "reprendre" son player_id si sa connexion WS coupe.
+        self._player_id_by_session_token: dict[str, str] = {}
+        self._session_token_by_player_id: dict[str, str] = {}
+        self._player_connected: set[str] = set()
+        self._player_last_seen_mono: dict[str, float] = {}
         
         # Obstacles du décor
         self.obstacles: list[StaticObstacle] = []
@@ -113,6 +122,46 @@ class GameState:
         
         self._village_tile_grid = try_load_village_tile_grid()
         self._load_world_data()
+
+    def ensure_player_session(self, player_id: str) -> str:
+        pid = (player_id or "").strip()
+        if not pid:
+            return ""
+        tok = self._session_token_by_player_id.get(pid)
+        if isinstance(tok, str) and tok:
+            return tok
+        tok = uuid.uuid4().hex
+        self._session_token_by_player_id[pid] = tok
+        self._player_id_by_session_token[tok] = pid
+        return tok
+
+    def resume_player_by_token(self, token: str) -> Entity | None:
+        t = (token or "").strip()
+        if not t:
+            return None
+        pid = self._player_id_by_session_token.get(t)
+        if not isinstance(pid, str) or not pid:
+            return None
+        ent = self.entities.get(pid)
+        if not ent or ent.kind != "player":
+            # Nettoyage best-effort si l'entité n'existe plus.
+            self._player_id_by_session_token.pop(t, None)
+            return None
+        return ent
+
+    def mark_player_connected(self, player_id: str) -> None:
+        pid = (player_id or "").strip()
+        if not pid:
+            return
+        self._player_connected.add(pid)
+        self._player_last_seen_mono[pid] = time.monotonic()
+
+    def mark_player_disconnected(self, player_id: str) -> None:
+        pid = (player_id or "").strip()
+        if not pid:
+            return
+        self._player_connected.discard(pid)
+        self._player_last_seen_mono[pid] = time.monotonic()
 
     def _load_world_data(self) -> None:
         # Tente de charger les données réelles depuis le seed du mmo_server
@@ -488,6 +537,8 @@ class GameState:
         trace_id: str,
         flags: dict[str, Any] | None,
         player_id: str | None = None,
+        player_x: float | None = None,
+        player_z: float | None = None,
     ) -> tuple[bool, str]:
         """
         Réconciliation minimaliste (phase 2) : accepte un commit "dialogue" pour un PNJ si :
@@ -517,6 +568,24 @@ class GameState:
             if any(isinstance(k, str) and k.startswith("player_item_") for k in cleaned):
                 if not (player_id or "").strip():
                     return False, "player_id requis pour commit inventaire"
+                # Validation gameplay : si on connaît la position, exiger une proximité raisonnable du PNJ.
+                try:
+                    px = float(player_x) if player_x is not None else None
+                    pz = float(player_z) if player_z is not None else None
+                except Exception:
+                    px, pz = None, None
+                if px is not None and pz is not None:
+                    npc = self.get_npc(npc_id)
+                    if npc is None:
+                        return False, "npc introuvable"
+                    try:
+                        max_d = float(getattr(__import__("mmmorpg_server.config", fromlist=["ITEM_INTERACT_MAX_DISTANCE_M"]), "ITEM_INTERACT_MAX_DISTANCE_M", 12.0))
+                    except Exception:
+                        max_d = 12.0
+                    dx = float(px) - float(npc.x)
+                    dz = float(pz) - float(npc.z)
+                    if dx * dx + dz * dz > float(max_d) * float(max_d):
+                        return False, f"trop loin du PNJ pour interaction inventaire (≤ {max_d} m)"
         if trace_id in self._seen_commit_trace_ids:
             return True, "duplicate (idempotent noop)"
         self._seen_commit_trace_ids.add(trace_id)
@@ -660,12 +729,20 @@ class GameState:
         )
         logger.info("%s", log_line)
         _ensure_player_inventory(p)
+        self.ensure_player_session(p.id)
+        self.mark_player_connected(p.id)
         return p
 
     def remove_player(self, player_id: str) -> None:
         ent = self.entities.get(player_id)
         if ent and ent.kind == "player":
             del self.entities[player_id]
+        pid = (player_id or "").strip()
+        tok = self._session_token_by_player_id.pop(pid, None)
+        if tok:
+            self._player_id_by_session_token.pop(tok, None)
+        self._player_connected.discard(pid)
+        self._player_last_seen_mono.pop(pid, None)
 
     def apply_player_move(self, player_id: str, x: float, y: float, z: float) -> None:
         ent = self.entities.get(player_id)
@@ -717,6 +794,22 @@ class GameState:
 
     def tick(self, dt: float) -> None:
         self.time.advance(dt)
+        # GC joueurs déconnectés : on garde une fenêtre de reprise de session.
+        ttl = 900.0
+        try:
+            ttl = float(getattr(__import__("mmmorpg_server.config", fromlist=["SESSION_TTL_S"]), "SESSION_TTL_S", ttl))
+        except Exception:
+            ttl = 900.0
+        now = time.monotonic()
+        if ttl > 0:
+            stale = []
+            for pid, last in list(self._player_last_seen_mono.items()):
+                if pid in self._player_connected:
+                    continue
+                if now - float(last or 0.0) > ttl:
+                    stale.append(pid)
+            for pid in stale:
+                self.remove_player(pid)
         for ent in self.entities.values():
             bt = float(getattr(ent, "busy_timer", 0.0) or 0.0)
             if bt > 0:
@@ -783,15 +876,44 @@ class GameState:
         if "Garde" in npc.name or npc.role == "guard":
             self._guard_behavior(npc, dt)
         else:
-            # PNJ basiques : lente dérive + rebond symbolique sur les bords
-            seed = sum(ord(c) for c in npc.id) % 314
-            noise = math.sin(self.time.world_time_s * 0.3 + seed) * 2.0
-            npc.vx += noise * dt
-            npc.vz += math.cos(self.time.world_time_s * 0.25) * 1.5 * dt
-            sp = math.sqrt(npc.vx**2 + npc.vz**2)
-            cap = 2.0
-            if sp > cap:
-                npc.vx, npc.vz = npc.vx / sp * cap, npc.vz / sp * cap
+            # PNJ basiques : micro-routines (v1) — errance bornée mais *avec* grille (évite les murs).
+            if npc.stats is None:
+                npc.stats = {}
+            if "wander_t" not in npc.stats:
+                npc.stats["wander_t"] = 0.0
+                npc.stats["wander_tx"] = float(npc.x)
+                npc.stats["wander_tz"] = float(npc.z)
+            npc.stats["wander_t"] = float(npc.stats.get("wander_t", 0.0) or 0.0) - float(dt)
+            if npc.stats["wander_t"] <= 0.0:
+                npc.stats["wander_t"] = 4.0 + (sum(ord(c) for c in npc.id) % 6) * 0.5
+                # Nouvelle cible : proche, puis snap walkable.
+                seed = sum(ord(c) for c in npc.id) % 1000
+                ang = (self.time.world_time_s * 0.4 + seed) % (2 * math.pi)
+                r = 8.0 + (seed % 5)
+                tx = float(npc.x) + math.cos(ang) * r
+                tz = float(npc.z) + math.sin(ang) * r
+                if self._village_tile_grid is not None:
+                    sn = self._village_tile_grid.nearest_walkable_tile_center_world_m(tx, tz)
+                    if sn is not None:
+                        tx, tz = float(sn[0]), float(sn[1])
+                npc.stats["wander_tx"] = tx
+                npc.stats["wander_tz"] = tz
+
+            tx = float(npc.stats.get("wander_tx", npc.x) or npc.x)
+            tz = float(npc.stats.get("wander_tz", npc.z) or npc.z)
+            if self._village_tile_grid is not None:
+                step = self._village_tile_grid.next_step_towards_world_m(from_x=npc.x, from_z=npc.z, to_x=tx, to_z=tz)
+                if step is not None:
+                    tx, tz = float(step[0]), float(step[1])
+            dx = tx - float(npc.x)
+            dz = tz - float(npc.z)
+            dist = math.sqrt(dx * dx + dz * dz)
+            if dist < 0.5:
+                npc.vx = npc.vz = 0.0
+                return
+            sp = 1.6
+            npc.vx = dx / dist * sp
+            npc.vz = dz / dist * sp
 
     def _get_location_coords(self, loc_id: str) -> tuple[float, float]:
         """Retourne les coordonnées (x, z) d'un lieu par son ID."""
@@ -838,6 +960,13 @@ class GameState:
             if sn is not None:
                 tx, tz = float(sn[0]), float(sn[1])
         
+        # Pathfinding grille : au lieu d'aller en ligne droite (qui tape les maisons),
+        # prendre le prochain pas A* sur tuiles walkables.
+        if self._village_tile_grid is not None:
+            step = self._village_tile_grid.next_step_towards_world_m(from_x=npc.x, from_z=npc.z, to_x=tx, to_z=tz)
+            if step is not None:
+                tx, tz = float(step[0]), float(step[1])
+
         dx, dz = tx - npc.x, tz - npc.z
         dist = math.sqrt(dx*dx + dz*dz)
         

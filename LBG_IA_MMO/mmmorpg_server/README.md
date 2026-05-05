@@ -32,6 +32,26 @@ python -m mmmorpg_server
 
 Variables : `MMMORPG_HOST`, `MMMORPG_PORT` (défaut **7733**), `MMMORPG_TICK_RATE_HZ`, etc. (voir `mmmorpg_server/config.py`).
 
+## Reconnexion / session (token)
+
+Au `welcome`, le serveur renvoie un **`session_token`**. Le client peut ensuite reprendre sa session en envoyant `hello` avec :
+
+- `resume_token: "<session_token>"`
+
+Le serveur réutilise alors le même `player_id` (si la session n’a pas expiré).
+
+Variables :
+
+- `MMMORPG_SESSION_TTL_S` (défaut **900**) : durée pendant laquelle un joueur déconnecté reste “reprenable”.
+
+## Rate-limit (anti-spam move)
+
+Le serveur applique un anti-spam sur `move` :
+
+- `MMMORPG_MOVE_MIN_INTERVAL_S` (défaut **0.02**) : intervalle minimal entre deux moves appliqués.
+
+Si le client spamme, le serveur ignore les moves excédentaires et peut renvoyer ponctuellement `error.message="rate_limited: move"`.
+
 ## Collisions village (grille `watabou_grid_v1`)
 
 Le serveur WS peut charger la même grille tuilée que `mmo_server` (export `pixie_seat.grid.json`, etc.) pour bloquer les déplacements sur l’herbe, les arbres, les bâtiments, etc. Seules les tuiles **`.`** et **`R`** sont franchissables.
@@ -47,6 +67,12 @@ Variables d’environnement (dans l’ordre de tentative) :
 **Spawn joueur** : si la grille est chargée et que le point monde `(0, 0)` est franchissable, le joueur apparaît à `(0, 0, 0)`. Sinon, le serveur choisit le **centre de la première tuile franchissable** en **spirale** (couches autour de la tuile sous `(0, 0)`). Si aucune tuile n’est franchissable, repli sur l’ancien défaut `(0, 0, -20)`.
 
 **PNJ (seed)** : si une grille est chargée, les positions issues de `world_initial.json` (ou du fallback `_seed_npcs`) sont recalées sur la **tuile franchissable la plus proche** (même spirale depuis la tuile cible).
+
+## Interactions inventaire (stub) — garde-fou distance
+
+Les commits `world_commit` avec `player_item_*` (ramasser/déposer v1) exigent que le joueur soit à proximité du PNJ ciblé :
+
+- `MMMORPG_ITEM_INTERACT_MAX_DISTANCE_M` (défaut **12**) : distance max joueur ↔ PNJ pour accepter l’interaction.
 
 ## Champ de vision (serveur WS)
 
