@@ -131,6 +131,10 @@ class GameState:
         self.time = TimeManager()
         self.entities: dict[str, Entity] = {}
         self.locations: list[dict[str, Any]] = []
+        # Intérieurs instanciés (v1): zone_id -> déf (centre + bounds + spawn).
+        self._interiors: dict[str, dict[str, float]] = {}
+        # Cache type par location_id (seed) (utile pour "maisons" de PNJ).
+        self._location_type_by_id: dict[str, str] = {}
         # Phase 2 (réconciliation) : commits idempotents (trace_id) enregistrés en mémoire.
         self._seen_commit_trace_ids: set[str] = set()
         self._npc_commit_flags: dict[str, dict[str, Any]] = {}
@@ -294,6 +298,7 @@ class GameState:
                     data = json.load(f)
                 
                 loc_coords = {}
+                loc_types: dict[str, str] = {}
                 # Charger les Lieux (Locations)
                 for loc in data.get("locations", []):
                     geom = loc.get("geometry", {})
@@ -323,6 +328,7 @@ class GameState:
                             pass
                         self.locations.append(l_data)
                         loc_coords[loc["id"]] = (l_data["x"], l_data["z"])
+                        loc_types[str(loc["id"])] = str(loc.get("type") or "").strip()
                         
                         # Obstacle physique pour les bâtiments (Plein pour éviter de traverser)
                         if loc["type"] in ("building", "house", "shop", "tower", "inn"):
@@ -361,9 +367,19 @@ class GameState:
                     r0 = npc_data.get("race_id")
                     if isinstance(r0, str) and r0.strip():
                         npc.race_id = r0.strip()
+                    # Maison (repos): mémoriser le bâtiment d'attache si le seed pointe une "house".
+                    try:
+                        if npc.stats is None:
+                            npc.stats = {}
+                        lid = str(loc_id or "").strip()
+                        if lid and loc_types.get(lid, "") == "house":
+                            npc.stats["home_location_id"] = lid
+                    except Exception:
+                        pass
                     self.entities[npc.id] = npc
                 # Mobs v1 (combat/quête) : garantir des cibles même si le seed n'en contient pas.
                 self._ensure_mobs_v1()
+                self._location_type_by_id = loc_types
             except Exception as e:
                 print(f"Erreur chargement seed: {e}")
                 self._seed_npcs()
@@ -374,21 +390,23 @@ class GameState:
         self._ensure_mobs_v1()
         self._ensure_resources_v1()
         self._ensure_doors_v1()
+        self._ensure_interiors_v1()
 
     def _ensure_doors_v1(self) -> None:
         """Ajoute des 'portes' (locations type=door) pour les bâtiments du seed.
 
         But: matérialiser une entrée visible par bâtiment sans toucher au pathfinding/obstacles.
-        Les portes sont des locations légères, snapées sur une tuile walkable si la grille est dispo.
+        Les portes sont des locations légères, positionnées au bord du bâtiment côté route quand possible,
+        puis snapées sur une tuile walkable (préférence route `R`) si la grille est dispo.
         """
         seen = {str(l.get("id")) for l in self.locations if isinstance(l, dict) and "id" in l}
         g = getattr(self, "_village_tile_grid", None)
 
-        def _snap_walkable(x: float, z: float) -> tuple[float, float]:
+        def _snap_prefer_road(x: float, z: float) -> tuple[float, float]:
             if g is None:
                 return (x, z)
             try:
-                snapped = g.nearest_walkable_tile_center_world_m(float(x), float(z))
+                snapped = g.nearest_preferred_or_walkable_tile_center_world_m(float(x), float(z))
             except Exception:
                 snapped = None
             if snapped is None:
@@ -419,39 +437,155 @@ class GameState:
             except Exception:
                 rot = None
 
-            # Porte heuristique: bord "sud" du rectangle (z+), à l'extérieur du volume.
-            # Si rotation connue, appliquer la rotation à l'offset.
-            dx0, dz0 = 0.0, (h / 2.0) + 2.0
-            if rot is not None:
-                c = math.cos(rot)
-                s = math.sin(rot)
-                dx = dx0 * c - dz0 * s
-                dz = dx0 * s + dz0 * c
-            else:
-                dx, dz = dx0, dz0
-
-            x, z = _snap_walkable(cx + dx, cz + dz)
+            # Candidates autour du périmètre (4 côtés) ; choisir le snap le plus proche
+            # du point d'entrée (et hors obstacle).
+            pad = 2.5
+            candidates = [
+                (0.0, (h / 2.0) + pad),
+                (0.0, -((h / 2.0) + pad)),
+                ((w / 2.0) + pad, 0.0),
+                (-((w / 2.0) + pad), 0.0),
+            ]
+            best: dict[str, float] | None = None
+            for dx0, dz0 in candidates:
+                if rot is not None:
+                    c = math.cos(rot)
+                    s = math.sin(rot)
+                    dx = dx0 * c - dz0 * s
+                    dz = dx0 * s + dz0 * c
+                else:
+                    dx, dz = dx0, dz0
+                want_x = cx + dx
+                want_z = cz + dz
+                sx, sz = _snap_prefer_road(want_x, want_z)
+                inside = False
+                for obs in self.obstacles:
+                    if obs.is_inside(sx, sz, margin=0.5):
+                        inside = True
+                        break
+                if inside:
+                    continue
+                d2 = (sx - want_x) ** 2 + (sz - want_z) ** 2
+                if best is None or d2 < best.get("d2", 1e18):
+                    best = {"x": float(sx), "z": float(sz), "dx": float(sx - cx), "dz": float(sz - cz), "d2": float(d2)}
+            if best is None:
+                dx0, dz0 = 0.0, (h / 2.0) + pad
+                if rot is not None:
+                    c = math.cos(rot)
+                    s = math.sin(rot)
+                    dx = dx0 * c - dz0 * s
+                    dz = dx0 * s + dz0 * c
+                else:
+                    dx, dz = dx0, dz0
+                sx, sz = _snap_prefer_road(cx + dx, cz + dz)
+                best = {"x": float(sx), "z": float(sz), "dx": float(sx - cx), "dz": float(sz - cz)}
             self.locations.append(
                 {
                     "id": door_id,
                     "name": f"Porte — {str(loc.get('name') or lid)}",
                     "type": "door",
-                    "x": float(x),
+                    "x": float(best["x"]),
                     "y": 0.0,
-                    "z": float(z),
+                    "z": float(best["z"]),
                     "w": 2.0,
                     "h": 2.0,
                     "for_location_id": lid,
                     # Vecteur "extérieur → intérieur" (approx.) pour calculer le point opposé.
                     # Sert à traverser le bâtiment sans se retrouver dans l'obstacle.
-                    "door_dx": float(dx),
-                    "door_dz": float(dz),
+                    "door_dx": float(best["dx"]),
+                    "door_dz": float(best["dz"]),
+                    "zone": "village",
                 }
             )
             seen.add(door_id)
 
+    def _ensure_interiors_v1(self) -> None:
+        """Génère des intérieurs instanciés par bâtiment (v1) + porte intérieure de sortie."""
+        base_x = 5000.0
+        base_z = 5000.0
+        step = 80.0
+        seen = {str(l.get("id")) for l in self.locations if isinstance(l, dict) and "id" in l}
+        idx = 0
+        for loc in list(self.locations):
+            if not isinstance(loc, dict):
+                continue
+            ltype = str(loc.get("type") or "").strip()
+            if ltype not in ("building", "house", "shop", "tower", "inn"):
+                continue
+            lid = str(loc.get("id") or "").strip()
+            if not lid:
+                continue
+            zone_id = f"interior:{lid}"
+            if zone_id in self._interiors:
+                continue
+
+            w0 = float(loc.get("w", 12.0) or 12.0)
+            h0 = float(loc.get("h", 12.0) or 12.0)
+            iw = max(10.0, min(20.0, w0 * 0.7))
+            ih = max(10.0, min(20.0, h0 * 0.7))
+            cx = base_x + (idx % 12) * step
+            cz = base_z + (idx // 12) * step
+            idx += 1
+
+            spawn_x = cx
+            spawn_z = cz + (ih / 2.0) - 2.5
+            door_x = cx
+            door_z = cz + (ih / 2.0) - 1.0
+
+            self._interiors[zone_id] = {
+                "cx": float(cx),
+                "cz": float(cz),
+                "w": float(iw),
+                "h": float(ih),
+                "spawn_x": float(spawn_x),
+                "spawn_z": float(spawn_z),
+                "door_x": float(door_x),
+                "door_z": float(door_z),
+            }
+
+            interior_loc_id = f"interior:{lid}"
+            if interior_loc_id not in seen:
+                self.locations.append(
+                    {
+                        "id": interior_loc_id,
+                        "name": f"Intérieur — {str(loc.get('name') or lid)}",
+                        "type": "interior",
+                        "x": float(cx),
+                        "y": 0.0,
+                        "z": float(cz),
+                        "w": float(iw),
+                        "h": float(ih),
+                        "for_location_id": lid,
+                        "zone": zone_id,
+                    }
+                )
+                seen.add(interior_loc_id)
+
+            door_in_id = f"door_in:{lid}"
+            if door_in_id not in seen:
+                self.locations.append(
+                    {
+                        "id": door_in_id,
+                        "name": f"Sortie — {str(loc.get('name') or lid)}",
+                        "type": "door",
+                        "x": float(door_x),
+                        "y": 0.0,
+                        "z": float(door_z),
+                        "w": 2.0,
+                        "h": 2.0,
+                        "for_location_id": lid,
+                        "door_kind": "inside",
+                        "zone": zone_id,
+                    }
+                )
+                seen.add(door_in_id)
+
     def use_door(self, *, player_id: str, door_id: str, player_x: float | None, player_z: float | None) -> tuple[bool, str]:
-        """Traverse une porte: téléporte le joueur de l'autre côté du bâtiment (sans entrer dans l'obstacle)."""
+        """Utilise une porte: bascule extérieur <-> intérieur du bâtiment (v1 instancing).
+
+        - Si le joueur est au village: entrer dans `interior:<loc_id>` (spawn intérieur).
+        - Si le joueur est déjà dans cet intérieur: ressortir au village (près de la porte extérieure).
+        """
         pid = (player_id or "").strip()
         did = (door_id or "").strip()
         if not pid or not did:
@@ -482,40 +616,44 @@ class GameState:
             return False, "trop loin de la porte"
 
         loc_id = str(door.get("for_location_id") or "").strip()
-        base = None
-        for l in self.locations:
-            if isinstance(l, dict) and str(l.get("id") or "") == loc_id:
-                base = l
-                break
-        if not base:
+        if not loc_id:
             return False, "bâtiment introuvable"
 
-        cx = float(base.get("x", 0.0) or 0.0)
-        cz = float(base.get("z", 0.0) or 0.0)
-        odx = float(door.get("door_dx", 0.0) or 0.0)
-        odz = float(door.get("door_dz", 0.0) or 0.0)
+        if ent.stats is None:
+            ent.stats = {}
+        cur_zone = str(ent.stats.get("zone") or "village").strip() or "village"
+        zone_id = f"interior:{loc_id}"
+        interior = self._interiors.get(zone_id)
+        if interior is None:
+            return False, "intérieur indisponible"
 
-        # Point opposé (autre côté du volume).
-        tx = cx - odx
-        tz = cz - odz
+        # Déterminer entrée/sortie: si on est déjà dans l'intérieur de ce bâtiment, on ressort.
+        exiting = cur_zone == zone_id
 
-        # Snapping walkable si possible.
-        g = getattr(self, "_village_tile_grid", None)
-        if g is not None:
-            try:
-                snapped = g.nearest_walkable_tile_center_world_m(float(tx), float(tz))
-            except Exception:
-                snapped = None
-            if snapped is not None:
-                tx, tz = float(snapped[0]), float(snapped[1])
-
-        # Eviter l'intérieur d'une boîte d'obstacle.
-        for obs in self.obstacles:
-            if obs.is_inside(tx, tz, margin=0.5):
-                # Reculer davantage dans la même direction.
-                tx = cx - odx * 1.35
-                tz = cz - odz * 1.35
-                break
+        if exiting:
+            # Sortie -> village, near porte extérieure.
+            ext_door_id = f"door:{loc_id}"
+            ext = None
+            for l in self.locations:
+                if isinstance(l, dict) and str(l.get("id") or "") == ext_door_id:
+                    ext = l
+                    break
+            if ext is None:
+                return False, "porte extérieure manquante"
+            tx = float(ext.get("x", 0.0) or 0.0)
+            tz = float(ext.get("z", 0.0) or 0.0)
+            # légèrement vers l'extérieur pour éviter d'être "sur" la porte
+            odx = float(ext.get("door_dx", 0.0) or 0.0)
+            odz = float(ext.get("door_dz", 0.0) or 0.0)
+            norm = math.hypot(odx, odz) or 1.0
+            tx += (odx / norm) * 1.2
+            tz += (odz / norm) * 1.2
+            ent.stats["zone"] = "village"
+        else:
+            # Entrée -> intérieur
+            tx = float(interior.get("spawn_x", interior["cx"]))
+            tz = float(interior.get("spawn_z", interior["cz"]))
+            ent.stats["zone"] = zone_id
 
         # Appliquer directement la position (autorité serveur).
         from_x, from_z = float(ent.x), float(ent.z)
@@ -526,11 +664,12 @@ class GameState:
             pid,
             {
                 "type": "door",
-                "status": "used",
+                "status": "exit" if exiting else "enter",
                 "door_id": did,
                 "for_location_id": loc_id,
                 "from": {"x": from_x, "z": from_z},
                 "to": {"x": float(tx), "z": float(tz)},
+                "zone": str(ent.stats.get("zone") or ""),
             },
         )
         return True, "ok"
@@ -1551,6 +1690,36 @@ class GameState:
                     ent.vx = ent.vy = ent.vz = 0.0
             
             npc_busy = ent.kind == "npc" and float(getattr(ent, "busy_timer", 0.0) or 0.0) > 0.0
+            # Besoins PNJ (v1): faim/soif/fatigue augmentent dehors, récupèrent plus vite à la maison.
+            if ent.kind == "npc" and isinstance(ent.stats, dict):
+                role = str(getattr(ent, "role", "") or "").strip().lower()
+                if role not in ("mob", "monster"):
+                    needs = ent.stats.get("needs")
+                    if not isinstance(needs, dict):
+                        needs = {"hunger": 0.15, "thirst": 0.15, "fatigue": 0.15}
+                        ent.stats["needs"] = needs
+                    h0 = float(needs.get("hunger", 0.0) or 0.0)
+                    t0 = float(needs.get("thirst", 0.0) or 0.0)
+                    f0 = float(needs.get("fatigue", 0.0) or 0.0)
+
+                    zone = str(ent.stats.get("zone") or "village").strip() or "village"
+                    home = str(ent.stats.get("home_location_id") or "").strip()
+                    home_zone = f"interior:{home}" if home else ""
+                    resting = bool(home_zone) and zone == home_zone
+
+                    # dehors: augmente lentement ; au repos: baisse plus vite
+                    if resting:
+                        h0 -= float(dt) * 0.030
+                        t0 -= float(dt) * 0.038
+                        f0 -= float(dt) * 0.050
+                    else:
+                        h0 += float(dt) * 0.0020
+                        t0 += float(dt) * 0.0026
+                        f0 += float(dt) * 0.0030
+
+                    needs["hunger"] = max(0.0, min(1.0, h0))
+                    needs["thirst"] = max(0.0, min(1.0, t0))
+                    needs["fatigue"] = max(0.0, min(1.0, f0))
             if ent.kind == "npc" and not npc_busy:
                 self._npc_step(ent, dt)
             elif ent.kind == "npc" and npc_busy and ("Garde" in ent.name or getattr(ent, "role", "") == "guard"):
@@ -1573,17 +1742,34 @@ class GameState:
             nx = ent.x + ent.vx * dt
             nz = ent.z + ent.vz * dt
             
-            # Grille village (Watabou) : hors carte ou tuile non franchissable = bloqué
-            blocked = False
-            if self._village_tile_grid is not None and not self._village_tile_grid.is_walkable_world_m(nx, nz):
-                blocked = True
+            # Zone/instance (v1): intérieur = pas de grille village/obstacles, mais bornes locales.
+            zone = "village"
+            if isinstance(ent.stats, dict):
+                zone = str(ent.stats.get("zone") or "village").strip() or "village"
 
-            # Vérification des obstacles (seed / boîtes)
-            if not blocked:
-                for obs in self.obstacles:
-                    if obs.is_inside(nx, nz, margin=0.5):
+            blocked = False
+            if zone.startswith("interior:"):
+                interior = self._interiors.get(zone)
+                if interior is None:
+                    blocked = True
+                else:
+                    cx = float(interior["cx"])
+                    cz = float(interior["cz"])
+                    w = float(interior["w"])
+                    h = float(interior["h"])
+                    if not (cx - w / 2.0 <= nx <= cx + w / 2.0 and cz - h / 2.0 <= nz <= cz + h / 2.0):
                         blocked = True
-                        break
+            else:
+                # Grille village (Watabou) : hors carte ou tuile non franchissable = bloqué
+                if self._village_tile_grid is not None and not self._village_tile_grid.is_walkable_world_m(nx, nz):
+                    blocked = True
+
+                # Vérification des obstacles (seed / boîtes)
+                if not blocked:
+                    for obs in self.obstacles:
+                        if obs.is_inside(nx, nz, margin=0.5):
+                            blocked = True
+                            break
             
             if not blocked:
                 ent.x = nx

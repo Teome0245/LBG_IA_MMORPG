@@ -428,6 +428,12 @@ def _filter_entities_for_player(game: GameState, player_id: str, snaps: list[dic
     r = float(config.FOV_RANGE_M)
     r2 = r * r
     g = getattr(game, "_village_tile_grid", None)
+    pzone = "village"
+    try:
+        if isinstance(getattr(ent, "stats", None), dict):
+            pzone = str(ent.stats.get("zone") or "village").strip() or "village"
+    except Exception:
+        pzone = "village"
 
     def los_ok(x: float, z: float) -> bool:
         if not config.FOV_LOS_ENABLED or g is None:
@@ -463,6 +469,15 @@ def _filter_entities_for_player(game: GameState, player_id: str, snaps: list[dic
     out: list[dict[str, Any]] = []
     for s in snaps:
         try:
+            # Filtre instance/zone (intérieurs): ne montrer que ce qui est dans la même zone.
+            szone = "village"
+            st = s.get("stats")
+            if isinstance(st, dict):
+                szone = str(st.get("zone") or "village").strip() or "village"
+            if szone != pzone:
+                # Toujours inclure soi-même (debug) même si mal taggé.
+                if s.get("id") != player_id:
+                    continue
             if s.get("id") == player_id:
                 out.append(s)
                 continue
@@ -472,7 +487,7 @@ def _filter_entities_for_player(game: GameState, player_id: str, snaps: list[dic
             dz = z - pz
             if dx * dx + dz * dz > r2:
                 continue
-            if not los_ok(x, z):
+            if pzone == "village" and not los_ok(x, z):
                 continue
             out.append(s)
         except Exception:
@@ -488,9 +503,18 @@ def _filter_locations_for_player(game: GameState, player_id: str, locs: list[dic
     pz = float(getattr(ent, "z", 0.0) or 0.0)
     r = float(config.FOV_RANGE_M)
     r2 = r * r
+    pzone = "village"
+    try:
+        if isinstance(getattr(ent, "stats", None), dict):
+            pzone = str(ent.stats.get("zone") or "village").strip() or "village"
+    except Exception:
+        pzone = "village"
     out: list[dict[str, Any]] = []
     for loc in locs:
         try:
+            lzone = str(loc.get("zone") or "village").strip() or "village"
+            if lzone != pzone:
+                continue
             x = float(loc.get("x", 0.0) or 0.0)
             z = float(loc.get("z", 0.0) or 0.0)
             dx = x - px
