@@ -518,6 +518,22 @@ export class Renderer {
                 ctx.fill();
                 ctx.stroke();
                 ctx.restore();
+            } else if (loc.type === "door") {
+                // Porte: petit losange + liseré (lisible même avec zoom modeste).
+                const r = Math.max(6, 10 * this.zoom);
+                ctx.save();
+                ctx.fillStyle = "rgba(255, 234, 0, 0.18)";
+                ctx.strokeStyle = "rgba(255, 234, 0, 0.85)";
+                ctx.lineWidth = Math.max(1, 1.5 * this.zoom);
+                ctx.beginPath();
+                ctx.moveTo(pos.x, pos.y - r);
+                ctx.lineTo(pos.x + r, pos.y);
+                ctx.lineTo(pos.x, pos.y + r);
+                ctx.lineTo(pos.x - r, pos.y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
             }
             if (this.zoom > 0.01) {
                 ctx.fillStyle = "rgba(255, 255, 255, 0.8)";

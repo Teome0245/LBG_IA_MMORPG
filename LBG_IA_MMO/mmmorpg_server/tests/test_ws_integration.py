@@ -83,6 +83,9 @@ async def _run_integration(port: int) -> None:
             assert any(e.get("id") == pid for e in welcome.get("entities", []))
             tok = welcome.get("session_token")
             assert isinstance(tok, str) and len(tok) > 0
+            # Portes v1: le seed doit générer au moins une location type=door.
+            locs = welcome.get("locations", [])
+            assert any(isinstance(l, dict) and l.get("type") == "door" for l in locs)
 
             await ws.send(
                 json.dumps(

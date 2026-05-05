@@ -373,6 +373,78 @@ class GameState:
         # Même si on est passé par _seed_npcs, s'assurer que les mobs v1 existent.
         self._ensure_mobs_v1()
         self._ensure_resources_v1()
+        self._ensure_doors_v1()
+
+    def _ensure_doors_v1(self) -> None:
+        """Ajoute des 'portes' (locations type=door) pour les bâtiments du seed.
+
+        But: matérialiser une entrée visible par bâtiment sans toucher au pathfinding/obstacles.
+        Les portes sont des locations légères, snapées sur une tuile walkable si la grille est dispo.
+        """
+        seen = {str(l.get("id")) for l in self.locations if isinstance(l, dict) and "id" in l}
+        g = getattr(self, "_village_tile_grid", None)
+
+        def _snap_walkable(x: float, z: float) -> tuple[float, float]:
+            if g is None:
+                return (x, z)
+            try:
+                snapped = g.nearest_walkable_tile_center_world_m(float(x), float(z))
+            except Exception:
+                snapped = None
+            if snapped is None:
+                return (x, z)
+            return (float(snapped[0]), float(snapped[1]))
+
+        for loc in list(self.locations):
+            if not isinstance(loc, dict):
+                continue
+            ltype = str(loc.get("type") or "").strip()
+            if ltype not in ("building", "house", "shop", "tower", "inn"):
+                continue
+            lid = str(loc.get("id") or "").strip()
+            if not lid:
+                continue
+            door_id = f"door:{lid}"
+            if door_id in seen:
+                continue
+
+            cx = float(loc.get("x", 0.0) or 0.0)
+            cz = float(loc.get("z", 0.0) or 0.0)
+            w = float(loc.get("w", 8.0) or 8.0)
+            h = float(loc.get("h", 8.0) or 8.0)
+            rot = None
+            try:
+                rr = loc.get("rotation_rad", None)
+                rot = float(rr) if rr is not None else None
+            except Exception:
+                rot = None
+
+            # Porte heuristique: bord "sud" du rectangle (z+), à l'extérieur du volume.
+            # Si rotation connue, appliquer la rotation à l'offset.
+            dx0, dz0 = 0.0, (h / 2.0) + 2.0
+            if rot is not None:
+                c = math.cos(rot)
+                s = math.sin(rot)
+                dx = dx0 * c - dz0 * s
+                dz = dx0 * s + dz0 * c
+            else:
+                dx, dz = dx0, dz0
+
+            x, z = _snap_walkable(cx + dx, cz + dz)
+            self.locations.append(
+                {
+                    "id": door_id,
+                    "name": f"Porte — {str(loc.get('name') or lid)}",
+                    "type": "door",
+                    "x": float(x),
+                    "y": 0.0,
+                    "z": float(z),
+                    "w": 2.0,
+                    "h": 2.0,
+                    "for_location_id": lid,
+                }
+            )
+            seen.add(door_id)
 
     def _ensure_resources_v1(self) -> None:
         """Ajoute des locations 'resource' stables pour la récolte positionnelle."""
