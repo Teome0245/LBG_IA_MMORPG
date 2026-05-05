@@ -367,6 +367,15 @@ class GameState:
                     r0 = npc_data.get("race_id")
                     if isinstance(r0, str) and r0.strip():
                         npc.race_id = r0.strip()
+                    # Garder la trace du bâtiment "d'attache" du seed (pour instancing intérieur).
+                    try:
+                        if npc.stats is None:
+                            npc.stats = {}
+                        lid = str(loc_id or "").strip()
+                        if lid:
+                            npc.stats["spawn_location_id"] = lid
+                    except Exception:
+                        pass
                     # Maison (repos): mémoriser le bâtiment d'attache si le seed pointe une "house".
                     try:
                         if npc.stats is None:
@@ -391,6 +400,27 @@ class GameState:
         self._ensure_resources_v1()
         self._ensure_doors_v1()
         self._ensure_interiors_v1()
+        self._place_seed_npcs_into_interiors_v1()
+
+    def _place_seed_npcs_into_interiors_v1(self) -> None:
+        """Place certains PNJ "de comptoir" (auberge/forge) dans l'intérieur du bâtiment du seed."""
+        for ent in list(self.entities.values()):
+            if not ent or ent.kind != "npc" or not isinstance(ent.stats, dict):
+                continue
+            role = str(getattr(ent, "role", "") or "").strip().lower()
+            if role not in ("innkeeper", "smith"):
+                continue
+            lid = str(ent.stats.get("spawn_location_id") or "").strip()
+            if not lid:
+                continue
+            zone_id = f"interior:{lid}"
+            interior = self._interiors.get(zone_id)
+            if not isinstance(interior, dict):
+                continue
+            ent.stats["zone"] = zone_id
+            ent.x = float(interior.get("spawn_x", interior.get("cx", ent.x)))
+            ent.z = float(interior.get("spawn_z", interior.get("cz", ent.z)))
+            ent.vx = ent.vz = 0.0
 
     def _ensure_doors_v1(self) -> None:
         """Ajoute des 'portes' (locations type=door) pour les bâtiments du seed.
@@ -813,7 +843,7 @@ class GameState:
             return None, None
 
         # Anti-abus : bornes simples (LAN, mais on protège des payloads accidentels).
-        if len(flags) > 14:
+        if len(flags) > 18:
             return None, "too many flags"
 
         allowed: dict[str, tuple[type, ...]] = {
@@ -832,7 +862,9 @@ class GameState:
             "aid_thirst_delta": (int, float),
             "aid_fatigue_delta": (int, float),
             "aid_reputation_delta": (int,),
-            # Inventaire joueur (session WS) — exige ``player_id`` dans ``commit_dialogue``.
+            # Gameplay v1 : ronde garde multipliée (≤ 1) ; cumul borne côté merge `commit_dialogue`.
+            "npc_patrol_wait_scale_delta": (int, float),
+            # Inventaire joueur (stub) via world_commit.
             "player_item_id": (str,),
             "player_item_qty_delta": (int,),
             "player_item_label": (str,),
@@ -894,6 +926,11 @@ class GameState:
                     if df < -1.0 or df > 1.0:
                         return None, f"invalid value for {key}"
                     cleaned[key] = float(df)
+            elif key == "npc_patrol_wait_scale_delta":
+                df = float(v)
+                if df < 0.55 or df > 1.0:
+                    return None, f"invalid value for {key}"
+                cleaned[key] = float(df)
             else:
                 cleaned[key] = v
 
@@ -1225,8 +1262,20 @@ class GameState:
                     except Exception:
                         pass
             cur = self._npc_commit_flags.get(npc_id) or {}
+            scale_delta_obj = cleaned.get("npc_patrol_wait_scale_delta")
+            if isinstance(scale_delta_obj, (int, float)):
+                try:
+                    sd = float(scale_delta_obj)
+                    sd = max(0.55, min(1.0, sd))
+                    prev = float(cur.get("npc_patrol_wait_factor", 1.0) or 1.0)
+                    prev = max(0.35, min(1.0, prev))
+                    cur["npc_patrol_wait_factor"] = max(0.35, min(1.0, prev * sd))
+                except Exception:
+                    pass
             # Merge léger : dernier write gagne (on n'expose pas les clés aid_* dans world_flags)
             for k, v in cleaned.items():
+                if k == "npc_patrol_wait_scale_delta":
+                    continue
                 if isinstance(k, str) and k.startswith("aid_"):
                     continue
                 if isinstance(k, str) and k.startswith("player_item_"):
@@ -2124,6 +2173,13 @@ class GameState:
                 wait = 14.0
             elif "hotel" in loc_id:
                 wait = 60.0
+
+            try:
+                wf = float(self.get_npc_commit_flags(npc.id).get("npc_patrol_wait_factor", 1.0) or 1.0)
+            except Exception:
+                wf = 1.0
+            wf = max(0.35, min(1.0, wf))
+            wait = max(2.5, wait * wf)
 
             npc.stats["wait_timer"] = wait
             npc.stats["patrol_idx"] = (npc.stats["patrol_idx"] + 1) % len(patrol_points)
