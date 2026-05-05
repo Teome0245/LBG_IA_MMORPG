@@ -432,13 +432,15 @@ class GameState:
         seen = {str(l.get("id")) for l in self.locations if isinstance(l, dict) and "id" in l}
         g = getattr(self, "_village_tile_grid", None)
 
-        def _road_door_from_grid(cx: float, cz: float) -> tuple[float, float] | None:
+        def _road_door_from_grid(cx: float, cz: float, *, hint_x: float | None = None, hint_z: float | None = None) -> tuple[float, float] | None:
             """Trouve une porte côté route en s'appuyant sur la grille (plus robuste que la géométrie seed)."""
             if g is None:
                 return None
             # 1) route la plus proche du centre
             try:
-                road = g.nearest_preferred_or_walkable_tile_center_world_m(float(cx), float(cz))
+                hx = float(hint_x) if hint_x is not None else float(cx)
+                hz = float(hint_z) if hint_z is not None else float(cz)
+                road = g.nearest_preferred_or_walkable_tile_center_world_m(hx, hz)
             except Exception:
                 road = None
             if road is None:
@@ -495,7 +497,24 @@ class GameState:
             cx = float(loc.get("x", 0.0) or 0.0)
             cz = float(loc.get("z", 0.0) or 0.0)
 
-            pos = _road_door_from_grid(cx, cz)
+            # Overrides: certains bâtiments (auberge/forge) doivent ouvrir côté place (proche du centre du village).
+            # On biaise la recherche de route vers la direction du centre (0,0) pour éviter de choisir une route "arrière".
+            hint_x = None
+            hint_z = None
+            if lid in ("auberge_salle_commune", "forge"):
+                w0 = float(loc.get("w", 12.0) or 12.0)
+                h0 = float(loc.get("h", 12.0) or 12.0)
+                vx = -cx
+                vz = -cz
+                norm = math.hypot(vx, vz) or 1.0
+                vx /= norm
+                vz /= norm
+                # point un peu à l'extérieur du bâtiment, côté centre
+                d = max(w0, h0) * 0.55 + 6.0
+                hint_x = cx + vx * d
+                hint_z = cz + vz * d
+
+            pos = _road_door_from_grid(cx, cz, hint_x=hint_x, hint_z=hint_z)
             if pos is None:
                 # Fallback : porte au centre (grille absente/ratée)
                 x, z = cx, cz
