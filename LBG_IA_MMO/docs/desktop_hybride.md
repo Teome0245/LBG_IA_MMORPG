@@ -25,7 +25,7 @@ Cette approche vise un MVP **contrôlé** :
 Flux :
 1. UI `/pilot/#/desktop` envoie `POST /v1/pilot/route` au backend
 2. Backend forward → orchestrateur
-3. Orchestrateur : si `context.desktop_action` est présent, route vers intent `desktop_control` → `agent.desktop`
+3. Orchestrateur : si `context.desktop_action` est présent, route vers intent `desktop_control` → `agent.desktop` (**sans** passage par le classifieur LLM d’intention : l’action est déjà structurée)
 4. `agent.desktop` appelle `POST {LBG_AGENT_DESKTOP_URL}/invoke` (worker Windows)
 5. Worker applique gardes + exécute + renvoie un résultat structuré + écrit un audit
 

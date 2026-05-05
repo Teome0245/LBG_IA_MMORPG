@@ -60,17 +60,32 @@ def _split_reply_lines(reply: str, *, max_lines: int = 12) -> list[str]:
     return parts
 
 
-def _stub_turn(player: str, speaker: str) -> tuple[list[str], str]:
+def _stub_turn(player: str, speaker: str, *, llm_error: str | None = None) -> tuple[list[str], str]:
     lines = [
         _truncate(
             f"{speaker} — « {player} »… Je vous écoute.",
             _MAX_LINE_CHARS,
         ),
-        _truncate(
-            f"{speaker} — Configurez LBG_DIALOGUE_LLM_BASE_URL (Ollama, OpenAI, etc.) pour des répliques générées.",
-            _MAX_LINE_CHARS,
-        ),
     ]
+    if llm_error:
+        err_short = (llm_error or "").strip()
+        if len(err_short) > 280:
+            err_short = err_short[:277] + "…"
+        lines.append(
+            _truncate(
+                f"{speaker} — Échec LLM : {err_short} "
+                "(modèle LBG_DIALOGUE_LLM_MODEL, charge Ollama, LBG_DIALOGUE_LLM_TIMEOUT ; "
+                "mode Pilot desktop : LBG_DIALOGUE_DESKTOP_PLAN=1 sur cet agent).",
+                _MAX_LINE_CHARS,
+            )
+        )
+    else:
+        lines.append(
+            _truncate(
+                f"{speaker} — Configurez LBG_DIALOGUE_LLM_BASE_URL (Ollama, OpenAI, etc.) pour des répliques générées.",
+                _MAX_LINE_CHARS,
+            )
+        )
     return lines, "\n\n".join(lines)
 
 
@@ -238,7 +253,8 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                 },
             }
         except Exception as e:
-            lines, reply = _stub_turn(player, speaker)
+            err_s = str(e)[:800]
+            lines, reply = _stub_turn(player, speaker, llm_error=err_s)
             return {
                 "agent": "http_dialogue",
                 "reply": reply,
@@ -250,7 +266,8 @@ def invoke(p: InvokeIn) -> dict[str, object]:
                     "stub": True,
                     "llm": True,
                     "model": dialogue_llm.model_name(),
-                    "llm_error": str(e)[:800],
+                    "llm_error": err_s,
+                    "desktop_plan_env_enabled": dialogue_llm.desktop_plan_env_enabled(),
                     "agent_version": app.version,
                     "cache_hit": False,
                     "dialogue_profile_resolved": profile_resolved,

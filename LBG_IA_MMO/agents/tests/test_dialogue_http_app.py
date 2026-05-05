@@ -68,6 +68,34 @@ def test_invoke_returns_rich_dialogue_shape_stub() -> None:
     assert j["meta"].get("dialogue_profile_resolved") == "professionnel"
 
 
+def test_invoke_llm_failure_stub_mentions_error_not_only_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_DIALOGUE_LLM_DISABLED", raising=False)
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_LLM_MODEL", "test-model")
+
+    import lbg_agents.dialogue_llm as llm_mod
+
+    def _boom(**_a: object, **_k: object) -> str:
+        raise RuntimeError("Réponse LLM vide")
+
+    monkeypatch.setattr(llm_mod, "run_dialogue_turn", _boom)
+
+    client = TestClient(app)
+    r = client.post(
+        "/invoke",
+        json={"actor_id": "p:1", "text": "test", "context": {"npc_name": "A"}},
+    )
+    assert r.status_code == 200
+    j = r.json()
+    assert j["meta"]["stub"] is True
+    assert j["meta"]["llm"] is True
+    assert "Réponse LLM vide" in (j["meta"].get("llm_error") or "")
+    assert j["meta"].get("desktop_plan_env_enabled") is False
+    reply = j["reply"]
+    assert "Réponse LLM vide" in reply or "Échec LLM" in reply
+    assert "Configurez LBG_DIALOGUE_LLM_BASE_URL" not in reply
+
+
 def test_invoke_default_speaker_when_no_npc_in_context() -> None:
     client = TestClient(app)
     r = client.post(
