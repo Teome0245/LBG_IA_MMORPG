@@ -658,11 +658,16 @@ class App {
         const target = this.getDialogueTarget();
         const npcId = target && target.id ? target.id : "";
         const p = this.playerLocalPos;
-        // Stub v1 : selon PNJ, proposer une quête fixe.
-        let questId = "quest:brindilles";
-        if (npcId === "npc:guard") questId = "quest:boars";
-        else if (npcId === "npc:smith") questId = "quest:forge_ingot";
-        else if (npcId === "npc:merchant") questId = "quest:brindilles";
+        const avail = this._availableQuestsForNpc(npcId);
+        const sel = String(this.selectedQuestId || "").trim();
+        let questId = sel && avail.some((q) => q && q.id === sel) ? sel : "";
+        if (!questId && avail.length) {
+            questId = typeof avail[0]?.id === "string" ? avail[0].id : "";
+        }
+        if (!questId) {
+            this.addLog("Quête : aucune quête disponible pour ce PNJ.", "system");
+            return;
+        }
         this.network.sendQuest({ action: "accept", questId, npcId, position: p });
     }
 
@@ -1189,7 +1194,63 @@ class App {
             statsExtra = `<div class="sheet-section sheet-sub"><span class="muted">Stats (serveur)</span><br>${lines.join("<br>")}</div>`;
         }
 
-        el.innerHTML = identity + stateHtml + statsExtra;
+        el.innerHTML = identity + stateHtml + statsExtra + '<div id="npc-quests-ui"></div>';
+        this.renderNpcQuestUi(tid);
+    }
+
+    renderNpcQuestUi(npcId) {
+        const root = document.getElementById("npc-quests-ui");
+        if (!root) return;
+        root.innerHTML = "";
+
+        const nid = String(npcId || "").trim();
+        if (!nid) return;
+
+        const qs = this._availableQuestsForNpc(nid);
+        if (!qs.length) {
+            const empty = document.createElement("div");
+            empty.className = "sheet-section muted";
+            empty.textContent = "Quêtes disponibles : aucune.";
+            root.appendChild(empty);
+            return;
+        }
+
+        const wrap = document.createElement("div");
+        wrap.className = "sheet-section";
+
+        const title = document.createElement("div");
+        title.className = "sheet-row muted";
+        title.style.marginBottom = "0.4rem";
+        title.textContent = "Quêtes disponibles";
+        wrap.appendChild(title);
+
+        for (const q of qs.slice(0, 6)) {
+            const qid = typeof q?.id === "string" ? q.id.trim() : "";
+            if (!qid) continue;
+            const qtitle = typeof q?.title === "string" && q.title.trim() ? q.title.trim() : qid;
+
+            const row = document.createElement("div");
+            row.className = "sheet-row";
+            row.style.justifyContent = "space-between";
+            row.style.gap = "0.5rem";
+
+            const left = document.createElement("span");
+            left.innerHTML = `<span class="label">${escapeHtml(qtitle)}</span> <span class="muted">(${escapeHtml(qid)})</span>`;
+
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "mini-action-btn";
+            btn.textContent = "Accepter";
+            btn.addEventListener("click", () => {
+                this.selectedQuestId = qid;
+                this.tryQuestAccept();
+            });
+
+            row.appendChild(left);
+            row.appendChild(btn);
+            wrap.appendChild(row);
+        }
+        root.appendChild(wrap);
     }
 
     _formatRoleSubtitle(target) {
