@@ -675,6 +675,28 @@ async def client_handler(
                     game.set_player_combat(player_id=player_id, active=False)
                 else:
                     await ws.send(json.dumps(msg_error("combat.action invalide (start|stop)")))
+            elif msg_type == "trade" and player_id:
+                side = data.get("side")
+                npc_id = data.get("npc_id")
+                item_id = data.get("item_id")
+                qty = data.get("qty", 1)
+                trace_id = data.get("trace_id")
+                try:
+                    qi = int(qty)
+                except Exception:
+                    qi = 0
+                ok, reason = game.trade(
+                    player_id=player_id,
+                    npc_id=npc_id if isinstance(npc_id, str) else "",
+                    side=side if isinstance(side, str) else "",
+                    item_id=item_id if isinstance(item_id, str) else "",
+                    qty=qi,
+                    player_x=float(data.get("x", 0.0)),
+                    player_z=float(data.get("z", 0.0)),
+                    trace_id=trace_id if isinstance(trace_id, str) else None,
+                )
+                if not ok:
+                    await ws.send(json.dumps(msg_error(f"trade refusé: {reason}")))
             else:
                 await ws.send(json.dumps(msg_error(f"type inconnu: {msg_type!r}")))
     finally:

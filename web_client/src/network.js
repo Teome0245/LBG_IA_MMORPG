@@ -186,6 +186,21 @@ export class NetworkManager {
         });
     }
 
+    sendTrade({ npcId, side, itemId, qty, position }) {
+        const pos = position || {};
+        this.send({
+            type: "trade",
+            npc_id: typeof npcId === "string" ? npcId : "",
+            side: typeof side === "string" ? side : "",
+            item_id: typeof itemId === "string" ? itemId : "",
+            qty: Number.isFinite(Number(qty)) ? Number(qty) : 1,
+            x: Number.isFinite(Number(pos.x)) ? Number(pos.x) : 0,
+            y: Number.isFinite(Number(pos.y)) ? Number(pos.y) : 0,
+            z: Number.isFinite(Number(pos.z)) ? Number(pos.z) : 0,
+            trace_id: `trade-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+        });
+    }
+
     disconnect() {
         this._manualClose = true;
         if (this._reconnectTimer) {

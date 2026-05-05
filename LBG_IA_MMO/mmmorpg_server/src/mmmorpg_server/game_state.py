@@ -6,6 +6,7 @@ import json
 import logging
 import math
 import os
+import random
 import time
 import uuid
 from typing import Any
@@ -90,6 +91,37 @@ def _ensure_player_inventory(ent: Entity) -> None:
         ent.stats["inventory"] = [dict(row) for row in _default_player_inventory()]
 
 
+def _inv_get_qty(inv_list: list[dict[str, Any]], item_id: str) -> int:
+    iid = (item_id or "").strip()
+    if not iid:
+        return 0
+    for row in inv_list:
+        if isinstance(row, dict) and str(row.get("item_id", "")).strip() == iid:
+            try:
+                return int(row.get("qty", 0))
+            except Exception:
+                return 0
+    return 0
+
+
+def _inv_set_qty(inv_list: list[dict[str, Any]], item_id: str, qty: int, *, label: str | None = None) -> None:
+    iid = (item_id or "").strip()
+    if not iid:
+        return
+    idx = next((i for i, row in enumerate(inv_list) if isinstance(row, dict) and str(row.get("item_id", "")).strip() == iid), -1)
+    if qty <= 0:
+        if idx >= 0:
+            inv_list.pop(idx)
+        return
+    if idx < 0:
+        inv_list.append({"item_id": iid, "qty": int(qty), "label": (label or iid)})
+        return
+    row = inv_list[idx]
+    row["qty"] = int(qty)
+    if label and not (isinstance(row.get("label"), str) and str(row.get("label")).strip()):
+        row["label"] = label
+
+
 class GameState:
     def __init__(self) -> None:
         self.planet = PlanetConfig(id="terre1", label="Terre1")
@@ -113,6 +145,31 @@ class GameState:
         # --- Combat v1 (auto-attack) ---
         # Events asynchrones (best-effort) envoyés au joueur via world_tick.world_event.
         self._player_events: dict[str, list[dict[str, Any]]] = {}
+
+        # --- Commerce v1 (PNJ shops) ---
+        # Catalogue minimal (prix en bronze_coin).
+        self._item_catalog: dict[str, dict[str, Any]] = {
+            "item:bronze_coin": {"label": "Pièces de bronze"},
+            "item:rations": {"label": "Rations"},
+            "item:waterskin": {"label": "Outre"},
+            "item:brindille": {"label": "Brindille"},
+            "item:iron_ingot": {"label": "Lingot de fer"},
+        }
+        # Shops: npc_id -> {"buy": {item_id: price}, "sell": {item_id: price}}
+        self._shops: dict[str, dict[str, dict[str, int]]] = {
+            "npc:merchant": {
+                "buy": {"item:rations": 3, "item:waterskin": 8},
+                "sell": {"item:brindille": 1, "item:iron_ingot": 6},
+            },
+            "npc:smith": {
+                "buy": {"item:iron_ingot": 12},
+                "sell": {"item:iron_ingot": 6},
+            },
+            "npc:innkeeper": {
+                "buy": {"item:rations": 4},
+                "sell": {},
+            },
+        }
         
         # Obstacles du décor
         self.obstacles: list[StaticObstacle] = []
@@ -533,6 +590,133 @@ class GameState:
                 if label_use and not (isinstance(row.get("label"), str) and str(row.get("label")).strip()):
                     row["label"] = label_use
         ent.stats["inventory"] = inv_list
+
+    def _player_inventory_list(self, player_id: str) -> list[dict[str, Any]] | None:
+        pid = (player_id or "").strip()
+        ent = self.entities.get(pid) if pid else None
+        if not ent or ent.kind != "player":
+            return None
+        _ensure_player_inventory(ent)
+        inv = ent.stats.get("inventory") if isinstance(ent.stats, dict) else None
+        if not isinstance(inv, list):
+            return None
+        out = []
+        for row in inv:
+            if isinstance(row, dict):
+                out.append(dict(row))
+        return out
+
+    def _set_player_inventory_list(self, player_id: str, inv_list: list[dict[str, Any]]) -> None:
+        pid = (player_id or "").strip()
+        ent = self.entities.get(pid) if pid else None
+        if not ent or ent.kind != "player":
+            return
+        if ent.stats is None:
+            ent.stats = {}
+        ent.stats["inventory"] = inv_list
+
+    def _distance2(self, ax: float, az: float, bx: float, bz: float) -> float:
+        dx = float(ax) - float(bx)
+        dz = float(az) - float(bz)
+        return dx * dx + dz * dz
+
+    def trade(
+        self,
+        *,
+        player_id: str,
+        npc_id: str,
+        side: str,
+        item_id: str,
+        qty: int,
+        player_x: float | None,
+        player_z: float | None,
+        trace_id: str | None = None,
+    ) -> tuple[bool, str]:
+        """Commerce v1 atomique : buy/sell contre item:bronze_coin. Émet un world_event côté joueur."""
+        pid = (player_id or "").strip()
+        nid = (npc_id or "").strip()
+        iid = (item_id or "").strip()
+        if not pid or not nid or not iid:
+            return False, "player_id/npc_id/item_id requis"
+        if qty <= 0 or qty > 50:
+            return False, "qty invalide"
+        npc = self.get_npc(nid)
+        if npc is None:
+            return False, "npc introuvable"
+        pl = self.entities.get(pid)
+        if not pl or pl.kind != "player":
+            return False, "joueur introuvable"
+        # Distance
+        try:
+            import mmmorpg_server.config as mm_cfg
+            max_d = float(getattr(mm_cfg, "TRADE_MAX_DISTANCE_M", 12.0))
+        except Exception:
+            max_d = 12.0
+        if player_x is not None and player_z is not None:
+            if self._distance2(float(player_x), float(player_z), float(npc.x), float(npc.z)) > max_d * max_d:
+                return False, f"trop loin du PNJ pour commerce (≤ {max_d} m)"
+        # Shop
+        shop = self._shops.get(nid)
+        if not isinstance(shop, dict):
+            return False, "ce PNJ ne fait pas commerce"
+        side0 = (side or "").strip().lower()
+        if side0 not in ("buy", "sell"):
+            return False, "side invalide (buy|sell)"
+        table = shop.get(side0) if isinstance(shop.get(side0), dict) else {}
+        if iid not in table:
+            return False, "item non disponible"
+        price = int(table[iid])
+        if price < 0:
+            return False, "prix invalide"
+        inv = self._player_inventory_list(pid)
+        if inv is None:
+            return False, "inventaire introuvable"
+        coins = _inv_get_qty(inv, "item:bronze_coin")
+        if side0 == "buy":
+            cost = price * int(qty)
+            if coins < cost:
+                return False, "fonds insuffisants"
+            _inv_set_qty(inv, "item:bronze_coin", coins - cost, label="Pièces de bronze")
+            cur = _inv_get_qty(inv, iid)
+            lab = self._item_catalog.get(iid, {}).get("label") if isinstance(self._item_catalog.get(iid), dict) else None
+            _inv_set_qty(inv, iid, cur + int(qty), label=str(lab) if isinstance(lab, str) else iid)
+            self._set_player_inventory_list(pid, inv)
+            self._queue_player_event(
+                pid,
+                {
+                    "type": "trade",
+                    "status": "bought",
+                    "npc_id": nid,
+                    "item_id": iid,
+                    "qty": int(qty),
+                    "unit_price": int(price),
+                    "total": int(cost),
+                    "trace_id": (trace_id or "").strip(),
+                },
+            )
+            return True, "bought"
+        # sell
+        have = _inv_get_qty(inv, iid)
+        if have < int(qty):
+            return False, "objet insuffisant"
+        gain = price * int(qty)
+        _inv_set_qty(inv, iid, have - int(qty))
+        _inv_set_qty(inv, "item:bronze_coin", coins + gain, label="Pièces de bronze")
+        self._set_player_inventory_list(pid, inv)
+        self._queue_player_event(
+            pid,
+            {
+                "type": "trade",
+                "status": "sold",
+                "npc_id": nid,
+                "item_id": iid,
+                "qty": int(qty),
+                "unit_price": int(price),
+                "total": int(gain),
+                "trace_id": (trace_id or "").strip(),
+            },
+        )
+        return True, "sold"
 
     def commit_dialogue(
         self,
@@ -1025,6 +1209,29 @@ class GameState:
                         "type": "combat_kill",
                         "source_id": pl.id,
                         "target_id": tid,
+                    },
+                )
+                # Loot v1 : crédite directement l'inventaire du joueur.
+                try:
+                    loot_coins = 2 + (abs(hash(tid)) % 3)
+                except Exception:
+                    loot_coins = 2
+                inv = self._player_inventory_list(pl.id)
+                if inv is not None:
+                    coins = _inv_get_qty(inv, "item:bronze_coin")
+                    _inv_set_qty(inv, "item:bronze_coin", coins + int(loot_coins), label="Pièces de bronze")
+                    # 25% : brindille (placeholder ressources/métiers)
+                    if random.random() < 0.25:
+                        cur = _inv_get_qty(inv, "item:brindille")
+                        _inv_set_qty(inv, "item:brindille", cur + 1, label="Brindille")
+                    self._set_player_inventory_list(pl.id, inv)
+                self._queue_player_event(
+                    pl.id,
+                    {
+                        "type": "loot",
+                        "source_id": pl.id,
+                        "target_id": tid,
+                        "coins": int(loot_coins),
                     },
                 )
                 cmb["active"] = False

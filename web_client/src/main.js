@@ -83,6 +83,8 @@ class App {
         const quickQuestBtn = document.getElementById('quick-quest-btn');
         const quickQuestCompleteBtn = document.getElementById('quick-quest-complete-btn');
         const stubPickupBtn = document.getElementById('stub-pickup-btn');
+        const tradeBuyBtn = document.getElementById('trade-buy-btn');
+        const tradeSellBtn = document.getElementById('trade-sell-btn');
         const clearQuestsBtn = document.getElementById('clear-quests-btn');
 
         connectBtn.addEventListener('click', () => {
@@ -153,6 +155,13 @@ class App {
             stubPickupBtn.addEventListener('click', () => this.tryStubPickupFromNpc());
         }
 
+        if (tradeBuyBtn) {
+            tradeBuyBtn.addEventListener("click", () => this.tryTrade("buy"));
+        }
+        if (tradeSellBtn) {
+            tradeSellBtn.addEventListener("click", () => this.tryTrade("sell"));
+        }
+
         this._onKeyAttack = (e) => {
             if (!e || e.code !== "KeyA" || e.repeat) return;
             const gameEl = document.getElementById("game-container");
@@ -174,6 +183,22 @@ class App {
             this.tryStubPickupFromNpc();
         };
         window.addEventListener("keydown", this._onKeyPickup);
+
+        this._onKeyTrade = (e) => {
+            if (!e || e.repeat) return;
+            const gameEl = document.getElementById("game-container");
+            if (!gameEl || gameEl.classList.contains("hidden")) return;
+            const chatEl = document.getElementById("chat-msg");
+            if (document.activeElement === chatEl) return;
+            if (e.code === "KeyB") {
+                e.preventDefault();
+                this.tryTrade("buy");
+            } else if (e.code === "KeyV") {
+                e.preventDefault();
+                this.tryTrade("sell");
+            }
+        };
+        window.addEventListener("keydown", this._onKeyTrade);
 
         if (clearQuestsBtn) {
             clearQuestsBtn.addEventListener('click', () => {
@@ -483,6 +508,10 @@ class App {
             this.handleCombatEvent(event);
             return;
         }
+        if (event.type === "loot" || event.type === "trade") {
+            this.handleEconEvent(event);
+            return;
+        }
         if (event.type !== "dialogue_commit") {
             return;
         }
@@ -537,6 +566,54 @@ class App {
             }
             this.isAttacking = false;
         }
+    }
+
+    handleEconEvent(event) {
+        if (!event || typeof event.type !== "string") return;
+        if (event.type === "loot") {
+            const coins = Number.isFinite(Number(event.coins)) ? Number(event.coins) : 0;
+            if (coins > 0) {
+                this.addLog(`Butin : +${coins} bronze.`, "system");
+            }
+            return;
+        }
+        if (event.type === "trade") {
+            const status = typeof event.status === "string" ? event.status : "";
+            const itemId = typeof event.item_id === "string" ? event.item_id : "";
+            const qty = Number.isFinite(Number(event.qty)) ? Number(event.qty) : 0;
+            const total = Number.isFinite(Number(event.total)) ? Number(event.total) : null;
+            const verb = status === "sold" ? "Vendu" : "Acheté";
+            const money = total != null ? ` (${total} bronze)` : "";
+            this.addLog(`${verb} : ${qty}× ${itemId}${money}`, "system");
+        }
+    }
+
+    tryTrade(side) {
+        const target = this.getDialogueTarget();
+        if (!target || !target.id) {
+            this.addLog("Commerce : aucune cible PNJ.", "system");
+            return;
+        }
+        let itemId = "";
+        let qty = 1;
+        if (side === "buy") {
+            if (target.id === "npc:merchant") itemId = "item:rations";
+            else if (target.id === "npc:innkeeper") itemId = "item:rations";
+            else if (target.id === "npc:smith") itemId = "item:iron_ingot";
+            else itemId = "item:rations";
+        } else {
+            if (target.id === "npc:merchant") itemId = "item:brindille";
+            else if (target.id === "npc:smith") itemId = "item:iron_ingot";
+            else itemId = "item:brindille";
+        }
+        const p = this.playerLocalPos;
+        this.network.sendTrade({
+            npcId: target.id,
+            side,
+            itemId,
+            qty,
+            position: p,
+        });
     }
 
     toggleAttackOnTarget() {

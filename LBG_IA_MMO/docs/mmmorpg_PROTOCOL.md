@@ -138,6 +138,43 @@ Notes :
 - paramètres serveur : `MMMORPG_COMBAT_TICK_S`, `MMMORPG_COMBAT_RANGE_M`, `MMMORPG_COMBAT_BASE_DAMAGE`
 - la cible doit être un PNJ vivant (HP > 0)
 
+### `trade` (économie v1 — buy/sell)
+
+Commerce direct avec un PNJ (prix en `item:bronze_coin`). Le serveur applique la transaction **atomiquement** (fonds, quantités, distance) et renvoie un `world_event` `trade` au joueur.
+
+Acheter :
+
+```json
+{
+  "type": "trade",
+  "npc_id": "npc:merchant",
+  "side": "buy",
+  "item_id": "item:rations",
+  "qty": 1,
+  "x": 10.0, "y": 0.0, "z": 2.0,
+  "trace_id": "trade-unique-001"
+}
+```
+
+Vendre :
+
+```json
+{
+  "type": "trade",
+  "npc_id": "npc:merchant",
+  "side": "sell",
+  "item_id": "item:brindille",
+  "qty": 1,
+  "x": 10.0, "y": 0.0, "z": 2.0,
+  "trace_id": "trade-unique-002"
+}
+```
+
+Règles v1 :
+
+- distance max joueur ↔ PNJ : `MMMORPG_TRADE_MAX_DISTANCE_M`
+- les items et prix sont définis côté serveur (shops PNJ)
+
 ### HTTP interne — `POST /internal/v1/npc/{npc_id}/dialogue-commit`
 
 Corps JSON :
