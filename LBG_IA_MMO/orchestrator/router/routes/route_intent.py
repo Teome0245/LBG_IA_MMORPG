@@ -7,6 +7,7 @@ from lbg_agents.dispatch import invoke_after_route
 
 from introspection.deterministic_classifier import DeterministicIntentClassifier
 from introspection.llm_intent_classifier import hybrid_classify
+from services.action_policy import evaluate_action_policy
 from services import metrics as svc_metrics
 from shared_registry import capability_registry
 
@@ -90,6 +91,35 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
     cap = capability_registry.get(intent) or capability_registry.get("unknown")
     assert cap is not None
     ctx_for_agent = _dialogue_context_for_route(ctx) if cap.routed_to == "agent.dialogue" else payload.context
+    policy = evaluate_action_policy(cap, ctx)
+    if not policy.allowed:
+        elapsed_ms = int((time.perf_counter() - t0) * 1000)
+        svc_metrics.inc("orchestrator_route_success_total")
+        out_body: dict[str, object] = {
+            "capability": cap.name,
+            "ok": False,
+            "outcome": policy.decision,
+            "error": policy.reason,
+            "policy": policy.model_dump(),
+        }
+        print(
+            json.dumps(
+                {
+                    "event": "orchestrator.route",
+                    "trace_id": trace_id,
+                    "actor_id": payload.actor_id,
+                    "intent": intent,
+                    "confidence": confidence,
+                    "routed_to": cap.routed_to,
+                    "elapsed_ms": elapsed_ms,
+                    "intent_source": route_meta.get("intent_source") if route_meta else None,
+                    "policy_decision": policy.decision,
+                    "policy_allowed": policy.allowed,
+                },
+                ensure_ascii=False,
+            )
+        )
+        return RouteResponse(intent=intent, confidence=confidence, routed_to=cap.routed_to, output=out_body)
     try:
         agent_out = invoke_after_route(
             cap.routed_to,
@@ -102,7 +132,7 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
         raise
     elapsed_ms = int((time.perf_counter() - t0) * 1000)
     svc_metrics.inc("orchestrator_route_success_total")
-    out_body: dict[str, object] = {"capability": cap.name, **agent_out}
+    out_body: dict[str, object] = {"capability": cap.name, "policy": policy.model_dump(), **agent_out}
     if route_meta:
         out_body["orchestrator_route_meta"] = route_meta
     print(
@@ -116,6 +146,8 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
                 "routed_to": cap.routed_to,
                 "elapsed_ms": elapsed_ms,
                 "intent_source": route_meta.get("intent_source") if route_meta else None,
+                "policy_decision": policy.decision,
+                "policy_allowed": policy.allowed,
             },
             ensure_ascii=False,
         )

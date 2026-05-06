@@ -48,6 +48,7 @@ Dans `docs/` :
 - `docs/architecture.md` : vue d’ensemble technique
 - `docs/subagents_cursor.md` : sous-agents Cursor (rôles, invocation, conventions)
 - `docs/vision_projet.md` : vision produit (orchestrateur + agents + auto-évolution + MMO)
+- `docs/assistant_core_plan.md` : plan d'action du recentrage IA conversationnelle incarnée (assistant poste/infra puis MMO)
 - `docs/lyra.md` : spécification Lyra 2.0 (jauges, intégrations)
 - `docs/plan_mmorpg.md` : plan d’architecture serveur MMO multivers
 - `docs/plan_de_route.md` : priorités 0–3, fusion LBG_IA, suivi des jalons

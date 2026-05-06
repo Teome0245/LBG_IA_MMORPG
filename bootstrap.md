@@ -494,6 +494,15 @@ cd LBG_IA_MMO
 bash infra/scripts/deploy_vm.sh
 ```
 
+**LAN complet (trois VM + secrets)** : enchaîne core → MMO → front (défauts `LBG_LAN_HOST_CORE` / `MMO` / `FRONT`), puis pousse `infra/secrets/lbg.env` vers chaque hôte si `LBG_PUSH_SECRETS=1` :
+
+```bash
+cd LBG_IA_MMO
+LBG_DEPLOY_ROLE=all LBG_PUSH_SECRETS=1 bash infra/scripts/deploy_vm.sh
+```
+
+Prérequis : fichier `infra/secrets/lbg.env` (non versionné), accès SSH `lbg` avec sudo NOPASSWD sur les VM, réseau vers le LAN. Voir `LBG_IA_MMO/infra/scripts/deploy_vm.sh` et `push_secrets_vm.sh`.
+
 Variables optionnelles :
 
 ```bash

@@ -452,6 +452,14 @@ class AgentDialogueInvokeBody(BaseModel):
     context: dict[str, object] = Field(default_factory=dict)
 
 
+class ActionProposalBody(BaseModel):
+    """Corps pour `POST orchestrator /v1/action-proposal`."""
+
+    actor_id: str
+    text: str = Field(..., min_length=1)
+    context: dict[str, object] = Field(default_factory=dict)
+
+
 @router.post("/agent-dialogue/invoke", tags=["pilot"])
 async def pilot_proxy_agent_dialogue_invoke(body: AgentDialogueInvokeBody) -> dict[str, object]:
     """
@@ -631,6 +639,21 @@ async def pilot_capabilities() -> dict[str, object]:
                 "body": r.text[:500],
             }
         return {"ok": True, **r.json()}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/action-proposal", tags=["pilot"])
+async def pilot_action_proposal(payload: ActionProposalBody) -> dict[str, object]:
+    """Proxy same-origin vers l’orchestrator : proposition d'action sans exécution."""
+    orch_url = os.environ.get("LBG_ORCHESTRATOR_URL", "http://127.0.0.1:8010").rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            r = await client.post(f"{orch_url}/v1/action-proposal", json=payload.model_dump())
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
     except Exception as e:
         return {"ok": False, "error": str(e)}
 

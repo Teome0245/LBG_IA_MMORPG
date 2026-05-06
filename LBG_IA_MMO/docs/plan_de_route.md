@@ -22,7 +22,7 @@ Prise en compte explicite de la note **`Boite à idées/20260428_1220_on ce rece
 
 | Rang | Objectif | Piste technique / doc |
 |------|----------|------------------------|
-| **1** | **Assistant sur PC et infra** — actions concrètes, bornées, observables | `docs/desktop_hybride.md`, capability **`desktop_control`** → `agent.desktop`, workers `windows_agent` / `linux_agent` ; `docs/adr/0004-assistant-local-vs-persona-mmo.md` |
+| **1** | **Assistant sur PC et infra** — actions concrètes, bornées, observables | `docs/assistant_core_plan.md`, `docs/desktop_hybride.md`, capability **`desktop_control`** → `agent.desktop`, workers `windows_agent` / `linux_agent` ; `docs/adr/0004-assistant-local-vs-persona-mmo.md` |
 | **2** | **Même famille cognitive côté MMO** — apprentissage / persona dans le bac à sable | `mmmorpg_server`, `agents/dialogue_*`, Lyra (`docs/lyra.md`) ; séparation **assistant local** vs **persona MMO** (ADR 0004) |
 | **3** | **Évolution du monde par l’IA** — jamais sans repreneur humain sur le tronc | Forge OpenGame (`docs/adr/0003-opengame-forge-prototypes.md`), Brain / DevOps **opt-in** + jetons, pas d’écriture sauvage sur le moteur autoritaire |
 
@@ -40,7 +40,7 @@ Prise en compte explicite de la note **`Boite à idées/20260428_1220_on ce rece
 | Fil | Source inspiration | Données versionnées | Code consommateur | Doc pivot |
 |-----|-------------------|---------------------|--------------------|-----------|
 | Idées lore / listes longues | `Boite à idées/` (non contractuel) | `LBG_IA_MMO/content/world/*.json` | `lbg_agents.world_content`, registre PNJ, `mmmorpg_server.world_catalog`, entités `race_id` | `plan_mmorpg.md`, `agents/README.md`, `pilot_web/README.md` |
-| **Poste + MMO unifiés (vision nord)** | `Boite à idées/` (ex. `20260428_1220_on ce recentre.txt`) | — | `agent.desktop`, orchestrateur, pont dialogue MMO, Lyra | `vision_projet.md`, `desktop_hybride.md`, `docs/adr/0004-assistant-local-vs-persona-mmo.md`, § *Étoile du nord* ci‑dessus, **`smoke_lan_core_desktop.sh`**, **`smoke_lan_pilot_agent_proxies.sh`** |
+| **Poste + MMO unifiés (vision nord)** | `Boite à idées/` (ex. `20260428_1220_on ce recentre.txt`, `20260502_2106_on ce recentre_2.txt`) | — | `agent.desktop`, orchestrateur, pont dialogue MMO, Lyra | `assistant_core_plan.md`, `vision_projet.md`, `desktop_hybride.md`, `docs/adr/0004-assistant-local-vs-persona-mmo.md`, § *Étoile du nord* ci‑dessus, **`smoke_lan_core_desktop.sh`**, **`smoke_lan_pilot_agent_proxies.sh`** |
 | Pilot & proxies backend | — | — | `backend/api/v1/routes/pilot.py` | `fusion_etat_des_lieux_v0.md`, `bootstrap.md` |
 | Snapshot Lyra / PNJ monde | `docs/lyra.md`, `fusion_spec_lyra.md` | état serveur + catalogue races | `mmmorpg_server` (`build_lyra_snapshot`, …) | `plan_de_route` (Historique), `lyra.md` si contrat change |
 
@@ -134,6 +134,12 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-05-06 | **Assistant Core — Jalon 5 fin + Jalon 6 (pont doux)** : `#/assistant` — **résumé de session volontaire** (JSON local : notes + historique, copie presse-papiers) ; **pont MMO** — import `session_summary` + `mmo_bridge.source=mmo_session_summary`, synchro `localStorage` partagée avec `#/desktop` ; orchestrateur — proposition `prototype_game` (OpenGame dry-run) si texte « forge/prototype » + trace MMO, champs `source` / `mmo_trace` ; tests `orchestrator/tests/test_action_proposal.py` **7 OK**. |
+| 2026-05-06 | **Assistant Core — Jalon 5 mémoire légère** : `#/assistant` conserve localement un historique court, des préférences explicites (`notepad_path`, dry-run par défaut) et des suggestions non destructives post-proposition/post-action ; aucun stockage serveur, pas de RAG disque ; tests ciblés **22 OK**. |
+| 2026-05-06 | **Assistant Core — Jalon 4 UX Pilot** : ajout du proxy backend `POST /v1/pilot/action-proposal` et d'une vue `#/assistant` dans `pilot_web` (texte/context → proposition éditable → appliquer context → exécuter dry-run/réel avec approval ; affichage `output.policy`) ; tests ciblés **22 OK**. |
+| 2026-05-06 | **Assistant Core — Jalon 3 ActionProposal** : ajout de `POST /v1/action-proposal` (proposition sans exécution) + service déterministe `services/action_proposal.py` ; parcours couverts `notepad_append`, `search_web_open`, `mail_imap_preview`, `devops selfcheck`, cas sans match ; tests ciblés **21 OK**. |
+| 2026-05-06 | **Assistant Core — Jalon 2 policy** : ajout d'une policy déterministe orchestrateur avant dispatch (`services/action_policy.py`) ; `output.policy` expose `safe_read` / `dry_run` / `approval_required` / `forbidden` / `approved_action` ; desktop réel sans dry-run/approval bloqué avant agent, DevOps read-only autorisé ; tests ciblés **16 OK**. |
+| 2026-05-06 | **Assistant Core — recentrage IA incarnée + Jalon 1** : ajout de `docs/assistant_core_plan.md` comme plan d'action canonique (assistant poste/infra → MMO → évolution contrôlée) ; `CapabilitySpec` enrichi (`mode`, `risk_level`, schémas, contraintes, effets, erreurs, tags) + registry central renseigné ; tests orchestrateur ciblés OK. |
 | 2026-05-05 | **Intérieurs instanciés (v1)** : zones `interior:<location_id>` générées par bâtiment + bascule via `door/use` (extérieur ↔ intérieur). Le serveur filtre `entities` et `locations` par **zone** (pas de leaking entre village et intérieurs). |
 | 2026-05-05 | **Portes v1** : génération `door:<building_id>` (type `door`) par bâtiment ; placement corrigé via la **grille Watabou** (route `R` la plus proche + approche jusqu’au contact d’une tuile bloquée), avec biais “côté place” pour **auberge/forge**. |
 | 2026-05-05 | **PNJ — repos & sommeil** : besoins `needs.{hunger,thirst,fatigue}` ; regen accélérée quand un PNJ est dans l’intérieur de sa maison ; routine “dodo” (fatigue haute → porte maison → entrer → attendre → ressortir). |
@@ -355,7 +361,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 - [x] **Jalon #5 : Physique & Collisions (Priorité 3)** : Bloquer les murs du village (`hollow=False`), ajuster les marges et régénérer le PNG sans chevauchements (v1.4).
 - [x] **Jalon #6 : Interactions & Dialogue (Priorité 2/3)** : inventaire session + commit Pilot ; **stub client** (`world_commit` + touche E) ; **ACTION_JSON quest + `player_item_*`** côté agent.
 
-**Étape actuelle** : **(A)** *Étoile du nord — rang 1* : renforcer l’**assistant poste / infra** (`desktop_control`, workers, audit — `desktop_hybride.md`). **(B)** suite *Jalon #6* : **objets utilisables**, quêtes à récompenses variées, polish UX ramassage — sans relâcher ADR 0004.
+**Étape actuelle** : **Assistant Core — Jalon 6 suite** : enrichir l’UX (`#/assistant` : fil capabilities, rappels ADR), et au besoin **intégration backend** d’un export borné de `session_summary` (hors scope navigateur). Les déploiements VM **110 / 140** restent la chaîne `deploy_vm.sh` / smokes habituels après merge — pas de changement d’infra spécifique à ce jalon.
 
 **File d’attente (intention produit)** : **Développement de l'univers MMO** — implémentation des niveaux de détails de simulation PNJ (LOD), Ticks sociaux, événements dynamiques (voir `plan_mmorpg.md`).
 
@@ -387,6 +393,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 - `lexique.md` — **termes, acronymes, définitions** (dont **ADR**) pour transmission du projet
 - `architecture.md` — architecture et règles réseau
 - `carte_plan_global.md` — alignement plan large (`.cursor/rules`) ↔ modules réels et backlog
+- `assistant_core_plan.md` — plan d'action du recentrage **IA conversationnelle incarnée** (assistant poste/infra, agents, sécurité, pont MMO)
 - `runbook_validation_serveurs_lan.md` — validation rapide LAN (santé, smokes, **métriques §2bis–2ter**)
 - `ops_pont_interne_auth_rl.md` — ops : token service + rate-limit du pont interne `mmmorpg_server` → backend
 - `plan_fusion_lbg_ia.md` — **fusion LBG_IA + LBG_IA_MMO + mmmorpg** (phases, correspondances, matrice tronc, pont jeu ↔ IA)

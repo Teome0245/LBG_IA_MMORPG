@@ -126,6 +126,51 @@ def test_route_intent_desktop_action_forces_desktop_control() -> None:
     assert data["routed_to"] == "agent.desktop"
     out = data["output"]
     assert out["capability"] == "desktop_control"
+    assert out["outcome"] == "approval_required"
+    assert out["policy"]["decision"] == "approval_required"
+
+
+def test_route_intent_desktop_dry_run_allowed() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/route",
+        json={
+            "actor_id": "svc:desktop",
+            "text": "Ignoré si desktop_action présent",
+            "context": {
+                "desktop_dry_run": True,
+                "desktop_action": {"kind": "open_url", "url": "https://example.org"},
+            },
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["intent"] == "desktop_control"
+    assert data["routed_to"] == "agent.desktop"
+    out = data["output"]
+    assert out["capability"] == "desktop_control"
+    assert out["policy"]["decision"] == "dry_run"
+    assert out.get("agent") == "desktop_executor"
+
+
+def test_route_intent_desktop_unknown_kind_forbidden() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/route",
+        json={
+            "actor_id": "svc:desktop",
+            "text": "Ignoré si desktop_action présent",
+            "context": {"desktop_action": {"kind": "format_disk"}},
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    out = data["output"]
+    assert data["intent"] == "desktop_control"
+    assert out["capability"] == "desktop_control"
+    assert out["outcome"] == "forbidden"
+    assert out["policy"]["decision"] == "forbidden"
+    assert "agent" not in out
 
 
 def test_route_intent_opengame_action_forces_prototype_game() -> None:
@@ -150,6 +195,7 @@ def test_route_intent_opengame_action_forces_prototype_game() -> None:
     assert data["routed_to"] == "agent.opengame"
     out = data["output"]
     assert out["capability"] == "prototype_game"
+    assert out["policy"]["decision"] == "dry_run"
     assert out.get("agent") == "opengame_executor"
     assert out.get("outcome") == "dry_run"
 

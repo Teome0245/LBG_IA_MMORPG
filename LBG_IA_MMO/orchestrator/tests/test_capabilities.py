@@ -17,3 +17,20 @@ def test_list_capabilities() -> None:
     assert "desktop_control" in names
     assert "prototype_game" in names
     assert "unknown" in names
+
+    by_name = {c["name"]: c for c in data["capabilities"]}
+    desktop = by_name["desktop_control"]
+    assert desktop["mode"] == "local_assistant"
+    assert desktop["risk_level"] == "high"
+    assert desktop["action_context_key"] == "desktop_action"
+    assert desktop["input_schema"]["properties"]["context"]["required"] == ["desktop_action"]
+    desktop_constraints = {c["name"] for c in desktop["constraints"]}
+    assert {"dry_run_default", "allowlists_required", "approval_for_real_execution"} <= desktop_constraints
+
+    dialogue = by_name["npc_dialogue"]
+    assert dialogue["mode"] == "mmo_persona"
+    dialogue_constraints = {c["name"] for c in dialogue["constraints"]}
+    assert "no_private_desktop_context" in dialogue_constraints
+
+    fallback = by_name["unknown"]
+    assert fallback["protocol"] == "internal"

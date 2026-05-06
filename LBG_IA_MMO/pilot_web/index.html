@@ -162,6 +162,7 @@
     <nav class="pilot-nav" id="pilot-nav" aria-label="Navigation pilot">
       <a href="#/">Accueil</a>
       <a href="#/chat">Chat & presets</a>
+      <a href="#/assistant">Assistant Core</a>
       <a href="#/ops">Ops & santé</a>
       <a href="#/pm">Chef de projet</a>
       <a href="#/lyra">Lyra (hors MMO)</a>
@@ -186,6 +187,7 @@
       <div>
         <div class="pilot-home-cards">
           <a class="pilot-home-card" href="#/chat"><h3>Chat & presets</h3><p>Intentions, PNJ, quêtes, combat, DevOps, Lyra via le monde MMO.</p></a>
+          <a class="pilot-home-card" href="#/assistant"><h3>Assistant Core</h3><p>Texte naturel → proposition éditable → policy → exécution dry-run ou réelle avec approval.</p></a>
           <a class="pilot-home-card" href="#/ops"><h3>Ops & santé</h3><p>Statut agrégé, capabilities, benchmark, cache, métriques.</p></a>
           <a class="pilot-home-card" href="#/pm"><h3>Chef de projet</h3><p>Jalons, tâches, étape actuelle, file d’attente ; chemins <code>docs/</code> copiables ; export Markdown.</p></a>
           <a class="pilot-home-card" href="#/lyra"><h3>Lyra (hors MMO)</h3><p>Lyra via <code>/v1/pilot/route</code> (modes PNJ monde / assistant), échelles alignées en UI.</p></a>
@@ -370,6 +372,111 @@
           <pre id="lyra-brain-raw" class="muted" style="font-size:0.82rem;max-height:10rem;">—</pre>
         </div>
       </div>
+    </section>
+  </div>
+
+  <div id="pilot-page-assistant" class="pilot-page" hidden>
+    <header>
+      <h1>Assistant Core</h1>
+      <p class="muted">
+        Flux rang 1 : demande naturelle → <code>ActionProposal</code> éditable → <code>output.policy</code> → exécution dry-run ou réelle avec approval.
+        Cette vue ne déclenche rien tant que vous ne cliquez pas sur <strong>Exécuter</strong>.
+      </p>
+    </header>
+    <section>
+      <label for="assistant-actor">actor_id</label>
+      <input type="text" id="assistant-actor" value="ui:assistant" />
+
+      <label for="assistant-text">Demande</label>
+      <textarea id="assistant-text" rows="3" style="font-family: inherit;">regarde si j'ai un mail de Intel</textarea>
+
+      <label for="assistant-context" style="margin-top:0.75rem">context (JSON)</label>
+      <textarea id="assistant-context" rows="6" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
+  "history": []
+}</textarea>
+
+      <p class="muted" style="margin:0.6rem 0 0 0">Raccourcis :</p>
+      <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+        <button type="button" id="btn-assistant-preset-notepad">Notepad</button>
+        <button type="button" id="btn-assistant-preset-web">Recherche web</button>
+        <button type="button" id="btn-assistant-preset-mail">Mail Intel</button>
+        <button type="button" id="btn-assistant-preset-selfcheck">Selfcheck infra</button>
+        <button type="button" id="btn-assistant-preset-mmo-dev">Forge MMO (après import)</button>
+      </p>
+
+      <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-assistant-propose">Proposer</button>
+        <button type="button" id="btn-assistant-apply-proposal">Appliquer proposition → context</button>
+        <button type="button" id="btn-assistant-exec-dry-run">Exécuter dry-run</button>
+        <button type="button" id="btn-assistant-exec-real">Exécuter réel</button>
+        <span class="muted" id="assistant-hint">—</span>
+      </p>
+
+      <label for="assistant-action" style="margin-top:0.75rem">ActionProposal / action éditable (JSON)</label>
+      <textarea id="assistant-action" rows="9" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{}</textarea>
+
+      <label for="assistant-approval" style="margin-top:0.75rem">Approval token (optionnel, injecté selon capability)</label>
+      <input type="password" id="assistant-approval" placeholder="desktop_approval / devops_approval / opengame_approval" autocomplete="off" />
+
+      <div class="pilot-pm-encarts" style="margin-top:1rem">
+        <div class="pilot-pm-encart">
+          <h3>Préférences explicites</h3>
+          <label for="assistant-pref-notepad-path" style="margin-top:0">Chemin Notepad par défaut</label>
+          <input type="text" id="assistant-pref-notepad-path" value="C:\Users\Public\lbg_desktop.txt" />
+          <label style="margin-top:0.65rem;display:flex;align-items:flex-start;gap:0.45rem;">
+            <input type="checkbox" id="assistant-pref-dry-run" checked style="margin-top:0.2rem" />
+            <span class="muted">Forcer le dry-run par défaut quand c'est applicable.</span>
+          </label>
+          <p style="margin:0.55rem 0 0 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <button type="button" id="btn-assistant-save-prefs">Sauver préférences</button>
+            <span class="muted" id="assistant-pref-hint">—</span>
+          </p>
+        </div>
+        <div class="pilot-pm-encart">
+          <h3>Suggestions contrôlées</h3>
+          <div id="assistant-suggestions" class="pilot-pm-encart-body muted">—</div>
+        </div>
+      </div>
+
+      <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Proposition / policy / résultat</h3>
+      <div id="assistant-pretty" style="margin-top:0.75rem"></div>
+      <pre id="assistant-raw" class="muted" style="font-size:0.82rem;max-height:20rem;">—</pre>
+
+      <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Historique court</h3>
+      <p class="muted" style="margin:0 0 0.5rem 0">
+        Historique local navigateur uniquement, limité aux derniers événements Assistant. Pas de stockage serveur.
+      </p>
+      <p style="margin:0.35rem 0 0.5rem 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-assistant-history-clear">Vider historique</button>
+        <span class="muted" id="assistant-history-hint">—</span>
+      </p>
+      <div id="assistant-history" class="pilot-pm-encart-body muted">—</div>
+
+      <h3 style="margin:1.2rem 0 0.35rem 0;font-size:1rem">Résumé de session volontaire</h3>
+      <p class="muted" style="margin:0 0 0.5rem 0">
+        Document local (navigateur) : agrège l’historique Assistant et des notes libres. À copier dans un ticket ou un journal ; rien n’est envoyé au serveur tant que vous n’exécutez pas une action.
+      </p>
+      <label for="assistant-session-notes" style="margin-top:0">Notes pour le résumé (optionnel)</label>
+      <textarea id="assistant-session-notes" rows="2" placeholder="Objectif de la session, décisions, suites possibles…" style="font-family: inherit;"></textarea>
+      <p style="margin:0.5rem 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-assistant-session-build">Générer le résumé</button>
+        <button type="button" id="btn-assistant-session-copy">Copier le résumé</button>
+        <span class="muted" id="assistant-session-hint">—</span>
+      </p>
+      <pre id="assistant-session-summary-out" class="muted" style="font-size:0.82rem;max-height:14rem;margin-top:0.35rem">—</pre>
+
+      <h3 style="margin:1.2rem 0 0.35rem 0;font-size:1rem">Pont MMO → assistant (volontaire)</h3>
+      <p class="muted" style="margin:0 0 0.5rem 0">
+        Collez un <code>session_summary</code> sanitisé (comme sur <a href="#/desktop">Desktop</a>) puis fusionnez-le dans le <strong>context</strong> avec une trace <code>mmo_bridge.source=mmo_session_summary</code> — requis pour les propositions « forge / prototype » liées au MMO (Jalon 6).
+      </p>
+      <label for="assistant-mmo-session-import" style="margin-top:0">JSON <code>session_summary</code></label>
+      <textarea id="assistant-mmo-session-import" rows="4" style="font-family: ui-monospace, monospace; font-size: 0.82rem;" placeholder='{"tracked_quest":"…","player_note":"…"}'></textarea>
+      <p style="margin:0.45rem 0 0.15rem 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <button type="button" id="btn-assistant-mmo-merge">Fusionner dans context + trace</button>
+        <button type="button" id="btn-assistant-mmo-load-desktop-key">Charger depuis stockage Desktop</button>
+        <button type="button" id="btn-assistant-mmo-save-desktop-key">Écrire vers stockage Desktop</button>
+        <span class="muted" id="assistant-mmo-hint">—</span>
+      </p>
     </section>
   </div>
 
@@ -763,6 +870,10 @@
     const STORAGE_LYRA_REG_LOG_KEY = "lbg_pilot_lyra_reg_log_v1";
     const STORAGE_LYRA_REG_FILTER_KEY = "lbg_pilot_lyra_reg_filter_v1";
     const STORAGE_PANEL_LAYOUT_KEY = "lbg_pilot_panel_layout_v1";
+    const STORAGE_ASSISTANT_HISTORY_KEY = "lbg_pilot_assistant_history_v1";
+    const STORAGE_ASSISTANT_PREFS_KEY = "lbg_pilot_assistant_prefs_v1";
+    const STORAGE_ASSISTANT_SESSION_NOTES_KEY = "lbg_pilot_assistant_session_notes_v1";
+    const LBG_PILOT_MMO_SESSION_SUMMARY_STORAGE = "lbg_pilot_mmo_session_summary_json";
 
     function getBase() {
       const el = document.getElementById("api-base");
@@ -2018,6 +2129,29 @@
       const wsh = document.getElementById("ws-internal-http");
       if (wsh) wsh.addEventListener("input", renderMetricsLinks);
     } catch (_) {}
+    try { document.getElementById("btn-assistant-propose").addEventListener("click", assistantPropose); } catch (_) {}
+    try { document.getElementById("btn-assistant-apply-proposal").addEventListener("click", assistantApplyProposalToContext); } catch (_) {}
+    try { document.getElementById("btn-assistant-exec-dry-run").addEventListener("click", () => assistantExecute("dry_run")); } catch (_) {}
+    try { document.getElementById("btn-assistant-exec-real").addEventListener("click", () => assistantExecute("real")); } catch (_) {}
+    try { document.getElementById("btn-assistant-preset-notepad").addEventListener("click", () => assistantPreset("notepad")); } catch (_) {}
+    try { document.getElementById("btn-assistant-preset-web").addEventListener("click", () => assistantPreset("web")); } catch (_) {}
+    try { document.getElementById("btn-assistant-preset-mail").addEventListener("click", () => assistantPreset("mail")); } catch (_) {}
+    try { document.getElementById("btn-assistant-preset-selfcheck").addEventListener("click", () => assistantPreset("selfcheck")); } catch (_) {}
+    try { document.getElementById("btn-assistant-save-prefs").addEventListener("click", assistantSavePrefs); } catch (_) {}
+    try { document.getElementById("btn-assistant-history-clear").addEventListener("click", assistantHistoryClear); } catch (_) {}
+    try { document.getElementById("btn-assistant-session-build").addEventListener("click", assistantSessionBuildSummary); } catch (_) {}
+    try { document.getElementById("btn-assistant-session-copy").addEventListener("click", assistantSessionCopySummary); } catch (_) {}
+    try { document.getElementById("btn-assistant-mmo-merge").addEventListener("click", assistantMmoMergeIntoContext); } catch (_) {}
+    try { document.getElementById("btn-assistant-mmo-load-desktop-key").addEventListener("click", assistantMmoLoadFromSharedStorage); } catch (_) {}
+    try { document.getElementById("btn-assistant-mmo-save-desktop-key").addEventListener("click", assistantMmoSaveToSharedStorage); } catch (_) {}
+    try { document.getElementById("btn-assistant-preset-mmo-dev").addEventListener("click", () => assistantPreset("mmo_dev")); } catch (_) {}
+    try {
+      const asn = document.getElementById("assistant-session-notes");
+      if (asn && !asn.dataset.lbgBound) {
+        asn.dataset.lbgBound = "1";
+        asn.addEventListener("blur", assistantSessionNotesPersist);
+      }
+    } catch (_) {}
     document.getElementById("btn-cap-refresh").addEventListener("click", refreshCapabilities);
     document.getElementById("btn-send").addEventListener("click", sendIntent);
     document.getElementById("btn-bench").addEventListener("click", runBenchmark);
@@ -2265,6 +2399,475 @@
       return { status: r.status, json: j, text: t };
     }
 
+    function assistantUiHint(msg, isError) {
+      pilotInlineHint("assistant-hint", msg || "—", !!isError);
+    }
+
+    function assistantDefaultPrefs() {
+      return {
+        notepad_path: "C:\\Users\\Public\\lbg_desktop.txt",
+        dry_run_default: true,
+      };
+    }
+
+    function assistantLoadPrefs() {
+      const defaults = assistantDefaultPrefs();
+      try {
+        const raw = localStorage.getItem(STORAGE_ASSISTANT_PREFS_KEY);
+        if (!raw) return defaults;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return defaults;
+        return {
+          ...defaults,
+          notepad_path: typeof parsed.notepad_path === "string" && parsed.notepad_path.trim()
+            ? parsed.notepad_path.trim()
+            : defaults.notepad_path,
+          dry_run_default: parsed.dry_run_default !== false,
+        };
+      } catch (_) {
+        return defaults;
+      }
+    }
+
+    function assistantApplyPrefsToUi() {
+      const prefs = assistantLoadPrefs();
+      const pathEl = document.getElementById("assistant-pref-notepad-path");
+      const dryEl = document.getElementById("assistant-pref-dry-run");
+      if (pathEl) pathEl.value = prefs.notepad_path;
+      if (dryEl) dryEl.checked = prefs.dry_run_default !== false;
+    }
+
+    function assistantReadPrefsFromUi() {
+      const defaults = assistantDefaultPrefs();
+      const pathEl = document.getElementById("assistant-pref-notepad-path");
+      const dryEl = document.getElementById("assistant-pref-dry-run");
+      const path = pathEl && pathEl.value ? String(pathEl.value).trim() : "";
+      return {
+        notepad_path: path || defaults.notepad_path,
+        dry_run_default: !(dryEl && dryEl.checked === false),
+      };
+    }
+
+    function assistantSavePrefs() {
+      const prefs = assistantReadPrefsFromUi();
+      try {
+        localStorage.setItem(STORAGE_ASSISTANT_PREFS_KEY, JSON.stringify(prefs));
+        pilotInlineHint("assistant-pref-hint", "Préférences sauvées localement.", false);
+      } catch (e) {
+        pilotInlineHint("assistant-pref-hint", "Sauvegarde impossible: " + e, true);
+      }
+    }
+
+    function assistantHistoryLoad() {
+      try {
+        const raw = localStorage.getItem(STORAGE_ASSISTANT_HISTORY_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.filter((x) => x && typeof x === "object").slice(0, 12) : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function assistantHistorySave(items) {
+      try { localStorage.setItem(STORAGE_ASSISTANT_HISTORY_KEY, JSON.stringify((items || []).slice(0, 12))); } catch (_) {}
+    }
+
+    function assistantHistoryAdd(item) {
+      const items = assistantHistoryLoad();
+      const next = [{
+        ts: new Date().toISOString(),
+        ...item,
+      }].concat(items).slice(0, 12);
+      assistantHistorySave(next);
+      assistantHistoryRender();
+    }
+
+    function assistantHistoryClear() {
+      assistantHistorySave([]);
+      assistantHistoryRender();
+      pilotInlineHint("assistant-history-hint", "Historique vidé.", false);
+    }
+
+    function assistantHistoryRender() {
+      const el = document.getElementById("assistant-history");
+      if (!el) return;
+      const items = assistantHistoryLoad();
+      if (!items.length) {
+        el.innerHTML = "<span class=\"muted\">—</span>";
+        return;
+      }
+      let html = "<ul style=\"margin:0;padding-left:1.1rem\">";
+      for (const it of items) {
+        const when = it.ts ? new Date(String(it.ts)).toLocaleTimeString() : "";
+        const kind = it.kind || "event";
+        const text = it.text || it.summary || "";
+        const cap = it.capability ? " · " + it.capability : "";
+        const decision = it.policy_decision ? " · policy=" + it.policy_decision : "";
+        html += "<li style=\"margin-bottom:0.35rem\"><strong>" + escapeHtml(String(kind)) + "</strong>" +
+          " <span class=\"muted\">" + escapeHtml(when + cap + decision) + "</span><br>" +
+          escapeHtml(String(text)).slice(0, 220) + "</li>";
+      }
+      html += "</ul>";
+      el.innerHTML = html;
+    }
+
+    let assistantLastVoluntarySummaryJson = "";
+
+    function assistantSessionNotesLoad() {
+      try {
+        const ta = document.getElementById("assistant-session-notes");
+        if (!ta) return;
+        const v = localStorage.getItem(STORAGE_ASSISTANT_SESSION_NOTES_KEY);
+        if (v) ta.value = v;
+      } catch (_) {}
+    }
+
+    function assistantSessionNotesPersist() {
+      try {
+        const ta = document.getElementById("assistant-session-notes");
+        const raw = ta && ta.value ? String(ta.value) : "";
+        localStorage.setItem(STORAGE_ASSISTANT_SESSION_NOTES_KEY, raw);
+      } catch (_) {}
+    }
+
+    function assistantSessionBuildSummary() {
+      assistantSessionNotesPersist();
+      const notesEl = document.getElementById("assistant-session-notes");
+      const outEl = document.getElementById("assistant-session-summary-out");
+      const hist = assistantHistoryLoad();
+      const notes = notesEl && notesEl.value ? String(notesEl.value).trim() : "";
+      const payload = {
+        kind: "assistant_voluntary_session_summary",
+        generated_at: new Date().toISOString(),
+        voluntary: true,
+        pilot_view: "#/assistant",
+        notes: notes || undefined,
+        history: hist.map((x) => ({
+          ts: x.ts,
+          kind: x.kind,
+          capability: x.capability,
+          policy_decision: x.policy_decision,
+          text: (x.text || x.summary || "").slice(0, 500),
+        })),
+      };
+      assistantLastVoluntarySummaryJson = JSON.stringify(payload, null, 2);
+      if (outEl) outEl.textContent = assistantLastVoluntarySummaryJson;
+      pilotInlineHint("assistant-session-hint", "Résumé généré (local uniquement).", false);
+    }
+
+    function assistantSessionCopySummary() {
+      const outEl = document.getElementById("assistant-session-summary-out");
+      const cur = (outEl && outEl.textContent ? String(outEl.textContent) : "").trim();
+      if (!cur || cur === "—") {
+        assistantSessionBuildSummary();
+      }
+      const text = assistantLastVoluntarySummaryJson ||
+        (outEl && outEl.textContent ? String(outEl.textContent) : "") ||
+        "";
+      if (!String(text).trim() || String(text).trim() === "—") {
+        pilotInlineHint("assistant-session-hint", "Générez d'abord un résumé.", true);
+        return;
+      }
+      assistantLastVoluntarySummaryJson = String(text).trim();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(assistantLastVoluntarySummaryJson).then(
+          function () { pilotInlineHint("assistant-session-hint", "Copié dans le presse-papiers.", false); },
+          function () { pilotInlineHint("assistant-session-hint", "Copie impossible (navigateur).", true); }
+        );
+      } else {
+        pilotInlineHint("assistant-session-hint", "Clipboard API indisponible.", true);
+      }
+    }
+
+    function assistantMmoMergeIntoContext() {
+      const ta = document.getElementById("assistant-mmo-session-import");
+      const ctxEl = document.getElementById("assistant-context");
+      let o = null;
+      try {
+        const raw = ta && ta.value ? String(ta.value).trim() : "";
+        if (!raw) {
+          pilotInlineHint("assistant-mmo-hint", "Collez un JSON session_summary.", true);
+          return;
+        }
+        o = JSON.parse(raw);
+        if (!o || typeof o !== "object" || Array.isArray(o)) throw new Error("attendu: objet JSON");
+      } catch (e) {
+        pilotInlineHint("assistant-mmo-hint", "JSON invalide : " + e, true);
+        return;
+      }
+      let ctx = assistantParseJsonTextarea("assistant-context", {});
+      if (!ctx || typeof ctx !== "object") ctx = {};
+      ctx.session_summary = o;
+      ctx.mmo_bridge = {
+        source: "mmo_session_summary",
+        imported_at: new Date().toISOString(),
+        via: "pilot_assistant",
+      };
+      if (ctxEl) ctxEl.value = JSON.stringify(ctx, null, 2);
+      try {
+        localStorage.setItem(LBG_PILOT_MMO_SESSION_SUMMARY_STORAGE, ta ? ta.value || "" : "");
+      } catch (_) {}
+      pilotInlineHint("assistant-mmo-hint", "Context mis à jour + trace mmo_bridge (import volontaire).", false);
+      assistantUiHint("session_summary fusionné — vous pouvez Proposer (ex. forge prototype)", false);
+    }
+
+    function assistantMmoImportSilentLoad() {
+      try {
+        const ta = document.getElementById("assistant-mmo-session-import");
+        const v = localStorage.getItem(LBG_PILOT_MMO_SESSION_SUMMARY_STORAGE);
+        if (ta && v && !String(ta.value || "").trim()) ta.value = v;
+      } catch (_) {}
+    }
+
+    function assistantMmoLoadFromSharedStorage() {
+      const ta = document.getElementById("assistant-mmo-session-import");
+      try {
+        const v = localStorage.getItem(LBG_PILOT_MMO_SESSION_SUMMARY_STORAGE);
+        if (ta && v) ta.value = v;
+        pilotInlineHint("assistant-mmo-hint", v ? "Chargé depuis le stockage partagé." : "Stockage vide.", !v);
+      } catch (e) {
+        pilotInlineHint("assistant-mmo-hint", "Erreur : " + e, true);
+      }
+    }
+
+    function assistantMmoSaveToSharedStorage() {
+      const ta = document.getElementById("assistant-mmo-session-import");
+      try {
+        if (ta) localStorage.setItem(LBG_PILOT_MMO_SESSION_SUMMARY_STORAGE, ta.value || "");
+        pilotInlineHint("assistant-mmo-hint", "Écrit vers le stockage Desktop partagé.", false);
+      } catch (e) {
+        pilotInlineHint("assistant-mmo-hint", "Erreur : " + e, true);
+      }
+    }
+
+    function assistantRenderSuggestions(items) {
+      const el = document.getElementById("assistant-suggestions");
+      if (!el) return;
+      const list = Array.isArray(items) ? items.filter(Boolean) : [];
+      if (!list.length) {
+        el.innerHTML = "<span class=\"muted\">—</span>";
+        return;
+      }
+      el.innerHTML = "<ul style=\"margin:0;padding-left:1.1rem\">" + list
+        .map((x) => "<li>" + escapeHtml(String(x)) + "</li>")
+        .join("") + "</ul>";
+    }
+
+    function assistantSuggestionsForProposal(proposal) {
+      if (!proposal || typeof proposal !== "object") return ["Demander une précision avant toute action."];
+      const cap = proposal.capability || "";
+      const action = proposal.action && typeof proposal.action === "object" ? proposal.action : {};
+      const kind = action.kind || "";
+      const out = ["Relire le JSON proposé avant exécution."];
+      if (cap === "desktop_control") out.push("Tester en dry-run avant toute action réelle sur le poste.");
+      if (kind === "mail_imap_preview") out.push("Garder la lecture mail en aperçu borné ; ne pas exposer de contenu privé au MMO.");
+      if (kind === "notepad_append") out.push("Vérifier que le chemin Notepad est dans l'allowlist du worker.");
+      if (cap === "devops_probe") out.push("Conserver le selfcheck en lecture seule tant qu'aucun correctif humain n'est décidé.");
+      if (cap === "prototype_game") {
+        out.push("La forge reste en sandbox ; aucun merge vers le dépôt canon sans revue humaine.");
+        if (proposal.source === "mmo_session_bridge" || (proposal.mmo_trace && typeof proposal.mmo_trace === "object")) {
+          out.push("Trace MMO : idée issue d'un session_summary importé — ne pas renvoyer de données poste vers le persona MMO.");
+        }
+      }
+      return out;
+    }
+
+    function assistantSuggestionsForResult(result) {
+      const res = result && result.result;
+      const out = res && res.output ? res.output : {};
+      const policy = out && out.policy ? out.policy : null;
+      const decision = policy && policy.decision ? String(policy.decision) : "";
+      const suggestions = [];
+      if (decision === "dry_run") suggestions.push("Dry-run OK : relire le résultat avant de fournir un approval pour une exécution réelle.");
+      if (decision === "approval_required") suggestions.push("Action bloquée : ajouter un approval ou repasser par un dry-run.");
+      if (decision === "forbidden") suggestions.push("Action refusée : reformuler avec une capability déclarée ou enrichir le registry/policy.");
+      if (decision === "safe_read") suggestions.push("Lecture sûre effectuée : transformer les constats en plan, pas en correction automatique.");
+      if (!suggestions.length) suggestions.push("Archiver le résultat utile dans l'historique court ou lancer un nouveau dry-run.");
+      return suggestions;
+    }
+
+    function assistantParseJsonTextarea(id, fallback) {
+      const el = document.getElementById(id);
+      const raw = (el && el.value ? String(el.value) : "").trim();
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error(id + " doit contenir un objet JSON");
+      }
+      return parsed;
+    }
+
+    async function assistantPropose() {
+      const actorEl = document.getElementById("assistant-actor");
+      const textEl = document.getElementById("assistant-text");
+      const actionEl = document.getElementById("assistant-action");
+      const rawEl = document.getElementById("assistant-raw");
+      const prettyEl = document.getElementById("assistant-pretty");
+      assistantUiHint("…", false);
+      try {
+        const actorId = (actorEl && actorEl.value ? actorEl.value.trim() : "") || "ui:assistant";
+        const text = (textEl && textEl.value ? textEl.value.trim() : "");
+        if (!text) {
+          assistantUiHint("Demande vide", true);
+          return;
+        }
+        const ctx = assistantParseJsonTextarea("assistant-context", {});
+        const prefs = assistantReadPrefsFromUi();
+        if (prefs.notepad_path && !ctx.desktop_default_notepad_path) ctx.desktop_default_notepad_path = prefs.notepad_path;
+        const out = await postJson(getBase() + "/v1/pilot/action-proposal", { actor_id: actorId, text, context: ctx });
+        if (rawEl) rawEl.textContent = out.json ? JSON.stringify(out.json, null, 2) : ("HTTP " + out.status + "\n" + (out.text || ""));
+        if (prettyEl) {
+          try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
+        }
+        if (out.status !== 200 || !out.json || out.json.ok === false) {
+          assistantUiHint("Proposition impossible (HTTP/proxy)", true);
+          return;
+        }
+        const proposal = out.json.proposal;
+        if (proposal && typeof proposal === "object") {
+          if (actionEl) actionEl.value = JSON.stringify(proposal, null, 2);
+          assistantHistoryAdd({
+            kind: "proposal",
+            text,
+            capability: proposal.capability || "",
+            summary: proposal.summary || "",
+          });
+          assistantRenderSuggestions(assistantSuggestionsForProposal(proposal));
+          assistantUiHint("Proposition prête — relire/éditer puis appliquer ou exécuter", false);
+        } else {
+          assistantRenderSuggestions(["Demander une précision ou rester en conversation sans action."]);
+          assistantUiHint(out.json.reason || "Aucune proposition", false);
+        }
+      } catch (e) {
+        assistantUiHint("Erreur: " + e, true);
+      }
+    }
+
+    function assistantReadProposal() {
+      const obj = assistantParseJsonTextarea("assistant-action", {});
+      if (obj.proposal && typeof obj.proposal === "object") return obj.proposal;
+      return obj;
+    }
+
+    function assistantContextFromProposal(proposal, mode) {
+      let ctx = assistantParseJsonTextarea("assistant-context", {});
+      const patch = proposal && proposal.context_patch && typeof proposal.context_patch === "object" ? proposal.context_patch : {};
+      ctx = { ...ctx, ...patch };
+      const key = proposal && typeof proposal.action_context_key === "string" ? proposal.action_context_key : "";
+      const action = proposal && proposal.action && typeof proposal.action === "object" ? proposal.action : null;
+      if (key && action) ctx[key] = action;
+
+      const approval = (document.getElementById("assistant-approval") || {}).value || "";
+      const capability = proposal && typeof proposal.capability === "string" ? proposal.capability : "";
+      const prefs = assistantReadPrefsFromUi();
+      if (capability === "desktop_control" && prefs.dry_run_default !== false && mode !== "real") {
+        ctx.desktop_dry_run = true;
+      }
+      if (mode === "dry_run") {
+        if (capability === "desktop_control") ctx.desktop_dry_run = true;
+        if (capability === "devops_probe") ctx.devops_dry_run = true;
+        if (capability === "prototype_game") ctx.opengame_dry_run = true;
+      } else if (mode === "real") {
+        if (capability === "desktop_control") delete ctx.desktop_dry_run;
+        if (capability === "devops_probe") delete ctx.devops_dry_run;
+        if (capability === "prototype_game") ctx.opengame_dry_run = false;
+        const token = String(approval || "").trim();
+        if (token) {
+          if (capability === "desktop_control") ctx.desktop_approval = token;
+          else if (capability === "devops_probe") ctx.devops_approval = token;
+          else if (capability === "prototype_game") ctx.opengame_approval = token;
+        }
+      }
+      return ctx;
+    }
+
+    function assistantApplyProposalToContext() {
+      try {
+        const proposal = assistantReadProposal();
+        const ctx = assistantContextFromProposal(proposal, "keep");
+        const ctxEl = document.getElementById("assistant-context");
+        if (ctxEl) ctxEl.value = JSON.stringify(ctx, null, 2);
+        assistantUiHint("Proposition appliquée au context JSON", false);
+      } catch (e) {
+        assistantUiHint("Erreur: " + e, true);
+      }
+    }
+
+    async function assistantExecute(mode) {
+      const rawEl = document.getElementById("assistant-raw");
+      const prettyEl = document.getElementById("assistant-pretty");
+      assistantUiHint("…", false);
+      try {
+        const proposal = assistantReadProposal();
+        if (!proposal || typeof proposal !== "object" || !proposal.action) {
+          assistantUiHint("Aucune ActionProposal valide à exécuter", true);
+          return;
+        }
+        const actorEl = document.getElementById("assistant-actor");
+        const textEl = document.getElementById("assistant-text");
+        const actorId = (actorEl && actorEl.value ? actorEl.value.trim() : "") || "ui:assistant";
+        const text = (textEl && textEl.value ? textEl.value.trim() : "") || String(proposal.summary || "assistant action");
+        const ctx = assistantContextFromProposal(proposal, mode);
+        const payload = { actor_id: actorId, text, context: ctx };
+        const out = await postJson(getBase() + "/v1/pilot/route", payload);
+        if (rawEl) out.json
+          ? rawEl.textContent = JSON.stringify(out.json, null, 2)
+          : rawEl.textContent = "HTTP " + out.status + "\n" + (out.text || "");
+        if (prettyEl) {
+          try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
+        }
+        const policy = out.json && out.json.result && out.json.result.output ? out.json.result.output.policy : null;
+        const dec = policy && policy.decision ? String(policy.decision) : "";
+        if (out.json) {
+          assistantHistoryAdd({
+            kind: mode === "real" ? "execute_real" : "execute_dry_run",
+            text,
+            capability: proposal.capability || "",
+            policy_decision: dec,
+            summary: proposal.summary || "",
+          });
+          assistantRenderSuggestions(assistantSuggestionsForResult(out.json));
+        }
+        assistantUiHint(out.status === 200 ? ("OK" + (dec ? " · policy=" + dec : "")) : ("HTTP " + out.status), out.status !== 200);
+      } catch (e) {
+        assistantUiHint("Erreur: " + e, true);
+      }
+    }
+
+    function assistantPreset(kind) {
+      const textEl = document.getElementById("assistant-text");
+      const ctxEl = document.getElementById("assistant-context");
+      if (!textEl || !ctxEl) return;
+      const prefs = assistantReadPrefsFromUi();
+      if (kind === "notepad") {
+        textEl.value = "ouvre notepad et écris ceci est un test de l'Assistant Core";
+        ctxEl.value = JSON.stringify({ history: [], desktop_default_notepad_path: prefs.notepad_path }, null, 2);
+      } else if (kind === "web") {
+        textEl.value = "cherche sur internet le site de Cursor AI";
+        ctxEl.value = JSON.stringify({ history: [] }, null, 2);
+      } else if (kind === "mail") {
+        textEl.value = "regarde si j'ai un mail de Intel";
+        ctxEl.value = JSON.stringify({ history: [] }, null, 2);
+      } else if (kind === "selfcheck") {
+        textEl.value = "vérifie l'état du backend et de l'orchestrateur";
+        ctxEl.value = JSON.stringify({ history: [] }, null, 2);
+      } else if (kind === "mmo_dev") {
+        textEl.value = "forge un prototype sandbox à partir de ma session MMO importée — dry-run uniquement, pas de merge";
+        let baseCtx = assistantParseJsonTextarea("assistant-context", {});
+        if (!baseCtx || typeof baseCtx !== "object") baseCtx = {};
+        if (!baseCtx.session_summary || typeof baseCtx.session_summary !== "object") {
+          pilotInlineHint(
+            "assistant-hint",
+            'Importez un session_summary et cliquez « Fusionner dans context » avant ce preset (ou complétez le JSON).',
+            true
+          );
+        }
+        ctxEl.value = JSON.stringify(baseCtx, null, 2);
+      }
+      assistantUiHint("Preset chargé — cliquer Proposer", false);
+    }
+
     async function worldContentRefresh() {
       const base = getBase();
       const out = document.getElementById("world-content-out");
@@ -2349,6 +2952,7 @@
       const seg = raw.split("/").filter(function (s) { return s; })[0] || "";
       if (!seg) return "home";
       if (seg === "chat") return "chat";
+      if (seg === "assistant") return "assistant";
       if (seg === "ops") return "ops";
       if (seg === "pm") return "pm";
       if (seg === "lyra") return "lyra";
@@ -2362,11 +2966,13 @@
       document.body.dataset.pilotRoute = r;
       const home = document.getElementById("pilot-page-home");
       const work = document.getElementById("pilot-page-work");
+      const assistantPage = document.getElementById("pilot-page-assistant");
       const pm = document.getElementById("pilot-page-pm");
       const ly = document.getElementById("pilot-page-lyra");
       const de = document.getElementById("pilot-page-desktop");
       if (home) home.hidden = r !== "home";
       if (work) work.hidden = r !== "chat" && r !== "ops";
+      if (assistantPage) assistantPage.hidden = r !== "assistant";
       if (pm) pm.hidden = r !== "pm";
       if (ly) ly.hidden = r !== "lyra";
       if (de) de.hidden = r !== "desktop";
@@ -2376,6 +2982,13 @@
         try { pilotDesktopLoadDryRunToggleFromStorage(); } catch (_) {}
         try { pilotDesktopBindDryRunTogglePersist(); } catch (_) {}
         try { pilotDesktopSetupSpeech(); } catch (_) {}
+      }
+      if (r === "assistant") {
+        try { assistantApplyPrefsToUi(); } catch (_) {}
+        try { assistantSessionNotesLoad(); } catch (_) {}
+        try { assistantMmoImportSilentLoad(); } catch (_) {}
+        try { assistantHistoryRender(); } catch (_) {}
+        try { assistantRenderSuggestions([]); } catch (_) {}
       }
       const title = document.getElementById("pilot-work-title");
       const sub = document.getElementById("pilot-work-sub");
