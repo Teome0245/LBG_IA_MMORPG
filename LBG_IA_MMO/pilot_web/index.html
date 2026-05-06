@@ -4,6 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LBG_IA_MMO — Pilotage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root { font-family: system-ui, sans-serif; line-height: 1.5; }
     body { max-width: 92rem; margin: 1.25rem auto; padding: 0 1rem; }
@@ -154,6 +157,389 @@
     .lyra-controls { display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center; margin-top:0.65rem; }
     .lyra-controls input[type="text"] { width: 7rem; }
     .lyra-small { font-size: 0.88rem; color: #555; }
+
+    /* ========== Assistant Core — thème « aurore » (distinct du reste du pilot) ========== */
+    body[data-pilot-route="assistant"] {
+      font-family: "Sora", system-ui, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(45, 212, 191, 0.18), transparent 50%),
+        radial-gradient(900px 500px at 90% 20%, rgba(139, 92, 246, 0.14), transparent 45%),
+        linear-gradient(165deg, #0f172a 0%, #134e4a 35%, #0f172a 100%);
+      color: #e2e8f0;
+      min-height: 100vh;
+      max-width: none;
+      margin: 0;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+    body[data-pilot-route="assistant"] .pilot-shell-bar {
+      background: rgba(15, 23, 42, 0.85);
+      border-bottom: 1px solid rgba(45, 212, 191, 0.25);
+      backdrop-filter: blur(10px);
+    }
+    body[data-pilot-route="assistant"] .pilot-nav a { color: #cbd5e1; border-radius: 8px; }
+    body[data-pilot-route="assistant"] .pilot-nav a:hover {
+      background: rgba(45, 212, 191, 0.12);
+      border-color: rgba(45, 212, 191, 0.35);
+    }
+    body[data-pilot-route="assistant"] .pilot-nav a.pilot-nav-active {
+      background: linear-gradient(135deg, rgba(45, 212, 191, 0.25), rgba(139, 92, 246, 0.2));
+      border-color: rgba(45, 212, 191, 0.45);
+      color: #f8fafc;
+      font-weight: 600;
+    }
+    body[data-pilot-route="assistant"] .pilot-shell-brand,
+    body[data-pilot-route="assistant"] .pilot-shell-tools label { color: #94a3b8; }
+    body[data-pilot-route="assistant"] .pilot-shell-tools input { background: #1e293b; border: 1px solid rgba(148, 163, 184, 0.35); color: #f1f5f9; }
+
+    .assistant-shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 18.5rem);
+      gap: 1.25rem;
+      align-items: stretch;
+      max-width: 110rem;
+      margin: 0 auto;
+      padding: 0 0.5rem 2rem;
+    }
+    @media (max-width: 1020px) {
+      .assistant-shell { grid-template-columns: 1fr; }
+      .assistant-sidebar { order: -1; }
+    }
+    .assistant-hero {
+      margin-bottom: 1rem;
+    }
+    .assistant-badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(45, 212, 191, 0.35), rgba(139, 92, 246, 0.35));
+      border: 1px solid rgba(45, 212, 191, 0.4);
+      color: #ccfbf1;
+    }
+    .assistant-hero h1 {
+      margin: 0.5rem 0 0.25rem;
+      font-size: 1.65rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, #5eead4, #a78bfa, #f472b6);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .assistant-lead {
+      margin: 0;
+      font-size: 0.95rem;
+      color: #94a3b8;
+      max-width: 42rem;
+    }
+    .assistant-main {
+      display: flex;
+      flex-direction: column;
+      min-height: min(70vh, 720px);
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      border-radius: 16px;
+      padding: 1rem 1.1rem 1.1rem;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+    }
+    .assistant-chat-stream {
+      flex: 1;
+      min-height: 14rem;
+      max-height: min(48vh, 520px);
+      overflow-y: auto;
+      padding: 0.5rem 0.35rem;
+      border-radius: 12px;
+      background: rgba(2, 6, 23, 0.45);
+      border: 1px solid rgba(51, 65, 85, 0.5);
+    }
+    .assistant-chat-empty {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #64748b;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+    .assistant-chat-empty strong { color: #94a3b8; }
+    .assistant-msg {
+      margin-bottom: 0.85rem;
+      padding: 0.65rem 0.85rem;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      animation: assistantFadeIn 0.25s ease;
+    }
+    @keyframes assistantFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .assistant-msg--proposal {
+      background: linear-gradient(145deg, rgba(30, 58, 138, 0.35), rgba(67, 56, 202, 0.2));
+      border-color: rgba(129, 140, 248, 0.35);
+    }
+    .assistant-msg--execute_dry_run {
+      background: rgba(21, 94, 117, 0.28);
+      border-color: rgba(34, 211, 238, 0.28);
+    }
+    .assistant-msg--execute_real {
+      background: rgba(127, 29, 29, 0.22);
+      border-color: rgba(248, 113, 113, 0.35);
+    }
+    .assistant-msg-meta {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #94a3b8;
+      margin-bottom: 0.35rem;
+    }
+    .assistant-msg-query {
+      color: #f1f5f9;
+      font-size: 0.95rem;
+      margin: 0 0 0.35rem 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .assistant-msg-detail {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      margin: 0;
+    }
+    .assistant-msg-policy {
+      display: inline-block;
+      margin-top: 0.45rem;
+      font-size: 0.78rem;
+      padding: 0.12rem 0.45rem;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.6);
+      color: #5eead4;
+      border: 1px solid rgba(45, 212, 191, 0.35);
+    }
+    .assistant-composer {
+      margin-top: 0.85rem;
+      padding-top: 0.85rem;
+      border-top: 1px solid rgba(71, 85, 105, 0.45);
+    }
+    .assistant-label-min {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      margin-top: 0.5rem;
+      margin-bottom: 0.2rem;
+    }
+    .assistant-input-compact {
+      width: 100%;
+      max-width: 22rem;
+      box-sizing: border-box;
+      background: #0f172a;
+      border: 1px solid rgba(100, 116, 139, 0.5);
+      color: #e2e8f0;
+      border-radius: 8px;
+      padding: 0.35rem 0.55rem;
+      font-size: 0.88rem;
+    }
+    .assistant-input-main {
+      width: 100%;
+      box-sizing: border-box;
+      min-height: 3.2rem;
+      background: #0f172a;
+      border: 1px solid rgba(45, 212, 191, 0.35);
+      color: #f8fafc;
+      border-radius: 12px;
+      padding: 0.65rem 0.85rem;
+      font-family: inherit;
+      font-size: 0.98rem;
+      resize: vertical;
+    }
+    .assistant-input-main:focus {
+      outline: none;
+      border-color: rgba(94, 234, 212, 0.65);
+      box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.15);
+    }
+    .assistant-actions-primary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
+      margin-top: 0.65rem;
+    }
+    .assistant-btn-primary,
+    .assistant-btn-secondary {
+      padding: 0.45rem 1rem;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+    .assistant-btn-primary {
+      background: linear-gradient(135deg, #14b8a6, #0d9488);
+      color: #042f2e;
+      border-color: rgba(45, 212, 191, 0.5);
+    }
+    .assistant-btn-primary:hover { filter: brightness(1.08); }
+    .assistant-btn-secondary {
+      background: rgba(30, 41, 59, 0.9);
+      color: #e2e8f0;
+      border-color: rgba(100, 116, 139, 0.55);
+    }
+    .assistant-btn-secondary:hover { background: rgba(51, 65, 85, 0.95); }
+    .assistant-btn-real {
+      border-color: rgba(248, 113, 113, 0.45);
+      color: #fecaca;
+    }
+    .assistant-hint-inline {
+      font-size: 0.84rem;
+      color: #94a3b8;
+      margin-left: 0.25rem;
+    }
+    .assistant-hint-inline.assistant-hint-err { color: #fca5a5; }
+    .assistant-actions-secondary {
+      margin-top: 0.35rem;
+    }
+    .assistant-linkish {
+      background: none;
+      border: none;
+      color: #5eead4;
+      cursor: pointer;
+      font-size: 0.86rem;
+      text-decoration: underline;
+      padding: 0.15rem 0;
+      font-family: inherit;
+    }
+    .assistant-tech-strip {
+      margin-top: 0.75rem;
+      font-size: 0.86rem;
+      color: #cbd5e1;
+    }
+    .assistant-tech-strip table { font-size: 0.82rem; }
+    .assistant-raw-collapsed {
+      margin-top: 0.5rem;
+      max-height: 12rem;
+      overflow: auto;
+      font-size: 0.78rem;
+      background: rgba(2, 6, 23, 0.75);
+      border: 1px solid rgba(51, 65, 85, 0.6);
+      border-radius: 8px;
+      padding: 0.6rem;
+      color: #94a3b8;
+    }
+    details.assistant-details {
+      margin-top: 0.85rem;
+      border-radius: 12px;
+      border: 1px solid rgba(71, 85, 105, 0.55);
+      background: rgba(15, 23, 42, 0.65);
+    }
+    details.assistant-details > summary {
+      cursor: pointer;
+      padding: 0.6rem 0.85rem;
+      font-weight: 600;
+      color: #94a3b8;
+      list-style: none;
+    }
+    details.assistant-details > summary::-webkit-details-marker { display: none; }
+    .assistant-advanced-inner {
+      padding: 0.65rem 0.85rem 1rem;
+      border-top: 1px solid rgba(51, 65, 85, 0.5);
+    }
+    .assistant-advanced-inner label { color: #94a3b8; }
+    .assistant-advanced-inner input[type="text"],
+    .assistant-advanced-inner input[type="password"],
+    .assistant-advanced-inner textarea {
+      background: #0f172a;
+      border: 1px solid rgba(71, 85, 105, 0.75);
+      color: #e2e8f0;
+      border-radius: 8px;
+    }
+    .assistant-advanced-inner textarea { font-family: ui-monospace, monospace; }
+
+    .assistant-sidebar { display: flex; flex-direction: column; gap: 0.85rem; }
+    .assistant-card {
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid rgba(100, 116, 139, 0.35);
+      border-radius: 14px;
+      padding: 0.85rem 1rem;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+    .assistant-card h2 {
+      margin: 0 0 0.35rem 0;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+    .assistant-muted {
+      margin: 0 0 0.65rem 0;
+      font-size: 0.8rem;
+      color: #64748b;
+      line-height: 1.45;
+    }
+    .assistant-motivation {
+      margin: 0.65rem 0 0;
+      font-size: 0.84rem;
+      color: #a5b4fc;
+      line-height: 1.45;
+      font-style: italic;
+    }
+    .assistant-lyra-mini {
+      display: grid;
+      gap: 0.5rem;
+    }
+    .assistant-lyra-row {
+      display: grid;
+      grid-template-columns: 5.2rem 1fr 2.1rem;
+      gap: 0.35rem;
+      align-items: center;
+      font-size: 0.78rem;
+      color: #94a3b8;
+    }
+    .assistant-lyra-row input[type="range"] {
+      width: 100%;
+      accent-color: #2dd4bf;
+    }
+    .assistant-lyra-val { text-align: right; color: #5eead4; font-variant-numeric: tabular-nums; }
+    .assistant-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.45rem;
+      margin: 0.4rem 0;
+      font-size: 0.86rem;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+    .assistant-check input { margin-top: 0.15rem; accent-color: #2dd4bf; }
+    .assistant-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+    .assistant-chip-row button {
+      margin: 0;
+      padding: 0.28rem 0.55rem;
+      font-size: 0.78rem;
+      border-radius: 999px;
+      border: 1px dashed rgba(94, 234, 212, 0.45);
+      background: rgba(13, 148, 136, 0.15);
+      color: #99f6e4;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .assistant-chip-row button:hover {
+      border-style: solid;
+      background: rgba(13, 148, 136, 0.28);
+    }
+    .assistant-sidebar details {
+      margin-top: 0.5rem;
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+    .assistant-sidebar details > summary { cursor: pointer; color: #5eead4; }
+    #assistant-suggestions ul { margin: 0; padding-left: 1rem; color: #cbd5e1; }
+    #assistant-suggestions li { margin-bottom: 0.3rem; }
+    .assistant-sidebar a { color: #5eead4; }
   </style>
 </head>
 <body>
@@ -376,108 +762,135 @@
   </div>
 
   <div id="pilot-page-assistant" class="pilot-page" hidden>
-    <header>
-      <h1>Assistant Core</h1>
-      <p class="muted">
-        Flux rang 1 : demande naturelle → <code>ActionProposal</code> éditable → <code>output.policy</code> → exécution dry-run ou réelle avec approval.
-        Cette vue ne déclenche rien tant que vous ne cliquez pas sur <strong>Exécuter</strong>.
-      </p>
-    </header>
-    <section>
-      <label for="assistant-actor">actor_id</label>
-      <input type="text" id="assistant-actor" value="ui:assistant" />
+    <div class="assistant-shell">
+      <div class="assistant-main">
+        <div class="assistant-hero">
+          <span class="assistant-badge">Assistant Core</span>
+          <h1>Copilote local</h1>
+          <p class="assistant-lead">
+            Écrivez comme dans un chat : une proposition structurée est préparée côté serveur, puis vous choisissez dry-run ou exécution réelle avec jeton d’approbation.
+          </p>
+        </div>
 
-      <label for="assistant-text">Demande</label>
-      <textarea id="assistant-text" rows="3" style="font-family: inherit;">regarde si j'ai un mail de Intel</textarea>
+        <div id="assistant-chat-stream" class="assistant-chat-stream" role="log" aria-live="polite" aria-relevant="additions"></div>
 
-      <label for="assistant-context" style="margin-top:0.75rem">context (JSON)</label>
-      <textarea id="assistant-context" rows="6" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{
+        <div class="assistant-composer">
+          <label class="assistant-label-min" for="assistant-actor">Identité (actor_id)</label>
+          <input type="text" id="assistant-actor" class="assistant-input-compact" value="ui:assistant" autocomplete="off" />
+
+          <label class="assistant-label-min" for="assistant-text">Votre message</label>
+          <textarea id="assistant-text" class="assistant-input-main" rows="3" placeholder="Ex. regarde si j’ai un mail de Intel, ou collez une intention libre…">regarde si j'ai un mail de Intel</textarea>
+
+          <div class="assistant-actions-primary">
+            <button type="button" id="btn-assistant-propose" class="assistant-btn-primary">Proposer une action</button>
+            <button type="button" id="btn-assistant-exec-dry-run" class="assistant-btn-secondary">Exécuter · dry-run</button>
+            <button type="button" id="btn-assistant-exec-real" class="assistant-btn-secondary assistant-btn-real">Exécuter · réel</button>
+            <span class="assistant-hint-inline" id="assistant-hint">—</span>
+          </div>
+          <div class="assistant-actions-secondary">
+            <button type="button" id="btn-assistant-apply-proposal" class="assistant-linkish">Appliquer la proposition → contexte JSON</button>
+          </div>
+
+          <div class="assistant-label-min" style="margin-top:0.85rem">Dernière réponse (lisible)</div>
+          <div id="assistant-pretty" class="assistant-tech-strip"></div>
+          <pre id="assistant-raw" class="assistant-raw-collapsed">—</pre>
+        </div>
+
+        <details class="assistant-details" id="assistant-details-advanced">
+          <summary>Réglages techniques · JSON · contexte</summary>
+          <div class="assistant-advanced-inner">
+            <label for="assistant-context">Contexte (JSON)</label>
+            <textarea id="assistant-context" rows="5" style="width:100%;box-sizing:border-box;font-size:0.82rem">{
   "history": []
 }</textarea>
 
-      <p class="muted" style="margin:0.6rem 0 0 0">Raccourcis :</p>
-      <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
-        <button type="button" id="btn-assistant-preset-notepad">Notepad</button>
-        <button type="button" id="btn-assistant-preset-web">Recherche web</button>
-        <button type="button" id="btn-assistant-preset-mail">Mail Intel</button>
-        <button type="button" id="btn-assistant-preset-selfcheck">Selfcheck infra</button>
-        <button type="button" id="btn-assistant-preset-mmo-dev">Forge MMO (après import)</button>
-      </p>
+            <label for="assistant-action" style="margin-top:0.65rem">ActionProposal / action (JSON)</label>
+            <textarea id="assistant-action" rows="8" style="width:100%;box-sizing:border-box;font-size:0.82rem">{}</textarea>
 
-      <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-        <button type="button" id="btn-assistant-propose">Proposer</button>
-        <button type="button" id="btn-assistant-apply-proposal">Appliquer proposition → context</button>
-        <button type="button" id="btn-assistant-exec-dry-run">Exécuter dry-run</button>
-        <button type="button" id="btn-assistant-exec-real">Exécuter réel</button>
-        <span class="muted" id="assistant-hint">—</span>
-      </p>
+            <label for="assistant-approval" style="margin-top:0.65rem">Jeton d’approbation (optionnel)</label>
+            <input type="password" id="assistant-approval" placeholder="desktop_approval / devops_approval / opengame_approval" autocomplete="off" style="width:100%;max-width:28rem;box-sizing:border-box" />
 
-      <label for="assistant-action" style="margin-top:0.75rem">ActionProposal / action éditable (JSON)</label>
-      <textarea id="assistant-action" rows="9" style="font-family: ui-monospace, monospace; font-size: 0.85rem;">{}</textarea>
-
-      <label for="assistant-approval" style="margin-top:0.75rem">Approval token (optionnel, injecté selon capability)</label>
-      <input type="password" id="assistant-approval" placeholder="desktop_approval / devops_approval / opengame_approval" autocomplete="off" />
-
-      <div class="pilot-pm-encarts" style="margin-top:1rem">
-        <div class="pilot-pm-encart">
-          <h3>Préférences explicites</h3>
-          <label for="assistant-pref-notepad-path" style="margin-top:0">Chemin Notepad par défaut</label>
-          <input type="text" id="assistant-pref-notepad-path" value="C:\Users\Public\lbg_desktop.txt" />
-          <label style="margin-top:0.65rem;display:flex;align-items:flex-start;gap:0.45rem;">
-            <input type="checkbox" id="assistant-pref-dry-run" checked style="margin-top:0.2rem" />
-            <span class="muted">Forcer le dry-run par défaut quand c'est applicable.</span>
-          </label>
-          <p style="margin:0.55rem 0 0 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-            <button type="button" id="btn-assistant-save-prefs">Sauver préférences</button>
-            <span class="muted" id="assistant-pref-hint">—</span>
-          </p>
-        </div>
-        <div class="pilot-pm-encart">
-          <h3>Suggestions contrôlées</h3>
-          <div id="assistant-suggestions" class="pilot-pm-encart-body muted">—</div>
-        </div>
+            <p style="margin:0.75rem 0 0.35rem;font-size:0.82rem;color:#64748b">Préférences fichier Notepad (défaut propositions)</p>
+            <label for="assistant-pref-notepad-path">Chemin Notepad</label>
+            <input type="text" id="assistant-pref-notepad-path" value="C:\Users\Public\lbg_desktop.txt" style="width:100%;max-width:28rem;box-sizing:border-box" />
+            <p style="margin:0.5rem 0 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+              <button type="button" id="btn-assistant-save-prefs">Sauver préférences</button>
+              <span class="assistant-muted" id="assistant-pref-hint">—</span>
+            </p>
+          </div>
+        </details>
       </div>
 
-      <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Proposition / policy / résultat</h3>
-      <div id="assistant-pretty" style="margin-top:0.75rem"></div>
-      <pre id="assistant-raw" class="muted" style="font-size:0.82rem;max-height:20rem;">—</pre>
+      <aside class="assistant-sidebar">
+        <div class="assistant-card assistant-lyra-card">
+          <h2>État · Lyra (Pilot)</h2>
+          <p class="assistant-muted">Jauges locales à cette vue — indication d’humeur pour guider vos choix (dry-run, prudence). Non synchronisées au MMO.</p>
+          <div id="assistant-lyra-panel"></div>
+          <p id="assistant-motivation-line" class="assistant-motivation"></p>
+        </div>
 
-      <h3 style="margin:1rem 0 0.35rem 0;font-size:1rem">Historique court</h3>
-      <p class="muted" style="margin:0 0 0.5rem 0">
-        Historique local navigateur uniquement, limité aux derniers événements Assistant. Pas de stockage serveur.
-      </p>
-      <p style="margin:0.35rem 0 0.5rem 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-        <button type="button" id="btn-assistant-history-clear">Vider historique</button>
-        <span class="muted" id="assistant-history-hint">—</span>
-      </p>
-      <div id="assistant-history" class="pilot-pm-encart-body muted">—</div>
+        <div class="assistant-card">
+          <h2>Options</h2>
+          <label class="assistant-check">
+            <input type="checkbox" id="assistant-pref-dry-run" checked />
+            <span>Dry-run par défaut (poste / forge)</span>
+          </label>
+          <label class="assistant-check">
+            <input type="checkbox" id="assistant-opt-advanced" />
+            <span>Afficher le panneau technique (JSON)</span>
+          </label>
+        </div>
 
-      <h3 style="margin:1.2rem 0 0.35rem 0;font-size:1rem">Résumé de session volontaire</h3>
-      <p class="muted" style="margin:0 0 0.5rem 0">
-        Document local (navigateur) : agrège l’historique Assistant et des notes libres. À copier dans un ticket ou un journal ; rien n’est envoyé au serveur tant que vous n’exécutez pas une action.
-      </p>
-      <label for="assistant-session-notes" style="margin-top:0">Notes pour le résumé (optionnel)</label>
-      <textarea id="assistant-session-notes" rows="2" placeholder="Objectif de la session, décisions, suites possibles…" style="font-family: inherit;"></textarea>
-      <p style="margin:0.5rem 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-        <button type="button" id="btn-assistant-session-build">Générer le résumé</button>
-        <button type="button" id="btn-assistant-session-copy">Copier le résumé</button>
-        <span class="muted" id="assistant-session-hint">—</span>
-      </p>
-      <pre id="assistant-session-summary-out" class="muted" style="font-size:0.82rem;max-height:14rem;margin-top:0.35rem">—</pre>
+        <div class="assistant-card">
+          <h2>Presets rapides</h2>
+          <p class="assistant-muted">Remplissent le message et le contexte de base ; puis « Proposer ».</p>
+          <div class="assistant-chip-row">
+            <button type="button" id="btn-assistant-preset-notepad">Notepad</button>
+            <button type="button" id="btn-assistant-preset-web">Web</button>
+            <button type="button" id="btn-assistant-preset-mail">Mail</button>
+            <button type="button" id="btn-assistant-preset-selfcheck">Infra</button>
+            <button type="button" id="btn-assistant-preset-mmo-dev">Forge MMO</button>
+          </div>
+        </div>
 
-      <h3 style="margin:1.2rem 0 0.35rem 0;font-size:1rem">Pont MMO → assistant (volontaire)</h3>
-      <p class="muted" style="margin:0 0 0.5rem 0">
-        Collez un <code>session_summary</code> sanitisé (comme sur <a href="#/desktop">Desktop</a>) puis fusionnez-le dans le <strong>context</strong> avec une trace <code>mmo_bridge.source=mmo_session_summary</code> — requis pour les propositions « forge / prototype » liées au MMO (Jalon 6).
-      </p>
-      <label for="assistant-mmo-session-import" style="margin-top:0">JSON <code>session_summary</code></label>
-      <textarea id="assistant-mmo-session-import" rows="4" style="font-family: ui-monospace, monospace; font-size: 0.82rem;" placeholder='{"tracked_quest":"…","player_note":"…"}'></textarea>
-      <p style="margin:0.45rem 0 0.15rem 0;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
-        <button type="button" id="btn-assistant-mmo-merge">Fusionner dans context + trace</button>
-        <button type="button" id="btn-assistant-mmo-load-desktop-key">Charger depuis stockage Desktop</button>
-        <button type="button" id="btn-assistant-mmo-save-desktop-key">Écrire vers stockage Desktop</button>
-        <span class="muted" id="assistant-mmo-hint">—</span>
-      </p>
-    </section>
+        <div class="assistant-card">
+          <h2>Suggestions</h2>
+          <div id="assistant-suggestions" class="assistant-muted">—</div>
+        </div>
+
+        <div class="assistant-card">
+          <h2>Historique &amp; exports</h2>
+          <p class="assistant-muted">Données uniquement dans ce navigateur.</p>
+          <p class="assistant-chip-row" style="margin:0.35rem 0">
+            <button type="button" id="btn-assistant-history-clear">Vider le fil</button>
+          </p>
+          <span class="assistant-muted" id="assistant-history-hint">—</span>
+          <div id="assistant-history" hidden aria-hidden="true"></div>
+          <details style="margin-top:0.65rem">
+            <summary>Résumé de session volontaire</summary>
+            <label for="assistant-session-notes" style="margin-top:0.5rem;display:block">Notes</label>
+            <textarea id="assistant-session-notes" rows="2" placeholder="Objectifs, décisions…" style="width:100%;box-sizing:border-box;font-family:inherit;font-size:0.88rem"></textarea>
+            <p style="display:flex;gap:0.45rem;flex-wrap:wrap;margin:0.4rem 0 0;">
+              <button type="button" id="btn-assistant-session-build">Générer</button>
+              <button type="button" id="btn-assistant-session-copy">Copier JSON</button>
+              <span class="assistant-muted" id="assistant-session-hint">—</span>
+            </p>
+            <pre id="assistant-session-summary-out" class="assistant-raw-collapsed" style="max-height:10rem;margin-top:0.35rem">—</pre>
+          </details>
+          <details style="margin-top:0.5rem">
+            <summary>Pont MMO (session_summary)</summary>
+            <label for="assistant-mmo-session-import" style="margin-top:0.35rem;display:block">JSON</label>
+            <textarea id="assistant-mmo-session-import" rows="3" style="width:100%;box-sizing:border-box;font-size:0.78rem" placeholder='{"tracked_quest":"…"}'></textarea>
+            <p style="display:flex;flex-wrap:wrap;gap:0.4rem;margin:0.4rem 0 0;">
+              <button type="button" id="btn-assistant-mmo-merge">Fusionner dans contexte</button>
+              <button type="button" id="btn-assistant-mmo-load-desktop-key">Depuis Desktop</button>
+              <button type="button" id="btn-assistant-mmo-save-desktop-key">Vers Desktop</button>
+            </p>
+            <span class="assistant-muted" id="assistant-mmo-hint">—</span>
+          </details>
+        </div>
+      </aside>
+    </div>
   </div>
 
   <div id="pilot-page-desktop" class="pilot-page" hidden>
@@ -874,6 +1287,8 @@
     const STORAGE_ASSISTANT_PREFS_KEY = "lbg_pilot_assistant_prefs_v1";
     const STORAGE_ASSISTANT_SESSION_NOTES_KEY = "lbg_pilot_assistant_session_notes_v1";
     const LBG_PILOT_MMO_SESSION_SUMMARY_STORAGE = "lbg_pilot_mmo_session_summary_json";
+    const STORAGE_ASSISTANT_LYRA_KEY = "lbg_pilot_assistant_lyra_gauges_v1";
+    const STORAGE_ASSISTANT_UI_ADVANCED_KEY = "lbg_pilot_assistant_ui_advanced_v1";
 
     function getBase() {
       const el = document.getElementById("api-base");
@@ -2401,6 +2816,10 @@
 
     function assistantUiHint(msg, isError) {
       pilotInlineHint("assistant-hint", msg || "—", !!isError);
+      try {
+        const el = document.getElementById("assistant-hint");
+        if (el) el.classList.toggle("assistant-hint-err", !!isError);
+      } catch (_) {}
     }
 
     function assistantDefaultPrefs() {
@@ -2469,16 +2888,161 @@
       }
     }
 
+    function assistantLoadLyraGauges() {
+      const d = assistantDefaultLyraGauges();
+      try {
+        const raw = localStorage.getItem(STORAGE_ASSISTANT_LYRA_KEY);
+        if (!raw) return d;
+        const o = JSON.parse(raw);
+        if (!o || typeof o !== "object") return d;
+        for (const k of Object.keys(d)) {
+          const n = parseInt(String(o[k]), 10);
+          if (!isNaN(n)) d[k] = Math.max(0, Math.min(100, n));
+        }
+        return d;
+      } catch (_) {
+        return d;
+      }
+    }
+
+    function assistantSaveLyraGauges(g) {
+      try {
+        localStorage.setItem(STORAGE_ASSISTANT_LYRA_KEY, JSON.stringify(g));
+      } catch (_) {}
+    }
+
+    function assistantMotivationText(g) {
+      const c = g.confiance;
+      const e = g.energie;
+      const p = g.patience;
+      if (c >= 75 && p >= 65) return "Motivation · allant calme : vous pouvez enchaîner propositions puis dry-run.";
+      if (c < 45) return "Motivation · prudence : relire le JSON, garder dry-run et approvals visibles.";
+      if (p < 45) return "Motivation · patience basse : clarifier la demande avant toute exécution réelle.";
+      if (e < 40) return "Motivation · rythme léger : privilégier des tours courts et des contrôles simples.";
+      return "Motivation · équilibre : proposer → dry-run → décider avec jeton si besoin.";
+    }
+
+    function assistantRenderLyraPanel() {
+      const host = document.getElementById("assistant-lyra-panel");
+      const mot = document.getElementById("assistant-motivation-line");
+      if (!host) return;
+      const g = assistantLoadLyraGauges();
+      const keys = [
+        ["chaleur", "Chaleur"],
+        ["energie", "Énergie"],
+        ["patience", "Patience"],
+        ["confiance", "Confiance"],
+      ];
+      var html = "<div class=\"assistant-lyra-mini\">";
+      for (var i = 0; i < keys.length; i++) {
+        var key = keys[i][0];
+        var lab = keys[i][1];
+        var v = g[key] != null ? g[key] : 70;
+        html +=
+          "<div class=\"assistant-lyra-row\"><span>" +
+          escapeHtml(lab) +
+          "</span><input type=\"range\" min=\"0\" max=\"100\" data-lyra-k=\"" +
+          escapeHtml(key) +
+          "\" value=\"" +
+          v +
+          "\" /><span class=\"assistant-lyra-val\">" +
+          v +
+          "</span></div>";
+      }
+      html += "</div>";
+      host.innerHTML = html;
+      var inputs = host.querySelectorAll("input[type=range]");
+      for (var j = 0; j < inputs.length; j++) {
+        (function (inp) {
+          inp.addEventListener("input", function () {
+            var k = inp.getAttribute("data-lyra-k");
+            var gg = assistantLoadLyraGauges();
+            if (k && gg) {
+              gg[k] = parseInt(inp.value, 10) || 0;
+              assistantSaveLyraGauges(gg);
+              var row = inp.closest(".assistant-lyra-row");
+              var vv = row && row.querySelector(".assistant-lyra-val");
+              if (vv) vv.textContent = String(gg[k]);
+              if (mot) mot.textContent = assistantMotivationText(gg);
+            }
+          });
+        })(inputs[j]);
+      }
+      if (mot) mot.textContent = assistantMotivationText(g);
+    }
+
+    function assistantNudgeLyraFromPolicy(decision, metaKind) {
+      const gg = assistantLoadLyraGauges();
+      const d = String(decision || "");
+      if (d === "approval_required") {
+        gg.patience = Math.max(15, (gg.patience || 70) - 5);
+        gg.confiance = Math.max(20, (gg.confiance || 70) - 4);
+      } else if (d === "forbidden") {
+        gg.confiance = Math.max(25, (gg.confiance || 70) - 6);
+        gg.patience = Math.max(20, (gg.patience || 70) - 3);
+      } else if (d === "dry_run") {
+        gg.energie = Math.min(100, (gg.energie || 60) + 3);
+        gg.chaleur = Math.min(100, (gg.chaleur || 70) + 2);
+      } else if (d === "safe_read" || d === "approved_action") {
+        gg.confiance = Math.min(100, (gg.confiance || 70) + 2);
+      }
+      if (metaKind === "proposal") {
+        gg.chaleur = Math.min(100, (gg.chaleur || 70) + 1);
+      }
+      assistantSaveLyraGauges(gg);
+      assistantRenderLyraPanel();
+    }
+
+    function assistantChatScrollToEnd() {
+      const stream = document.getElementById("assistant-chat-stream");
+      if (stream) stream.scrollTop = stream.scrollHeight;
+    }
+
+    function assistantBindAssistantPage() {
+      if (document.body.dataset.assistantUxBound) return;
+      document.body.dataset.assistantUxBound = "1";
+      const cb = document.getElementById("assistant-opt-advanced");
+      const det = document.getElementById("assistant-details-advanced");
+      if (cb && det) {
+        cb.addEventListener("change", function () {
+          det.open = !!cb.checked;
+          try {
+            localStorage.setItem(STORAGE_ASSISTANT_UI_ADVANCED_KEY, cb.checked ? "1" : "0");
+          } catch (_) {}
+        });
+      }
+    }
+
+    function assistantSyncAdvancedPanel() {
+      try {
+        const cb = document.getElementById("assistant-opt-advanced");
+        const det = document.getElementById("assistant-details-advanced");
+        if (!cb || !det) return;
+        const v = localStorage.getItem(STORAGE_ASSISTANT_UI_ADVANCED_KEY);
+        const on = v === "1";
+        cb.checked = on;
+        det.open = on;
+      } catch (_) {}
+    }
+
+    function assistantDefaultLyraGauges() {
+      return { chaleur: 70, energie: 60, patience: 70, confiance: 70 };
+    }
+
     function assistantHistorySave(items) {
-      try { localStorage.setItem(STORAGE_ASSISTANT_HISTORY_KEY, JSON.stringify((items || []).slice(0, 12))); } catch (_) {}
+      try {
+        localStorage.setItem(STORAGE_ASSISTANT_HISTORY_KEY, JSON.stringify((items || []).slice(0, 12)));
+      } catch (_) {}
     }
 
     function assistantHistoryAdd(item) {
       const items = assistantHistoryLoad();
-      const next = [{
-        ts: new Date().toISOString(),
-        ...item,
-      }].concat(items).slice(0, 12);
+      const next = [
+        {
+          ts: new Date().toISOString(),
+          ...item,
+        },
+      ].concat(items).slice(0, 12);
       assistantHistorySave(next);
       assistantHistoryRender();
     }
@@ -2490,26 +3054,61 @@
     }
 
     function assistantHistoryRender() {
-      const el = document.getElementById("assistant-history");
-      if (!el) return;
+      const stream = document.getElementById("assistant-chat-stream");
+      const hiddenHist = document.getElementById("assistant-history");
+      if (hiddenHist) hiddenHist.innerHTML = "";
       const items = assistantHistoryLoad();
+      if (!stream) return;
       if (!items.length) {
-        el.innerHTML = "<span class=\"muted\">—</span>";
+        stream.innerHTML =
+          "<div class=\"assistant-chat-empty\"><strong>Bienvenue.</strong><br>" +
+          "Écrivez une intention, ou choisissez un <strong>preset</strong> à droite, puis <em>Proposer une action</em>. " +
+          "Rien ne part vers les agents tant que vous n’exécutez pas.</div>";
         return;
       }
-      let html = "<ul style=\"margin:0;padding-left:1.1rem\">";
+      const parts = [];
       for (const it of items) {
         const when = it.ts ? new Date(String(it.ts)).toLocaleTimeString() : "";
         const kind = it.kind || "event";
         const text = it.text || it.summary || "";
-        const cap = it.capability ? " · " + it.capability : "";
-        const decision = it.policy_decision ? " · policy=" + it.policy_decision : "";
-        html += "<li style=\"margin-bottom:0.35rem\"><strong>" + escapeHtml(String(kind)) + "</strong>" +
-          " <span class=\"muted\">" + escapeHtml(when + cap + decision) + "</span><br>" +
-          escapeHtml(String(text)).slice(0, 220) + "</li>";
+        const cap = it.capability ? String(it.capability) : "";
+        const dec = it.policy_decision ? String(it.policy_decision) : "";
+        let msgClass = "assistant-msg--proposal";
+        if (kind === "execute_dry_run") msgClass = "assistant-msg--execute_dry_run";
+        else if (kind === "execute_real") msgClass = "assistant-msg--execute_real";
+        const kindLabel =
+          kind === "proposal"
+            ? "Proposition"
+            : kind === "execute_dry_run"
+              ? "Exécution dry-run"
+              : kind === "execute_real"
+                ? "Exécution réelle"
+                : kind;
+        const metaLine = when + " · " + kindLabel + (cap ? " · " + cap : "");
+        const policyHtml = dec
+          ? "<span class=\"assistant-msg-policy\">policy · " + escapeHtml(dec) + "</span>"
+          : "";
+        const summaryExtra =
+          kind === "proposal" && it.summary && String(it.summary) !== String(text)
+            ? "<p class=\"assistant-msg-detail\">" + escapeHtml(String(it.summary).slice(0, 320)) + "</p>"
+            : "";
+        parts.push(
+          '<div class="assistant-msg ' +
+            msgClass +
+            '">' +
+            '<div class="assistant-msg-meta">' +
+            escapeHtml(metaLine) +
+            "</div>" +
+            '<p class="assistant-msg-query">' +
+            escapeHtml(String(text).slice(0, 800)) +
+            "</p>" +
+            summaryExtra +
+            policyHtml +
+            "</div>"
+        );
       }
-      html += "</ul>";
-      el.innerHTML = html;
+      stream.innerHTML = parts.join("");
+      assistantChatScrollToEnd();
     }
 
     let assistantLastVoluntarySummaryJson = "";
@@ -2646,7 +3245,7 @@
       if (!el) return;
       const list = Array.isArray(items) ? items.filter(Boolean) : [];
       if (!list.length) {
-        el.innerHTML = "<span class=\"muted\">—</span>";
+        el.innerHTML = "<span class=\"assistant-muted\">—</span>";
         return;
       }
       el.innerHTML = "<ul style=\"margin:0;padding-left:1.1rem\">" + list
@@ -2735,6 +3334,9 @@
           });
           assistantRenderSuggestions(assistantSuggestionsForProposal(proposal));
           assistantUiHint("Proposition prête — relire/éditer puis appliquer ou exécuter", false);
+          try {
+            assistantNudgeLyraFromPolicy("", "proposal");
+          } catch (_) {}
         } else {
           assistantRenderSuggestions(["Demander une précision ou rester en conversation sans action."]);
           assistantUiHint(out.json.reason || "Aucune proposition", false);
@@ -2829,6 +3431,9 @@
           });
           assistantRenderSuggestions(assistantSuggestionsForResult(out.json));
         }
+        try {
+          assistantNudgeLyraFromPolicy(dec, "execute");
+        } catch (_) {}
         assistantUiHint(out.status === 200 ? ("OK" + (dec ? " · policy=" + dec : "")) : ("HTTP " + out.status), out.status !== 200);
       } catch (e) {
         assistantUiHint("Erreur: " + e, true);
@@ -2984,9 +3589,12 @@
         try { pilotDesktopSetupSpeech(); } catch (_) {}
       }
       if (r === "assistant") {
+        try { assistantBindAssistantPage(); } catch (_) {}
         try { assistantApplyPrefsToUi(); } catch (_) {}
+        try { assistantSyncAdvancedPanel(); } catch (_) {}
         try { assistantSessionNotesLoad(); } catch (_) {}
         try { assistantMmoImportSilentLoad(); } catch (_) {}
+        try { assistantRenderLyraPanel(); } catch (_) {}
         try { assistantHistoryRender(); } catch (_) {}
         try { assistantRenderSuggestions([]); } catch (_) {}
       }
