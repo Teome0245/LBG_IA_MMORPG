@@ -9,7 +9,7 @@ Document **transverse** : définitions courtes des termes, acronymes et concepts
 ## A
 
 **ADR** (*Architecture Decision Record*)  
-Enregistrement structuré d’une **décision d’architecture** : contexte, décision adoptée, conséquences (avantages, coûts), parfois statut (brouillon, accepté, déprécié). Les ADR du dépôt vivent sous **`docs/adr/`** (ex. `0001-tronc-monorepo.md`, `0002-mmo-autorite-pont.md`). Ils complètent les plans longs (`plan_de_route.md`, `plan_fusion_lbg_ia.md`) en **figeant** un choix précis sans tout réécrire.
+Enregistrement structuré d’une **décision d’architecture** : contexte, décision adoptée, conséquences (avantages, coûts), parfois statut (brouillon, accepté, déprécié). Les ADR du dépôt vivent sous **`docs/adr/`** (ex. `0001-tronc-monorepo.md`, `0002-mmo-autorite-pont.md`, `0004-assistant-local-vs-persona-mmo.md`, `0005-new-mmo-core3-coexistence.md`). Ils complètent les plans longs (`plan_de_route.md`, `plan_fusion_lbg_ia.md`) en **figeant** un choix précis sans tout réécrire.
 
 **Agent** (dans ce monorepo)  
 Module exécuté après le routage d’intention (`lbg_agents.dispatch`), souvent derrière une **capability** déclarée (dialogue, quêtes, combat, DevOps, etc.). Peut être in-process ou exposé en **HTTP** (`/invoke`, healthz). Voir `agents/README.md`, `architecture.md`.
@@ -70,6 +70,9 @@ Ce dépôt **`LBG_IA_MMO/`** : plusieurs packages (`backend/`, `orchestrator/`, 
 
 **`mmmorpg_server/`**  
 Serveur **WebSocket** jeu (portage depuis le dépôt source **`mmmorpg`**) : `python -m mmmorpg_server`, variables **`MMMORPG_*`**. Voir **`mmmorpg_server/README.md`**, **`docs/mmmorpg_PROTOCOL.md`**.
+
+**new_mmo / Core3**  
+Dépôt ou clone du **serveur jeu SWGEmu (Core3)** : binaire **`core3`**, base **`swgemu`**, protocole et stack **distincts** du couple Python **`mmmorpg_server`** + **`mmo_server`**. Coexistence et migration documentées : ADR **`0005-new-mmo-core3-coexistence.md`**, guide **`migration_new_mmo_core3.md`**, emplacement clone optionnel **`third_party/new_mmo/`** (ignoré par Git).
 
 ---
 

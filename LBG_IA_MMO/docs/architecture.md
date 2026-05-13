@@ -26,6 +26,7 @@ Construire un framework complet permettant :
 - Après routage, appelle le paquet **`agents/`** (`lbg_agents.dispatch.invoke_after_route`) pour enrichir le champ `output`. Le dialogue peut cibler un **agent HTTP** (`LBG_AGENT_DIALOGUE_URL`, port **8020** en prod systemd, voir `agents/README.md`). L’intention **`devops_probe`** déclenche **`agent.devops`** : GET HTTP et lecture de fichiers **uniquement** via listes blanches d’environnement (`agents/README.md`) ; dry-run **`LBG_DEVOPS_DRY_RUN`** ; garde **`LBG_DEVOPS_APPROVAL_TOKEN`** + `context.devops_approval` ; audit JSON **`agents.devops.audit`** (champ `ts`) sur stdout et/ou fichier **`LBG_DEVOPS_AUDIT_LOG_PATH`** (JSONL).
 - **Forge de prototypes OpenGame (cadrage)** : si OpenGame est intégré, il reste une capability expérimentale orchestrée (`agent.opengame`) pour générer des prototypes isolés ; l’orchestrateur reste maître du déclenchement, et le code généré ne modifie pas le cœur MMO automatiquement. Décision : `docs/adr/0003-opengame-forge-prototypes.md`.
 - **Assistant poste vs persona MMO** : deux modes produit (`local_assistant` ↔ **`desktop_control`/`agent.desktop`** + worker ; `mmo_persona` ↔ dialogue/WS MMO), isolation des secrets et routage ; pas d’exécution OS sensible depuis le flux MMO sans pont dédié. Décision : `docs/adr/0004-assistant-local-vs-persona-mmo.md`.
+- **Serveur jeu Core3 (`new_mmo`) vs stack MMO Python** : le dépôt **`new_mmo`** n’est pas un remplacement silencieux de `mmmorpg_server` / `mmo_server` ; coexistence documentée, migration par phases. Décision : `docs/adr/0005-new-mmo-core3-coexistence.md`, guide `docs/migration_new_mmo_core3.md`.
 - **Classification d’intention (langage courant)** : couche **LLM optionnelle** côté orchestrateur (`LBG_ORCHESTRATOR_INTENT_LLM*`) avec repli déterministe ; métadonnées `output.orchestrator_route_meta` ; Pilot accueil **Routage intention**. Voir `orchestrator/README.md`, `introspection/llm_intent_classifier.py`.
 - Introspection : **`GET /v1/capabilities`** (liste des `CapabilitySpec`). Le backend expose **`GET /v1/pilot/capabilities`** en proxy pour l’UI `/pilot/`.
 
@@ -101,6 +102,10 @@ Variables régulateur :
 
 Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure des **`remediation_hints`** : indications **lisibles** pour un opérateur (relancer un service, vérifier une URL, consulter un log). **Règle projet** : ces hints ne déclenchent **aucune** action corrective **automatique** côté LLM ou agent sans revue humaine. L’exécution sur l’infra (ex. **`systemd_restart`** après approbation, quota, fenêtre UTC) reste **explicite** (outil DevOps, systemd, playbook) — typiquement un **humain** ou un **agent d’outillage contrôlé** (ex. Cursor sur poste de confiance avec les mêmes prérequis SSH que la doc `ops_vm_user.md`) applique le correctif. Ne pas brancher de boucle « LLM → restart production » sans garde-fous documentés et revus.
 
+### Agent hybride proactif (`hybrid_proactive_agent/`)
+
+Bibliothèque Python **isolée** (paquet installable, hors `orchestrator/`) : moteur **proactif léger / avancé / autonome**, tension et curiosité, objectifs internes, mémoire longue JSONL optionnelle, coordinateur **multi-rôles** (architecte, orchestrateur, game designer). Aucune route HTTP imposée : pensée pour un **greffon ultérieur** sur l’orchestrateur, le dialogue MMO ou un client web. Documentation produit du module : `hybrid_proactive_agent/README.md` et `hybrid_proactive_agent/docs/`. Un port TypeScript de référence existe dans `web_client/src/lib/hybridProactiveEngine.ts`.
+
 ### MMO Server (`mmo_server/`)
 - Serveur headless tick-based.
 - Monde data-driven, entités, quêtes, classes, simulation.
@@ -112,6 +117,8 @@ Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure de
 Données **data-driven** versionnées dans le monorepo : `LBG_IA_MMO/content/world/races.json`, `creatures.json`. **Consommateurs** : `lbg_agents.world_content` (enrichissement des prompts dialogue ; `GET /world-content` sur l’agent HTTP), `npc_registry.json` des agents (**`race_id`** par PNJ), `mmmorpg_server.world_catalog` + champ **`Entity.race_id`** / snapshot Lyra (`meta.race_id`, `meta.race_display`). **Pilot** : proxy same-origin **`GET /v1/pilot/agent-dialogue/world-content`**. Surcharge de répertoire : **`LBG_WORLD_CONTENT_DIR`**. Fil documentaire : `docs/plan_de_route.md` (section *Fil produit ↔ documentation*, Historique), `docs/plan_mmorpg.md`, `agents/README.md`, `pilot_web/README.md`.
 
 ### Frontend et Pilotage (`pilot_web/` et `web_client/`)
+
+- **Bot compagnon (plan)** : service + UI chat dédiés décrits dans **`docs/plan_bot_compagnon_autonome.md`** (prototype type port Vite LAN, prod derrière reverse proxy).
 - **Routage unifié (Nginx, port 8080)** : La VM 110 centralise l'accès utilisateur.
     - `http://<IP>:8080/` : Interface **Lyra / Pilotage** (Originale).
     - `http://<IP>:8080/mmo/` : Interface **Client MMO** (Vite).
@@ -182,4 +189,5 @@ Recommandation pour **cette** machine : **déploiement via systemd** (voir `../.
 - `ops_vm_user.md` : compte **`lbg`** (sudoer, SSH, `User=` systemd, `/opt`, secrets `640 root:lbg`)
 - `adr/0003-opengame-forge-prototypes.md` : OpenGame comme forge de prototypes orchestrée et sandboxée
 - `adr/0004-assistant-local-vs-persona-mmo.md` : assistant poste de travail (`local_assistant`) vs incarnation MMO (`mmo_persona`)
+- `adr/0005-new-mmo-core3-coexistence.md` : dépôt **new_mmo** (Core3) — coexistence avec `mmmorpg_server` / `mmo_server`, pas de remplacement implicite
 

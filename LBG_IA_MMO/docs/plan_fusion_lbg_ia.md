@@ -22,6 +22,7 @@
 | **`~/projects/LBG_IA_MMORPG/LBG_IA_MMO/`** (ce monorepo) | **Tronc cible** : intégration de tout le livrable ; VM, systemd, `mmo_server`, agents `lbg_agents`, et à terme code porté depuis **LBG_IA** et **mmmorpg**. |
 | **`~/projects/LBG_IA/`** | **Source** (non modifiée ici) : orchestrateur Docker/Vue, `RouterIA`, Postgres, etc. ; doc : `LBG_IA/docs/REFERENCE_PROJET_LBG_IA.md`. |
 | **`~/projects/mmmorpg/`** | **Source** (non modifiée ici) : **`mmmorpg_server`**, WebSocket (**7733**), `PROTOCOL.md`, client Godot prototype. **Complémentaire** de `mmo_server` dans le monorepo : voir **§3.4**. |
+| **`~/projects/new_mmo/`** (ou clone sous `LBG_IA_MMO/third_party/new_mmo/`) | **Serveur jeu Core3 / SWGEmu** (binaire **`core3`**, **MMOCoreORB**, MariaDB **`swgemu`**). **Lignée distincte** du couple Python `mmmorpg_server` + `mmo_server` — coexistence et migration : **`docs/adr/0005-new-mmo-core3-coexistence.md`**, **`docs/migration_new_mmo_core3.md`**. |
 
 **MMO — deux briques aujourd’hui** : **mmmorpg** (joueurs, WS, planète Terre1, entités réseau) et **`mmo_server`** (tick léger, **HTTP** `/v1/world/lyra`, **Lyra PNJ ↔ backend/orchestrateur**). La fusion « monde » consiste à **les unifier dans le monorepo** (autorité, ponts, dépréciation progressive des doublons) selon les phases et ADR, sans confondre les rôles tant que les contrats ne sont pas unifiés.
 
@@ -61,6 +62,8 @@ Tout changement de répartition doit être reflété dans **`plan_fusion_lbg_ia.
 - **Fusion** : tant que les rôles restent sur des **hôtes** différents, **`deploy_vm.sh`** reste le **chemin nominal** pour ce qui est **déjà** dans le monorepo ; regrouper physiquement des services ne change pas l’exigence de **documenter** ports et `ROOT_DIR`.
 
 Les variables d’environnement des backends doivent pointer vers les **bons hôtes** (ex. `LBG_MMO_SERVER_URL` vers **140** si `mmo_server` y reste ; `LBG_ORCHESTRATOR_URL` / agents **110** si l’UI LBG_IA appelle l’orchestrateur MMO sur une autre machine ; clients **mmmorpg** vers **245** — **à figer dans un tableau env par rôle** en phase A du plan).
+
+**Routage LLM (convergence minimale, sans port de code)** : tant que le **catalogue** détaillé des providers (`orchestrateur/backend/src/providers/`, `RouterIA`, etc.) reste sur **LBG_IA** en référence, on peut quand même **unifier le comportement** côté monorepo en alignant **`LBG_DIALOGUE_FAST_*`**, **`LBG_DIALOGUE_REMOTE_*`**, l’ordre `LBG_DIALOGUE_AUTO_ORDER` et le failover sur les **mêmes** URL OpenAI-compatibles (`/v1/chat/completions`) et **mêmes clés** que ceux configurés pour Groq, OpenRouter ou tout backend distant utilisé par LBG_IA. L’agent MMO (`lbg_agents/dialogue_llm.py`) consomme déjà ces endpoints ; **un routeur unique dans le monorepo n’est pas une exigence produit** — tout port ou bibliothèque partagée reste **optionnel** et à trancher plus tard si besoin. Référence env : `infra/secrets/lbg.env.example`, `agents/README.md`.
 
 En cas de divergence entre ce plan et le code, **le code et les ADR adoptés après fusion** font foi — ce fichier doit être **mis à jour** à chaque jalon.
 
