@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import time
@@ -93,6 +94,22 @@ def _pilot_agent_dialogue_invoke_timeout_s() -> float:
         return max(45.0, float(raw))
     except ValueError:
         return 300.0
+
+
+def _lbg_ia_backend_base_url() -> str | None:
+    """URL racine du FastAPI orchestrateur projet LBG_IA (voir `GET /metrics`, `/monitor/agents`)."""
+    raw = (os.environ.get("LBG_PILOT_LBGIA_BACKEND_URL", "").strip() or os.environ.get("LBG_IA_BACKEND_URL", "").strip()).rstrip(
+        "/"
+    )
+    return raw or None
+
+
+def _pilot_lbg_ia_http_timeout_s() -> float:
+    raw = os.environ.get("LBG_PILOT_LBGIA_HTTP_TIMEOUT", "3").strip()
+    try:
+        return max(0.8, min(15.0, float(raw)))
+    except ValueError:
+        return 3.0
 
 
 async def _pilot_route_impl(*, payload: IntentRequest, trace_id: str) -> dict[str, object]:
@@ -375,6 +392,82 @@ async def pilot_aggregate_status() -> dict[str, object]:
         "mmo_server_health_url": mmo_probe_url,
         "mmo_server_detail": mmo_detail,
     }
+
+
+@router.get("/lbg-ia/status", tags=["pilot"])
+async def pilot_lbg_ia_orchestrator_status() -> dict[str, object]:
+    """
+    Agrège `GET /metrics` + `GET /monitor/agents` du backend FastAPI **projet LBG_IA** (même réseau/VM).
+
+    Définir `LBG_PILOT_LBGIA_BACKEND_URL` (ou `LBG_IA_BACKEND_URL`) sur ce backend ; le pilot web pilote alors
+    le monitoring sans CORS depuis le navigateur.
+    """
+    base = _lbg_ia_backend_base_url()
+    if not base:
+        return {
+            "ok": False,
+            "disabled": True,
+            "detail": "LBG_PILOT_LBGIA_BACKEND_URL / LBG_IA_BACKEND_URL non défini.",
+        }
+
+    timeout = _pilot_lbg_ia_http_timeout_s()
+    metrics_error = ""
+    agents_error = ""
+
+    metrics_data: dict[str, object] | None = None
+    agents_data: dict[str, object] | None = None
+    metrics_status = 0
+    agents_status = 0
+
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            m_resp, a_resp = await asyncio.gather(
+                client.get(f"{base}/metrics"),
+                client.get(f"{base}/monitor/agents"),
+            )
+
+        metrics_status = int(getattr(m_resp, "status_code", 0))
+        agents_status = int(getattr(a_resp, "status_code", 0))
+
+        if metrics_status != 200:
+            metrics_error = (getattr(m_resp, "text", "") or "")[:500]
+
+        try:
+            if metrics_status == 200:
+                raw_m = m_resp.json()
+                metrics_data = raw_m if isinstance(raw_m, dict) else {"payload": raw_m}
+        except Exception as e:
+            metrics_error = str(e)
+
+        if agents_status != 200:
+            agents_error = (getattr(a_resp, "text", "") or "")[:500]
+
+        try:
+            if agents_status == 200:
+                raw_a = a_resp.json()
+                agents_data = raw_a if isinstance(raw_a, dict) else {"payload": raw_a}
+        except Exception as e:
+            agents_error = str(e)
+
+    except Exception as e:
+        LOG.warning("pilot.lbg_ia_orchestrator_status error base=%s err=%s", base, e)
+        return {"ok": False, "upstream_base": base, "detail": str(e)}
+
+    ok = metrics_status == 200 and agents_status == 200 and metrics_data is not None and agents_data is not None
+    out: dict[str, object] = {
+        "ok": ok,
+        "upstream_base": base,
+        "metrics": metrics_data,
+        "agents_monitor": agents_data,
+    }
+    if not ok:
+        out["upstream_errors"] = {
+            "metrics_http": metrics_status,
+            "metrics_detail": metrics_error or None,
+            "agents_http": agents_status,
+            "agents_detail": agents_error or None,
+        }
+    return out
 
 
 @router.get("/agent-dialogue/healthz", tags=["pilot"])

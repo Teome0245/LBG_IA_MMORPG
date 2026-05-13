@@ -6,7 +6,7 @@
   <title>LBG_IA_MMO — Pilotage</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Outfit:wght@500;800&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root { font-family: system-ui, sans-serif; line-height: 1.5; }
     body { max-width: 92rem; margin: 1.25rem auto; padding: 0 1rem; }
@@ -158,19 +158,36 @@
     .lyra-controls input[type="text"] { width: 7rem; }
     .lyra-small { font-size: 0.88rem; color: #555; }
 
-    /* ========== Assistant Core — thème « aurore » (distinct du reste du pilot) ========== */
+    /* ========== Assistant Core — aligné UI dev Vite (127.0.0.1:5174 · LBG IA Orchestrateur) ========== */
     body[data-pilot-route="assistant"] {
-      font-family: "Sora", system-ui, sans-serif;
-      background:
-        radial-gradient(1200px 600px at 10% -10%, rgba(45, 212, 191, 0.18), transparent 50%),
-        radial-gradient(900px 500px at 90% 20%, rgba(139, 92, 246, 0.14), transparent 45%),
-        linear-gradient(165deg, #0f172a 0%, #134e4a 35%, #0f172a 100%);
+      font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+      position: relative;
+      background-color: #020617;
       color: #e2e8f0;
       min-height: 100vh;
       max-width: none;
       margin: 0;
       padding-left: 1rem;
       padding-right: 1rem;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    body[data-pilot-route="assistant"]::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgb(2 6 23 / 0.55), rgb(2 6 23 / 0.88)),
+        radial-gradient(ellipse 120% 80% at 50% 115%, rgb(16 185 129 / 0.09), transparent 58%),
+        radial-gradient(ellipse 70% 50% at 100% -10%, rgb(139 92 246 / 0.08), transparent 50%);
+      background-position: center;
+      background-size: cover;
+    }
+    body[data-pilot-route="assistant"] ::selection {
+      background: rgb(16 185 129 / 0.3);
+      color: #f8fafc;
     }
     body[data-pilot-route="assistant"] .pilot-shell-bar {
       background: rgba(15, 23, 42, 0.85);
@@ -223,11 +240,19 @@
     .assistant-hero h1 {
       margin: 0.5rem 0 0.25rem;
       font-size: 1.65rem;
-      font-weight: 700;
-      background: linear-gradient(90deg, #5eead4, #a78bfa, #f472b6);
+      font-weight: 800;
+      font-family: "Outfit", "Inter", system-ui, sans-serif;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #34d399, #2dd4bf, #a78bfa);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
+    }
+    .assistant-hero-kicker {
+      font-weight: 600;
+      font-size: 0.88em;
+      color: #94a3b8;
+      margin-right: 0.12em;
     }
     .assistant-lead {
       margin: 0;
@@ -239,11 +264,13 @@
       display: flex;
       flex-direction: column;
       min-height: min(70vh, 720px);
-      background: rgba(15, 23, 42, 0.55);
-      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgb(15 23 42 / 0.35);
+      border: 1px solid rgb(255 255 255 / 0.08);
       border-radius: 16px;
       padding: 1rem 1.1rem 1.1rem;
-      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.45);
+      -webkit-backdrop-filter: blur(24px);
+      backdrop-filter: blur(24px);
     }
     .assistant-chat-stream {
       flex: 1;
@@ -252,8 +279,20 @@
       overflow-y: auto;
       padding: 0.5rem 0.35rem;
       border-radius: 12px;
-      background: rgba(2, 6, 23, 0.45);
-      border: 1px solid rgba(51, 65, 85, 0.5);
+      background: rgb(15 23 42 / 0.35);
+      border: 1px solid rgb(255 255 255 / 0.06);
+      scrollbar-width: thin;
+      scrollbar-color: rgb(255 255 255 / 0.14) transparent;
+    }
+    .assistant-chat-stream::-webkit-scrollbar {
+      width: 6px;
+    }
+    .assistant-chat-stream::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .assistant-chat-stream::-webkit-scrollbar-thumb {
+      background-color: rgb(255 255 255 / 0.12);
+      border-radius: 999px;
     }
     .assistant-chat-empty {
       text-align: center;
@@ -285,6 +324,128 @@
     .assistant-msg--execute_real {
       background: rgba(127, 29, 29, 0.22);
       border-color: rgba(248, 113, 113, 0.35);
+    }
+    .assistant-msg--chat_user {
+      margin-left: 0;
+      margin-right: 0;
+      background: rgba(30, 58, 138, 0.28);
+      border-color: rgba(96, 165, 250, 0.38);
+      text-align: right;
+    }
+    .assistant-msg--chat_user .assistant-msg-meta {
+      text-align: right;
+    }
+    .assistant-msg--chat_assistant {
+      margin-right: 0;
+      margin-left: 0;
+      background: rgba(15, 118, 110, 0.22);
+      border-color: rgba(45, 212, 191, 0.32);
+    }
+    .assistant-chat-row {
+      display: flex;
+      gap: 0.65rem;
+      align-items: flex-start;
+      margin-bottom: 0.95rem;
+      animation: assistantFadeIn 0.25s ease;
+    }
+    .assistant-chat-row--user {
+      flex-direction: row-reverse;
+    }
+    .assistant-chat-avatar {
+      flex: 0 0 auto;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 999px;
+      font-size: 0.55rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: lowercase;
+      letter-spacing: 0.02em;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: #e2e8f0;
+      background: rgba(30, 41, 59, 0.85);
+    }
+    .assistant-chat-row--user .assistant-chat-avatar {
+      background: rgba(37, 99, 235, 0.38);
+      border-color: rgba(96, 165, 250, 0.5);
+    }
+    .assistant-chat-row--bot .assistant-chat-avatar {
+      background: rgba(15, 118, 110, 0.38);
+      border-color: rgba(45, 212, 191, 0.45);
+    }
+    .assistant-chat-col {
+      flex: 1;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .assistant-chat-row .assistant-msg {
+      margin-bottom: 0;
+    }
+    .assistant-lbgia-muted {
+      font-size: 0.78rem;
+      color: #64748b;
+      margin-top: 0.35rem;
+    }
+    .assistant-lbgia-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      margin-top: 0.5rem;
+    }
+    .assistant-lbgia-bar-row {
+      display: grid;
+      grid-template-columns: 2.8rem 1fr 2.6rem;
+      gap: 0.35rem;
+      align-items: center;
+      font-size: 0.72rem;
+      color: #94a3b8;
+    }
+    .assistant-lbgia-bar-label {
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+    .assistant-lbgia-bar-track {
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(51, 65, 85, 0.55);
+      overflow: hidden;
+    }
+    .assistant-lbgia-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.35s ease;
+    }
+    .assistant-lbgia-bar-val {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: #cbd5e1;
+    }
+    .assistant-lbgia-agents {
+      margin-top: 0.65rem;
+      font-size: 0.78rem;
+      color: #cbd5e1;
+      line-height: 1.45;
+    }
+    .assistant-lbgia-agent-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      padding: 0.15rem 0;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.35);
+    }
+    .assistant-lbgia-agent-line:last-child {
+      border-bottom: none;
+    }
+    .assistant-lbgia-agent-id {
+      color: #94a3b8;
+      font-size: 0.72rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .assistant-msg-meta {
       font-size: 0.72rem;
@@ -377,11 +538,22 @@
       border: 1px solid transparent;
     }
     .assistant-btn-primary {
-      background: linear-gradient(135deg, #14b8a6, #0d9488);
-      color: #042f2e;
-      border-color: rgba(45, 212, 191, 0.5);
+      background-color: #059669;
+      color: #ffffff;
+      border-color: rgb(16 185 129 / 0.45);
+      box-shadow:
+        0 10px 15px -3px rgb(0 0 0 / 0.12),
+        0 4px 6px -4px rgb(0 77 59 / 0.18);
+      transition: background-color 0.15s ease, box-shadow 0.15s ease;
     }
-    .assistant-btn-primary:hover { filter: brightness(1.08); }
+    .assistant-btn-primary:hover {
+      background-color: #10b981;
+      filter: none;
+    }
+    .assistant-btn-primary:active {
+      transform: scale(0.97);
+      box-shadow: none;
+    }
     .assistant-btn-secondary {
       background: rgba(30, 41, 59, 0.9);
       color: #e2e8f0;
@@ -392,12 +564,123 @@
       border-color: rgba(248, 113, 113, 0.45);
       color: #fecaca;
     }
+    .assistant-btn-converse {
+      padding: 0.45rem 1rem;
+      border-radius: 10px;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      border: 1px solid rgba(45, 212, 191, 0.45);
+      background: linear-gradient(145deg, #0f766e, #0d9488);
+      color: #f0fdfa;
+    }
+    .assistant-btn-converse:hover {
+      filter: brightness(1.08);
+    }
     .assistant-hint-inline {
       font-size: 0.84rem;
       color: #94a3b8;
       margin-left: 0.25rem;
     }
     .assistant-hint-inline.assistant-hint-err { color: #fca5a5; }
+    .assistant-route-badge {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.15rem 0.45rem;
+      border-radius: 6px;
+      margin-left: 0.35rem;
+      vertical-align: middle;
+      border: 1px solid transparent;
+    }
+    .assistant-route-badge--llm {
+      color: #a7f3d0;
+      background: rgba(6, 78, 59, 0.45);
+      border-color: rgba(52, 211, 153, 0.45);
+    }
+    .assistant-route-badge--stub {
+      color: #fde68a;
+      background: rgba(120, 53, 15, 0.35);
+      border-color: rgba(251, 191, 36, 0.4);
+    }
+    .assistant-route-badge--off {
+      color: #94a3b8;
+      background: rgba(30, 41, 59, 0.85);
+      border-color: rgba(71, 85, 105, 0.55);
+    }
+    .assistant-exec-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-left: 0.15rem;
+    }
+    .assistant-exec-mode-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+      user-select: none;
+    }
+    .assistant-switch {
+      position: relative;
+      display: inline-block;
+      width: 2.55rem;
+      height: 1.35rem;
+      flex-shrink: 0;
+    }
+    .assistant-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .assistant-switch-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: rgba(51, 65, 85, 0.95);
+      border-radius: 999px;
+      border: 1px solid rgba(100, 116, 139, 0.6);
+      transition: background 0.18s ease, border-color 0.18s ease;
+    }
+    .assistant-switch-slider::before {
+      content: "";
+      position: absolute;
+      height: 1rem;
+      width: 1rem;
+      left: 0.2rem;
+      bottom: 0.14rem;
+      background: #e2e8f0;
+      border-radius: 50%;
+      transition: transform 0.18s ease, background 0.18s ease;
+    }
+    .assistant-switch input:checked + .assistant-switch-slider {
+      background: rgba(127, 29, 29, 0.5);
+      border-color: rgba(248, 113, 113, 0.42);
+    }
+    .assistant-switch input:checked + .assistant-switch-slider::before {
+      transform: translateX(1.1rem);
+      background: #fecaca;
+    }
+    .assistant-kbd-hint {
+      font-size: 0.72rem;
+      color: #64748b;
+      margin-top: 0.35rem;
+      line-height: 1.35;
+    }
+    .assistant-kbd-hint kbd {
+      font-size: 0.78rem;
+      padding: 0.08rem 0.28rem;
+      border-radius: 4px;
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid #475569;
+      font-family: ui-monospace, monospace;
+    }
     .assistant-actions-secondary {
       margin-top: 0.35rem;
     }
@@ -459,16 +742,19 @@
 
     .assistant-sidebar { display: flex; flex-direction: column; gap: 0.85rem; }
     .assistant-card {
-      background: rgba(15, 23, 42, 0.72);
-      border: 1px solid rgba(100, 116, 139, 0.35);
+      background: rgb(2 6 23 / 0.4);
+      border: 1px solid rgb(255 255 255 / 0.08);
       border-radius: 14px;
       padding: 0.85rem 1rem;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.35);
+      -webkit-backdrop-filter: blur(16px);
+      backdrop-filter: blur(16px);
     }
     .assistant-card h2 {
       margin: 0 0 0.35rem 0;
       font-size: 0.95rem;
       font-weight: 600;
+      font-family: "Outfit", "Inter", ui-sans-serif, system-ui, sans-serif;
       color: #e2e8f0;
     }
     .assistant-muted {
@@ -555,7 +841,7 @@
       <a href="#/desktop">Desktop (hybride)</a>
     </nav>
     <div class="pilot-shell-tools">
-      <label>Backend <input type="text" id="api-base" placeholder="http://127.0.0.1:8000" /></label>
+      <label>Backend <input type="text" id="api-base" placeholder="LAN ex. http://192.168.0.140:8000" title="URL du backend MMO (/v1/pilot). Sur pilot 110:8080 défaut automatique si vide." /></label>
       <label class="muted">Token <input type="text" id="service-token" placeholder="X-LBG-Service-Token" style="min-width:12rem;max-width:20rem" /></label>
     </div>
   </div>
@@ -765,10 +1051,11 @@
     <div class="assistant-shell">
       <div class="assistant-main">
         <div class="assistant-hero">
-          <span class="assistant-badge">Assistant Core</span>
-          <h1>Copilote local</h1>
+          <span class="assistant-badge">LBG IA — Orchestrateur</span>
+          <h1><span class="assistant-hero-kicker">Assistant Core ·</span> Copilote local</h1>
           <p class="assistant-lead">
-            Écrivez comme dans un chat : une proposition structurée est préparée côté serveur, puis vous choisissez dry-run ou exécution réelle avec jeton d’approbation.
+            <strong>Dialoguer</strong> : conversation texte avec l’agent (historique dans le contexte JSON).
+            <strong>Proposer une action</strong> : proposition structurée, puis exécution (dry-run ou réel selon le switch) avec jeton d’approbation si besoin.
           </p>
         </div>
 
@@ -779,14 +1066,24 @@
           <input type="text" id="assistant-actor" class="assistant-input-compact" value="ui:assistant" autocomplete="off" />
 
           <label class="assistant-label-min" for="assistant-text">Votre message</label>
-          <textarea id="assistant-text" class="assistant-input-main" rows="3" placeholder="Ex. regarde si j’ai un mail de Intel, ou collez une intention libre…">regarde si j'ai un mail de Intel</textarea>
+          <textarea id="assistant-text" class="assistant-input-main" rows="3" placeholder="Ex. regarde si j’ai un mail de Intel, ou collez une intention libre…"></textarea>
 
           <div class="assistant-actions-primary">
-            <button type="button" id="btn-assistant-propose" class="assistant-btn-primary">Proposer une action</button>
-            <button type="button" id="btn-assistant-exec-dry-run" class="assistant-btn-secondary">Exécuter · dry-run</button>
-            <button type="button" id="btn-assistant-exec-real" class="assistant-btn-secondary assistant-btn-real">Exécuter · réel</button>
+            <button type="button" id="btn-assistant-converse" class="assistant-btn-converse" title="Réponse texte multi-tours (POST /v1/pilot/agent-dialogue/invoke)">Dialoguer</button>
+            <button type="button" id="btn-assistant-propose" class="assistant-btn-primary" title="Ctrl+Entrée">Proposer une action</button>
+            <div class="assistant-exec-row" title="Mode mémorisé localement avec les autres préférences Assistant">
+              <span class="assistant-exec-mode-label">dry-run</span>
+              <label class="assistant-switch" for="assistant-exec-real-toggle">
+                <input type="checkbox" id="assistant-exec-real-toggle" autocomplete="off" />
+                <span class="assistant-switch-slider"></span>
+              </label>
+              <span class="assistant-exec-mode-label">réel</span>
+              <button type="button" id="btn-assistant-exec" class="assistant-btn-secondary">Exécuter</button>
+            </div>
             <span class="assistant-hint-inline" id="assistant-hint">—</span>
+            <span id="assistant-dialogue-badge" class="assistant-route-badge" hidden></span>
           </div>
+          <p class="assistant-kbd-hint"><kbd>Entrée</kbd> Dialoguer · <kbd>Ctrl</kbd>+<kbd>Entrée</kbd> Proposer · <kbd>Maj</kbd>+<kbd>Entrée</kbd> saut de ligne</p>
           <div class="assistant-actions-secondary">
             <button type="button" id="btn-assistant-apply-proposal" class="assistant-linkish">Appliquer la proposition → contexte JSON</button>
           </div>
@@ -824,9 +1121,15 @@
       <aside class="assistant-sidebar">
         <div class="assistant-card assistant-lyra-card">
           <h2>État · Lyra (Pilot)</h2>
-          <p class="assistant-muted">Jauges locales à cette vue — indication d’humeur pour guider vos choix (dry-run, prudence). Non synchronisées au MMO.</p>
+          <p class="assistant-muted">Jauges locales à cette vue — indication d’humeur pour guider vos choix (dry-run, prudence). Lors d’un <strong>Dialoguer</strong>, elles sont envoyées à l’agent sous <code>context.lyra</code> pour influencer le ton de la réponse. Non synchronisées au MMO.</p>
           <div id="assistant-lyra-panel"></div>
           <p id="assistant-motivation-line" class="assistant-motivation"></p>
+        </div>
+
+        <div class="assistant-card" id="assistant-card-lbgia">
+          <h2>LBG IA · orchestrateur</h2>
+          <p class="assistant-muted" id="assistant-lbgia-hint">Chargement…</p>
+          <div id="assistant-lbgia-body" aria-live="polite"></div>
         </div>
 
         <div class="assistant-card">
@@ -836,8 +1139,20 @@
             <span>Dry-run par défaut (poste / forge)</span>
           </label>
           <label class="assistant-check">
+            <input type="checkbox" id="assistant-pref-auto-sim-after-propose" checked />
+            <span>Après « Proposer », lancer tout de suite la simulation (dry-run)</span>
+          </label>
+          <label class="assistant-check">
+            <input type="checkbox" id="assistant-pref-auto-real-after-sim" checked />
+            <span>Si la simulation est OK et que le sélecteur ci-dessous est sur « réel », enchaîner sans clic supplémentaire</span>
+          </label>
+          <label class="assistant-check">
             <input type="checkbox" id="assistant-opt-advanced" />
             <span>Afficher le panneau technique (JSON)</span>
+          </label>
+          <label class="assistant-check">
+            <input type="checkbox" id="assistant-pref-dialogue-desktop-plan" />
+            <span><strong>Dialoguer</strong> : propositions poste <code>DESKTOP_JSON</code> (<code>meta.desktop_action_proposal</code>) — requiert <code>LBG_DIALOGUE_DESKTOP_PLAN=1</code> sur l’agent dialogue</span>
           </label>
         </div>
 
@@ -897,6 +1212,7 @@
     <header>
       <h1>Desktop (hybride)</h1>
       <p class="muted">
+        <strong>Proposer (orchestrateur)</strong> appelle <code>POST /v1/pilot/action-proposal</code> (aligné Assistant Core) puis peut enchaîner simulation · exécution réelle comme les cases « flux orchestrateur ».
         Exécution PC via <strong>worker Windows</strong> (HTTP) derrière allowlists + dry-run + approval + audit.
         Le routage est forcé quand <code>context.desktop_action</code> est présent.
         <strong>Proposer via IA</strong> appelle <code>POST /v1/pilot/agent-dialogue/invoke</code> ; relisez le JSON puis utilisez <strong>Envoyer</strong>.
@@ -941,6 +1257,29 @@
         <span class="muted" style="line-height:1.35">Forcer <code>desktop_dry_run: true</code> à l’envoi (<strong>Proposer via IA</strong> et <strong>Envoyer</strong>), en surcharge du champ JSON si besoin — persistant (navigateur).</span>
       </label>
 
+      <div style="margin-top:0.85rem;padding:0.65rem 0.85rem;border:1px solid #ddd;border-radius:10px;max-width:46rem;background:#f8fafc;">
+        <p class="muted" style="margin:0 0 0.55rem;font-size:0.88rem">
+          <strong>Flux orchestrateur</strong> (comme vue Assistant après <code>POST /v1/pilot/action-proposal</code>) : simulation automatique puis exécution réelle si le curseur réel est actif et que la synthèse est OK.
+        </p>
+        <label style="display:flex;align-items:flex-start;gap:0.45rem;margin-bottom:0.35rem">
+          <input type="checkbox" id="desktop-pipeline-auto-sim" checked />
+          <span class="muted">Après « Proposer (orchestrateur) » : simuler (dry-run) tout de suite</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:0.45rem;margin-bottom:0.55rem">
+          <input type="checkbox" id="desktop-pipeline-auto-real" checked />
+          <span class="muted">Si simulation OK et réel ci-dessous : enchaîner sans clic supplémentaire</span>
+        </label>
+        <p style="margin:0;display:flex;gap:0.65rem;flex-wrap:wrap;align-items:center">
+          <span class="muted" style="font-size:0.84rem;font-weight:600">2ᵉ étape · envoi réel</span>
+          <span class="muted" style="font-size:0.8rem">off</span>
+          <label class="assistant-switch" for="desktop-pipeline-real-toggle" style="vertical-align:middle;">
+            <input type="checkbox" id="desktop-pipeline-real-toggle" autocomplete="off" />
+            <span class="assistant-switch-slider"></span>
+          </label>
+          <span class="muted" style="font-size:0.8rem">on</span>
+        </p>
+      </div>
+
       <p class="muted" style="margin:0.6rem 0 0 0">Presets :</p>
       <p style="margin:0.35rem 0 0 0; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
         <button type="button" id="btn-desktop-preset-open-url">open_url</button>
@@ -953,6 +1292,9 @@
       <p style="margin-top:0.75rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
         <button type="button" id="btn-desktop-propose-llm">Proposer via IA (dialogue)</button>
         <button type="button" id="btn-desktop-infer-text" title="Sans LLM : open_app / open_url depuis le champ « Texte »">Déduire du texte</button>
+        <button type="button" id="btn-desktop-propose-backend" title="/v1/pilot/action-proposal puis enchaînement optionnel comme Assistant Core">
+          Proposer (orchestrateur)
+        </button>
         <button type="button" id="btn-desktop-send">Envoyer (POST /v1/pilot/route)</button>
         <button type="button" id="btn-desktop-health">GET agent-desktop /healthz</button>
         <span class="muted" id="desktop-hint">—</span>
@@ -1290,11 +1632,43 @@
     const STORAGE_ASSISTANT_LYRA_KEY = "lbg_pilot_assistant_lyra_gauges_v1";
     const STORAGE_ASSISTANT_UI_ADVANCED_KEY = "lbg_pilot_assistant_ui_advanced_v1";
 
+    /**
+     * URL du backend FastAPI (lbg-backend) servant /v1/pilot/* .
+     * Sur front LAN statique (110:8080), sans reverse-proxy /v1, le navigateur doit cibler le core (voir fusion_env_lan.md).
+     * Surcharge optionnelle : définir window.__LBG_PILOT_DEFAULT_API_BASE__ avant ce script.
+     */
+    function pilotInferDefaultApiBase() {
+      try {
+        if (
+          typeof window.__LBG_PILOT_DEFAULT_API_BASE__ !== "undefined" &&
+          window.__LBG_PILOT_DEFAULT_API_BASE__
+        ) {
+          const x = String(window.__LBG_PILOT_DEFAULT_API_BASE__)
+            .trim()
+            .replace(/\/$/, "");
+          if (x) return x;
+        }
+      } catch (_) {}
+      try {
+        const h = String(window.location.hostname || "");
+        const port = String(window.location.port || "");
+        if (h === "192.168.0.110" && port === "8080") {
+          return "http://192.168.0.140:8000";
+        }
+      } catch (_) {}
+      try {
+        const o = String(window.location.origin || "").replace(/\/$/, "");
+        return o || "http://127.0.0.1:8000";
+      } catch (_) {
+        return "http://127.0.0.1:8000";
+      }
+    }
+
     function getBase() {
       const el = document.getElementById("api-base");
-      const fromInput = el.value.trim();
+      const fromInput = el && el.value ? String(el.value).trim() : "";
       if (fromInput) return fromInput.replace(/\/$/, "");
-      return window.location.origin;
+      return pilotInferDefaultApiBase();
     }
 
     function pilotInlineHint(elementId, msg, isError) {
@@ -1308,7 +1682,29 @@
     function loadStoredBase() {
       try {
         const v = localStorage.getItem(STORAGE_KEY);
-        if (v) document.getElementById("api-base").value = v;
+        const el = document.getElementById("api-base");
+        if (!el) return;
+        if (v != null && String(v).trim() !== "") {
+          let vs = String(v).trim();
+          const originNorm = String(window.location.origin || "").replace(/\/$/, "");
+          try {
+            const h = String(window.location.hostname || "");
+            const port = String(window.location.port || "");
+            if (h === "192.168.0.110" && port === "8080" && vs === originNorm) {
+              vs = "http://192.168.0.140:8000";
+              try {
+                localStorage.setItem(STORAGE_KEY, vs);
+              } catch (_) {}
+            }
+          } catch (_) {}
+          el.value = vs;
+          return;
+        }
+        const inferred = pilotInferDefaultApiBase();
+        const origin = String(window.location.origin || "").replace(/\/$/, "");
+        if (inferred && (!origin || inferred !== origin)) {
+          el.value = inferred;
+        }
       } catch (_) {}
     }
 
@@ -2544,10 +2940,18 @@
       const wsh = document.getElementById("ws-internal-http");
       if (wsh) wsh.addEventListener("input", renderMetricsLinks);
     } catch (_) {}
+    try { document.getElementById("btn-assistant-converse").addEventListener("click", function () { assistantConverse().catch(function (e) { assistantUiHint(String(e), true); }); }); } catch (_) {}
     try { document.getElementById("btn-assistant-propose").addEventListener("click", assistantPropose); } catch (_) {}
     try { document.getElementById("btn-assistant-apply-proposal").addEventListener("click", assistantApplyProposalToContext); } catch (_) {}
-    try { document.getElementById("btn-assistant-exec-dry-run").addEventListener("click", () => assistantExecute("dry_run")); } catch (_) {}
-    try { document.getElementById("btn-assistant-exec-real").addEventListener("click", () => assistantExecute("real")); } catch (_) {}
+    try {
+      document.getElementById("btn-assistant-exec").addEventListener("click", function () {
+        var t = document.getElementById("assistant-exec-real-toggle");
+        var mode = t && t.checked ? "real" : "dry_run";
+        assistantExecute(mode).catch(function (e) {
+          assistantUiHint(String(e), true);
+        });
+      });
+    } catch (_) {}
     try { document.getElementById("btn-assistant-preset-notepad").addEventListener("click", () => assistantPreset("notepad")); } catch (_) {}
     try { document.getElementById("btn-assistant-preset-web").addEventListener("click", () => assistantPreset("web")); } catch (_) {}
     try { document.getElementById("btn-assistant-preset-mail").addEventListener("click", () => assistantPreset("mail")); } catch (_) {}
@@ -2822,10 +3226,70 @@
       } catch (_) {}
     }
 
+    function assistantStyleExecButtonForMode() {
+      const t = document.getElementById("assistant-exec-real-toggle");
+      const b = document.getElementById("btn-assistant-exec");
+      if (!b) return;
+      const real = t && t.checked;
+      b.classList.toggle("assistant-btn-real", !!real);
+      b.title = real
+        ? "Exécuter avec effets réels (jeton d’approbation selon capability)"
+        : "Exécuter en simulation (dry-run)";
+    }
+
+    function assistantClearDialogueRouteBadge() {
+      const el = document.getElementById("assistant-dialogue-badge");
+      if (!el) return;
+      el.hidden = true;
+      el.textContent = "";
+      el.title = "";
+      el.className = "assistant-route-badge";
+    }
+
+    function assistantSetDialogueRouteBadge(out) {
+      const el = document.getElementById("assistant-dialogue-badge");
+      if (!el) return;
+      if (!out || out.status !== 200 || !out.json) {
+        el.hidden = true;
+        return;
+      }
+      const meta = out.json.meta && typeof out.json.meta === "object" ? out.json.meta : {};
+      const stub = meta.stub === true;
+      const llmOn = meta.llm !== false;
+      el.hidden = false;
+      el.className = "assistant-route-badge";
+      if (!llmOn) {
+        el.textContent = "hors LLM";
+        el.classList.add("assistant-route-badge--off");
+        el.title =
+          "Côté agent : pas de route LLM active (ex. LBG_DIALOGUE_LLM_BASE_URL / LBG_DIALOGUE_LLM désactivé).";
+      } else if (stub) {
+        el.textContent = "stub";
+        el.classList.add("assistant-route-badge--stub");
+        var err = typeof meta.llm_error === "string" ? meta.llm_error.trim() : "";
+        el.title = err ? ("Réponse de secours — " + err.slice(0, 420)) : "Réponse de secours (stub).";
+      } else {
+        el.textContent = "LLM";
+        el.classList.add("assistant-route-badge--llm");
+        el.title = "Tour issu du modèle configuré sur le service dialogue (Ollama / OpenAI-compatible).";
+      }
+    }
+
+    function assistantPersistExecToggle() {
+      try {
+        const prefs = assistantReadPrefsFromUi();
+        localStorage.setItem(STORAGE_ASSISTANT_PREFS_KEY, JSON.stringify(prefs));
+      } catch (_) {}
+    }
+
     function assistantDefaultPrefs() {
       return {
         notepad_path: "C:\\Users\\Public\\lbg_desktop.txt",
         dry_run_default: true,
+        exec_real: false,
+        auto_simulate_after_propose: true,
+        auto_real_after_sim_ok: true,
+        dialogue_desktop_plan: false,
       };
     }
 
@@ -2842,6 +3306,10 @@
             ? parsed.notepad_path.trim()
             : defaults.notepad_path,
           dry_run_default: parsed.dry_run_default !== false,
+          exec_real: parsed.exec_real === true,
+          auto_simulate_after_propose: parsed.auto_simulate_after_propose !== false,
+          auto_real_after_sim_ok: parsed.auto_real_after_sim_ok !== false,
+          dialogue_desktop_plan: parsed.dialogue_desktop_plan === true,
         };
       } catch (_) {
         return defaults;
@@ -2852,18 +3320,35 @@
       const prefs = assistantLoadPrefs();
       const pathEl = document.getElementById("assistant-pref-notepad-path");
       const dryEl = document.getElementById("assistant-pref-dry-run");
+      const execTgl = document.getElementById("assistant-exec-real-toggle");
+      const autoSimEl = document.getElementById("assistant-pref-auto-sim-after-propose");
+      const autoRealEl = document.getElementById("assistant-pref-auto-real-after-sim");
+      const deskPlanEl = document.getElementById("assistant-pref-dialogue-desktop-plan");
       if (pathEl) pathEl.value = prefs.notepad_path;
       if (dryEl) dryEl.checked = prefs.dry_run_default !== false;
+      if (execTgl) execTgl.checked = prefs.exec_real === true;
+      if (autoSimEl) autoSimEl.checked = prefs.auto_simulate_after_propose !== false;
+      if (autoRealEl) autoRealEl.checked = prefs.auto_real_after_sim_ok !== false;
+      if (deskPlanEl) deskPlanEl.checked = prefs.dialogue_desktop_plan === true;
+      assistantStyleExecButtonForMode();
     }
 
     function assistantReadPrefsFromUi() {
       const defaults = assistantDefaultPrefs();
       const pathEl = document.getElementById("assistant-pref-notepad-path");
       const dryEl = document.getElementById("assistant-pref-dry-run");
+      const execTgl = document.getElementById("assistant-exec-real-toggle");
+      const autoSimEl = document.getElementById("assistant-pref-auto-sim-after-propose");
+      const autoRealEl = document.getElementById("assistant-pref-auto-real-after-sim");
+      const deskPlanEl = document.getElementById("assistant-pref-dialogue-desktop-plan");
       const path = pathEl && pathEl.value ? String(pathEl.value).trim() : "";
       return {
         notepad_path: path || defaults.notepad_path,
         dry_run_default: !(dryEl && dryEl.checked === false),
+        exec_real: !!(execTgl && execTgl.checked),
+        auto_simulate_after_propose: !(autoSimEl && autoSimEl.checked === false),
+        auto_real_after_sim_ok: !(autoRealEl && autoRealEl.checked === false),
+        dialogue_desktop_plan: !!(deskPlanEl && deskPlanEl.checked),
       };
     }
 
@@ -2920,6 +3405,31 @@
       if (p < 45) return "Motivation · patience basse : clarifier la demande avant toute exécution réelle.";
       if (e < 40) return "Motivation · rythme léger : privilégier des tours courts et des contrôles simples.";
       return "Motivation · équilibre : proposer → dry-run → décider avec jeton si besoin.";
+    }
+
+    /**
+     * Alimente context.lyra pour l'agent dialogue : jauges Pilot → clés lues par dialogue_llm._format_lyra_for_prompt
+     * (fatigue 0–1, patience/stress 0–100) + texte de motivation pour le ton.
+     */
+    function assistantBuildLyraContextForDialogue() {
+      const g = assistantLoadLyraGauges();
+      const chaleur = g.chaleur != null ? g.chaleur : 70;
+      const energie = g.energie != null ? g.energie : 60;
+      const patience = g.patience != null ? g.patience : 70;
+      const confiance = g.confiance != null ? g.confiance : 70;
+      return {
+        version: "pilot_assistant_v1",
+        meta: {
+          source: "pilot_web#/assistant",
+          pilot_motivation: assistantMotivationText(g),
+          gauges_raw: { chaleur: chaleur, energie: energie, patience: patience, confiance: confiance },
+        },
+        gauges: {
+          fatigue: Math.max(0, Math.min(1, (100 - energie) / 100)),
+          patience: patience,
+          stress: Math.max(0, Math.min(100, 100 - confiance)),
+        },
+      };
     }
 
     function assistantRenderLyraPanel() {
@@ -3011,6 +3521,48 @@
           } catch (_) {}
         });
       }
+      const ta = document.getElementById("assistant-text");
+      if (ta && !ta.dataset.composerKeys) {
+        ta.dataset.composerKeys = "1";
+        ta.addEventListener("keydown", function (e) {
+          if (e.key !== "Enter") return;
+          if (e.shiftKey) return;
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            assistantPropose().catch(function (err) {
+              assistantUiHint(String(err), true);
+            });
+            return;
+          }
+          e.preventDefault();
+          assistantConverse().catch(function (err) {
+            assistantUiHint(String(err), true);
+          });
+        });
+      }
+      const exTgl = document.getElementById("assistant-exec-real-toggle");
+      if (exTgl && !exTgl.dataset.persistBound) {
+        exTgl.dataset.persistBound = "1";
+        exTgl.addEventListener("change", function () {
+          assistantStyleExecButtonForMode();
+          assistantPersistExecToggle();
+        });
+      }
+      const pipeS = document.getElementById("assistant-pref-auto-sim-after-propose");
+      const pipeR = document.getElementById("assistant-pref-auto-real-after-sim");
+      function bindPipe(cb) {
+        if (cb && !cb.dataset.persistBound) {
+          cb.dataset.persistBound = "1";
+          cb.addEventListener("change", assistantPersistExecToggle);
+        }
+      }
+      bindPipe(pipeS);
+      bindPipe(pipeR);
+      const deskPlanCb = document.getElementById("assistant-pref-dialogue-desktop-plan");
+      if (deskPlanCb && !deskPlanCb.dataset.persistBound) {
+        deskPlanCb.dataset.persistBound = "1";
+        deskPlanCb.addEventListener("change", assistantPersistExecToggle);
+      }
     }
 
     function assistantSyncAdvancedPanel() {
@@ -3051,6 +3603,15 @@
       assistantHistorySave([]);
       assistantHistoryRender();
       pilotInlineHint("assistant-history-hint", "Historique vidé.", false);
+      try {
+        const ctxEl = document.getElementById("assistant-context");
+        if (!ctxEl) return;
+        let o = assistantParseJsonTextarea("assistant-context", {});
+        if (o && typeof o === "object" && !Array.isArray(o)) {
+          o.history = [];
+          ctxEl.value = JSON.stringify(o, null, 2);
+        }
+      } catch (_) {}
     }
 
     function assistantHistoryRender() {
@@ -3061,9 +3622,15 @@
       if (!stream) return;
       if (!items.length) {
         stream.innerHTML =
-          "<div class=\"assistant-chat-empty\"><strong>Bienvenue.</strong><br>" +
-          "Écrivez une intention, ou choisissez un <strong>preset</strong> à droite, puis <em>Proposer une action</em>. " +
-          "Rien ne part vers les agents tant que vous n’exécutez pas.</div>";
+          '<div class="assistant-chat-empty">' +
+          '<svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="margin:0 auto 1rem;display:block;opacity:.75">' +
+          '<path fill="#2dd4bf" fill-opacity=".35" d="M12 2l1.09 6.26L18 10l-5.91 1.74L12 18l-1.09-6.26L5 10l5.91-1.74L12 2z"/>' +
+          '<circle cx="8" cy="7" r="1.2" fill="#5eead4"/>' +
+          '<circle cx="15" cy="16" r="1" fill="#64748b"/>' +
+          "</svg>" +
+          "<strong>Bienvenue</strong><br>" +
+          "Style bulles simple comme l’UI LBG IA : <strong>Dialoguer</strong> (LLM, historique dans le JSON) ou <strong>Proposer une action</strong>. " +
+          "Aucune exécution réelle sans « Exécuter ».</div>";
         return;
       }
       const parts = [];
@@ -3076,6 +3643,8 @@
         let msgClass = "assistant-msg--proposal";
         if (kind === "execute_dry_run") msgClass = "assistant-msg--execute_dry_run";
         else if (kind === "execute_real") msgClass = "assistant-msg--execute_real";
+        else if (kind === "chat_user") msgClass = "assistant-msg--chat_user";
+        else if (kind === "chat_assistant") msgClass = "assistant-msg--chat_assistant";
         const kindLabel =
           kind === "proposal"
             ? "Proposition"
@@ -3083,7 +3652,11 @@
               ? "Exécution dry-run"
               : kind === "execute_real"
                 ? "Exécution réelle"
-                : kind;
+                : kind === "chat_user"
+                  ? "Vous"
+                  : kind === "chat_assistant"
+                    ? "Assistant"
+                    : kind;
         const metaLine = when + " · " + kindLabel + (cap ? " · " + cap : "");
         const policyHtml = dec
           ? "<span class=\"assistant-msg-policy\">policy · " + escapeHtml(dec) + "</span>"
@@ -3092,6 +3665,39 @@
           kind === "proposal" && it.summary && String(it.summary) !== String(text)
             ? "<p class=\"assistant-msg-detail\">" + escapeHtml(String(it.summary).slice(0, 320)) + "</p>"
             : "";
+        const textMax =
+          kind === "chat_user" || kind === "chat_assistant" ? 4000 : 800;
+        if (kind === "chat_user" || kind === "chat_assistant") {
+          const rowClass =
+            kind === "chat_user"
+              ? "assistant-chat-row assistant-chat-row--user"
+              : "assistant-chat-row assistant-chat-row--bot";
+          const avShort = kind === "chat_user" ? "toi" : "ia";
+          parts.push(
+            '<div class="' +
+              rowClass +
+              '">' +
+              '<div class="assistant-chat-avatar">' +
+              escapeHtml(avShort) +
+              "</div>" +
+              '<div class="assistant-chat-col">' +
+              '<div class="assistant-msg ' +
+              msgClass +
+              '">' +
+              '<div class="assistant-msg-meta">' +
+              escapeHtml(metaLine) +
+              "</div>" +
+              '<p class="assistant-msg-query">' +
+              escapeHtml(String(text).slice(0, textMax)) +
+              "</p>" +
+              summaryExtra +
+              policyHtml +
+              "</div>" +
+              "</div>" +
+              "</div>"
+          );
+          continue;
+        }
         parts.push(
           '<div class="assistant-msg ' +
             msgClass +
@@ -3100,7 +3706,7 @@
             escapeHtml(metaLine) +
             "</div>" +
             '<p class="assistant-msg-query">' +
-            escapeHtml(String(text).slice(0, 800)) +
+            escapeHtml(String(text).slice(0, textMax)) +
             "</p>" +
             summaryExtra +
             policyHtml +
@@ -3109,6 +3715,170 @@
       }
       stream.innerHTML = parts.join("");
       assistantChatScrollToEnd();
+    }
+
+    let __assistantLbgiaPoll = null;
+
+    function assistantLbgiaPollStop() {
+      if (__assistantLbgiaPoll !== null) {
+        clearInterval(__assistantLbgiaPoll);
+        __assistantLbgiaPoll = null;
+      }
+    }
+
+    function assistantLbgiaFormatRamLine(usedMb, totalMb) {
+      const u = usedMb == null ? NaN : Number(usedMb);
+      const t = totalMb == null ? NaN : Number(totalMb);
+      if (!Number.isFinite(u) || !Number.isFinite(t) || t <= 0) return "";
+      return (u / 1024).toFixed(1) + " / " + (t / 1024).toFixed(1) + " Go RAM";
+    }
+
+    function assistantLbgiaBarHtml(labelKey, pct, gradientCss) {
+      const pRaw = pct == null ? NaN : Number(pct);
+      const p =
+        typeof pRaw === "number" && Number.isFinite(pRaw) ? Math.max(0, Math.min(100, pRaw)) : null;
+      const valTxt = p == null ? "—" : Math.round(p) + "%";
+      const inner =
+        p == null
+          ? ""
+          : '<div class="assistant-lbgia-bar-fill" style="width:' +
+            String(Math.round(p)) +
+            "%;background:" +
+            (gradientCss || "linear-gradient(90deg,#2dd4bf,#0d9488)") +
+            ';"></div>';
+      return (
+        '<div class="assistant-lbgia-bar-row">' +
+        '<span class="assistant-lbgia-bar-label">' +
+        escapeHtml(labelKey) +
+        "</span>" +
+        '<div class="assistant-lbgia-bar-track">' +
+        inner +
+        "</div>" +
+        '<span class="assistant-lbgia-bar-val">' +
+        escapeHtml(valTxt) +
+        "</span></div>"
+      );
+    }
+
+    async function assistantLbgiaRefresh() {
+      const hint = document.getElementById("assistant-lbgia-hint");
+      const body = document.getElementById("assistant-lbgia-body");
+      if (!hint || !body) return;
+      const base = getBase();
+      try {
+        const r = await fetch(base + "/v1/pilot/lbg-ia/status");
+        let j = null;
+        try {
+          j = await r.json();
+        } catch (_) {
+          j = null;
+        }
+        if (!j || typeof j !== "object") {
+          hint.textContent = r.status >= 400 ? "Backend injoignable ou mauvaise URL." : "Réponse invalide.";
+          body.innerHTML =
+            '<p class="assistant-lbgia-muted">' +
+            "Contrôlez le champ <strong>Backend</strong> en haut (ex. LAN : <code>http://192.168.0.140:8000</code>). " +
+            "Depuis un pilot sur <strong>110:8080</strong>, sans proxy <code>/v1</code>, l’API n’est pas sur l’origine de la page. " +
+            "HTTP <strong>" +
+            escapeHtml(String(r.status)) +
+            "</strong>.</p>";
+          return;
+        }
+        if (j.disabled) {
+          hint.textContent =
+            "Proxy désactivé : LBG_PILOT_LBGIA_BACKEND_URL ou LBG_IA_BACKEND_URL sur le backend MMO.";
+          body.innerHTML =
+            '<p class="assistant-lbgia-muted">Même VM (ex. 110) : URL interne FastAPI projet LBG_IA, sans CORS depuis le navigateur.</p>';
+          return;
+        }
+        if (!j.ok) {
+          const ue = j.upstream_errors && typeof j.upstream_errors === "object" ? j.upstream_errors : {};
+          const bits = [];
+          if (j.detail) bits.push(String(j.detail));
+          if (ue.metrics_http != null && ue.metrics_http !== 200) bits.push("metrics HTTP " + String(ue.metrics_http));
+          if (ue.agents_http != null && ue.agents_http !== 200) bits.push("agents HTTP " + String(ue.agents_http));
+          if (ue.metrics_detail) bits.push(String(ue.metrics_detail).slice(0, 140));
+          if (ue.agents_detail) bits.push(String(ue.agents_detail).slice(0, 140));
+          hint.textContent = "LBG IA amont indisponible.";
+          body.innerHTML =
+            '<p class="assistant-lbgia-muted">' + escapeHtml(bits.join(" · ") || "Erreur proxy") + "</p>";
+          return;
+        }
+        const metricsRoot = j.metrics && typeof j.metrics === "object" ? j.metrics : {};
+        const sysObj =
+          metricsRoot.system && typeof metricsRoot.system === "object"
+            ? metricsRoot.system
+            : metricsRoot.System && typeof metricsRoot.System === "object"
+              ? metricsRoot.System
+              : {};
+        const cpu = sysObj.cpu_usage_pct != null ? sysObj.cpu_usage_pct : metricsRoot.cpu_usage_pct;
+        const memPct =
+          sysObj.memory_usage_pct != null ? sysObj.memory_usage_pct : metricsRoot.memory_usage_pct;
+        const memUsed =
+          sysObj.memory_used_mb != null ? sysObj.memory_used_mb : metricsRoot.memory_used_mb;
+        const memTot =
+          sysObj.memory_total_mb != null ? sysObj.memory_total_mb : metricsRoot.memory_total_mb;
+        const ramLine = assistantLbgiaFormatRamLine(memUsed, memTot);
+        const baseShort =
+          typeof j.upstream_base === "string" && j.upstream_base.trim()
+            ? j.upstream_base.trim()
+            : "";
+        hint.textContent =
+          (baseShort ? "Connecté · " + baseShort : "Connecté") + (ramLine ? " · " + ramLine : "");
+        let html = '<div class="assistant-lbgia-bars">';
+        html += assistantLbgiaBarHtml("cpu", cpu, "linear-gradient(90deg,#60a5fa,#2563eb)");
+        html += assistantLbgiaBarHtml("ram", memPct, "linear-gradient(90deg,#34d399,#059669)");
+        html += "</div>";
+        const mon = j.agents_monitor && typeof j.agents_monitor === "object" ? j.agents_monitor : {};
+        const agents = Array.isArray(mon.agents)
+          ? mon.agents
+          : mon.data && typeof mon.data === "object" && !Array.isArray(mon.data) && Array.isArray(mon.data.agents)
+            ? mon.data.agents
+            : [];
+        if (agents.length) {
+          html += '<div class="assistant-lbgia-agents"><strong>Agents</strong>';
+          let nShown = 0;
+          for (let i = 0; i < agents.length && nShown < 8; i++) {
+            const ag = agents[i];
+            if (!ag || typeof ag !== "object") continue;
+            const name =
+              (typeof ag.label === "string" && ag.label.trim()) ||
+              (typeof ag.name === "string" && ag.name.trim()) ||
+              (typeof ag.id === "string" && ag.id.trim()) ||
+              "agent";
+            const stRaw =
+              ag.status !== undefined && ag.status !== null
+                ? ag.status
+                : ag.state !== undefined && ag.state !== null
+                  ? ag.state
+                  : ag.health !== undefined && ag.health !== null
+                    ? ag.health
+                    : "—";
+            const st = String(stRaw).slice(0, 48);
+            html +=
+              '<div class="assistant-lbgia-agent-line">' +
+              '<span class="assistant-lbgia-agent-id" title="' +
+              escapeHtml(name) +
+              '">' +
+              escapeHtml(name) +
+              "</span>" +
+              "<span>" +
+              escapeHtml(st) +
+              "</span></div>";
+            nShown++;
+          }
+          html += "</div>";
+        } else {
+          html +=
+            '<p class="assistant-lbgia-muted">' +
+            "Réponse agents reçue (aucune entrée listée)." +
+            "</p>";
+        }
+        body.innerHTML = html;
+      } catch (e) {
+        hint.textContent = "Erreur réseau.";
+        body.innerHTML = '<p class="assistant-lbgia-muted">' + escapeHtml(String(e)) + "</p>";
+      }
     }
 
     let assistantLastVoluntarySummaryJson = "";
@@ -3297,12 +4067,114 @@
       return parsed;
     }
 
+    async function assistantConverse() {
+      const base = getBase();
+      const actorEl = document.getElementById("assistant-actor");
+      const textEl = document.getElementById("assistant-text");
+      const ctxEl = document.getElementById("assistant-context");
+      const rawEl = document.getElementById("assistant-raw");
+      const prettyEl = document.getElementById("assistant-pretty");
+      assistantClearDialogueRouteBadge();
+      assistantUiHint("…", false);
+      const text = textEl && textEl.value ? String(textEl.value).trim() : "";
+      if (!text) {
+        assistantUiHint("Message vide", true);
+        return;
+      }
+      const actorId = (actorEl && actorEl.value ? String(actorEl.value).trim() : "") || "ui:assistant";
+      let ctx;
+      try {
+        ctx = assistantParseJsonTextarea("assistant-context", {});
+      } catch (e) {
+        assistantUiHint("Contexte JSON invalide : " + e, true);
+        return;
+      }
+      var payloadCtx;
+      try {
+        payloadCtx = JSON.parse(JSON.stringify(ctx));
+      } catch (_) {
+        assistantUiHint("Contexte impossible à cloner", true);
+        return;
+      }
+      if (!Array.isArray(payloadCtx.history)) payloadCtx.history = [];
+      payloadCtx.lyra_engagement = "local_assistant";
+      delete payloadCtx.world_npc_id;
+      var wantDlgDesktop = false;
+      try {
+        var _ddc = document.getElementById("assistant-pref-dialogue-desktop-plan");
+        wantDlgDesktop = !!(_ddc && _ddc.checked);
+      } catch (_) {}
+      if (!wantDlgDesktop) {
+        delete payloadCtx._desktop_plan;
+        delete payloadCtx._require_desktop_json;
+      } else {
+        payloadCtx._desktop_plan = true;
+      }
+      if (typeof payloadCtx.dialogue_target !== "string" || !String(payloadCtx.dialogue_target).trim()) {
+        payloadCtx.dialogue_target = "fast";
+      }
+      payloadCtx.lyra = assistantBuildLyraContextForDialogue();
+      const payload = { actor_id: actorId, text: text, context: payloadCtx };
+      var out;
+      try {
+        out = await postJson(base + "/v1/pilot/agent-dialogue/invoke", payload);
+      } catch (e) {
+        assistantUiHint("Réseau : " + e, true);
+        assistantClearDialogueRouteBadge();
+        return;
+      }
+      if (rawEl) rawEl.textContent = out.json ? JSON.stringify(out.json, null, 2) : ("HTTP " + out.status + "\n" + (out.text || ""));
+      if (prettyEl) {
+        try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
+      }
+      if (out.status !== 200) {
+        assistantUiHint("Dialogue impossible (HTTP " + out.status + ")", true);
+        assistantClearDialogueRouteBadge();
+        return;
+      }
+      try {
+        var _md = out.json && out.json.meta && typeof out.json.meta === "object" ? out.json.meta : null;
+        var _dap = _md && _md.desktop_action_proposal && typeof _md.desktop_action_proposal === "object";
+        if (_dap) {
+          assistantUiHint(
+            "Proposition desktop reçue : voir meta.desktop_action_proposal — enchaîner avec #/desktop ou Proposer une action après relecture.",
+            false
+          );
+        }
+      } catch (_) {}
+      var reply = "";
+      if (out.json) {
+        if (typeof out.json.reply === "string") reply = out.json.reply;
+        else if (Array.isArray(out.json.lines)) reply = out.json.lines.join("\n");
+      }
+      const replyNorm = String(reply || "").trim() || "(réponse vide)";
+      if (!Array.isArray(ctx.history)) ctx.history = [];
+      ctx.lyra_engagement = "local_assistant";
+      delete ctx.world_npc_id;
+      delete ctx._desktop_plan;
+      delete ctx._require_desktop_json;
+      ctx.history = ctx.history.concat([
+        { role: "user", content: text },
+        { role: "assistant", content: replyNorm },
+      ]);
+      if (ctx.history.length > 24) ctx.history = ctx.history.slice(-24);
+      if (ctxEl) ctxEl.value = JSON.stringify(ctx, null, 2);
+      assistantHistoryAdd({ kind: "chat_user", text: text.slice(0, 8000) });
+      assistantHistoryAdd({ kind: "chat_assistant", text: replyNorm.slice(0, 8000) });
+      try {
+        assistantNudgeLyraFromPolicy("safe_read", "proposal");
+      } catch (_) {}
+      assistantSetDialogueRouteBadge(out);
+      assistantUiHint("Réponse reçue", false);
+    }
+
     async function assistantPropose() {
       const actorEl = document.getElementById("assistant-actor");
       const textEl = document.getElementById("assistant-text");
       const actionEl = document.getElementById("assistant-action");
       const rawEl = document.getElementById("assistant-raw");
       const prettyEl = document.getElementById("assistant-pretty");
+      assistantClearDialogueRouteBadge();
       assistantUiHint("…", false);
       try {
         const actorId = (actorEl && actorEl.value ? actorEl.value.trim() : "") || "ui:assistant";
@@ -3333,10 +4205,29 @@
             summary: proposal.summary || "",
           });
           assistantRenderSuggestions(assistantSuggestionsForProposal(proposal));
-          assistantUiHint("Proposition prête — relire/éditer puis appliquer ou exécuter", false);
-          try {
-            assistantNudgeLyraFromPolicy("", "proposal");
-          } catch (_) {}
+          const pipePrefs = assistantReadPrefsFromUi();
+          if (pipePrefs.auto_simulate_after_propose !== false) {
+            try {
+              const sim = await assistantRunRouteFromProposal(proposal, "dry_run");
+              const simOk = assistantRouteLooksSuccessful(sim.json);
+              if (pipePrefs.auto_real_after_sim_ok && pipePrefs.exec_real && simOk) {
+                await assistantRunRouteFromProposal(proposal, "real");
+              } else if (!simOk) {
+                assistantRenderSuggestions([
+                  "Contrôler réseau, worker desktop / DevOps et le détail JSON (policy, erreur agent).",
+                  "Pour le poste : renseigner le jeton d'approbation si l'exécution réelle est refusée, ou rester en dry-run.",
+                  "Reformuler la demande de façon plus explicite si aucune action sûre n'est reconnue.",
+                ]);
+              }
+            } catch (ePipe) {
+              assistantUiHint("Enchaînement après proposition : " + ePipe, true);
+            }
+          } else {
+            try {
+              assistantNudgeLyraFromPolicy("", "proposal");
+            } catch (_) {}
+            assistantUiHint("Proposition prête — relire/éditer puis appliquer ou exécuter", false);
+          }
         } else {
           assistantRenderSuggestions(["Demander une précision ou rester en conversation sans action."]);
           assistantUiHint(out.json.reason || "Aucune proposition", false);
@@ -3384,6 +4275,67 @@
       return ctx;
     }
 
+    function assistantRouteLooksSuccessful(routePayload) {
+      if (!routePayload || routePayload.ok === false) return false;
+      const out = routePayload.result && routePayload.result.output;
+      if (!out || out.ok === false) return false;
+      const pol = out.policy;
+      if (pol && pol.allowed === false) return false;
+      return true;
+    }
+
+    async function assistantRunRouteFromProposal(proposal, mode) {
+      const rawEl = document.getElementById("assistant-raw");
+      const prettyEl = document.getElementById("assistant-pretty");
+      assistantClearDialogueRouteBadge();
+      const actorEl = document.getElementById("assistant-actor");
+      const textEl = document.getElementById("assistant-text");
+      const actorId = (actorEl && actorEl.value ? actorEl.value.trim() : "") || "ui:assistant";
+      const text =
+        (textEl && textEl.value ? textEl.value.trim() : "") ||
+        String((proposal && proposal.summary) || "assistant action");
+      const ctx = assistantContextFromProposal(proposal, mode);
+      const payload = { actor_id: actorId, text: text, context: ctx };
+      const out = await postJson(getBase() + "/v1/pilot/route", payload);
+      if (rawEl) {
+        out.json
+          ? (rawEl.textContent = JSON.stringify(out.json, null, 2))
+          : (rawEl.textContent = "HTTP " + out.status + "\n" + (out.text || ""));
+      }
+      if (prettyEl) {
+        try {
+          prettyEl.innerHTML = out.json ? renderPretty(out.json) : "";
+        } catch (_) {
+          prettyEl.innerHTML = "";
+        }
+      }
+      const policy = out.json && out.json.result && out.json.result.output ? out.json.result.output.policy : null;
+      const dec = policy && policy.decision ? String(policy.decision) : "";
+      if (out.json) {
+        assistantHistoryAdd({
+          kind: mode === "real" ? "execute_real" : "execute_dry_run",
+          text: text,
+          capability: proposal && proposal.capability ? proposal.capability : "",
+          policy_decision: dec,
+          summary: proposal && proposal.summary ? proposal.summary : "",
+        });
+        assistantRenderSuggestions(assistantSuggestionsForResult(out.json));
+      }
+      try {
+        assistantNudgeLyraFromPolicy(dec, "execute");
+      } catch (_) {}
+      const okUi = out.status === 200 && assistantRouteLooksSuccessful(out.json);
+      assistantUiHint(
+        out.status !== 200
+          ? "HTTP " + out.status
+          : okUi
+            ? "OK" + (dec ? " · policy=" + dec : "")
+            : "Échec ou refus (policy / agent) — voir détail ci-dessous",
+        out.status !== 200 || !okUi
+      );
+      return { status: out.status, json: out.json };
+    }
+
     function assistantApplyProposalToContext() {
       try {
         const proposal = assistantReadProposal();
@@ -3397,8 +4349,6 @@
     }
 
     async function assistantExecute(mode) {
-      const rawEl = document.getElementById("assistant-raw");
-      const prettyEl = document.getElementById("assistant-pretty");
       assistantUiHint("…", false);
       try {
         const proposal = assistantReadProposal();
@@ -3406,35 +4356,7 @@
           assistantUiHint("Aucune ActionProposal valide à exécuter", true);
           return;
         }
-        const actorEl = document.getElementById("assistant-actor");
-        const textEl = document.getElementById("assistant-text");
-        const actorId = (actorEl && actorEl.value ? actorEl.value.trim() : "") || "ui:assistant";
-        const text = (textEl && textEl.value ? textEl.value.trim() : "") || String(proposal.summary || "assistant action");
-        const ctx = assistantContextFromProposal(proposal, mode);
-        const payload = { actor_id: actorId, text, context: ctx };
-        const out = await postJson(getBase() + "/v1/pilot/route", payload);
-        if (rawEl) out.json
-          ? rawEl.textContent = JSON.stringify(out.json, null, 2)
-          : rawEl.textContent = "HTTP " + out.status + "\n" + (out.text || "");
-        if (prettyEl) {
-          try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
-        }
-        const policy = out.json && out.json.result && out.json.result.output ? out.json.result.output.policy : null;
-        const dec = policy && policy.decision ? String(policy.decision) : "";
-        if (out.json) {
-          assistantHistoryAdd({
-            kind: mode === "real" ? "execute_real" : "execute_dry_run",
-            text,
-            capability: proposal.capability || "",
-            policy_decision: dec,
-            summary: proposal.summary || "",
-          });
-          assistantRenderSuggestions(assistantSuggestionsForResult(out.json));
-        }
-        try {
-          assistantNudgeLyraFromPolicy(dec, "execute");
-        } catch (_) {}
-        assistantUiHint(out.status === 200 ? ("OK" + (dec ? " · policy=" + dec : "")) : ("HTTP " + out.status), out.status !== 200);
+        await assistantRunRouteFromProposal(proposal, mode);
       } catch (e) {
         assistantUiHint("Erreur: " + e, true);
       }
@@ -3567,6 +4489,9 @@
     }
 
     function pilotApplyRoute() {
+      try {
+        assistantLbgiaPollStop();
+      } catch (_) {}
       const r = pilotParseRoute();
       document.body.dataset.pilotRoute = r;
       const home = document.getElementById("pilot-page-home");
@@ -3585,6 +4510,8 @@
         try { pilotDesktopRefreshConfigHint(); } catch (_) {}
         try { pilotDesktopLoadMmoSummaryFromStorage(); } catch (_) {}
         try { pilotDesktopLoadDryRunToggleFromStorage(); } catch (_) {}
+        try { pilotDesktopApplyPipelinePrefsToUi(); } catch (_) {}
+        try { pilotDesktopBindPipelinePrefs(); } catch (_) {}
         try { pilotDesktopBindDryRunTogglePersist(); } catch (_) {}
         try { pilotDesktopSetupSpeech(); } catch (_) {}
       }
@@ -3597,6 +4524,10 @@
         try { assistantRenderLyraPanel(); } catch (_) {}
         try { assistantHistoryRender(); } catch (_) {}
         try { assistantRenderSuggestions([]); } catch (_) {}
+        try {
+          assistantLbgiaRefresh();
+          __assistantLbgiaPoll = window.setInterval(assistantLbgiaRefresh, 2800);
+        } catch (_) {}
       }
       const title = document.getElementById("pilot-work-title");
       const sub = document.getElementById("pilot-work-sub");
@@ -4406,9 +5337,190 @@
     const LBG_PILOT_MMO_SUMMARY_KEY = "lbg_pilot_mmo_session_summary_json";
     const LBG_PILOT_DESKTOP_NOTEPAD_DEFAULT = "C:\\\\Users\\\\Public\\\\lbg_desktop.txt";
     const LBG_PILOT_DESKTOP_DRY_RUN_KEY = "lbg_pilot_desktop_dry_run_v1";
+    const LBG_PILOT_DESKTOP_PIPELINE_KEY = "lbg_pilot_desktop_pipeline_v1";
+
+    function pilotDesktopDefaultPipelinePrefs() {
+      return { auto_simulate: true, auto_real: true, exec_real: false };
+    }
+
+    function pilotDesktopLoadPipelinePrefs() {
+      const d = pilotDesktopDefaultPipelinePrefs();
+      try {
+        const raw = localStorage.getItem(LBG_PILOT_DESKTOP_PIPELINE_KEY);
+        if (!raw) return d;
+        const o = JSON.parse(raw);
+        if (!o || typeof o !== "object") return d;
+        return {
+          auto_simulate: o.auto_simulate !== false,
+          auto_real: o.auto_real !== false,
+          exec_real: o.exec_real === true,
+        };
+      } catch (_) {
+        return d;
+      }
+    }
+
+    function pilotDesktopReadPipelinePrefsFromUi() {
+      const sim = document.getElementById("desktop-pipeline-auto-sim");
+      const ar = document.getElementById("desktop-pipeline-auto-real");
+      const rt = document.getElementById("desktop-pipeline-real-toggle");
+      return {
+        auto_simulate: !(sim && sim.checked === false),
+        auto_real: !(ar && ar.checked === false),
+        exec_real: !!(rt && rt.checked),
+      };
+    }
+
+    function pilotDesktopApplyPipelinePrefsToUi() {
+      const p = pilotDesktopLoadPipelinePrefs();
+      const sim = document.getElementById("desktop-pipeline-auto-sim");
+      const ar = document.getElementById("desktop-pipeline-auto-real");
+      const rt = document.getElementById("desktop-pipeline-real-toggle");
+      if (sim) sim.checked = p.auto_simulate !== false;
+      if (ar) ar.checked = p.auto_real !== false;
+      if (rt) rt.checked = p.exec_real === true;
+    }
+
+    function pilotDesktopPersistPipelinePrefs() {
+      try {
+        const p = pilotDesktopReadPipelinePrefsFromUi();
+        localStorage.setItem(LBG_PILOT_DESKTOP_PIPELINE_KEY, JSON.stringify(p));
+      } catch (_) {}
+    }
+
+    function pilotDesktopBindPipelinePrefs() {
+      function bind(el) {
+        if (!el || el.dataset.lbgPipe) return;
+        el.dataset.lbgPipe = "1";
+        el.addEventListener("change", pilotDesktopPersistPipelinePrefs);
+      }
+      bind(document.getElementById("desktop-pipeline-auto-sim"));
+      bind(document.getElementById("desktop-pipeline-auto-real"));
+      bind(document.getElementById("desktop-pipeline-real-toggle"));
+    }
+
+    function pilotDesktopRoutePayloadLooksSuccessful(routePayload) {
+      if (!routePayload || routePayload.ok === false) return false;
+      const out = routePayload.result && routePayload.result.output;
+      if (!out) return false;
+      if (out.ok === false) return false;
+      const pol = out.policy;
+      if (pol && pol.allowed === false) return false;
+      return true;
+    }
+
+    function pilotDesktopMergeProposalIntoUi(proposal) {
+      if (!proposal || typeof proposal !== "object") return;
+      const aEl = document.getElementById("desktop-action");
+      const cEl = document.getElementById("desktop-context");
+      let ctx = {};
+      try {
+        ctx = JSON.parse((cEl && cEl.value) || "{}");
+      } catch (_) {
+        ctx = {};
+      }
+      if (!ctx || typeof ctx !== "object") ctx = {};
+      delete ctx.desktop_action;
+      delete ctx.devops_action;
+      delete ctx.opengame_action;
+      const patch = proposal.context_patch && typeof proposal.context_patch === "object" ? proposal.context_patch : {};
+      ctx = { ...ctx, ...patch };
+      if (proposal.capability === "desktop_control" && proposal.action && typeof proposal.action === "object" && aEl) {
+        aEl.value = JSON.stringify(proposal.action, null, 2);
+      } else if (aEl) {
+        aEl.value = "{}";
+      }
+      if (cEl) cEl.value = JSON.stringify(ctx, null, 2);
+    }
 
     function pilotDesktopUiHint(msg, isError) {
       pilotInlineHint("desktop-hint", msg, isError);
+    }
+
+    async function pilotDesktopPostRouteWithOptions(opts) {
+      opts = opts || {};
+      const base = getBase();
+      const rawEl = document.getElementById("desktop-raw");
+      const prettyEl = document.getElementById("desktop-pretty");
+      const forceDry = opts.forceDry === true;
+      const forceReal = opts.forceReal === true;
+
+      let text = (document.getElementById("desktop-text") && document.getElementById("desktop-text").value) || "";
+      text = String(text || "").trim();
+      if (!text) text = "desktop action";
+
+      let action;
+      try {
+        action = JSON.parse((document.getElementById("desktop-action") && document.getElementById("desktop-action").value) || "{}");
+      } catch (_) {
+        pilotDesktopUiHint("desktop_action JSON invalide", true);
+        return { status: 0, json: null };
+      }
+      if (!action || typeof action !== "object") {
+        pilotDesktopUiHint("desktop_action doit être un objet JSON", true);
+        return { status: 0, json: null };
+      }
+
+      let ctx;
+      try {
+        ctx = JSON.parse((document.getElementById("desktop-context") && document.getElementById("desktop-context").value) || "{}");
+      } catch (_) {
+        pilotDesktopUiHint("context JSON invalide", true);
+        return { status: 0, json: null };
+      }
+      if (!ctx || typeof ctx !== "object") ctx = {};
+
+      try {
+        const ap = document.getElementById("desktop-approval");
+        const v = ap && ap.value ? String(ap.value || "").trim() : "";
+        if (!forceDry && v) {
+          if (!ctx.desktop_approval) ctx.desktop_approval = v;
+          if (!ctx.devops_approval) ctx.devops_approval = v;
+          if (!ctx.opengame_approval) ctx.opengame_approval = v;
+        }
+      } catch (_) {}
+
+      const actionKind = typeof action.kind === "string" ? action.kind.trim() : "";
+
+      if (forceDry) {
+        ctx.desktop_dry_run = true;
+        ctx.devops_dry_run = true;
+        ctx.opengame_dry_run = true;
+        delete ctx.desktop_approval;
+        delete ctx.devops_approval;
+        delete ctx.opengame_approval;
+      } else if (forceReal) {
+        delete ctx.desktop_dry_run;
+        delete ctx.devops_dry_run;
+        ctx.opengame_dry_run = false;
+      } else {
+        pilotDesktopApplyDryRunToContext(ctx);
+      }
+
+      pilotDesktopMergeMmoSummaryIntoContext(ctx);
+
+      if (actionKind) {
+        ctx.desktop_action = action;
+      }
+
+      const payload = { actor_id: "ui:desktop", text: text, context: ctx };
+      const out = await postJson(base + "/v1/pilot/route", payload);
+      if (rawEl) {
+        rawEl.textContent = out.json ? JSON.stringify(out.json, null, 2) : "HTTP " + out.status + "\n" + (out.text || "");
+      }
+      if (prettyEl) {
+        try {
+          prettyEl.innerHTML = out.json ? renderPretty(out.json) : "";
+        } catch (_) {
+          prettyEl.innerHTML = "";
+        }
+      }
+      const ok = out.status === 200 && pilotDesktopRoutePayloadLooksSuccessful(out.json);
+      pilotDesktopUiHint(
+        out.status !== 200 ? "HTTP " + out.status : ok ? "OK" : "Refus ou erreur (voir JSON)",
+        out.status !== 200 || !ok
+      );
+      return { status: out.status, json: out.json };
     }
 
     function pilotDesktopApplyDryRunToContext(ctx) {
@@ -4667,25 +5779,14 @@
       pilotDesktopUiHint("Action déduite — relire puis Envoyer", false);
     }
 
-    async function pilotDesktopSend() {
+    async function pilotDesktopProposeBackend() {
       const base = getBase();
-      const rawEl = document.getElementById("desktop-raw");
-      const prettyEl = document.getElementById("desktop-pretty");
       pilotDesktopUiHint("…", false);
-
-      let text = (document.getElementById("desktop-text") && document.getElementById("desktop-text").value) || "";
-      text = String(text || "").trim();
-      if (!text) text = "desktop action";
-
-      let action;
-      try {
-        action = JSON.parse((document.getElementById("desktop-action") && document.getElementById("desktop-action").value) || "{}");
-      } catch (_) {
-        pilotDesktopUiHint("desktop_action JSON invalide", true);
-        return;
-      }
-      if (!action || typeof action !== "object") {
-        pilotDesktopUiHint("desktop_action doit être un objet JSON", true);
+      let textRaw = String(
+        ((document.getElementById("desktop-text") && document.getElementById("desktop-text").value) || "").trim()
+      );
+      if (!textRaw) {
+        pilotDesktopUiHint("Texte vide — décrivez l’action souhaitée", true);
         return;
       }
 
@@ -4697,21 +5798,63 @@
         return;
       }
       if (!ctx || typeof ctx !== "object") ctx = {};
-      try {
-        const ap = document.getElementById("desktop-approval");
-        const v = ap && ap.value ? String(ap.value || "").trim() : "";
-        if (v && !ctx.desktop_approval) ctx.desktop_approval = v;
-      } catch (_) {}
-      ctx.desktop_action = action;
       pilotDesktopMergeMmoSummaryIntoContext(ctx);
 
-      const payload = { actor_id: "ui:desktop", text: text, context: ctx };
-      const out = await postJson(base + "/v1/pilot/route", payload);
-      if (rawEl) rawEl.textContent = out.json ? JSON.stringify(out.json, null, 2) : ("HTTP " + out.status + "\n" + (out.text || ""));
-      if (prettyEl) {
-        try { prettyEl.innerHTML = out.json ? renderPretty(out.json) : ""; } catch (_) { prettyEl.innerHTML = ""; }
+      try {
+        const aprefs = assistantLoadPrefs();
+        const np = aprefs && typeof aprefs.notepad_path === "string" ? aprefs.notepad_path.trim() : "";
+        const cur = typeof ctx.desktop_default_notepad_path === "string" ? ctx.desktop_default_notepad_path.trim() : "";
+        if (np && !cur) ctx.desktop_default_notepad_path = np;
+      } catch (_) {}
+
+      const rawEl = document.getElementById("desktop-raw");
+      const prettyEl = document.getElementById("desktop-pretty");
+
+      const out = await postJson(base + "/v1/pilot/action-proposal", {
+        actor_id: "ui:desktop_backend",
+        text: textRaw,
+        context: ctx,
+      });
+
+      if (rawEl) {
+        rawEl.textContent = out.json ? JSON.stringify(out.json, null, 2) : "HTTP " + out.status + "\n" + (out.text || "");
       }
-      pilotDesktopUiHint(out.status === 200 ? "OK" : "HTTP " + out.status, out.status !== 200);
+      if (prettyEl) {
+        try {
+          prettyEl.innerHTML = out.json ? renderPretty(out.json) : "";
+        } catch (_) {
+          prettyEl.innerHTML = "";
+        }
+      }
+
+      if (out.status !== 200 || !out.json || out.json.ok === false) {
+        pilotDesktopUiHint("Action-proposal indisponible (HTTP ou proxy)", true);
+        return;
+      }
+      const proposal = out.json.proposal;
+      if (!proposal || typeof proposal !== "object") {
+        pilotDesktopUiHint(out.json.reason || "Aucune proposition backend", false);
+        return;
+      }
+      pilotDesktopMergeProposalIntoUi(proposal);
+
+      const pp = pilotDesktopReadPipelinePrefsFromUi();
+      if (pp.auto_simulate !== false) {
+        const sim = await pilotDesktopPostRouteWithOptions({ forceDry: true });
+        const okSim = pilotDesktopRoutePayloadLooksSuccessful(sim.json);
+        if (pp.auto_real !== false && pp.exec_real && okSim) {
+          await pilotDesktopPostRouteWithOptions({ forceReal: true });
+        } else if (!okSim) {
+          pilotDesktopUiHint("Simulation échouée — voir JSON (policy, erreur agent, worker…).", true);
+        }
+      } else {
+        pilotDesktopUiHint("Proposition appliquée — lancez Envoyer ou activez simulation auto ci-dessus.", false);
+      }
+    }
+
+    async function pilotDesktopSend() {
+      pilotDesktopUiHint("…", false);
+      await pilotDesktopPostRouteWithOptions({});
     }
 
     // Desktop UI helpers: garder `desktop_action` en phase avec le texte (évite la double saisie).
@@ -5311,6 +6454,13 @@
     } catch (_) {}
     try {
       document.getElementById("btn-desktop-infer-text").addEventListener("click", pilotDesktopInferFromTextOnly);
+    } catch (_) {}
+    try {
+      document.getElementById("btn-desktop-propose-backend").addEventListener("click", function () {
+        pilotDesktopProposeBackend().catch(function (e) {
+          pilotDesktopUiHint("Orchestrateur : " + e, true);
+        });
+      });
     } catch (_) {}
     try {
       document.getElementById("btn-desktop-send").addEventListener("click", function () {
