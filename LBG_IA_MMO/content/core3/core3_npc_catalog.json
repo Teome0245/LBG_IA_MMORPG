@@ -1,0 +1,2381 @@
+{
+  "schema_version": 2,
+  "zone": "tatooine",
+  "description": "Catalogue PNJ Core3 Prime — profils réutilisables, instances, rosters service, remplacements vanilla (rollout progressif)",
+  "game_time": {
+    "real_hours_per_game_day": 6,
+    "game_days_per_real_day": 4,
+    "phase_hours_real": {
+      "work": 2,
+      "rest": 2,
+      "leisure": 2
+    },
+    "notes": "C.4b — 24h reel = 4j IG ; cycle travail/repos/loisir par triplon (shift_offset 0..2)"
+  },
+  "profiles": {
+    "profile:scribe_ref": {
+      "lbg_npc_id": "npc:scribe",
+      "tier": "reference",
+      "role": "scribe",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Archiviste calme, phrases courtes, Tatooine / Mos Eisley.",
+        "max_tokens": 120
+      }
+    },
+    "profile:guard_ref": {
+      "lbg_npc_id": "npc:guard",
+      "tier": "reference",
+      "role": "guard",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Garde factuel, sécurité du quartier, pas de menaces gratuites.",
+        "max_tokens": 120
+      }
+    },
+    "profile:scientist_mos_v1": {
+      "lbg_npc_id": "npc:scientist_mos",
+      "tier": "simple_replace",
+      "role": "scientist",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Scientifique Mos Eisley, curieuse et precise. Phrases courtes. Eviter les accents (e a la place de e accent).",
+        "max_tokens": 100
+      }
+    },
+    "profile:entertainer_trainer_mos_v1": {
+      "lbg_npc_id": "npc:entertainer_trainer_mos",
+      "tier": "simple_replace",
+      "role": "trainer",
+      "trainer_type": "entertainer",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur Entertainer a Mos Eisley, enthousiaste (show business). Phrases courtes, ton accueillant. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:entertainer_trainer_relief_v1": {
+      "lbg_npc_id": "npc:entertainer_trainer_relief",
+      "tier": "roster_relief",
+      "role": "trainer",
+      "trainer_type": "entertainer",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur Entertainer, patiente et pro. Couvre le poste quand Bige est en show ou au repos. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:entertainer_trainer_relief2_v1": {
+      "lbg_npc_id": "npc:entertainer_trainer_relief2",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "entertainer",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur Entertainer, troisieme du triplon Mos Eisley. Ton posé. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:quest_giver_mos_v1": {
+      "lbg_npc_id": "npc:quest_giver_mos",
+      "tier": "roster_triplet",
+      "role": "quest_giver",
+      "actions_allowed": [
+        "npc_say",
+        "offer_quest",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Donneur de quetes Mos Eisley, ton discret. Propose une mission locale en une phrase. action offer_quest si le joueur demande du travail. Eviter les accents.",
+        "max_tokens": 120
+      },
+      "quest_hooks": [
+        "quest:mos_eisley_intro_stub"
+      ]
+    },
+    "profile:quest_giver_mos_relief_v1": {
+      "lbg_npc_id": "npc:quest_giver_mos_relief",
+      "tier": "roster_triplet",
+      "role": "quest_giver",
+      "actions_allowed": [
+        "npc_say",
+        "offer_quest",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève donneur de quetes, calme et factuelle. offer_quest pour proposer une course simple. Eviter les accents.",
+        "max_tokens": 110
+      },
+      "quest_hooks": [
+        "quest:mos_eisley_intro_stub"
+      ]
+    },
+    "profile:quest_giver_mos_relief2_v1": {
+      "lbg_npc_id": "npc:quest_giver_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "quest_giver",
+      "actions_allowed": [
+        "npc_say",
+        "offer_quest",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Troisieme donneur de quetes du triplon. Brefs conseils de survie du desert. offer_quest si demande explicite. Eviter les accents.",
+        "max_tokens": 110
+      },
+      "quest_hooks": [
+        "quest:mos_eisley_intro_stub"
+      ]
+    },
+    "profile:trainer_brawler_mos_v1": {
+      "lbg_npc_id": "npc:trainer_brawler_mos",
+      "tier": "simple_replace",
+      "role": "trainer",
+      "trainer_type": "brawler",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur brawler au centre d entrainement Mos Eisley. Phrases courtes, ton pro. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:trainer_brawler_mos_relief1_v1": {
+      "lbg_npc_id": "npc:trainer_brawler_mos_relief",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "brawler",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur brawler, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_brawler_mos_relief2_v1": {
+      "lbg_npc_id": "npc:trainer_brawler_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "brawler",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur brawler, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_marksman_mos_v1": {
+      "lbg_npc_id": "npc:trainer_marksman_mos",
+      "tier": "simple_replace",
+      "role": "trainer",
+      "trainer_type": "marksman",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur marksman au centre d entrainement Mos Eisley. Phrases courtes, ton pro. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:trainer_marksman_mos_relief1_v1": {
+      "lbg_npc_id": "npc:trainer_marksman_mos_relief",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "marksman",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur marksman, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_marksman_mos_relief2_v1": {
+      "lbg_npc_id": "npc:trainer_marksman_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "marksman",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur marksman, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_scout_mos_v1": {
+      "lbg_npc_id": "npc:trainer_scout_mos",
+      "tier": "simple_replace",
+      "role": "trainer",
+      "trainer_type": "scout",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur scout au centre d entrainement Mos Eisley. Phrases courtes, ton pro. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:trainer_scout_mos_relief1_v1": {
+      "lbg_npc_id": "npc:trainer_scout_mos_relief",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "scout",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur scout, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_scout_mos_relief2_v1": {
+      "lbg_npc_id": "npc:trainer_scout_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "scout",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur scout, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_medic_mos_v1": {
+      "lbg_npc_id": "npc:trainer_medic_mos",
+      "tier": "simple_replace",
+      "role": "trainer",
+      "trainer_type": "medic",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur medic au centre d entrainement Mos Eisley. Phrases courtes, ton pro. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:trainer_medic_mos_relief1_v1": {
+      "lbg_npc_id": "npc:trainer_medic_mos_relief",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "medic",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur medic, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_medic_mos_relief2_v1": {
+      "lbg_npc_id": "npc:trainer_medic_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "medic",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur medic, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_entertainer_mos_v1": {
+      "lbg_npc_id": "npc:trainer_entertainer_mos",
+      "tier": "simple_replace",
+      "role": "trainer",
+      "trainer_type": "entertainer",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur entertainer au centre d entrainement Mos Eisley. Phrases courtes, ton pro. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:trainer_entertainer_mos_relief1_v1": {
+      "lbg_npc_id": "npc:trainer_entertainer_mos_relief",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "entertainer",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur entertainer, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_entertainer_mos_relief2_v1": {
+      "lbg_npc_id": "npc:trainer_entertainer_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "entertainer",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur entertainer, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_politician_mos_v1": {
+      "lbg_npc_id": "npc:trainer_politician_mos",
+      "tier": "simple_replace",
+      "role": "trainer",
+      "trainer_type": "politician",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur politician au centre d entrainement Mos Eisley. Phrases courtes, ton pro. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:trainer_politician_mos_relief1_v1": {
+      "lbg_npc_id": "npc:trainer_politician_mos_relief",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "politician",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur politician, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_politician_mos_relief2_v1": {
+      "lbg_npc_id": "npc:trainer_politician_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "politician",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur politician, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_artisan_mos_v1": {
+      "lbg_npc_id": "npc:trainer_artisan_mos",
+      "tier": "simple_replace",
+      "role": "trainer",
+      "trainer_type": "artisan",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur artisan au centre d entrainement Mos Eisley. Phrases courtes, ton pro. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:trainer_artisan_mos_relief1_v1": {
+      "lbg_npc_id": "npc:trainer_artisan_mos_relief",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "artisan",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur artisan, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:trainer_artisan_mos_relief2_v1": {
+      "lbg_npc_id": "npc:trainer_artisan_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "trainer",
+      "trainer_type": "artisan",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève instructeur artisan, Mos Eisley. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:pilot_alliance_mos_v1": {
+      "lbg_npc_id": "npc:pilot_alliance_mos",
+      "tier": "simple_replace",
+      "role": "space_trainer",
+      "trainer_type": "alliance",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur pilote alliance au starport Mos Eisley. Formation space bientot disponible. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:pilot_alliance_mos_relief1_v1": {
+      "lbg_npc_id": "npc:pilot_alliance_mos_relief",
+      "tier": "roster_triplet",
+      "role": "space_trainer",
+      "trainer_type": "alliance",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève pilote alliance. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:pilot_alliance_mos_relief2_v1": {
+      "lbg_npc_id": "npc:pilot_alliance_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "space_trainer",
+      "trainer_type": "alliance",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève pilote alliance. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:pilot_imperial_mos_v1": {
+      "lbg_npc_id": "npc:pilot_imperial_mos",
+      "tier": "simple_replace",
+      "role": "space_trainer",
+      "trainer_type": "imperial",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur pilote imperial au starport Mos Eisley. Formation space bientot disponible. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:pilot_imperial_mos_relief1_v1": {
+      "lbg_npc_id": "npc:pilot_imperial_mos_relief",
+      "tier": "roster_triplet",
+      "role": "space_trainer",
+      "trainer_type": "imperial",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève pilote imperial. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:pilot_imperial_mos_relief2_v1": {
+      "lbg_npc_id": "npc:pilot_imperial_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "space_trainer",
+      "trainer_type": "imperial",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève pilote imperial. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:pilot_freelance_mos_v1": {
+      "lbg_npc_id": "npc:pilot_freelance_mos",
+      "tier": "simple_replace",
+      "role": "space_trainer",
+      "trainer_type": "freelance",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Instructeur pilote freelance au starport Mos Eisley. Formation space bientot disponible. Eviter les accents.",
+        "max_tokens": 110
+      }
+    },
+    "profile:pilot_freelance_mos_relief1_v1": {
+      "lbg_npc_id": "npc:pilot_freelance_mos_relief",
+      "tier": "roster_triplet",
+      "role": "space_trainer",
+      "trainer_type": "freelance",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève pilote freelance. Eviter les accents.",
+        "max_tokens": 100
+      }
+    },
+    "profile:pilot_freelance_mos_relief2_v1": {
+      "lbg_npc_id": "npc:pilot_freelance_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "space_trainer",
+      "trainer_type": "freelance",
+      "actions_allowed": [
+        "npc_say",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relève pilote freelance. Eviter les accents.",
+        "max_tokens": 100
+      }
+    }
+  },
+  "entries": [
+    {
+      "pilot_id": "npc:core3_scribe",
+      "profile_id": "profile:scribe_ref",
+      "display_name": "[IA] Archiviste",
+      "status": "active",
+      "binding": {
+        "mode": "spawn",
+        "mobile_template": "commoner_old",
+        "spawn": {
+          "x": 3510,
+          "y": -4795,
+          "z": 5,
+          "heading": 90
+        },
+        "follow_lia": {
+          "enabled": false,
+          "mode": "walk_patrol",
+          "roam_contain_m": 22
+        }
+      },
+      "c1_validated": "2026-05-23",
+      "notes": "PNJ reference C.1 — patrouille courte walk_patrol (navmesh, anti-murs)"
+    },
+    {
+      "pilot_id": "npc:core3_guard",
+      "profile_id": "profile:guard_ref",
+      "display_name": "[IA] Garde",
+      "status": "active",
+      "binding": {
+        "mode": "spawn",
+        "mobile_template": "mos_espa_police_officer",
+        "spawn": {
+          "x": 3540,
+          "y": -4810,
+          "z": 5,
+          "heading": 180
+        },
+        "follow_lia": {
+          "enabled": false,
+          "mode": "walk_patrol",
+          "roam_contain_m": 22
+        }
+      },
+      "c1_validated": "2026-05-23",
+      "notes": "PNJ reference C.1 — ronde locale walk_patrol Mos Eisley (anti-murs)"
+    },
+    {
+      "pilot_id": "npc:core3_kisreudi",
+      "profile_id": "profile:scientist_mos_v1",
+      "display_name": "Kisreudi Teste",
+      "status": "active",
+      "binding": {
+        "mode": "replace_spawn",
+        "mobile_template": "scientist",
+        "spawn": {
+          "x": 3551,
+          "y": -4725,
+          "z": 5,
+          "heading": 270
+        },
+        "follow_lia": {
+          "enabled": false
+        }
+      },
+      "notes": "C.3 — scientifique poste fixe cantine Mos Eisley (coords IG). Despawn manuel du doublon vanilla/GM si present."
+    }
+  ],
+  "rosters": [
+    {
+      "roster_id": "roster:mos_entertainer_trainer",
+      "profile_id": "profile:entertainer_trainer_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": 0.18237507343292,
+        "y": -1.4937621355057,
+        "z": 1.1330564022064,
+        "heading": 348.3811340332,
+        "cell": 1189634
+      },
+      "description": "Centre entrainement ME — triplon entertainer (recon 2026-05-29)",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_bige_coto",
+          "display_name": "Bige Coto",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:entertainer_trainer_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_entertainer",
+            "post": {
+              "x": 0.18237507343292,
+              "y": -1.4937621355057,
+              "z": 1.1330564022064,
+              "heading": 348.3811340332,
+              "cell": 1189634
+            },
+            "home": {
+              "x": 0.18237507343292,
+              "y": -1.4937621355057,
+              "z": 1.1330564022064,
+              "heading": 348.3811340332,
+              "cell": 1189634
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_lyra_velo",
+          "display_name": "Lyra Velo",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:entertainer_trainer_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_entertainer",
+            "post": {
+              "x": 0.18237507343292,
+              "y": -1.4937621355057,
+              "z": 1.1330564022064,
+              "heading": 348.3811340332,
+              "cell": 1189634
+            },
+            "home": {
+              "x": 0.18237507343292,
+              "y": -1.4937621355057,
+              "z": 1.1330564022064,
+              "heading": 348.3811340332,
+              "cell": 1189634
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:entertainer_trainer_relief_v1"
+        },
+        {
+          "pilot_id": "npc:core3_talen_ress",
+          "display_name": "Talen Ress",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:entertainer_trainer_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_entertainer",
+            "post": {
+              "x": 0.18237507343292,
+              "y": -1.4937621355057,
+              "z": 1.1330564022064,
+              "heading": 348.3811340332,
+              "cell": 1189634
+            },
+            "home": {
+              "x": 0.18237507343292,
+              "y": -1.4937621355057,
+              "z": 1.1330564022064,
+              "heading": 348.3811340332,
+              "cell": 1189634
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:entertainer_trainer_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_eisley_quest_giver",
+      "profile_id": "profile:quest_giver_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": 3488,
+        "y": -4782,
+        "z": 5,
+        "heading": 135
+      },
+      "description": "C.5 — triplon donneur de quete (informant Mos Eisley, cycle 2h)",
+      "routine": {
+        "kind": "quest_giver",
+        "quest_hooks": [
+          "quest:mos_eisley_intro_stub"
+        ],
+        "states": [
+          "idle",
+          "bark",
+          "offer_quest"
+        ]
+      },
+      "slots": [
+        {
+          "pilot_id": "npc:core3_vex_sorn",
+          "display_name": "Vex Sorn",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:quest_giver_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "informant_npc_lvl_1",
+            "post": {
+              "x": 3488,
+              "y": -4782,
+              "z": 5,
+              "heading": 135
+            },
+            "home": {
+              "x": 3495,
+              "y": -4790,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3488,
+                "y": -4782,
+                "z": 5
+              },
+              {
+                "x": 3480,
+                "y": -4775,
+                "z": 5
+              },
+              {
+                "x": 3495,
+                "y": -4790,
+                "z": 5
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_nira_kell",
+          "display_name": "Nira Kell",
+          "shift_offset": 1,
+          "profile_id": "profile:quest_giver_mos_relief_v1",
+          "lbg_npc_id": "npc:quest_giver_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "informant_npc_lvl_1",
+            "post": {
+              "x": 3488,
+              "y": -4782,
+              "z": 5,
+              "heading": 135
+            },
+            "home": {
+              "x": 3475,
+              "y": -4810,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3475,
+                "y": -4810,
+                "z": 5
+              },
+              {
+                "x": 3482,
+                "y": -4795,
+                "z": 5
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_daan_oth",
+          "display_name": "Daan Oth",
+          "shift_offset": 2,
+          "profile_id": "profile:quest_giver_mos_relief2_v1",
+          "lbg_npc_id": "npc:quest_giver_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "informant_npc_lvl_1",
+            "post": {
+              "x": 3488,
+              "y": -4782,
+              "z": 5,
+              "heading": 135
+            },
+            "home": {
+              "x": 3500,
+              "y": -4805,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3500,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3490,
+                "y": -4795,
+                "z": 5
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_trainer_brawler",
+      "profile_id": "profile:trainer_brawler_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": 14.035821914673,
+        "y": -13.745964050293,
+        "z": 1.133056640625,
+        "heading": 317.1379699707,
+        "cell": 1189637
+      },
+      "description": "Centre entrainement ME — triplon brawler (recon 2026-05-29)",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_brawler_trainer_a",
+          "display_name": "Korr Ven",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:trainer_brawler_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_brawler",
+            "post": {
+              "x": 14.035821914673,
+              "y": -13.745964050293,
+              "z": 1.133056640625,
+              "heading": 317.1379699707,
+              "cell": 1189637
+            },
+            "home": {
+              "x": 14.035821914673,
+              "y": -13.745964050293,
+              "z": 1.133056640625,
+              "heading": 317.1379699707,
+              "cell": 1189637
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_brawler_trainer_b",
+          "display_name": "Mira Kael",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:trainer_brawler_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_brawler",
+            "post": {
+              "x": 14.035821914673,
+              "y": -13.745964050293,
+              "z": 1.133056640625,
+              "heading": 317.1379699707,
+              "cell": 1189637
+            },
+            "home": {
+              "x": 14.035821914673,
+              "y": -13.745964050293,
+              "z": 1.133056640625,
+              "heading": 317.1379699707,
+              "cell": 1189637
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_brawler_mos_relief1_v1"
+        },
+        {
+          "pilot_id": "npc:core3_brawler_trainer_c",
+          "display_name": "Tobin Ress",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:trainer_brawler_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_brawler",
+            "post": {
+              "x": 14.035821914673,
+              "y": -13.745964050293,
+              "z": 1.133056640625,
+              "heading": 317.1379699707,
+              "cell": 1189637
+            },
+            "home": {
+              "x": 14.035821914673,
+              "y": -13.745964050293,
+              "z": 1.133056640625,
+              "heading": 317.1379699707,
+              "cell": 1189637
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_brawler_mos_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_trainer_marksman",
+      "profile_id": "profile:trainer_marksman_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": -3.7848906517029,
+        "y": -14.170740127563,
+        "z": 1.133056640625,
+        "heading": 38.580310821533,
+        "cell": 1189638
+      },
+      "description": "Centre entrainement ME — triplon marksman (recon 2026-05-29)",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_marksman_trainer_a",
+          "display_name": "Sela Voss",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:trainer_marksman_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_marksman",
+            "post": {
+              "x": -3.7848906517029,
+              "y": -14.170740127563,
+              "z": 1.133056640625,
+              "heading": 38.580310821533,
+              "cell": 1189638
+            },
+            "home": {
+              "x": -3.7848906517029,
+              "y": -14.170740127563,
+              "z": 1.133056640625,
+              "heading": 38.580310821533,
+              "cell": 1189638
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_marksman_trainer_b",
+          "display_name": "Jax Morr",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:trainer_marksman_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_marksman",
+            "post": {
+              "x": -3.7848906517029,
+              "y": -14.170740127563,
+              "z": 1.133056640625,
+              "heading": 38.580310821533,
+              "cell": 1189638
+            },
+            "home": {
+              "x": -3.7848906517029,
+              "y": -14.170740127563,
+              "z": 1.133056640625,
+              "heading": 38.580310821533,
+              "cell": 1189638
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_marksman_mos_relief1_v1"
+        },
+        {
+          "pilot_id": "npc:core3_marksman_trainer_c",
+          "display_name": "Unar Tek",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:trainer_marksman_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_marksman",
+            "post": {
+              "x": -3.7848906517029,
+              "y": -14.170740127563,
+              "z": 1.133056640625,
+              "heading": 38.580310821533,
+              "cell": 1189638
+            },
+            "home": {
+              "x": -3.7848906517029,
+              "y": -14.170740127563,
+              "z": 1.133056640625,
+              "heading": 38.580310821533,
+              "cell": 1189638
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_marksman_mos_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_trainer_scout",
+      "profile_id": "profile:trainer_scout_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": -8.5867328643799,
+        "y": -0.37793651223183,
+        "z": 1.133056640625,
+        "heading": 307.46752929688,
+        "cell": 1189636
+      },
+      "description": "Centre entrainement ME — triplon scout (recon 2026-05-29)",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_scout_trainer_a",
+          "display_name": "Elin Vor",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:trainer_scout_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_scout",
+            "post": {
+              "x": -8.5867328643799,
+              "y": -0.37793651223183,
+              "z": 1.133056640625,
+              "heading": 307.46752929688,
+              "cell": 1189636
+            },
+            "home": {
+              "x": -8.5867328643799,
+              "y": -0.37793651223183,
+              "z": 1.133056640625,
+              "heading": 307.46752929688,
+              "cell": 1189636
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_scout_trainer_b",
+          "display_name": "Perrin Koch",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:trainer_scout_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_scout",
+            "post": {
+              "x": -8.5867328643799,
+              "y": -0.37793651223183,
+              "z": 1.133056640625,
+              "heading": 307.46752929688,
+              "cell": 1189636
+            },
+            "home": {
+              "x": -8.5867328643799,
+              "y": -0.37793651223183,
+              "z": 1.133056640625,
+              "heading": 307.46752929688,
+              "cell": 1189636
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_scout_mos_relief1_v1"
+        },
+        {
+          "pilot_id": "npc:core3_scout_trainer_c",
+          "display_name": "Yara Nis",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:trainer_scout_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_scout",
+            "post": {
+              "x": -8.5867328643799,
+              "y": -0.37793651223183,
+              "z": 1.133056640625,
+              "heading": 307.46752929688,
+              "cell": 1189636
+            },
+            "home": {
+              "x": -8.5867328643799,
+              "y": -0.37793651223183,
+              "z": 1.133056640625,
+              "heading": 307.46752929688,
+              "cell": 1189636
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_scout_mos_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_trainer_medic",
+      "profile_id": "profile:trainer_medic_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": 11.6887550354,
+        "y": 1.052926659584,
+        "z": 1.133056640625,
+        "heading": 167.56114196777,
+        "cell": 1189635
+      },
+      "description": "Centre entrainement ME — triplon medic (recon 2026-05-29)",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_medic_trainer_a",
+          "display_name": "Fen Taro",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:trainer_medic_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_medic",
+            "post": {
+              "x": 11.6887550354,
+              "y": 1.052926659584,
+              "z": 1.133056640625,
+              "heading": 167.56114196777,
+              "cell": 1189635
+            },
+            "home": {
+              "x": 11.6887550354,
+              "y": 1.052926659584,
+              "z": 1.133056640625,
+              "heading": 167.56114196777,
+              "cell": 1189635
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_medic_trainer_b",
+          "display_name": "Nessa Rhyl",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:trainer_medic_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_medic",
+            "post": {
+              "x": 11.6887550354,
+              "y": 1.052926659584,
+              "z": 1.133056640625,
+              "heading": 167.56114196777,
+              "cell": 1189635
+            },
+            "home": {
+              "x": 11.6887550354,
+              "y": 1.052926659584,
+              "z": 1.133056640625,
+              "heading": 167.56114196777,
+              "cell": 1189635
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_medic_mos_relief1_v1"
+        },
+        {
+          "pilot_id": "npc:core3_medic_trainer_c",
+          "display_name": "Odo Merr",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:trainer_medic_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_medic",
+            "post": {
+              "x": 11.6887550354,
+              "y": 1.052926659584,
+              "z": 1.133056640625,
+              "heading": 167.56114196777,
+              "cell": 1189635
+            },
+            "home": {
+              "x": 11.6887550354,
+              "y": 1.052926659584,
+              "z": 1.133056640625,
+              "heading": 167.56114196777,
+              "cell": 1189635
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_medic_mos_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_trainer_politician",
+      "profile_id": "profile:trainer_politician_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": 0.080673284828663,
+        "y": 8.7543745040894,
+        "z": 2.5,
+        "heading": 175.73554992676,
+        "cell": 1189634
+      },
+      "description": "Centre entrainement ME — triplon politician (recon 2026-05-29)",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_politician_trainer_a",
+          "display_name": "Mace Dulon",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:trainer_politician_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_politician",
+            "post": {
+              "x": 0.080673284828663,
+              "y": 8.7543745040894,
+              "z": 2.5,
+              "heading": 175.73554992676,
+              "cell": 1189634
+            },
+            "home": {
+              "x": 0.080673284828663,
+              "y": 8.7543745040894,
+              "z": 2.5,
+              "heading": 175.73554992676,
+              "cell": 1189634
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_politician_trainer_b",
+          "display_name": "Sira Kell",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:trainer_politician_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_politician",
+            "post": {
+              "x": 0.080673284828663,
+              "y": 8.7543745040894,
+              "z": 2.5,
+              "heading": 175.73554992676,
+              "cell": 1189634
+            },
+            "home": {
+              "x": 0.080673284828663,
+              "y": 8.7543745040894,
+              "z": 2.5,
+              "heading": 175.73554992676,
+              "cell": 1189634
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_politician_mos_relief1_v1"
+        },
+        {
+          "pilot_id": "npc:core3_politician_trainer_c",
+          "display_name": "Vorn Thess",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:trainer_politician_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_politician",
+            "post": {
+              "x": 0.080673284828663,
+              "y": 8.7543745040894,
+              "z": 2.5,
+              "heading": 175.73554992676,
+              "cell": 1189634
+            },
+            "home": {
+              "x": 0.080673284828663,
+              "y": 8.7543745040894,
+              "z": 2.5,
+              "heading": 175.73554992676,
+              "cell": 1189634
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_politician_mos_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_trainer_artisan",
+      "profile_id": "profile:trainer_artisan_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": -14.276340484619,
+        "y": -8.6046371459961,
+        "z": 1.133056640625,
+        "heading": 129.65873718262,
+        "cell": 1189639
+      },
+      "description": "Centre entrainement ME — triplon artisan (recon 2026-05-29)",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_artisan_trainer_a",
+          "display_name": "Bix Torren",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:trainer_artisan_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_artisan",
+            "post": {
+              "x": -14.276340484619,
+              "y": -8.6046371459961,
+              "z": 1.133056640625,
+              "heading": 129.65873718262,
+              "cell": 1189639
+            },
+            "home": {
+              "x": -14.276340484619,
+              "y": -8.6046371459961,
+              "z": 1.133056640625,
+              "heading": 129.65873718262,
+              "cell": 1189639
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_artisan_trainer_b",
+          "display_name": "Hana Meru",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:trainer_artisan_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_artisan",
+            "post": {
+              "x": -14.276340484619,
+              "y": -8.6046371459961,
+              "z": 1.133056640625,
+              "heading": 129.65873718262,
+              "cell": 1189639
+            },
+            "home": {
+              "x": -14.276340484619,
+              "y": -8.6046371459961,
+              "z": 1.133056640625,
+              "heading": 129.65873718262,
+              "cell": 1189639
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_artisan_mos_relief1_v1"
+        },
+        {
+          "pilot_id": "npc:core3_artisan_trainer_c",
+          "display_name": "Kell Asa",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:trainer_artisan_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "trainer_artisan",
+            "post": {
+              "x": -14.276340484619,
+              "y": -8.6046371459961,
+              "z": 1.133056640625,
+              "heading": 129.65873718262,
+              "cell": 1189639
+            },
+            "home": {
+              "x": -14.276340484619,
+              "y": -8.6046371459961,
+              "z": 1.133056640625,
+              "heading": 129.65873718262,
+              "cell": 1189639
+            },
+            "leisure_patrol": [
+              {
+                "x": 3468,
+                "y": -4671,
+                "z": 6
+              },
+              {
+                "x": 3463,
+                "y": -4678,
+                "z": 6
+              },
+              {
+                "x": 3457,
+                "y": -4669,
+                "z": 6
+              }
+            ]
+          },
+          "profile_id": "profile:trainer_artisan_mos_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_pilot_alliance",
+      "profile_id": "profile:pilot_alliance_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": 3551,
+        "y": -4800,
+        "z": 5,
+        "heading": 90
+      },
+      "description": "Starport lounge — triplon pilote alliance",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_pilot_alliance_a",
+          "display_name": "Castor Reyl",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:pilot_alliance_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "stranded_rebel_pilot",
+            "post": {
+              "x": 3551,
+              "y": -4800,
+              "z": 5,
+              "heading": 90
+            },
+            "home": {
+              "x": 3555,
+              "y": -4802,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3551,
+                "y": -4800,
+                "z": 5
+              },
+              {
+                "x": 3551,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3570,
+                "y": -4801,
+                "z": 5
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_pilot_alliance_b",
+          "display_name": "Kira Vann",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:pilot_alliance_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "stranded_rebel_pilot",
+            "post": {
+              "x": 3551,
+              "y": -4800,
+              "z": 5,
+              "heading": 90
+            },
+            "home": {
+              "x": 3555,
+              "y": -4802,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3551,
+                "y": -4800,
+                "z": 5
+              },
+              {
+                "x": 3551,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3570,
+                "y": -4801,
+                "z": 5
+              }
+            ]
+          },
+          "profile_id": "profile:pilot_alliance_mos_relief1_v1"
+        },
+        {
+          "pilot_id": "npc:core3_pilot_alliance_c",
+          "display_name": "Theo Nash",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:pilot_alliance_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "stranded_rebel_pilot",
+            "post": {
+              "x": 3551,
+              "y": -4800,
+              "z": 5,
+              "heading": 90
+            },
+            "home": {
+              "x": 3555,
+              "y": -4802,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3551,
+                "y": -4800,
+                "z": 5
+              },
+              {
+                "x": 3551,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3570,
+                "y": -4801,
+                "z": 5
+              }
+            ]
+          },
+          "profile_id": "profile:pilot_alliance_mos_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_pilot_imperial",
+      "profile_id": "profile:pilot_imperial_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": 3551,
+        "y": -4805,
+        "z": 5,
+        "heading": 90
+      },
+      "description": "Starport lounge — triplon pilote imperial",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_pilot_imperial_a",
+          "display_name": "Garr Vek",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:pilot_imperial_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "imperial_colonel",
+            "post": {
+              "x": 3551,
+              "y": -4805,
+              "z": 5,
+              "heading": 90
+            },
+            "home": {
+              "x": 3555,
+              "y": -4802,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3551,
+                "y": -4800,
+                "z": 5
+              },
+              {
+                "x": 3551,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3570,
+                "y": -4801,
+                "z": 5
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_pilot_imperial_b",
+          "display_name": "Lina Thess",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:pilot_imperial_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "imperial_colonel",
+            "post": {
+              "x": 3551,
+              "y": -4805,
+              "z": 5,
+              "heading": 90
+            },
+            "home": {
+              "x": 3555,
+              "y": -4802,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3551,
+                "y": -4800,
+                "z": 5
+              },
+              {
+                "x": 3551,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3570,
+                "y": -4801,
+                "z": 5
+              }
+            ]
+          },
+          "profile_id": "profile:pilot_imperial_mos_relief1_v1"
+        },
+        {
+          "pilot_id": "npc:core3_pilot_imperial_c",
+          "display_name": "Mord Kael",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:pilot_imperial_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "imperial_colonel",
+            "post": {
+              "x": 3551,
+              "y": -4805,
+              "z": 5,
+              "heading": 90
+            },
+            "home": {
+              "x": 3555,
+              "y": -4802,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3551,
+                "y": -4800,
+                "z": 5
+              },
+              {
+                "x": 3551,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3570,
+                "y": -4801,
+                "z": 5
+              }
+            ]
+          },
+          "profile_id": "profile:pilot_imperial_mos_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_pilot_freelance",
+      "profile_id": "profile:pilot_freelance_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": 3570,
+        "y": -4801,
+        "z": 5,
+        "heading": 90
+      },
+      "description": "Starport lounge — triplon pilote freelance",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_pilot_freelance_a",
+          "display_name": "Renn Sol",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:pilot_freelance_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "freelance_pilot",
+            "post": {
+              "x": 3570,
+              "y": -4801,
+              "z": 5,
+              "heading": 90
+            },
+            "home": {
+              "x": 3555,
+              "y": -4802,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3551,
+                "y": -4800,
+                "z": 5
+              },
+              {
+                "x": 3551,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3570,
+                "y": -4801,
+                "z": 5
+              }
+            ]
+          }
+        },
+        {
+          "pilot_id": "npc:core3_pilot_freelance_b",
+          "display_name": "Vex Mara",
+          "shift_offset": 1,
+          "lbg_npc_id": "npc:pilot_freelance_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "freelance_pilot",
+            "post": {
+              "x": 3570,
+              "y": -4801,
+              "z": 5,
+              "heading": 90
+            },
+            "home": {
+              "x": 3555,
+              "y": -4802,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3551,
+                "y": -4800,
+                "z": 5
+              },
+              {
+                "x": 3551,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3570,
+                "y": -4801,
+                "z": 5
+              }
+            ]
+          },
+          "profile_id": "profile:pilot_freelance_mos_relief1_v1"
+        },
+        {
+          "pilot_id": "npc:core3_pilot_freelance_c",
+          "display_name": "Dorn Pike",
+          "shift_offset": 2,
+          "lbg_npc_id": "npc:pilot_freelance_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "freelance_pilot",
+            "post": {
+              "x": 3570,
+              "y": -4801,
+              "z": 5,
+              "heading": 90
+            },
+            "home": {
+              "x": 3555,
+              "y": -4802,
+              "z": 5,
+              "cell": 0
+            },
+            "leisure_patrol": [
+              {
+                "x": 3551,
+                "y": -4800,
+                "z": 5
+              },
+              {
+                "x": 3551,
+                "y": -4805,
+                "z": 5
+              },
+              {
+                "x": 3570,
+                "y": -4801,
+                "z": 5
+              }
+            ]
+          },
+          "profile_id": "profile:pilot_freelance_mos_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_eisley_innkeeper",
+      "profile_id": "profile:innkeeper_v1",
+      "status": "draft",
+      "service_policy": "exactly_one",
+      "description": "Exemple C.4 — deux aubergistes (jour/nuit), pas des clones : noms et postes différents",
+      "slots": [
+        {
+          "pilot_id": "npc:core3_inn_mara",
+          "display_name": "Mara Vel",
+          "shift": "day",
+          "binding": {
+            "mode": "spawn",
+            "mobile_template": "commoner_fat",
+            "spawn": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "heading": 0
+            }
+          }
+        },
+        {
+          "pilot_id": "npc:core3_inn_jor",
+          "display_name": "Jor Bek",
+          "shift": "night",
+          "binding": {
+            "mode": "spawn",
+            "mobile_template": "commoner_old",
+            "spawn": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "heading": 0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "vanilla_replacements": [
+    {
+      "vanilla_ref": "custom:kisreudi_teste_mos_eisley",
+      "action": "replace_spawn",
+      "replaced_by_entry": "npc:core3_kisreudi",
+      "status": "active",
+      "notes": "PNJ scientifique repere IG ~3551,-4725. Pas de ligne screenplay vanilla — spawn LBG a la place. Supprimer a la main l ancien mobile si doublon."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/trainer_entertainer",
+      "action": "replace_spawn",
+      "replaced_by": "roster:mos_entertainer_trainer",
+      "status": "active",
+      "vanilla_spawn": {
+        "mobile": "trainer_entertainer",
+        "x": 3477.89,
+        "y": -4791.6,
+        "z": 5,
+        "heading": 215
+      },
+      "notes": "Migré vers centre entrainement 3465,-4682,z6. Vanilla outdoor deja commente."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/informant_outdoor_3488",
+      "action": "replace_spawn",
+      "replaced_by": "roster:mos_eisley_quest_giver",
+      "status": "active",
+      "vanilla_spawn": {
+        "mobile": "informant_npc_lvl_1",
+        "x": 3488,
+        "y": -4782,
+        "z": 5,
+        "heading": 135
+      },
+      "notes": "C.5 — informant outdoor ligne ~283 tatooine_mos_eisley.lua. Despawn GM du vanilla si doublon."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/stationary_3532_4788",
+      "action": "replace_spawn",
+      "replaced_by": "npc:core3_guide_quartier",
+      "status": "active",
+      "vanilla_spawn": {
+        "pool": "stationaryMobiles",
+        "x": 3532.96,
+        "y": -4788.08,
+        "z": 5,
+        "heading": 313
+      },
+      "notes": "stationaryMobiles ligne ~91 — PNJ aleatoire (souvent miner) commente."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/trainer_brawler",
+      "action": "replace_spawn",
+      "replaced_by": "roster:mos_trainer_brawler",
+      "status": "active",
+      "vanilla_spawn": {
+        "mobile": "trainer_brawler",
+        "x": 3496,
+        "y": -4765,
+        "z": 5
+      },
+      "notes": "Outdoor ME — ligne commentee dans tatooine_mos_eisley.lua ; roster LBG centre entrainement."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/trainer_marksman",
+      "action": "replace_spawn",
+      "replaced_by": "roster:mos_trainer_marksman",
+      "status": "active",
+      "vanilla_spawn": {
+        "mobile": "trainer_marksman",
+        "x": 3506,
+        "y": -4760,
+        "z": 5
+      },
+      "notes": "Outdoor ME — ligne commentee dans tatooine_mos_eisley.lua ; roster LBG centre entrainement."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/trainer_marksman_2",
+      "action": "replace_spawn",
+      "replaced_by": "roster:mos_trainer_marksman",
+      "status": "active",
+      "vanilla_spawn": {
+        "mobile": "trainer_marksman",
+        "x": 3552,
+        "y": -4710,
+        "z": 5
+      },
+      "notes": "Outdoor ME — ligne commentee dans tatooine_mos_eisley.lua ; roster LBG centre entrainement."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/trainer_scout",
+      "action": "replace_spawn",
+      "replaced_by": "roster:mos_trainer_scout",
+      "status": "active",
+      "vanilla_spawn": {
+        "mobile": "trainer_scout",
+        "x": 3519.76,
+        "y": -4786.9,
+        "z": 5
+      },
+      "notes": "Outdoor ME — ligne commentee dans tatooine_mos_eisley.lua ; roster LBG centre entrainement."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/trainer_medic",
+      "action": "replace_spawn",
+      "replaced_by": "roster:mos_trainer_medic",
+      "status": "active",
+      "vanilla_spawn": {
+        "mobile": "trainer_medic",
+        "x": 3522,
+        "y": -4774,
+        "z": 5
+      },
+      "notes": "Outdoor ME — ligne commentee dans tatooine_mos_eisley.lua ; roster LBG centre entrainement."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/trainer_artisan",
+      "action": "replace_spawn",
+      "replaced_by": "roster:mos_trainer_artisan",
+      "status": "active",
+      "vanilla_spawn": {
+        "mobile": "trainer_artisan",
+        "x": 3503,
+        "y": -4809,
+        "z": 5
+      },
+      "notes": "Outdoor ME — ligne commentee dans tatooine_mos_eisley.lua ; roster LBG centre entrainement."
+    },
+    {
+      "vanilla_ref": "screenplay:tatooine_mos_eisley/training_center_cluster",
+      "action": "replace_spawn",
+      "replaced_by": "roster:mos_trainer_*",
+      "status": "active",
+      "notes": "7 professions base + 3 pilotes space — rosters catalogue 2026-05-29."
+    }
+  ],
+  "routine_examples": {
+    "quest_giver_draft": {
+      "kind": "quest_giver",
+      "schedule": [
+        {
+          "id": "counter_morning",
+          "window_utc": "06:00-14:00",
+          "location_id": "mos_eisley_cantina",
+          "states": [
+            "idle",
+            "bark",
+            "offer_quest"
+          ]
+        }
+      ],
+      "quest_hooks": []
+    },
+    "trainer_draft": {
+      "kind": "trainer",
+      "schedule": [
+        {
+          "window_utc": "08:00-20:00",
+          "location_id": "mos_eisley_trainer_yard",
+          "states": [
+            "train",
+            "bark"
+          ]
+        }
+      ],
+      "skill_trainer_type": "marksman"
+    }
+  }
+}

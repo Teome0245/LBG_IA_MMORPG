@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "location_id": "loc:mos_eisley_training_center",
+  "zone": "tatooine",
+  "label": "Centre d'entraînement Mos Eisley",
+  "description": "Complexe intérieur proche spaceport (~3460, -4670). Recon IG 2026-05-29. 7 salles = 7 professions de base × triplon.",
+  "building_ref": "mos_eisley_starport_training_annex",
+  "building_cell": 0,
+  "building_cell_notes": "Si les PNJ n apparaissent pas en interieur : noter la cellule IG (/way ou objet) et mettre building_cell ici + dans les posts du catalogue.",
+  "world_anchor": {
+    "x": 3460,
+    "y": -4670,
+    "z": 6
+  },
+  "posts": [
+    {
+      "profession": "brawler",
+      "skill_trainer_type": "trainer_brawler",
+      "room_label": "Salle mêlée (armes blanches)",
+      "spawn": {
+        "x": 14.035821914673,
+        "y": -13.745964050293,
+        "z": 1.133056640625,
+        "heading": 317.1379699707,
+        "cell": 1189637
+      },
+      "recon_image": "image1",
+      "status": "confirmed"
+    },
+    {
+      "profession": "marksman",
+      "skill_trainer_type": "trainer_marksman",
+      "room_label": "Salle armes à distance (mur d'exposition)",
+      "spawn": {
+        "x": -3.7848906517029,
+        "y": -14.170740127563,
+        "z": 1.133056640625,
+        "heading": 38.580310821533,
+        "cell": 1189638
+      },
+      "recon_image": "image2",
+      "status": "confirmed"
+    },
+    {
+      "profession": "scout",
+      "skill_trainer_type": "trainer_scout",
+      "room_label": "Salle chasse / trophées",
+      "spawn": {
+        "x": -8.5867328643799,
+        "y": -0.37793651223183,
+        "z": 1.133056640625,
+        "heading": 307.46752929688,
+        "cell": 1189636
+      },
+      "recon_image": "image3",
+      "status": "confirmed"
+    },
+    {
+      "profession": "medic",
+      "skill_trainer_type": "trainer_medic",
+      "room_label": "Salle repos / formation médicale",
+      "spawn": {
+        "x": 11.6887550354,
+        "y": 1.052926659584,
+        "z": 1.133056640625,
+        "heading": 167.56114196777,
+        "cell": 1189635
+      },
+      "recon_image": "image4",
+      "status": "confirmed",
+      "notes": "Minimap IG : X tronqué ; X=3468 retenu (cluster spaceport). Ajuster heading en jeu."
+    },
+    {
+      "profession": "entertainer",
+      "skill_trainer_type": "trainer_entertainer",
+      "room_label": "Salle amphithéâtre / chaises",
+      "spawn": {
+        "x": 0.18237507343292,
+        "y": -1.4937621355057,
+        "z": 1.1330564022064,
+        "heading": 348.3811340332,
+        "cell": 1189634
+      },
+      "recon_image": "image5",
+      "status": "approx",
+      "notes": "Coords à affiner au pied de la pièce (centre des chaises). Migrer roster Bige/Lyra/Talen ici."
+    },
+    {
+      "profession": "politician",
+      "skill_trainer_type": "trainer_politician",
+      "room_label": "Hall d'accueil / bancs",
+      "spawn": {
+        "x": 0.080673284828663,
+        "y": 8.7543745040894,
+        "z": 2.5,
+        "heading": 175.73554992676,
+        "cell": 1189634
+      },
+      "recon_image": "image6",
+      "status": "confirmed"
+    },
+    {
+      "profession": "artisan",
+      "skill_trainer_type": "trainer_artisan",
+      "room_label": "Salle stockage / artisanat",
+      "spawn": {
+        "x": -14.276340484619,
+        "y": -8.6046371459961,
+        "z": 1.133056640625,
+        "heading": 129.65873718262,
+        "cell": 1189639
+      },
+      "recon_image": "image7",
+      "status": "confirmed"
+    }
+  ],
+  "homes_default": {
+    "description": "Repos triplon — logements ME à définir (cantina / auberge / cellules)",
+    "leisure_anchor": {
+      "x": 3526,
+      "y": -4799,
+      "z": 5,
+      "cell": 0
+    }
+  },
+  "leisure_patrol_shared": [
+    {
+      "x": 3468,
+      "y": -4671,
+      "z": 6
+    },
+    {
+      "x": 3463,
+      "y": -4678,
+      "z": 6
+    },
+    {
+      "x": 3457,
+      "y": -4669,
+      "z": 6
+    }
+  ]
+}

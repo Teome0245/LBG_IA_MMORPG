@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "zone": "tatooine",
+  "exported_at": "2026-06-01T19:36:12Z",
+  "exported_by": "Teome",
+  "pois": [],
+  "npc_slots": [
+    {
+      "pilot_id": "npc:core3_scout_trainer_a",
+      "roster_id": "roster:mos_trainer_scout",
+      "mobile_template": "trainer_scout",
+      "service_post": {
+        "x": -8.5867328643799,
+        "y": -0.37793651223183,
+        "z": 1.133056640625,
+        "heading": 307.46752929688,
+        "cell": 1189636
+      }
+    },
+    {
+      "pilot_id": "npc:core3_marksman_trainer_a",
+      "roster_id": "roster:mos_trainer_marksman",
+      "mobile_template": "trainer_marksman",
+      "service_post": {
+        "x": -3.7848906517029,
+        "y": -14.170740127563,
+        "z": 1.133056640625,
+        "heading": 38.580310821533,
+        "cell": 1189638
+      }
+    },
+    {
+      "pilot_id": "npc:core3_bige_coto",
+      "roster_id": "roster:mos_entertainer_trainer",
+      "mobile_template": "trainer_entertainer",
+      "service_post": {
+        "x": 0.18237507343292,
+        "y": -1.4937621355057,
+        "z": 1.1330564022064,
+        "heading": 348.3811340332,
+        "cell": 1189634
+      }
+    },
+    {
+      "pilot_id": "npc:core3_brawler_trainer_a",
+      "roster_id": "roster:mos_trainer_brawler",
+      "mobile_template": "trainer_brawler",
+      "service_post": {
+        "x": 14.035821914673,
+        "y": -13.745964050293,
+        "z": 1.133056640625,
+        "heading": 317.1379699707,
+        "cell": 1189637
+      }
+    },
+    {
+      "pilot_id": "npc:core3_medic_trainer_a",
+      "roster_id": "roster:mos_trainer_medic",
+      "mobile_template": "trainer_medic",
+      "service_post": {
+        "x": 11.6887550354,
+        "y": 1.052926659584,
+        "z": 1.133056640625,
+        "heading": 167.56114196777,
+        "cell": 1189635
+      }
+    },
+    {
+      "pilot_id": "npc:core3_artisan_trainer_a",
+      "roster_id": "roster:mos_trainer_artisan",
+      "mobile_template": "trainer_artisan",
+      "service_post": {
+        "x": -14.276340484619,
+        "y": -8.6046371459961,
+        "z": 1.133056640625,
+        "heading": 129.65873718262,
+        "cell": 1189639
+      }
+    },
+    {
+      "pilot_id": "npc:core3_politician_trainer_a",
+      "roster_id": "roster:mos_trainer_politician",
+      "mobile_template": "trainer_politician",
+      "service_post": {
+        "x": 0.080673284828663,
+        "y": 8.7543745040894,
+        "z": 2.5,
+        "heading": 175.73554992676,
+        "cell": 1189634
+      }
+    }
+  ]
+}
