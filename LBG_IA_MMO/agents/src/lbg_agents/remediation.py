@@ -10,6 +10,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from lbg_agents.infra_memory_remediation import (
+    build_memory_remediation_plan,
+    format_memory_plan_reply,
+)
+
 
 def _suggest_from_step(step: dict[str, Any]) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
@@ -119,6 +124,24 @@ def run_remediation(
         step = step.replace("remediation_", "")
 
     if step == "plan":
+        if action.get("source") == "memory" or action.get("step") == "plan_memory":
+            from lbg_agents.infra_watchdog import run_infra_watchdog
+
+            wd = run_infra_watchdog(actor_id=actor_id, persist=False)
+            plan = build_memory_remediation_plan(wd)
+            return {
+                "agent": "remediation",
+                "handler": "devops",
+                "actor_id": actor_id,
+                "request_text": text,
+                "remediation_action": action,
+                "watchdog": wd,
+                "result": plan,
+                "ok": True,
+                "reply": format_memory_plan_reply(plan),
+                "remediation_hints": plan.get("hints") or [],
+                "meta": {"read_only": True, "source": "infra_memory"},
+            }
         sc_ctx = {**context, "devops_action": {"kind": "selfcheck"}}
         sc_ctx.setdefault("devops_dry_run", context.get("devops_dry_run", True))
         sc = run_devops_action(actor_id=actor_id, text=text, action={"kind": "selfcheck"}, context=sc_ctx)

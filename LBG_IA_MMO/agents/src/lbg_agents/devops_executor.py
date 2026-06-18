@@ -1033,6 +1033,31 @@ def run_devops_action(
             },
         }
 
+    if kind == "memory_remediation_plan":
+        from lbg_agents.infra_watchdog import run_infra_watchdog
+        from lbg_agents.infra_memory_remediation import build_memory_remediation_plan, format_memory_plan_reply
+
+        wd = run_infra_watchdog(actor_id=actor_id, persist=True)
+        plan = build_memory_remediation_plan(wd)
+        return {
+            "agent": "devops_executor",
+            "handler": "devops",
+            "actor_id": actor_id,
+            "request_text": text,
+            "devops_action": dict(action),
+            "result": {"watchdog": wd, "remediation_plan": plan},
+            "ok": True,
+            "outcome": wd.get("outcome"),
+            "reply": format_memory_plan_reply(plan),
+            "meta": {
+                "allowlist": True,
+                "sterile": True,
+                "dry_run": True,
+                "dry_run_source": dr_src,
+                "execution_gated": gated,
+            },
+        }
+
     if kind == "selfcheck":
         return _run_devops_selfcheck(
             actor_id=actor_id,

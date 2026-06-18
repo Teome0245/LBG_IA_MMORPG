@@ -39,6 +39,18 @@ Variables (`/etc/lbg-core3-ia.env` ou `lbg-ia-mmo.env`) :
 Agrège Proxmox + sonde RAM VMs (Prime exclu par défaut pendant rebuild).
 
 ```bash
+# Depuis poste dev ou VM 140
+cd /opt/LBG_IA_MMO
+bash infra/scripts/run_infra_watchdog.sh --json
+```
+
+Si `outcome` est `warn` ou `critical`, le JSON inclut `remediation_plan` (suggestions sans exécution auto).
+
+Playbook remédiation RAM : [`runbook_infra_remediation.md`](runbook_infra_remediation.md).
+
+Alternative Python :
+
+```bash
 # Kind devops depuis orchestrateur ou script direct
 PYTHONPATH=agents/src python3 -c "
 from lbg_agents.infra_watchdog import run_infra_watchdog
@@ -83,4 +95,5 @@ Voir [`scrapaltai_starting_locations_mod.md`](scrapaltai_starting_locations_mod.
 
 - `infra/systemd/lbg-core3-ia-bots-ensure.service`
 - `agents/src/lbg_agents/infra_watchdog.py`
+- [`runbook_infra_remediation.md`](runbook_infra_remediation.md) — Track C remediation RAM
 - [`plan_parallel_next_steps.md`](plan_parallel_next_steps.md) — Track G

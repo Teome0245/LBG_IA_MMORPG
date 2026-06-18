@@ -8,6 +8,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from lbg_agents.infra_memory_remediation import build_memory_remediation_plan
 from lbg_agents.proxmox_client import proxmox_configured
 from lbg_agents.proxmox_probe import run_proxmox_status
 from lbg_agents.vm_memory_probe import run_vm_memory_probe
@@ -110,6 +111,9 @@ def run_infra_watchdog(
         "alerts": alerts,
         "reply": "\n\n".join(sections),
     }
+
+    if outcome in {"warn", "critical"}:
+        payload["remediation_plan"] = build_memory_remediation_plan(payload)
 
     if persist:
         path = watchdog_state_path()

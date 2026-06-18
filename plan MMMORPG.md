@@ -33,13 +33,14 @@
 \- Effet connu post‑rebuild : nouveaux persos (ex. **Mira**) peuvent être **redirigés vers les coords hub** sans assets visuels → à traiter **demain** (freeze redirect ou rebuild LH v9).  
 \- Doc technique : `LBG_IA_MMO/docs/core3_prime_runbook.md`, `content/core3/lua/lbg_lost_heaven_screenplay.lua`.
 
-\### Suite prévue (reprise)
+\### Suite prévue (reprise — juin 2026)
 
-1. Autonomie population (Lia + Nix + Mira) + timer `bots-ensure`  
-2. Valider PNJ cantina (Jax) + artisan trainer  
-3. Lost Heaven : rebuild ou désactiver redirect temporaire jusqu’au hub prêt  
-4. World Director phase B (économie) — voir `docs/plan_world_director_integration.md`  
-5. Exécution parallèle multi-agents — voir `LBG_IA_MMO/docs/plan_parallel_next_steps.md`
+1. Autonomie population (Lia + Nix + Mira) + timer `bots-ensure` — **runbook** `docs/runbook_ops_bots_watchdog.md`  
+2. Valider PNJ cantina (Jax) + artisan trainer — **Track E** ; checklist `docs/core3_prime_post_deploy_checklist.md` §5  
+3. Remédiation RAM / watchdog infra — **Track C** ; `docs/runbook_infra_remediation.md`  
+4. Lost Heaven : redirect **désactivé** (Option A) ; rebuild hub plus tard  
+5. World Director (économie, chroniqueur) — `docs/plan_world_director_integration.md`  
+6. Exécution parallèle — `LBG_IA_MMO/docs/plan_parallel_next_steps.md`
 
 \### Décision stratégique — focus **Core3 Prime** + **client SWGEmu** (juin 2026)
 

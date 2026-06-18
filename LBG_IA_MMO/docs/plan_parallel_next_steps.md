@@ -55,7 +55,7 @@ flowchart TB
 | **D** | ✅ `world_chronicler.py` + `faction_goals.json` + tests |
 | **G** | ✅ [`runbook_ops_bots_watchdog.md`](runbook_ops_bots_watchdog.md) |
 | **A** | 🟡 test Lia quête ; validation IG 246 restante |
-| **C** | ⏳ non démarré |
+| **C** | ✅ `infra_memory_remediation.py`, plan watchdog, `memory_remediation_plan`, [`runbook_infra_remediation.md`](runbook_infra_remediation.md) |
 | **E** | ✅ `ensureArtisanTrainerOnDuty`, Jax profile explicite, tests catalogue |
 
 **Règle de fusion** : **E et F ne pas paralléliser** sur le même fichier Lua — soit **un agent Lua** pour E+F, soit E puis F en série.
@@ -184,9 +184,9 @@ def run_economy_director_tick(*, dry_run: bool = True) -> dict: ...
 - Open Interpreter sandbox (phase 2.5).
 
 **Critères d’acceptation**
-- [ ] Tests verts.
-- [ ] Dry-run documenté : `devops_probe` + `infra_watchdog` → plan visible, pas d’exec sans approbation.
-- [ ] Timer `lbg-infra-watchdog` sur 140 : doc install dans runbook (script existant si présent).
+- [x] Tests verts (`test_infra_memory_remediation.py`, `test_infra_watchdog.py`).
+- [x] Dry-run documenté : `devops_probe` + `infra_watchdog` → plan visible, pas d’exec sans approbation.
+- [x] Timer `lbg-infra-watchdog` sur 140 : doc install dans [`runbook_infra_remediation.md`](runbook_infra_remediation.md).
 
 **Conflits** : faible — zone `agents/` + `infra/` + docs.
 

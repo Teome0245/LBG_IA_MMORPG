@@ -50,3 +50,27 @@ def test_infra_watchdog_skips_proxmox_without_token(monkeypatch, tmp_path):
             out = run_infra_watchdog(persist=False)
     assert out["proxmox"]["outcome"] == "skipped_not_configured"
     assert out["outcome"] == "ok"
+
+
+def test_infra_watchdog_warn_includes_remediation_plan(monkeypatch, tmp_path):
+    monkeypatch.setenv("LBG_INFRA_WATCHDOG_STATE", str(tmp_path / "state.json"))
+    fake_mem = {
+        "ok": True,
+        "worst_status": "warn",
+        "hosts": [
+            {
+                "label": "core",
+                "host": "192.168.0.140",
+                "ok": True,
+                "status": "warn",
+                "metrics": {"mem_avail_pct": 12.0, "top_processes": []},
+            }
+        ],
+        "reply": "mem warn",
+    }
+    with patch("lbg_agents.infra_watchdog.proxmox_configured", return_value=False):
+        with patch("lbg_agents.infra_watchdog.run_vm_memory_probe", return_value=fake_mem):
+            out = run_infra_watchdog(persist=False)
+    assert out["outcome"] == "warn"
+    assert out["remediation_plan"]["kind"] == "remediation_plan"
+    assert out["remediation_plan"]["stressed_hosts"]

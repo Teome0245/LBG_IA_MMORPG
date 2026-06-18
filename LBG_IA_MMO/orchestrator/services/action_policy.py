@@ -27,6 +27,7 @@ _DEVOPS_SAFE_READ_KINDS = {
     "vm_memory_probe",
     "proxmox_status",
     "infra_watchdog",
+    "memory_remediation_plan",
     "remediation_plan",
     "remediation_validate",
 }
