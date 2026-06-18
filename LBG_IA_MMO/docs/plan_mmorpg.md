@@ -193,7 +193,9 @@ Découpage logique proposé (à faire converger avec `mmo_server/`) :
 
 ## MMO v1 (LAN) — périmètre acté
 
-Cette section fige ce que couvre **MMO v1** sur le LAN (3 VM) avec l’infra actuelle. Tout le reste du plan reste une **vision** pour des itérations ultérieures.
+> **Statut juin 2026** : ce périmètre décrit le **bac à sable Python** (v1 historique), désormais **gelé**. Le serveur jeu actif est **Core3 Prime** ; voir [`ARCHIVED_mmmorpg_sandbox.md`](ARCHIVED_mmmorpg_sandbox.md) et [`core3_prime_runbook.md`](core3_prime_runbook.md).
+
+Cette section fige ce que couvrait **MMO v1** sur le LAN (3 VM) avec l’infra d’alors. Tout le reste du plan reste une **vision** pour des itérations ultérieures.
 
 ### Ce qui est déjà en place (v1)
 

@@ -2,7 +2,8 @@
 
 ## Statut
 
-**Accepté** — 2026-04-12
+**Accepté** — 2026-04-12  
+**Supersédé (autorité jeu)** — 2026-06-28 : l'autorité **temps réel multijoueur** est **Core3 Prime**, pas `mmmorpg_server`. Ce ADR reste valide pour l'**historique** de la coexistence Python et les règles de pont IA ; voir amendement ci‑dessous et [`ARCHIVED_mmmorpg_sandbox.md`](../ARCHIVED_mmmorpg_sandbox.md).
 
 ## Contexte
 
@@ -27,11 +28,21 @@ Sans décision explicite, on risque **deux vérités** pour le même PNJ (état 
 
 5. **Données initiales PNJ / scène** : la **liste des PNJ** et paramètres **seed** vivent dans le **monorepo** (fichiers versionnés sous `mmo_server`, voir `world/seed_data/`) pour rester **reproductibles** ; la convergence avec l’autorité **`mmmorpg`** se fera par **même identifiants** (`npc_id`) et migration de chargement lors du pont.
 
+## Amendement — 2026-06-28 (autorité Core3 Prime)
+
+| Couche | Autorité (juin 2026) |
+|--------|----------------------|
+| Jeu temps réel, multijoueur | **Core3 Prime** (VM 246) — protocole SWG natif |
+| IA ↔ monde (bots, PNJ pilotes, quêtes) | Pont **Lua/JSON** (`ia_bridge_screenplay.lua`) + sidecar orchestrateur |
+| Bac à sable Python (`mmo_server`, `mmmorpg_server`) | **Gelé** — plus source de vérité jeu |
+
+Les règles **§3–4** (pas de double écriture, pont lecture puis écriture validée) s'appliquent désormais entre **orchestrateur/agents** et **Core3**, pas entre les deux stacks Python.
+
 ## Conséquences
 
 ### Positives
 
-- Frontière claire : **jeu = WS** (futur intégré), **IA PNJ slice = `mmo_server`** jusqu’à pont.
+- Frontière claire (historique phase R&D) : **jeu = WS** Python, **IA PNJ slice = `mmo_server`** — remplacé en prod par **jeu = Core3**, **IA = pont Lua/sidecar**.
 - Évite un big bang : **coexistence** documentée, strangler pour unifier.
 
 ### Négatives / dette
@@ -49,4 +60,6 @@ Sans décision explicite, on risque **deux vérités** pour le même PNJ (état 
 - `docs/plan_fusion_lbg_ia.md` — §3.4, phases B–C.
 - `docs/fusion_etat_des_lieux_v0.md` — inventaire réseau.
 - `docs/adr/0001-tronc-monorepo.md` — tronc monorepo.
+- `docs/adr/0005-new-mmo-core3-coexistence.md` — bascule Core3 Prime.
+- `docs/ARCHIVED_mmmorpg_sandbox.md` — gel bac à sable Python.
 - `mmmorpg/docs/PROTOCOL.md` (dépôt source, lecture).

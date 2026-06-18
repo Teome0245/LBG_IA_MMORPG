@@ -1,9 +1,8 @@
 # Plan — Client LBG personnalisé (Godot) sans client SWG
 
-**Statut** : étude de faisabilité — juin 2026  
+**Statut** : **gelé** — juin 2026 (voir [`ARCHIVED_mmmorpg_sandbox.md`](ARCHIVED_mmmorpg_sandbox.md))
 
-> **Objectif produit actuel (juin 2026)** : client Godot sur **le même Core3 Prime**, joueur visible depuis **lbgemu ou Godot**, monde habillé (bâtiments, obstacles) et avatars au-delà des capsules.  
-> Voir **[`plan_client_godot_prime_rendu.md`](plan_client_godot_prime_rendu.md)** — le POC gateway observateur (port 50000) reste un outil de test, pas la cible finale.
+> **Objectif produit actuel (juin 2026)** : **client SWGEmu personnalisé** (launchpad + patches Prime) — pas Godot comme axe produit.
 
 **Objectif initial (doc)** : savoir si et comment construire un **client joueur LBG** (Godot 4) indépendant du client SWG, connecté à **l’autorité monde** cible (Core3 Prime ou bac à sable Python).
 

@@ -768,11 +768,13 @@ local function ia_build_pilots_from_catalog(doc)
 	IA_BRIDGE_PILOTS = pilots
 	local ps = _G.IA_BRIDGE_PERSIST
 	if (ps == nil) then
-		ps = { pilotMobs = {}, catalogPilots = nil }
+		ps = { pilotMobs = {}, catalogPilots = nil, rosterPolicies = nil }
 		_G.IA_BRIDGE_PERSIST = ps
 	end
 	ps.catalogPilots = pilots
+	ps.rosterPolicies = rosterPolicies
 	IA_BRIDGE_ROSTER_POLICIES = rosterPolicies
+	writeData("ia_bridge_catalog_ready", 1)
 	local anchorCount = 0
 	for _ in pairs(IA_BRIDGE_INTERIOR_OUTDOOR_ANCHORS) do
 		anchorCount = anchorCount + 1
@@ -1093,12 +1095,22 @@ local IA_BRIDGE_PILOTS_FALLBACK = {
 	},
 }
 
-if (IA_BRIDGE_PILOTS == nil) then
-	IA_BRIDGE_PILOTS = {}
+local function ia_table_has_entries(tbl)
+	return tbl ~= nil and next(tbl) ~= nil
 end
 
 if (_G.IA_BRIDGE_PERSIST == nil) then
-	_G.IA_BRIDGE_PERSIST = { pilotMobs = {}, catalogPilots = nil }
+	_G.IA_BRIDGE_PERSIST = { pilotMobs = {}, catalogPilots = nil, rosterPolicies = nil }
+end
+
+if (ia_table_has_entries(_G.IA_BRIDGE_PERSIST.catalogPilots)) then
+	IA_BRIDGE_PILOTS = _G.IA_BRIDGE_PERSIST.catalogPilots
+elseif (IA_BRIDGE_PILOTS == nil) then
+	IA_BRIDGE_PILOTS = {}
+end
+
+if (_G.IA_BRIDGE_PERSIST.rosterPolicies ~= nil) then
+	IA_BRIDGE_ROSTER_POLICIES = _G.IA_BRIDGE_PERSIST.rosterPolicies
 end
 
 IaBridgeScreenPlay = ScreenPlay:new {
@@ -1111,14 +1123,88 @@ IaBridgeScreenPlay = ScreenPlay:new {
 
 registerScreenPlay("IaBridgeScreenPlay", true)
 
+if (_G.IA_BRIDGE_PERSIST.pilotsBootDone == true) then
+	IaBridgeScreenPlay.pilotsBootDone = true
+end
+
 function IaBridgeScreenPlay:persistStore()
 	if (_G.IA_BRIDGE_PERSIST == nil) then
-		_G.IA_BRIDGE_PERSIST = { pilotMobs = {}, catalogPilots = nil }
+		_G.IA_BRIDGE_PERSIST = { pilotMobs = {}, catalogPilots = nil, rosterPolicies = nil }
 	end
 	if (_G.IA_BRIDGE_PERSIST.pilotMobs == nil) then
 		_G.IA_BRIDGE_PERSIST.pilotMobs = {}
 	end
 	return _G.IA_BRIDGE_PERSIST
+end
+
+function IaBridgeScreenPlay:syncGlobalsFromPersist()
+	local ps = self:persistStore()
+	if (ia_table_has_entries(ps.catalogPilots)) then
+		IA_BRIDGE_PILOTS = ps.catalogPilots
+	elseif (ia_table_has_entries(IA_BRIDGE_PILOTS)) then
+		ps.catalogPilots = IA_BRIDGE_PILOTS
+	end
+	if (ps.rosterPolicies ~= nil) then
+		IA_BRIDGE_ROSTER_POLICIES = ps.rosterPolicies
+	end
+end
+
+function IaBridgeScreenPlay:hasProductionCatalog()
+	local ps = self:persistStore()
+	if (ia_table_has_entries(ps.catalogPilots)) then
+		return true
+	end
+	if (ia_table_has_entries(IA_BRIDGE_PILOTS)) then
+		return true
+	end
+	return false
+end
+
+function IaBridgeScreenPlay:shouldRehydrateCatalog()
+	if (self:hasProductionCatalog()) then
+		return false
+	end
+	local last = readData("ia_bridge_catalog_rehydrate_ts") or 0
+	return (os.time() - last) >= 30
+end
+
+function IaBridgeScreenPlay:ensureCatalogReady()
+	self:syncGlobalsFromPersist()
+	if (self:hasProductionCatalog()) then
+		return true
+	end
+	if (not self:shouldRehydrateCatalog()) then
+		return false
+	end
+	writeData("ia_bridge_catalog_rehydrate_ts", os.time())
+	local doc, chosen = ia_load_npc_catalog()
+	if (doc == nil) then
+		ia_catalog_boot_log("catalogue rehydrate FAILED introuvable")
+		return false
+	end
+	ia_apply_game_time_from_catalog(doc)
+	local ok, pilotCount = ia_build_pilots_from_catalog(doc)
+	if (not ok) then
+		IA_BRIDGE_PILOTS = IA_BRIDGE_PILOTS_FALLBACK
+		self:syncGlobalsFromPersist()
+		ia_catalog_boot_log("catalogue rehydrate fallback hardcoded")
+		return ia_table_has_entries(IA_BRIDGE_PILOTS)
+	end
+	ia_merge_pilots_from_pilots_json()
+	ia_merge_pilot_bodies()
+	self:syncGlobalsFromPersist()
+	writeData("ia_bridge_catalog_ready", 1)
+	ia_catalog_boot_log("catalogue rehydrate OK path=" .. tostring(chosen) .. " pilots=" .. tostring(pilotCount))
+	return true
+end
+
+function IaBridgeScreenPlay:rehydratePilotMobCache()
+	for pilotId, _ in pairs(self:catalogPilotTable()) do
+		self:resolvePilotMob(pilotId)
+	end
+	for pilotId, _ in pairs(self:pilotMobTable()) do
+		self:resolvePilotMob(pilotId)
+	end
 end
 
 function IaBridgeScreenPlay:pilotMobTable()
@@ -1127,10 +1213,13 @@ end
 
 function IaBridgeScreenPlay:catalogPilotTable()
 	local ps = self:persistStore()
-	if (ps.catalogPilots ~= nil) then
+	if (ia_table_has_entries(ps.catalogPilots)) then
 		return ps.catalogPilots
 	end
-	if (IA_BRIDGE_PILOTS ~= nil) then
+	if (ia_table_has_entries(IA_BRIDGE_PILOTS)) then
+		if (ps.catalogPilots == nil) then
+			ps.catalogPilots = IA_BRIDGE_PILOTS
+		end
 		return IA_BRIDGE_PILOTS
 	end
 	return IA_BRIDGE_PILOTS_FALLBACK
@@ -1205,6 +1294,7 @@ function IaBridgeScreenPlay:start()
 	ia_load_species_height_table()
 	ia_load_species_slot_heights()
 	ia_merge_pilot_bodies()
+	self:syncGlobalsFromPersist()
 	self:configurePersistentGameTime()
 	-- Toujours lancer le tick (pending.jsonl) même si Tatooine n'est pas encore deployee au boot.
 	self:scheduleTick()
@@ -2824,9 +2914,10 @@ function IaBridgeScreenPlay:bootPilotsOnce()
 		return
 	end
 	IaBridgeScreenPlay.pilotsBootDone = true
+	self:persistStore().pilotsBootDone = true
 	self:ensurePilots()
 	local online = 0
-	for pilotId, cfg in pairs(IA_BRIDGE_PILOTS) do
+	for pilotId, cfg in pairs(self:catalogPilotTable()) do
 		if (self:resolvePilotMob(pilotId) ~= nil) then
 			online = online + 1
 		end
@@ -3337,7 +3428,9 @@ function IaBridgeScreenPlay:publishNpcSnapshots()
 		end
 	end
 	publishAllFrom(self:catalogPilotTable())
-	publishAllFrom(IA_BRIDGE_PILOTS)
+	if (self:hasProductionCatalog()) then
+		publishAllFrom(IA_BRIDGE_PILOTS)
+	end
 	publishAllFrom(self:pilotMobTable())
 	local body = "{" .. table.concat(chunks, ",") .. "}"
 	if (n == 0) then
@@ -5174,6 +5267,7 @@ function IaBridgeScreenPlay:tick()
 	end
 	if (line == nil or line == "") then
 		local okTick, tickErr = pcall(function()
+			self:ensureCatalogReady()
 			self:containLiaInCantina()
 			self:tickRosterLifecycle()
 			self:ensureCantinaBarmanOnDuty()
@@ -5186,6 +5280,7 @@ function IaBridgeScreenPlay:tick()
 				self:ensurePilotBodiesApplied()
 			end
 			self:maybeAmbientGesture()
+			self:rehydratePilotMobCache()
 			self:publishSnapshot()
 			self:publishAiPlayerSnapshots()
 			self:publishNpcSnapshots()
@@ -5201,9 +5296,10 @@ function IaBridgeScreenPlay:tick()
 				for _ in pairs(self:pilotMobTable()) do
 					mobRefs = mobRefs + 1
 				end
-				local catSize = 0
-				for _ in pairs(self:catalogPilotTable()) do
-					catSize = catSize + 1
+				local ps = self:persistStore()
+				local catSize = self:countTableKeys(ps.catalogPilots)
+				if (catSize == 0) then
+					catSize = self:countTableKeys(IA_BRIDGE_PILOTS)
 				end
 				local online = 0
 				local okCount, countResult = pcall(function()
@@ -5216,6 +5312,14 @@ function IaBridgeScreenPlay:tick()
 					"tick online=%d mobRefs=%d catalog=%d tick=%d",
 					online, mobRefs, catSize, IA_BRIDGE_TICK_COUNT
 				))
+				if (catSize == 0) then
+					ia_catalog_boot_log(string.format(
+						"catalog EMPTY persistCat=%s globals=%s fallback=%d",
+						tostring(ps.catalogPilots ~= nil),
+						tostring(ia_table_has_entries(IA_BRIDGE_PILOTS)),
+						self:countTableKeys(IA_BRIDGE_PILOTS_FALLBACK)
+					))
+				end
 			end
 		end)
 		if (not okTick) then

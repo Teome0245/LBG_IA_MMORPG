@@ -18,6 +18,10 @@ Module exécuté après le routage d’intention (`lbg_agents.dispatch`), souven
 
 ## B
 
+
+**Bac à sable MMO Python (archivé)**  
+Stack gelée juin 2026 : **`mmo_server/`**, **`mmmorpg_server/`**, **`web_client/`**, **`lbg_client_godot/`**. Serveur jeu actif = **Core3 Prime** ; client = **SWGEmu personnalisé**. Voir **`docs/ARCHIVED_mmmorpg_sandbox.md`**, ADR **0005** (amendé).
+
 **Backend**  
 API FastAPI dans **`backend/`** : point d’entrée stable pour les clients (dont **`pilot_web`**), proxy vers l’orchestrateur et les health checks des agents.
 
@@ -69,10 +73,10 @@ Service headless dans ce monorepo : tick monde, persistance **`WorldState`**, HT
 Ce dépôt **`LBG_IA_MMO/`** : plusieurs packages (`backend/`, `orchestrator/`, `agents/`, `mmo_server/`, **`mmmorpg_server/`**, etc.) dans **un** arbre Git — **tronc** cible de la fusion (ADR 0001).
 
 **`mmmorpg_server/`**  
-Serveur **WebSocket** jeu (portage depuis le dépôt source **`mmmorpg`**) : `python -m mmmorpg_server`, variables **`MMMORPG_*`**. Voir **`mmmorpg_server/README.md`**, **`docs/mmmorpg_PROTOCOL.md`**.
+Serveur **WebSocket** jeu bac à sable (portage depuis **`mmmorpg`**) — **gelé** juin 2026. Autorité jeu = **Core3 Prime**. Voir **`docs/ARCHIVED_mmmorpg_sandbox.md`**, **`mmmorpg_server/README.md`**, **`docs/mmmorpg_PROTOCOL.md`**.
 
 **new_mmo / Core3**  
-Dépôt ou clone du **serveur jeu SWGEmu (Core3)** : binaire **`core3`**, base **`swgemu`**, protocole et stack **distincts** du couple Python **`mmmorpg_server`** + **`mmo_server`**. Coexistence et migration documentées : ADR **`0005-new-mmo-core3-coexistence.md`**, guide **`migration_new_mmo_core3.md`**, emplacement clone optionnel **`third_party/new_mmo/`** (ignoré par Git).
+Dépôt ou clone du **serveur jeu SWGEmu (Core3)** — **serveur jeu prod** (Prime VM 246, galaxie 3). Binaire **`core3-clean`**, base **`swgemu`** (MariaDB 245). ADR **`0005`** (amendé juin 2026), runbook **`core3_prime_runbook.md`**, clone **`~/projects/new_mmo`**.
 
 ---
 

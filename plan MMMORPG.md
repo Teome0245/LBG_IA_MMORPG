@@ -40,11 +40,44 @@
 3. Lost Heaven : rebuild ou désactiver redirect temporaire jusqu’au hub prêt  
 4. World Director phase B (économie) — voir `docs/plan_world_director_integration.md`
 
+\### Décision stratégique — focus **Core3 Prime** + **client SWGEmu** (juin 2026)
+
+\> **Pivot acté** : on ne développe plus le bac à sable Python ni le client Godot comme axes produit.  
+\> Le jeu jouable = **Core3 Prime (246)** ; le client = **client SWGEmu personnalisé** (launchpad, patches `.tre`, branding LBG).  
+\> L’orchestrateur IA (140) et le pont Lua/JSON restent le cœur « rang 2–3 ».
+
+\#### Étoile du nord (`LBG_IA_MMO/docs/plan_de_route.md`)
+
+| Rang | Périmètre | Avancement | Focus actuel |
+|------|-----------|------------|---------------|
+| **1** | Assistant PC / infra | ~80 % | jobs, desktop, devops, MCP, watchdog |
+| **2** | Persona MMO / pont jeu | ~55 % | pont Core3 (sidecar, bots, dialogue) — **plus** bac à sable Lyra |
+| **3** | Évolution monde par IA | ~35 % | Prime Lua/JSON, World Director — pas encore MJ macro |
+
+\#### Moteur de jeu : **un seul axe actif**
+
+| Composant | Statut | Note |
+|-----------|--------|------|
+| **Core3 SWG Prime** (C++ 246) | **PROD — focus unique** | vrai MMO jouable, IA, économie MVP, `ia_bridge_screenplay.lua` |
+| `mmo_server` + `mmmorpg_server` (Python WS, 245) | **Gelé / à archiver** | v1 LAN OK ; conservé en lecture pour smokes et Lyra ; **pas de nouvelle feature** |
+| `web_client` / `lbg_client_godot` | **Gelé / à archiver** | phase 0 faite ; **hors scope** jusqu’à décision contraire |
+
+Réf. coexistence historique : ADR 0005 — **interprétation juin 2026** : Core3 = serveur cible ; Python MMO = legacy bac à sable, non bloquant. Doc archivage : `LBG_IA_MMO/docs/ARCHIVED_mmmorpg_sandbox.md`.
+
+\#### Client joueur : **SWGEmu personnalisé**
+
+| Composant | Statut | Note |
+|-----------|--------|------|
+| Launchpad dual PreCU / Prime | **Actif** | `new_mmo/launchpad`, manifests `:8080` |
+| Patches client Prime (`.tre`, DDS, UI) | **En cours** | `generate_client_patch_manifests.sh`, `build_helmet_lbg_dds.py` |
+| Client Godot LBG | **Gelé** | `lbg_client_godot/` archivé conceptuellement |
+| Doc ops | `LBG_IA_MMO/docs/client_dual_launchpad.md` | |
+
 \## 1. 🎯 \*\*Vision générale du projet\*\*
 
 \- MMORPG multivers avec plusieurs planètes, chacune ayant ses propres règles physiques, technologiques et magiques.  
 
-\- Univers inspiré de : Gunnm, Cyberpunk, Albator, DBZ, Discworld, Avatar, Free Guy, Firefly, Steampunk, Fullmetal Alchemist.  
+\- Univers inspiré de : Gunnm, Cyberpunk, Albator, DBZ, Discworld, Avatar le dernier maitre de l'air, Free Guy, Firefly, Steampunk, Fullmetal Alchemist, gun frontierres, shadowrun.  
 
 \- Joueurs humains + joueurs IA + un MJ IA capable de proposer des améliorations et d’assister les joueurs.  
 
@@ -64,11 +97,13 @@
 
 \- OS : Linux  
 
-\- **Déploiement actuel (juin 2026)** : serveur de jeu **SWG Prime** sur VM **246** (`core3-clean`) ; persistance comptes via MariaDB sur **245** ; orchestration IA sur **140**. Le stack Python/WebSocket (`mmo_server`, `mmmorpg_server`) reste sur **245** en parallèle du fork Core3.
+\- **Déploiement actuel (juin 2026)** : serveur de jeu **unique = SWG Prime** sur VM **246** (`core3-clean`) ; persistance comptes via MariaDB sur **245** ; orchestration IA sur **140**. Le stack Python/WebSocket (`mmo_server`, `mmmorpg_server`) sur **245** est **gelé** (bac à sable v1, archivage possible — ne plus étendre).
 
-\- Langage cible long terme : Python (modules orchestrés) + **Core3** (simulation monde SWG Prime)
+\- **Stack actif** : **Core3** (simulation monde SWG Prime) + orchestrateur/agents Python (pont IA, jobs, pas serveur jeu principal).
 
-\- Modules principaux :
+\- **Vision long terme (non prioritaire)** : modules Python orchestrés type WorldCore / EntityEngine — voir §5 plus bas, marqué *archivé / aspiration*
+
+\- Modules principaux *(implémentation cible = Core3 Prime + Lua/JSON ; pas le stack Python gelé)* :
 
 &#x20; - Gestion du monde (planètes, cycles, météo, saisons)
 
@@ -94,13 +129,13 @@
 
 \## 2.2. \*\*Client\*\*
 
-\- Moteur : Godot Engine  
+\- **Client actif (juin 2026)** : **client SWGEmu** (PreCU / Prime) via launchpad LBG — patches `.tre`, assets DDS, personnalisation UI/branding.
 
-\- Refonte graphique complète  
+\- Personnalisation en cours : manifests Prime, scripts build patch, doc `client_dual_launchpad.md`.
 
-\- Communication réseau : WebSocket / TCP / UDP selon besoins  
+\- **Gelé / archivé** : Godot (`lbg_client_godot/`) et `web_client` MMO Python — hors scope tant que Core3 + client SWG ne sont pas stabilisés.
 
-\- Rendu sphérique pour planètes (mini-planètes) (une exeption, terre-plate)
+\- **Vision long terme (non prioritaire)** : refonte Godot, rendu sphérique multivers, WebSocket custom — voir §5 *Client Godot*, marqué aspiration.
 
 
 
@@ -810,17 +845,17 @@ C’est littéralement \*\*Free Guy + SWG + simulation sociale\*\*.
 
 \## Phase 1 — Fondations
 
-\- Architecture serveur Python
+\- ~~Architecture serveur Python~~ → **fait côté bac à sable (gelé)** ; **fait côté Core3 Prime (prod)**
 
-\- Communication client/serveur
+\- Communication client/serveur : **client SWGEmu + Core3 UDP** (launchpad Prime)
 
-\- Gestion d’une planète simple
+\- Gestion d’une planète simple : **Tatooine Prime** (1 planète SWG)
 
-\- Cycle jour/nuit
+\- Cycle jour/nuit : GameTime Core3 + `core3_planet_rules.json`
 
-\- Mouvement joueur
+\- Mouvement joueur : moteur SWG natif
 
-\- PNJ basiques
+\- PNJ basiques : pont IA + catalogues JSON (en cours d’enrichissement)
 
 
 
@@ -862,13 +897,13 @@ C’est littéralement \*\*Free Guy + SWG + simulation sociale\*\*.
 
 \## Phase 5 — Optimisation \& polish
 
-\- Refonte graphique Godot
+\- Personnalisation client SWGEmu (patches, UI, assets LBG) — **remplace** refonte Godot (gelée)
 
-\- Équilibrage
+\- Équilibrage gameplay Prime
 
-\- Tests de charge
+\- Tests de charge Core3
 
-\- Sécurité
+\- Sécurité (comptes, sidecar, admin `:8792`)
 
 
 
@@ -1660,9 +1695,12 @@ Je vais te livrer un \*\*ensemble cohérent\*\*, pensé comme la base d’un vra
 
 \# 🏗️ \*\*5. Architecture Serveur (Python / Linux)\*\*
 
+\> **Statut juin 2026 — archivé / aspiration long terme**  
+\> Ce découpage Python (WorldCore, EntityEngine, …) **n’est plus la cible d’implémentation**.  
+\> Le serveur jeu = **Core3 Prime** ; Python = orchestrateur, agents, pont IA, jobs.  
+\> Conservé comme référence de vision si un jour on extrait des modules hors Core3.
 
-
-\## Modules principaux
+\## Modules principaux *(vision, non roadmap active)*
 
 \- \*\*WorldCore\*\* : gestion des planètes, cycles, saisons  
 
@@ -1698,7 +1736,7 @@ Je vais te livrer un \*\*ensemble cohérent\*\*, pensé comme la base d’un vra
 
 
 
-\## Client Godot
+\## Client Godot *(gelé — aspiration long terme)*
 
 \- Rendu sphérique  
 
@@ -1707,6 +1745,8 @@ Je vais te livrer un \*\*ensemble cohérent\*\*, pensé comme la base d’un vra
 \- UI factionnelle  
 
 \- Effets magiques / technologiques  
+
+\> **Remplacé à court terme** par personnalisation du **client SWGEmu** (launchpad + patches).
 
 
 
@@ -1730,63 +1770,47 @@ poser les fondations d’un vrai gros projet —on va te donner une base exploit
 
 ```text
 
-&#x20;               \[ Client Godot ]
-
-&#x20;       - Rendu 3D (planètes, persos, UI)
-
-&#x20;       - Input joueur
-
-&#x20;       - UI Factions / Quêtes / Inventaire
+&#x20;     \[ Client SWGEmu LBG ]  *(actif — launchpad + patches)*
 
 &#x20;                    │
 
-&#x20;                    │ WebSocket / TCP
+&#x20;                    │ UDP login / zone (44553)
 
 &#x20;                    ▼
 
-&#x20;             \[ Network Gateway ]
+&#x20;        \[ Core3 Prime — VM 246 ]  *(serveur jeu prod)*
 
-&#x20;       - Authentification
-
-&#x20;       - Session management
-
-&#x20;       - Routage des messages
+&#x20;        ia_bridge_screenplay.lua + catalogues JSON
 
 &#x20;                    │
 
-&#x20;  ┌─────────────────┴───────────────────┐
+&#x20;                    │ HTTP sidecar :8791
 
-&#x20;  ▼                                     ▼
+&#x20;                    ▼
 
-\[ Game Logic Core ]                \[ Services Transverses ]
+&#x20;     \[ Orchestrateur IA — VM 140 ]  agents, jobs, planner
 
-\- WorldCore                        - DB (PostgreSQL)
+&#x20;                    │
 
-\- EntityEngine                     - Cache (Redis)
+&#x20;                    ▼
 
-\- FactionSystem                    - Logs / Metrics
+&#x20;     \[ Ollama — VM 110 ]
 
-\- MagicEngine                      - File storage
+&#x20;                    │
 
-\- TechEngine
+&#x20;     ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─
 
-\- PhysicsEngine
+&#x20;     \[ Bac à sable Python 245 ]  *(gelé — mmo_server / mmmorpg_server)*
 
-\- EventEngine
+&#x20;     \[ Client Godot / web_client ]  *(gelé)*
 
-\- AIEngine (PNJ + MJ IA)
-
-\- QuestEngine
-
-\- EconomyEngine
-
-\- HousingEngine
+&#x20;     \[ Game Logic Python §5 ]  *(vision archivée — WorldCore, EntityEngine, …)*
 
 ```
 
 
 
-\### 1.2 Découpage modules serveur (Python)
+\### 1.2 Découpage modules serveur (Python) *(gelé / aspiration — voir §5)*
 
 
 
