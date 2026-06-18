@@ -964,6 +964,75 @@ def run_devops_action(
     gated = execution_requires_approval()
     kind = action.get("kind")
 
+    if kind == "vm_memory_probe":
+        from lbg_agents.vm_memory_probe import run_vm_memory_probe
+
+        result = run_vm_memory_probe(actor_id=actor_id, text=text, context=context)
+        return {
+            "agent": "devops_executor",
+            "handler": "devops",
+            "actor_id": actor_id,
+            "request_text": text,
+            "devops_action": dict(action),
+            "result": result,
+            "ok": bool(result.get("ok")),
+            "outcome": result.get("outcome"),
+            "reply": result.get("reply"),
+            "meta": {
+                "allowlist": True,
+                "sterile": True,
+                "dry_run": dry_run,
+                "dry_run_source": dr_src,
+                "execution_gated": gated,
+            },
+        }
+
+    if kind == "proxmox_status":
+        from lbg_agents.proxmox_probe import run_proxmox_status
+
+        result = run_proxmox_status(actor_id=actor_id, text=text, context=context)
+        return {
+            "agent": "devops_executor",
+            "handler": "devops",
+            "actor_id": actor_id,
+            "request_text": text,
+            "devops_action": dict(action),
+            "result": result,
+            "ok": bool(result.get("ok")),
+            "outcome": result.get("outcome"),
+            "reply": result.get("reply"),
+            "meta": {
+                "allowlist": True,
+                "sterile": True,
+                "dry_run": dry_run,
+                "dry_run_source": dr_src,
+                "execution_gated": gated,
+            },
+        }
+
+    if kind == "infra_watchdog":
+        from lbg_agents.infra_watchdog import run_infra_watchdog
+
+        result = run_infra_watchdog(actor_id=actor_id, persist=False)
+        return {
+            "agent": "devops_executor",
+            "handler": "devops",
+            "actor_id": actor_id,
+            "request_text": text,
+            "devops_action": dict(action),
+            "result": result,
+            "ok": bool(result.get("ok")),
+            "outcome": result.get("outcome"),
+            "reply": result.get("reply"),
+            "meta": {
+                "allowlist": True,
+                "sterile": True,
+                "dry_run": dry_run,
+                "dry_run_source": dr_src,
+                "execution_gated": gated,
+            },
+        }
+
     if kind == "selfcheck":
         return _run_devops_selfcheck(
             actor_id=actor_id,
@@ -1208,6 +1277,25 @@ def run_devops_action(
             },
         }
 
+    if kind in ("remediation_plan", "remediation_apply", "remediation_validate"):
+        from lbg_agents.remediation import run_remediation
+
+        step = kind.replace("remediation_", "")
+        rem_action = {**action, "step": action.get("step") or step}
+        return run_remediation(actor_id=actor_id, text=text, action=rem_action, context=context)
+
+    if kind == "ssh_run":
+        return _run_ssh_action(
+            actor_id=actor_id,
+            text=text,
+            action=action,
+            context=context,
+            dry_run=dry_run,
+            dr_src=dr_src,
+            gated=gated,
+            trace_id=trace_id,
+        )
+
     _audit_devops(
         trace_id=trace_id,
         actor_id=actor_id,
@@ -1223,7 +1311,7 @@ def run_devops_action(
         "handler": "devops",
         "actor_id": actor_id,
         "request_text": text,
-        "error": f"kind inconnu: {kind!r} (attendu http_get | read_log_tail | systemd_is_active | systemd_restart | selfcheck)",
+        "error": f"kind inconnu: {kind!r} (attendu http_get | read_log_tail | systemd_is_active | systemd_restart | selfcheck | ssh_run)",
         "devops_action": dict(action),
         "meta": {
             "allowlist": True,
@@ -1234,9 +1322,176 @@ def run_devops_action(
     }
 
 
+def _run_ssh_action(
+    *,
+    actor_id: str,
+    text: str,
+    action: dict[str, Any],
+    context: dict[str, Any],
+    dry_run: bool,
+    dr_src: str,
+    gated: bool,
+    trace_id: str | None,
+) -> dict[str, Any]:
+    """Action ``ssh_run`` : commande **allowlistée** sur une VM LAN cible (multi-VM, sous garde-fous).
+
+    Cibler via ``action.server_id`` (ex. ``linux-245`` / ``core`` / ``mmo``) ou ``action.host``.
+    SSH désactivé par défaut (``LBG_MCP_SSH_ENABLED``). Dry-run et approbation appliqués comme
+    pour les autres actions DevOps sensibles.
+    """
+    from lbg_agents import ssh_client as _ssh
+    from lbg_agents.remote_targets import resolve_host as _resolve_host
+
+    def _meta() -> dict[str, Any]:
+        return {"allowlist": True, "dry_run": dry_run, "dry_run_source": dr_src, "execution_gated": gated}
+
+    def _err(msg: str, outcome: str = "validation_error") -> dict[str, Any]:
+        _audit_devops(
+            trace_id=trace_id,
+            actor_id=actor_id,
+            action_kind="ssh_run",
+            dry_run=dry_run,
+            dry_run_source=dr_src,
+            outcome=outcome,
+            approval_gate_active=gated,
+            error=msg,
+        )
+        return {
+            "agent": "devops_executor",
+            "handler": "devops",
+            "actor_id": actor_id,
+            "request_text": text,
+            "ok": False,
+            "outcome": outcome,
+            "error": msg,
+            "devops_action": dict(action),
+            "meta": _meta(),
+        }
+
+    command = action.get("command")
+    if not isinstance(command, str) or not command.strip():
+        return _err("ssh_run requiert action.command (string)")
+    if not _ssh.ssh_enabled():
+        return _err("SSH désactivé : activer LBG_MCP_SSH_ENABLED=1 sur l'orchestrateur.", outcome="forbidden")
+
+    server_id = action.get("server_id") or action.get("target")
+    host = action.get("host")
+    if isinstance(host, str) and host.strip():
+        target_host = host.strip()
+    elif isinstance(server_id, str) and server_id.strip():
+        target_host = _resolve_host(server_id) or ""
+        if not target_host:
+            return _err(f"server_id inconnu : {server_id!r} (ex. linux-140/110/245, core/front/mmo)")
+    else:
+        return _err("ssh_run requiert action.server_id (ou action.host)")
+
+    if not _ssh.command_allowed(command):
+        return _err(f"commande SSH refusée (allowlist) : {command.strip()[:120]}", outcome="forbidden")
+
+    # Dry-run : on n'exécute rien sur la VM.
+    if dry_run:
+        _audit_devops(
+            trace_id=trace_id,
+            actor_id=actor_id,
+            action_kind="ssh_run",
+            dry_run=True,
+            dry_run_source=dr_src,
+            outcome="dry_run",
+            approval_gate_active=gated,
+        )
+        return {
+            "agent": "devops_executor",
+            "handler": "devops",
+            "actor_id": actor_id,
+            "request_text": text,
+            "ok": True,
+            "outcome": "dry_run",
+            "devops_action": dict(action),
+            "result": {
+                "kind": "ssh_run",
+                "ok": True,
+                "outcome": "dry_run",
+                "ssh_host": target_host,
+                "server_id": server_id if isinstance(server_id, str) else None,
+                "command": command.strip(),
+                "transport": "ssh",
+            },
+            "reply": f"SSH (dry-run) : {command.strip()[:80]} sur {target_host} — simulé, non exécuté.",
+            "meta": _meta(),
+        }
+
+    # Exécution réelle : exige l'approbation si un token est configuré.
+    if not _approval_granted(context):
+        _audit_devops(
+            trace_id=trace_id,
+            actor_id=actor_id,
+            action_kind="ssh_run",
+            dry_run=False,
+            dry_run_source=dr_src,
+            outcome="approval_denied",
+            approval_gate_active=gated,
+        )
+        return {
+            "agent": "devops_executor",
+            "handler": "devops",
+            "actor_id": actor_id,
+            "request_text": text,
+            "ok": False,
+            "outcome": "approval_required",
+            "approval_required": True,
+            "error": _approval_error(),
+            "devops_action": dict(action),
+            "meta": _meta(),
+        }
+
+    res = _ssh.run_ssh(target_host, command.strip())
+    _audit_devops(
+        trace_id=trace_id,
+        actor_id=actor_id,
+        action_kind="ssh_run",
+        dry_run=False,
+        dry_run_source=dr_src,
+        outcome="ok" if res.ok else "error",
+        approval_gate_active=gated,
+        error=None if res.ok else res.error,
+    )
+    return {
+        "agent": "devops_executor",
+        "handler": "devops",
+        "actor_id": actor_id,
+        "request_text": text,
+        "ok": res.ok,
+        "outcome": "ok" if res.ok else "error",
+        "error": None if res.ok else res.error,
+        "devops_action": dict(action),
+        "result": {
+            "kind": "ssh_run",
+            "ok": res.ok,
+            "ssh_host": target_host,
+            "server_id": server_id if isinstance(server_id, str) else None,
+            "command": res.command,
+            "stdout": res.stdout,
+            "stderr": res.stderr,
+            "exit_code": res.exit_code,
+            "transport": "ssh",
+        },
+        "reply": (
+            f"SSH {target_host} : {command.strip()[:80]} — {'OK' if res.ok else 'échec'}"
+            + (f" (exit {res.exit_code})" if not res.ok else "")
+        ),
+        "meta": _meta(),
+    }
+
+
 def default_action_from_text(text: str) -> dict[str, Any] | None:
     """Si le texte indique une sonde sans ``context.devops_action``, propose un http_get par défaut."""
     t = text.strip().lower()
+    if re.search(r"\b(remediat|remédiation|remediation|corrige|corriger|fix ops|plan ops)\b", t):
+        from lbg_agents.remediation import default_remediation_action_from_text
+
+        rem = default_remediation_action_from_text(text)
+        if rem is not None:
+            return {"kind": f"remediation_{rem.get('step', 'plan')}", "step": rem.get("step", "plan")}
     if re.search(
         r"\b(auto[-\s]?diagnostic|diagnostic\s+complet|sonde\s+complète|stack\s+health|health\s+check\s+complet)\b",
         t,

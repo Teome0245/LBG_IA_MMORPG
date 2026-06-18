@@ -6,7 +6,7 @@
 
 \- MMORPG multivers avec plusieurs planètes, chacune ayant ses propres règles physiques, technologiques et magiques.  
 
-\- Univers inspiré de : Gunnm, Cyberpunk, Albator, DragonBall Z, Discworld, Avatar le dernier maitre de l'aire, Free Guy, Firefly, Steampunk, Fullmetal Alchemist.  
+\- Univers inspiré de : Gunnm, Cyberpunk, Albator, DragonBall Z, Discworld, Avatar le dernier maitre de l'aire, Free Guy, Firefly, Steampunk, Fullmetal Alchemist, ShadowRun.  
 
 \- Joueurs humains + joueurs IA + un MJ IA capable de proposer des améliorations et d’assister les joueurs.  
 

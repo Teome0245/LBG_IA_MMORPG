@@ -806,6 +806,108 @@ async def pilot_proxy_orchestrator_brain_approve(payload: dict[str, object]) -> 
         return {"ok": False, "error": str(e)}
 
 
+class JobCreateBody(BaseModel):
+    """Corps pour `POST orchestrator /v1/jobs` (moteur de jobs autonome)."""
+
+    actor_id: str = Field(..., min_length=1)
+    objective: str = Field(..., min_length=1)
+    context: dict[str, object] = Field(default_factory=dict)
+    approval_token: str | None = None
+    auto_start: bool = True
+
+
+class JobApproveBody(BaseModel):
+    token: str = Field(..., min_length=1)
+
+
+def _orchestrator_base() -> str:
+    return os.environ.get("LBG_ORCHESTRATOR_URL", "http://127.0.0.1:8010").rstrip("/")
+
+
+@router.post("/jobs", tags=["pilot"])
+async def pilot_jobs_create(payload: JobCreateBody) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/jobs` (créer un job autonome)."""
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(f"{_orchestrator_base()}/v1/jobs", json=payload.model_dump())
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/jobs", tags=["pilot"])
+async def pilot_jobs_list(actor_id: str | None = None) -> dict[str, object]:
+    """Proxy same-origin vers `GET orchestrator /v1/jobs` (liste, filtre optionnel `actor_id`)."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{_orchestrator_base()}/v1/jobs", params={"actor_id": actor_id} if actor_id else None)
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/jobs/{job_id}", tags=["pilot"])
+async def pilot_jobs_get(job_id: str) -> dict[str, object]:
+    """Proxy same-origin vers `GET orchestrator /v1/jobs/{id}` (état complet)."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{_orchestrator_base()}/v1/jobs/{job_id}")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/jobs/{job_id}/approve", tags=["pilot"])
+async def pilot_jobs_approve(job_id: str, payload: JobApproveBody) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/jobs/{id}/approve`."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(f"{_orchestrator_base()}/v1/jobs/{job_id}/approve", json=payload.model_dump())
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/jobs/{job_id}/cancel", tags=["pilot"])
+async def pilot_jobs_cancel(job_id: str) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/jobs/{id}/cancel`."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(f"{_orchestrator_base()}/v1/jobs/{job_id}/cancel")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/jobs/{job_id}/advance", tags=["pilot"])
+async def pilot_jobs_advance(job_id: str) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/jobs/{id}/advance` (avancer d'une étape)."""
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            r = await client.post(f"{_orchestrator_base()}/v1/jobs/{job_id}/advance")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @router.post("/route", tags=["pilot"])
 async def pilot_route_intent_timed(payload: IntentRequest) -> dict[str, object]:
     """

@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "zone": "tatooine",
+  "templates": [
+    {
+      "id": "quest:mos_delivery_water",
+      "type": "delivery",
+      "title": "Livraison d'eau",
+      "brief": "Apporte une ration (fruit forage) au donneur de quete.",
+      "reward_item": "object/tangible/food/foraged/foraged_fruit_s2.iff",
+      "faction_rep": { "coalition": 5 }
+    },
+    {
+      "id": "quest:mos_repair_generator",
+      "type": "repair",
+      "title": "Reparation rapide",
+      "brief": "Va sur place (3520,-4788), confirme, puis reviens.",
+      "reward_item": "object/tangible/food/foraged/foraged_fruit_s3.iff",
+      "check_coords": { "x": 3520, "y": -4788, "z": 5, "radius_m": 12 },
+      "faction_rep": { "coalition": 8 }
+    },
+    {
+      "id": "quest:mos_investigate_noise",
+      "type": "investigate",
+      "title": "Enquete de quartier",
+      "brief": "Parle au garde [IA] puis reviens faire ton rapport.",
+      "reward_item": "object/tangible/food/foraged/foraged_fruit_s1.iff",
+      "faction_rep": { "coalition": 6, "arcanes": 2 }
+    },
+    {
+      "id": "quest:mos_gather_bar_fruit",
+      "type": "gather",
+      "title": "Recolte pour le bar",
+      "brief": "Rapporte 3 fruits forages au barman du comptoir cantina.",
+      "target_item": "object/tangible/food/foraged/foraged_fruit_s1.iff",
+      "target_count": 3,
+      "reward_item": "object/tangible/food/foraged/foraged_fruit_s2.iff",
+      "reward_credits": 150,
+      "faction_rep": { "coalition": 4 },
+      "giver_pilot_id": "npc:core3_barman_jax"
+    },
+    {
+      "id": "quest:mos_gather_bar_spice",
+      "type": "gather",
+      "title": "Epices du desert",
+      "brief": "Collecte des ingredients rares pour les cocktails du barman.",
+      "target_item": "object/tangible/food/foraged/foraged_fruit_s2.iff",
+      "target_count": 2,
+      "reward_item": "object/tangible/food/foraged/foraged_fruit_s3.iff",
+      "reward_credits": 200,
+      "faction_rep": { "coalition": 5 },
+      "giver_pilot_id": "npc:core3_barman_sira"
+    }
+  ]
+}

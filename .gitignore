@@ -27,3 +27,4 @@ LBG_IA_MMO/mmmorpg_server/uv.lock
 # Artefacts / exports locaux (ne pas versionner par défaut)
 Villages/
 **/*:Zone.Identifier
+Boite à idées/*.*

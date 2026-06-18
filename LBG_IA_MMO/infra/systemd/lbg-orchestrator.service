@@ -11,7 +11,11 @@ WorkingDirectory=/opt/LBG_IA_MMO/orchestrator
 # Surcharge : /etc/lbg-ia-mmo.env — LBG_METRICS_ENABLED=1 et optionnellement LBG_METRICS_TOKEN.
 Environment=LBG_METRICS_ENABLED=0
 EnvironmentFile=-/etc/lbg-ia-mmo.env
+EnvironmentFile=-/etc/lbg-core3-ia.env
 Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+# Pont Core3 Prime (VM 245) — boucle Lia si LBG_CORE3_LIA_AUTONOMY_ENABLED=1 dans lbg-core3-ia.env
+# Environment=LBG_CORE3_IA_SIDECAR_URL=http://192.168.0.245:8791
 # Appel POST http://127.0.0.1:8020/invoke pour agent.dialogue (service lbg-agent-dialogue)
 Environment=LBG_AGENT_DIALOGUE_URL=http://127.0.0.1:8020
 ExecStart=/opt/LBG_IA_MMO/.venv/bin/uvicorn main:app --host 0.0.0.0 --port 8010

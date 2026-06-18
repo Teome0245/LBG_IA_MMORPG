@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lbg-ws/server.zone_state_v2",
+  "title": "lbg-ws/2 zone_state (Core3 ZoneServer → Godot)",
+  "description": "Deltas temps réel depuis le hook ZoneServer. Remplace la lecture snapshot fichier en v2.",
+  "type": "object",
+  "required": ["type", "proto", "zone", "tick", "entities"],
+  "properties": {
+    "type": { "const": "zone_state" },
+    "proto": { "const": "lbg-ws/2" },
+    "zone": { "type": "string", "examples": ["tatooine"] },
+    "tick": { "type": "integer", "minimum": 0 },
+    "server_time_ms": { "type": "integer" },
+    "your_character_id": { "type": "integer", "description": "Personnage contrôlé par cette session WS" },
+    "session_policy": {
+      "type": "string",
+      "enum": ["single_client", "kick_other", "reject"],
+      "description": "Une session active par character_id sur la zone"
+    },
+    "entities": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/zone_entity" }
+    },
+    "removed_entity_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "static_revision": {
+      "type": "integer",
+      "description": "Version POI/collision statique côté client"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "zone_entity": {
+      "type": "object",
+      "required": ["id", "kind", "pos"],
+      "properties": {
+        "id": { "type": "string", "description": "player:<firstname> ou npc:<pilot_id>" },
+        "kind": { "enum": ["player", "npc"] },
+        "name": { "type": "string" },
+        "pos": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "type": "number" },
+          "description": "[x, hauteur, z] monde ou local selon cell"
+        },
+        "cell": { "type": "integer", "minimum": 0 },
+        "local_pos": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "type": "number" },
+          "description": "Coords cellule si in_interior"
+        },
+        "heading": { "type": "number" },
+        "velocity": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "type": "number" }
+        },
+        "appearance": {
+          "type": "object",
+          "properties": {
+            "species": { "type": "string" },
+            "height_m": { "type": "number" },
+            "gender": { "type": "string" },
+            "wearables": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": true
+        },
+        "anim": { "type": "string", "examples": ["idle", "walk"] },
+        "pilot_id": { "type": "string" },
+        "source": { "enum": ["core3", "gateway"] }
+      },
+      "additionalProperties": false
+    }
+  }
+}

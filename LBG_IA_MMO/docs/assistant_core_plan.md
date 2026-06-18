@@ -26,6 +26,12 @@ Le noyau cible doit remplacer les reponses passives du type "je ne peux rien fai
 - `~/projects/LBG_IA/` reste une **source en lecture** : on y reprend les bons patterns, pas une seconde stack a maintenir.
 - Les modules existants `desktop_control`, `agent.desktop`, workers Windows/Linux, `agent.devops`, `agent.pm`, `Lyra` et `mmmorpg_server` sont des briques a consolider, pas a remplacer brutalement.
 
+### Routage LLM (reseau + config seulement)
+
+- **Decision** : aligner **URLs**, **cles API** et **modeles** entre LBG_IA (providers historiques) et le dialogue monorepo via l’environnement, **sans** exiger un port du `RouterIA` / des modules `providers/` dans `LBG_IA_MMO/`.
+- **Exigence produit** : un **routeur LLM unique** dans le monorepo **n’est pas** au catalogue ; la convergence par **config** (`lbg.env`) suffit.
+- **Operational** : pour `lbg_agents` (`dialogue_llm.py`), renseigner `LBG_DIALOGUE_FAST_*` et `LBG_DIALOGUE_REMOTE_*` (plus `LBG_DIALOGUE_AUTO_ORDER`, failover, budget) avec les **memes** endpoints OpenAI-compatibles (`…/v1`) et jetons que ceux utilises par la stack LBG_IA pour Groq, OpenRouter, etc. Detail des variables : `infra/secrets/lbg.env.example`, `agents/README.md`. Un catalogue ou routeur partage dans le monorepo reste **hors scope** tant qu’aucune nouvelle exigence ne le demande.
+
 ### Modes separes
 
 - `local_assistant` : actions poste, fichiers, web, mail, infra du proprietaire.
@@ -255,6 +261,39 @@ Livrables :
 - [x] proposition d'actions de developpement du MMO sous forme de plan/patch (forge sandbox), jamais auto-merge ;
 - [x] trace explicite quand une idee vient du MMO (`mmo_trace`, `source: mmo_session_bridge`) ;
 - [x] tests de non-fuite : proposition MMO pont sans `desktop_action` ; isolation persona formalisee dans l'ADR (hors scope : audit runtime dialogue).
+
+### Jalon 7 — Moteur de jobs autonome ("type Cowork", sous garde-fous)
+
+Statut : **premier increment livre**. L'orchestrateur sait maintenant transformer un **objectif en langage naturel** en un **plan multi-etapes**, l'executer **en tache de fond** et **se corriger** (retry borne) — l'ecart cle avec un agent autonome facon *Claude Cowork*, mais sans jamais contourner la policy d'actions.
+
+Objectif : remplacer le chainage **manuel** (proposition → route → reinjection) par une boucle **objectif → plan → execution → observation → correction**, pilotable et reprenable.
+
+Composants livres :
+
+- **Planner** (`orchestrator/services/planner.py`) : decoupe l'objectif en clauses puis reutilise `propose_action_from_text` (meme brique que `POST /v1/action-proposal`) pour mapper chaque clause sur une **capability du registry**. Planner **LLM optionnel** opt-in (`LBG_JOBS_PLANNER_LLM`) qui produit un plan JSON revalide contre une allowlist ; repli deterministe systematique. Allowlist de planification : `npc_dialogue`, `project_pm`, `devops_probe`, `desktop_control`, `prototype_game`, `unknown`.
+- **Moteur de jobs** (`orchestrator/services/jobs.py`) : modele `Job` / `JobStep` avec machine a etats (`queued → planning → running → waiting_approval → done/failed/cancelled`), persistance best-effort JSON (`LBG_JOBS_STATE_PATH`), timeline d'evenements (`orchestrator.jobs.*`), boucle **observe→agit→corrige** (`advance_job`, pur et testable) et **runner daemon** (`ensure_started`, gate `LBG_JOBS_RUNNER_ENABLED`, **off par defaut** comme le Brain).
+- **API** (`orchestrator/router/routes/jobs.py`) : `POST /v1/jobs`, `GET /v1/jobs`, `GET /v1/jobs/{id}`, `POST /v1/jobs/{id}/approve`, `.../cancel`, `.../advance`.
+
+Garde-fous (ce qui distingue de Cowork "grand public") :
+
+- chaque etape passe par `evaluate_action_policy` **avant** dispatch ;
+- perimetre restreint du premier increment : actions a effet de bord **forcees en dry-run** ;
+- autonomie **semi-auto par token** : un job peut etre **pre-autorise** (`approval_token` valide vs `LBG_JOBS_APPROVAL_TOKEN`) pour enchainer une action reelle ; sinon l'etape a risque met le job en `waiting_approval` (reprise via `/approve`), jamais d'action en aveugle ;
+- aucune auto-modification du tronc (ADR 0003 / 0004 respectes : forge OpenGame en dry-run, pas d'auto-merge).
+
+Livrables :
+
+- [x] modele `Job` / `JobStep` persistant + machine a etats ;
+- [x] planner deterministe (objectif → etapes mappees registry) + planner LLM optionnel borne ;
+- [x] runner daemon de fond + avancement pur `advance_job` ;
+- [x] boucle d'auto-correction (retry borne `LBG_JOBS_STEP_MAX_ATTEMPTS`) ;
+- [x] gate token semi-auto + pause `waiting_approval` / reprise `/approve` ;
+- [x] endpoints `/v1/jobs*` ;
+- [x] tests `orchestrator/tests/test_jobs.py` (plan, execution, auto-correction, pause/approve, annulation) ;
+- [x] vue Pilot `#/jobs` (creation, liste, timeline live, approbation/annulation/avance en un clic) — proxies `/v1/pilot/jobs*` ;
+- [x] elargissement du perimetre aux actions a effet de bord reelles sous token, **capability par capability** (`LBG_JOBS_REAL_CAPABILITIES`) ;
+- [x] persistance **Redis** optionnelle (`LBG_JOBS_REDIS_URL`), prioritaire sur le JSON, fallback fichier/memoire ;
+- [x] indexation Redis par job (cle par job `{prefix}:job:{id}` + set d'index `{prefix}:index`) au lieu d'un snapshot unique, pour le multivers a grande echelle (`LBG_JOBS_REDIS_LAYOUT=index`, defaut ; `LBG_JOBS_REDIS_PREFIX`).
 
 ## Tests
 

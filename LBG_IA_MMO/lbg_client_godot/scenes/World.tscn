@@ -1,0 +1,111 @@
+[gd_scene load_steps=9 format=3 uid="uid://bworld01"]
+
+[ext_resource type="Script" path="res://scenes/World.gd" id="1_world"]
+[ext_resource type="PackedScene" uid="uid://cantina_interior01" path="res://scenes/world/CantinaInterior.tscn" id="2_cantina"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.12, 0.15, 0.22, 1)
+sky_horizon_color = Color(0.35, 0.38, 0.42, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 2
+ambient_light_color = Color(0.55, 0.58, 0.65, 1)
+ambient_light_energy = 0.45
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.18, 0.28, 0.16, 1)
+uv1_scale = Vector3(40, 40, 40)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(320, 320)
+subdivide_width = 32
+subdivide_depth = 32
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_marker"]
+top_radius = 0.35
+bottom_radius = 0.35
+height = 0.08
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
+albedo_color = Color(0.2, 0.85, 1, 1)
+emission_enabled = true
+emission = Color(0.1, 0.5, 0.8, 1)
+
+[node name="World" type="Node3D"]
+script = ExtResource("1_world")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 18, 0)
+light_energy = 1.1
+shadow_enabled = true
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="CantinaInterior" parent="." instance=ExtResource("2_cantina")]
+visible = false
+
+[node name="Entities" type="Node3D" parent="."]
+
+[node name="ClickMarker" type="MeshInstance3D" parent="."]
+visible = false
+mesh = SubResource("CylinderMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 10, 10)
+fov = 50.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="HUD" type="Label" parent="CanvasLayer"]
+mouse_filter = 2
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 900.0
+offset_bottom = 32.0
+theme_override_font_sizes/font_size = 16
+text = "Monde LBG"
+
+[node name="TargetLabel" type="Label" parent="CanvasLayer"]
+mouse_filter = 2
+offset_left = 12.0
+offset_top = 34.0
+offset_right = 700.0
+offset_bottom = 58.0
+theme_override_colors/font_color = Color(0.7, 1, 0.75, 1)
+theme_override_font_sizes/font_size = 15
+text = "Cible: —"
+
+[node name="ChatPanel" type="VBoxContainer" parent="CanvasLayer"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -200.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+
+[node name="ChatLog" type="RichTextLabel" parent="CanvasLayer/ChatPanel"]
+mouse_filter = 2
+custom_minimum_size = Vector2(0, 140)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true
+
+[node name="ChatInput" type="LineEdit" parent="CanvasLayer/ChatPanel"]
+layout_mode = 2
+placeholder_text = "Entrée dialogue | Clic sol bouger | Clic droit caméra"

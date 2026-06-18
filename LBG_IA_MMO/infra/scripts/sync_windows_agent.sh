@@ -37,5 +37,13 @@ if [ ! -f "$DST/desktop.env" ]; then
   cp -f "$SRC/desktop.env" "$DST/desktop.env"
 fi
 
+# Pipeline Murrik texture (DDS -> ComfyUI -> DDS)
+INFRA="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LBG_MMO="$(cd "${INFRA}/../.." && pwd)"
+mkdir -p "$DST/workflows" "$DST/tools"
+cp -f "$INFRA/murrik_texture_dds_to_dds.ps1" "$DST/murrik_texture_dds_to_dds.ps1"
+cp -f "${LBG_MMO}/infra/workflows/murrik_texture_reskin_tile_v2_api.json" "$DST/workflows/murrik_texture_reskin_tile_v2_api.json"
+cp -f "$INFRA/tools/gimp_dds_convert.scm" "$DST/tools/gimp_dds_convert.scm"
+
 echo "OK: sync -> $DST"
 

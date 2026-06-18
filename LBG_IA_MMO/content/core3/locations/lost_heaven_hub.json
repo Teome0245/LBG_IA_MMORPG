@@ -1,0 +1,238 @@
+{
+  "schema_version": 1,
+  "location_id": "loc:lost_heaven_hub",
+  "zone_id": "tatooine",
+  "display_zone": "Scrapaltai",
+  "display_city": "Lost Heaven",
+  "description": "Hub principal LBG — désert est, remplace Mos Eisley comme ville de départ et centre PNJ IA.",
+  "status": "build_script_ready",
+  "world_anchor": {
+    "x": 4749,
+    "y": -737,
+    "z": 1
+  },
+  "anchor_notes": {
+    "rationale": "Dune Sea est (~4,5 km de Mos Eisley) — recon IG Teome 2026-06-01, carte + /way.",
+    "region_ref": "@tatooine_region_names:e_dune_sea_3 (tatooine_regions.lua)",
+    "recon_required": false,
+    "recon_by": "Teome",
+    "recon_at": "2026-06-01",
+    "ig_way": "4749 -737"
+  },
+  "new_player_spawn": {
+    "status": "active_lua_redirect",
+    "replaces_starting_city": "mos_eisley",
+    "implementation": [
+      "datatables/creation/starting_locations.iff — entrée lost_heaven",
+      "optionnel: ia_bridge teleport premier login si IFF pas encore patché"
+    ],
+    "world": {
+      "x": 4749,
+      "y": -537,
+      "z": 1,
+      "heading": 0,
+      "cell": 0
+    },
+    "label": "Shuttleport Lost Heaven (sud, 100 m de la place bazar)"
+  },
+  "poi_buildings": [
+    {
+      "poi_id": "poi:lost_heaven_starport",
+      "role": "starport_shuttle",
+      "label": "Port shuttle",
+      "status": "script_deploy",
+      "priority": 1,
+      "world_offset": {
+        "x": 0,
+        "y": 200,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/shuttleport_tatooine.iff",
+      "notes": "Spawn nouveau joueur — aligner sur new_player_spawn.world"
+    },
+    {
+      "poi_id": "poi:lost_heaven_cantina",
+      "role": "cantina",
+      "label": "Cantina",
+      "status": "script_deploy",
+      "priority": 2,
+      "world_offset": {
+        "x": 100,
+        "y": 100,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/cantina_tatooine.iff",
+      "migration_from": "roster:mos_eisley_cantina_barman",
+      "building_cell_tbd": true
+    },
+    {
+      "poi_id": "poi:lost_heaven_inn",
+      "role": "inn",
+      "label": "Auberge",
+      "status": "script_deploy",
+      "priority": 3,
+      "world_offset": {
+        "x": -100,
+        "y": 100,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/hotel_tatooine_general.iff"
+    },
+    {
+      "poi_id": "poi:lost_heaven_bank",
+      "role": "bank",
+      "label": "Banque",
+      "status": "script_deploy",
+      "priority": 4,
+      "world_offset": {
+        "x": -200,
+        "y": 0,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/bank_tatooine.iff"
+    },
+    {
+      "poi_id": "poi:lost_heaven_market",
+      "role": "shops",
+      "label": "Marché / commerces",
+      "status": "script_deploy",
+      "priority": 5,
+      "world_offset": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/guild_commerce_tatooine_style_01.iff"
+    },
+    {
+      "poi_id": "poi:lost_heaven_artisan_hall",
+      "role": "trainer_artisan",
+      "label": "Atelier artisan",
+      "status": "script_deploy",
+      "priority": 6,
+      "world_offset": {
+        "x": 200,
+        "y": 0,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/housing_tatt_style01_med.iff",
+      "migration_from": "roster:mos_trainer_artisan"
+    },
+    {
+      "poi_id": "poi:lost_heaven_training_hall",
+      "role": "trainers_combat",
+      "label": "Hall d'entraînement",
+      "status": "script_deploy",
+      "priority": 7,
+      "world_offset": {
+        "x": 100,
+        "y": -100,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/guild_combat_tatooine_style_01.iff",
+      "migration_from": [
+        "roster:mos_trainer_brawler",
+        "roster:mos_trainer_marksman",
+        "roster:mos_trainer_scout",
+        "roster:mos_trainer_medic",
+        "roster:mos_trainer_politician"
+      ]
+    },
+    {
+      "poi_id": "poi:lost_heaven_clinic",
+      "role": "clinic",
+      "label": "Clinique",
+      "status": "script_deploy",
+      "priority": 8,
+      "world_offset": {
+        "x": -100,
+        "y": -100,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/hospital_tatooine.iff"
+    },
+    {
+      "poi_id": "poi:lost_heaven_mission_post",
+      "role": "mission_terminal",
+      "label": "Bureau des missions",
+      "status": "script_deploy",
+      "priority": 9,
+      "world_offset": {
+        "x": 200,
+        "y": -200,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/salon_tatooine.iff"
+    },
+    {
+      "poi_id": "poi:lost_heaven_housing_npc",
+      "role": "npc_housing_block",
+      "label": "Logements PNJ",
+      "status": "script_deploy",
+      "priority": 10,
+      "world_offset": {
+        "x": -200,
+        "y": 200,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/housing_tatt_style01_small.iff",
+      "notes": "Pas housing joueur — world_poi ou instances scriptées"
+    },
+    {
+      "poi_id": "poi:lost_heaven_gate",
+      "role": "city_gate",
+      "label": "Porte / palissade",
+      "status": "script_deploy",
+      "priority": 11,
+      "world_offset": {
+        "x": 0,
+        "y": -300,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/filler_building_block_64x32_style_01.iff"
+    },
+    {
+      "poi_id": "poi:lost_heaven_town_hall",
+      "role": "town_hall",
+      "label": "Mairie",
+      "status": "script_deploy",
+      "priority": 12,
+      "world_offset": {
+        "x": 0,
+        "y": -200,
+        "z": 0
+      },
+      "structure_template": "object/building/tatooine/capitol_tatooine.iff"
+    }
+  ],
+  "deprecation": {
+    "mos_eisley_hub": {
+      "locations": [
+        "mos_eisley_cantina_bar",
+        "mos_eisley_training_center"
+      ],
+      "policy": "Pas de nouveau contenu ; migration vers poi:lost_heaven_* puis statut deprecated"
+    }
+  },
+  "auto_build": {
+    "screenplay": "LbgLostHeavenScreenPlay",
+    "lua": "content/core3/lua/lbg_lost_heaven_screenplay.lua",
+    "world_poi_export": "content/core3/world_poi/scrapaltai.json",
+    "trigger": "zone_boot_poll + player_login_tatooine",
+    "terrain": {
+      "method": "scrapaltai_layout_editor",
+      "layout_id": "scrapaltai_v7_default",
+      "grid_spacing_m": 100,
+      "civic_center_poi": "poi:lost_heaven_market",
+      "theater_step_m": 50,
+      "theater_half_cells": 9,
+      "terrain_mod_step_m": 50,
+      "terrain_mod_half_cells": 9,
+      "lay_file": "terrain/poi_small.lay"
+    }
+  },
+  "player_housing": {
+    "status": "future_adr",
+    "note": "Ne pas enregistrer les logements joueurs dans world_poi — règle ADR 0009 + 0008"
+  }
+}

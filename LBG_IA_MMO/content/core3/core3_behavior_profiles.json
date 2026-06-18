@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "profiles": {
+    "profile:orchestrator_social_v1": {
+      "label": "Incarnation orchestrateur — cantina / social",
+      "kind": "orchestrator",
+      "profession_current": "entertainer",
+      "profession_secondary": "artisan",
+      "progression_goals": ["entertainer_master", "artisan_novice", "commerce_bazaar"],
+      "scenes": [
+        {
+          "id": "social_greet",
+          "orchestrator": "Tour social obligatoire. {status} Action attendue : interact avec message='greet:{first_online}' (approche et ouvre une interaction). Pas de say si tu as deja salue recemment."
+        },
+        {
+          "id": "welcome",
+          "orchestrator": "Tour accueil. {status} Action attendue : perform message=greet ou animate wave. Ne dis pas 'Bienvenue sur Tatooine' en boucle."
+        },
+        {
+          "id": "cantina_dance",
+          "orchestrator": "Tour danse cantina. {status} Tu es en cantina Mos Eisley : perform message=dance (vraie danse entertainer avec flourish). Pas de forage ni say."
+        },
+        {
+          "id": "spectacle",
+          "orchestrator": "Tour spectacle. {status} Action attendue : perform message=dance ou dance_floor (flourish entertainer). Pas de forage. Pas de phrase si personne ne t'a parle."
+        },
+        {
+          "id": "artisan_secondary",
+          "orchestrator": "Tour artisan — second metier. {status} Objectif : monter artisan novice. interact message='examine:trainer' ou move_to vers centre d'entrainement Mos Eisley. perform message=think si aucun instructeur visible."
+        },
+        {
+          "id": "commerce_intro",
+          "orchestrator": "Tour commerce — debut bazar. {status} Si inventaire non vide : vendor_buy via interact au comptoir (npc barman) item index 0 pour apprendre l'economie. Sinon perform message=dance pour gagner des credits spectacle."
+        },
+        {
+          "id": "entertainer_progress",
+          "orchestrator": "Tour entertainer — progression danseur. {status} Objectif long terme : devenir maitre danseur. Si tu es en cantina ou Mos Eisley : perform message=dance puis interact message='examine:entertainer'. Sinon move_to vers Mos Eisley. Pas de say sauf salut bref."
+        },
+        {
+          "id": "presence",
+          "orchestrator": "Tour presence. {status} Si {first_online} est en ligne : interact message='assist:{first_online}' ou examine:{first_online}. Sinon perform message=think."
+        }
+      ]
+    },
+    "profile:entertainer_bar_v1": {
+      "label": "Entertainer au bar / cantina",
+      "kind": "player",
+      "profession_current": "entertainer",
+      "profession_secondary": "artisan",
+      "progression_goals": ["entertainer_master", "artisan_novice", "commerce_bazaar"],
+      "scenes": [
+        {
+          "id": "dance",
+          "player": "perform message=dance ou dance_floor — progression danseur entertainer.",
+          "npc": "npc_perform message=wipe_brow puis npc_say message='Un peu de musique ?'"
+        },
+        {
+          "id": "trainer_artisan",
+          "player": "interact message='examine:trainer' pour le second metier {profession_secondary} au centre d'entrainement Mos Eisley.",
+          "npc": "npc_say message='Je peux vous renseigner sur les metiers du coin.'"
+        },
+        {
+          "id": "commerce_buy",
+          "player": "vendor_buy item 0 au barman (debut commerce) si inventaire non vide.",
+          "npc": "npc_say message='Que desirez-vous au comptoir ?'"
+        },
+        {
+          "id": "cantina_presence",
+          "player": "housing_enter message=cantina si Gally est en ligne et tu es dehors.",
+          "npc": "npc_path message=post — rester au comptoir."
+        },
+        {
+          "id": "assist",
+          "player": "interact message=assist:Gally si Gally est en ligne.",
+          "npc": "npc_say message='Bienvenue a la cantina.'"
+        },
+        {
+          "id": "greet",
+          "player": "perform message=greet puis say une observation courte sans accents.",
+          "npc": "npc_say message='Salut voyageur, installez-vous.'"
+        }
+      ]
+    },
+    "profile:artisan_gather_v1": {
+      "label": "Artisan exterieur — collecte ressources",
+      "kind": "player",
+      "profession_current": "artisan",
+      "profession_secondary": "entertainer",
+      "progression_goals": ["artisan_novice", "forage_economy", "commerce_bazaar"],
+      "scenes": [
+        {
+          "id": "forage",
+          "player": "perform message=forage — collecte ressources artisan en exterieur Mos Eisley. Priorite absolue dehors."
+        },
+        {
+          "id": "gather_search",
+          "player": "perform message=search si forage indisponible — fouille le desert pour matieres."
+        },
+        {
+          "id": "recon_move",
+          "player": "move_to x=3520 y=-4810 z=5 si tu es dehors — elargir la zone de collecte."
+        },
+        {
+          "id": "vendor_sell_intro",
+          "player": "vendor_sell item 0 au barman si inventaire plein (debut revente artisan)."
+        },
+        {
+          "id": "trainer_visit",
+          "player": "interact message='examine:trainer' seulement apres un tour forage reussi — visite courte centre entrainement."
+        },
+        {
+          "id": "craft_think",
+          "player": "perform message=think — planifier combinaison craft quand assez de ressources."
+        }
+      ],
+      "scenes_inventory_full": [
+        {
+          "id": "search_only",
+          "player": "perform message=search (inventaire plein, pas de forage)."
+        },
+        {
+          "id": "vendor_sell",
+          "player": "vendor_sell item 0 au barman cantina — vider surplus fruits de forage."
+        },
+        {
+          "id": "recon_move",
+          "player": "move_to x=3528 y=-4804 z=5 vers Mos Eisley si bloquee dehors."
+        }
+      ]
+    },
+    "profile:scout_outdoor_v1": {
+      "label": "Scout exterieur — recon et economie",
+      "kind": "player",
+      "profession_current": "scout",
+      "profession_secondary": "marksman",
+      "progression_goals": ["scout_skills", "marksman_novice", "forage_economy"],
+      "scenes": [
+        {
+          "id": "forage",
+          "player": "perform message=forage — scout exterieur Mos Eisley, priorite absolue si tu es dehors. Pas d interact examine.",
+          "npc": "npc_say message='*observe le desert*'"
+        },
+        {
+          "id": "examine_gally",
+          "player": "perform message=forage si tu es dehors. interact message=examine:Gally seulement si Gally est a portee et tu as fini un tour forage.",
+          "npc": "npc_say message='Le vent souffle fort dehors.'"
+        },
+        {
+          "id": "recon_move",
+          "player": "move_to x=3465 y=-4795 z=5 seulement si tu es dehors — recon scout.",
+          "npc": "npc_path message=home"
+        },
+        {
+          "id": "marksman_trainer",
+          "player": "interact message='examine:trainer' pour viser le second metier marksman.",
+          "npc": "npc_say message='La cible est la-bas, novice.'"
+        },
+        {
+          "id": "vendor_intro",
+          "player": "vendor_buy item 0 au barman si inventaire plein (debut revente) — sinon perform message=search.",
+          "npc": "npc_say message='Je rachete du butin si vous en avez.'"
+        },
+        {
+          "id": "scout_observe",
+          "player": "say une observation scout nouvelle, sans accents, maximum 12 mots.",
+          "npc": "npc_say message='Piste fraiche par ici.'"
+        }
+      ],
+      "scenes_inventory_full": [
+        {
+          "id": "search_only",
+          "player": "perform message=search (inventaire plein, pas de forage)."
+        },
+        {
+          "id": "examine_gally",
+          "player": "interact message=examine:Gally si Gally est en ligne."
+        },
+        {
+          "id": "approach",
+          "player": "approach_player message=Gally si Gally est en ligne."
+        },
+        {
+          "id": "scout_say",
+          "player": "say une observation scout courte, sans accents, maximum 12 mots."
+        }
+      ]
+    },
+    "profile:cantina_vendor_v1": {
+      "label": "Barman cantina — comptoir vivant",
+      "kind": "npc",
+      "profession_current": "vendor",
+      "role": "vendor",
+      "progression_goals": ["commerce_bazaar", "rep:cantina_bar"],
+      "scenes": [
+        {
+          "id": "welcome",
+          "npc": "npc_say message='Que puis-je vous servir ?' — accueil court au comptoir."
+        },
+        {
+          "id": "bar_dance",
+          "npc": "npc_perform message=dance — danse cantina au comptoir (geste bartender vivant)."
+        },
+        {
+          "id": "wipe_glass",
+          "npc": "npc_perform message=wipe_brow — geste comptoir sans parler."
+        },
+        {
+          "id": "polish_post",
+          "npc": "npc_path message=post — ajuster position au bar."
+        },
+        {
+          "id": "offer_drink",
+          "npc": "npc_say message='Jus desert ou cocktail ME a prix doux.'"
+        },
+        {
+          "id": "buyback_hint",
+          "npc": "npc_say message='Je rachete le butin de forage si vous vendez.' — annonce vendor_sell MVP."
+        },
+        {
+          "id": "quest_hook",
+          "npc": "offer_quest message=Gally|quest:mos_gather_bar_fruit — proposition quete locale."
+        }
+      ]
+    },
+    "profile:trainer_artisan_v1": {
+      "label": "Instructeur artisan ME — derive entertainer/commerce",
+      "kind": "npc",
+      "profession_current": "artisan",
+      "profession_secondary": "entertainer",
+      "role": "trainer",
+      "progression_goals": ["artisan_novice", "train_players", "craft_demo"],
+      "scenes": [
+        {
+          "id": "train_bark",
+          "npc": "npc_say message='L artisanat demande patience et precision.' — consigne courte."
+        },
+        {
+          "id": "demo_gesture",
+          "npc": "npc_perform message=wipe_brow — demonstration geste atelier."
+        },
+        {
+          "id": "post_adjust",
+          "npc": "npc_path message=post — rester au poste d entrainement."
+        },
+        {
+          "id": "examine_hint",
+          "npc": "npc_say message='Examinez le trainer pour apprendre artisan novice.'"
+        },
+        {
+          "id": "craft_talk",
+          "npc": "npc_say message='Combinez vos ressources au workbench quand vous serez pret.'"
+        },
+        {
+          "id": "commerce_link",
+          "npc": "npc_say message='Vendez vos creations au barman cantina pour vos premiers credits.'"
+        }
+      ]
+    },
+    "profile:brawler_train_v1": {
+      "label": "Brawler exterieur — entrainement et second metier medic",
+      "kind": "player",
+      "profession_current": "brawler",
+      "profession_secondary": "medic",
+      "progression_goals": ["brawler_novice", "medic_novice", "forage_economy"],
+      "scenes": [
+        {
+          "id": "forage",
+          "player": "perform message=forage — collecte ressources autour du centre d'entrainement."
+        },
+        {
+          "id": "trainer_brawler",
+          "player": "interact message='examine:trainer' au centre entrainement Mos Eisley."
+        },
+        {
+          "id": "recon_yard",
+          "player": "move_to x=3465 y=-4682 z=5 — cour d'entrainement."
+        },
+        {
+          "id": "vendor_sell_intro",
+          "player": "vendor_sell item 0 au comptoir si inventaire plein."
+        },
+        {
+          "id": "social_spar",
+          "player": "say invitation courte au sparring, sans accents."
+        }
+      ]
+    }
+  }
+}

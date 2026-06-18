@@ -35,6 +35,14 @@ if [[ -n "${LBG_SSH_IDENTITY:-}" ]]; then
   SSH_OPTS=( -i "${LBG_SSH_IDENTITY}" "${SSH_OPTS[@]}" )
 fi
 
+# Stratégie “comme deploy_vm.sh” : connexion SSH persistante (plus rapide/stable)
+# et sudo strictement non-interactif (NOPASSWD requis).
+SSH_OPTS+=(
+  -o ControlMaster=auto
+  -o ControlPersist=5m
+  -o "ControlPath=/tmp/lbg_ia_mmo_%r@%h:%p"
+)
+
 if [[ ! -f "${CONF_LOCAL}" ]]; then
   echo "Fichier introuvable : ${CONF_LOCAL}" >&2
   exit 1
@@ -50,10 +58,17 @@ scp "${SSH_OPTS[@]}" "${TMP_CONF}" "${VM_USER}@${VM_HOST}:/tmp/${REMOTE_TMP}"
 
 REMOTE_SCRIPT=$(cat <<EOS
 set -euo pipefail
-echo "Sudo auth (VM front)"
-sudo -v
+echo "Vérification sudo non-interactif (NOPASSWD requis)…"
+if ! sudo -n true 2>/dev/null; then
+  echo "ERROR: sudo demande un mot de passe sur ${VM_HOST}." >&2
+  echo "Attendu: compte ${VM_USER} sudoer avec NOPASSWD (même stratégie que deploy_vm.sh)." >&2
+  echo "Fix rapide: sur la VM, ajouter une règle sudoers pour ${VM_USER} (ex: /etc/sudoers.d/${VM_USER})." >&2
+  exit 10
+fi
+
 sudo -n apt-get update -qq
-sudo -n DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nginx
+# Sur certaines VMs, sudoers interdit de propager DEBIAN_FRONTEND.
+sudo -n apt-get install -y -qq nginx
 sudo -n install -m 644 /tmp/${REMOTE_TMP} /etc/nginx/sites-available/${SITE}
 sudo -n rm -f /tmp/${REMOTE_TMP}
 sudo -n rm -f /etc/nginx/sites-enabled/default

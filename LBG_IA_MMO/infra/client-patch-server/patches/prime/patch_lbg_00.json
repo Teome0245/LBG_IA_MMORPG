@@ -1,0 +1,9 @@
+{
+  "command": "lbgwe",
+  "tre_path": "datatables/command/client_command_table.iff",
+  "tre_file": "patch_lbg_00.tre",
+  "rows": 71,
+  "added": true,
+  "template": "dumpPausedCommands",
+  "source_iff": "/home/sdesh/projects/new_mmo/modding_tools/patch_fr_workspace/orig_extracted/datatables/command/client_command_table.iff"
+}

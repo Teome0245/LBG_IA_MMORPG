@@ -6,6 +6,7 @@ set -euo pipefail
 # Rôles (LBG_DEPLOY_ROLE) :
 #   core  — backend, orchestrator, agents, pilot_web (optionnel) ; **sans** mmo_server/ sur le disque
 #   mmo   — **mmo_server** (HTTP Lyra) + **mmmorpg_server** (WebSocket jeu) + unités systemd associées
+#           (serveur Core3 / MMOCoreORB du repo **new_mmo** : script séparé `infra/scripts/rsync_new_mmo_core3_orb.sh`, en pratique même VM MMO **245**)
 #   front — **pilot_web/** statique uniquement (ex. VM 110 ; API reste sur core)
 #   all   — enchaîne core → mmo → front sur les hôtes LBG_LAN_HOST_* (voir ci‑dessous)
 #
@@ -92,7 +93,7 @@ case "${DEPLOY_ROLE}" in
     RSYNC_EXCLUDES+=(
       --exclude "backend/"
       --exclude "orchestrator/"
-      --exclude "agents/"
+      --exclude "agents/tests/"
       --exclude "pilot_web/"
     )
     ;;
@@ -167,12 +168,12 @@ ${REMOTE_PROMOTE}
   fi
   sudo -n chown -R ${SERVICE_USER}:${SERVICE_USER} \"${REMOTE_DIR}\"
   sudo -n -u ${SERVICE_USER} -H bash -c \"cd \\\"${REMOTE_DIR}\\\" && LBG_SKIP_MMO_SERVER=1 bash infra/scripts/install_local.sh\"
-  for u in lbg-agent-dialogue.service lbg-agent-quests.service lbg-agent-combat.service lbg-agent-pm.service lbg-orchestrator.service lbg-backend.service; do
+  for u in lbg-agent-dialogue.service lbg-agent-quests.service lbg-agent-combat.service lbg-agent-pm.service lbg-orchestrator.service lbg-backend.service lbg-companion-bot.service; do
     if [ ! -f \"infra/systemd/\$u\" ]; then echo ERROR missing \$u; exit 1; fi
     sudo -n cp \"infra/systemd/\$u\" /etc/systemd/system/
   done
   sudo -n systemctl daemon-reload
-  for u in lbg-agent-dialogue lbg-agent-quests lbg-agent-combat lbg-agent-pm lbg-orchestrator lbg-backend; do
+  for u in lbg-agent-dialogue lbg-agent-quests lbg-agent-combat lbg-agent-pm lbg-orchestrator lbg-backend lbg-companion-bot; do
     sudo -n systemctl enable --now \"\$u\"
     sudo -n systemctl restart \"\$u\"
   done
@@ -189,9 +190,9 @@ ${REMOTE_PROMOTE}
     sudo -n apt-get install -y \"python\${PY_VER}-venv\" python3-venv
   fi
   sudo -n chown -R ${SERVICE_USER}:${SERVICE_USER} \"${REMOTE_DIR}\"
-  # Persistance MMO/WS (évite les Permission denied sur /var/lib/lbg/*)
-  sudo -n mkdir -p /var/lib/lbg/mmmorpg /var/lib/lbg/mmo
-  sudo -n chown -R ${SERVICE_USER}:${SERVICE_USER} /var/lib/lbg/mmmorpg /var/lib/lbg/mmo
+  # Persistance MMO/WS + jobs autonomes (évite les Permission denied sur /var/lib/lbg/*)
+  sudo -n mkdir -p /var/lib/lbg/mmmorpg /var/lib/lbg/mmo /var/lib/lbg/jobs
+  sudo -n chown -R ${SERVICE_USER}:${SERVICE_USER} /var/lib/lbg/mmmorpg /var/lib/lbg/mmo /var/lib/lbg/jobs
   sudo -n -u ${SERVICE_USER} -H bash -c \"cd \\\"${REMOTE_DIR}\\\" && bash infra/scripts/install_local_mmo.sh\"
   if [ ! -f infra/systemd/lbg-mmo-server.service ]; then echo ERROR lbg-mmo-server.service; exit 1; fi
   if [ ! -f infra/systemd/lbg-mmmorpg-ws.service ]; then echo ERROR lbg-mmmorpg-ws.service; exit 1; fi

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "layout_id": "scrapaltai_v7_default",
+  "label": "Lost Heaven v7 — bazar centre, grille 100 m",
+  "zone_id": "tatooine",
+  "civic_center_poi": "poi:lost_heaven_market",
+  "anchor": { "x": 4809, "y": -802, "z": 9 },
+  "grid_spacing_m": 100,
+  "plateau": {
+    "theater_step_m": 48,
+    "theater_half_cells": 6,
+    "terrain_mod_step_m": 48,
+    "terrain_mod_half_cells": 6,
+    "lay_file": "terrain/poi_small.lay"
+  },
+  "buildings": [
+    { "poi_id": "poi:lost_heaven_market", "ox": 0, "oy": 0 },
+    { "poi_id": "poi:lost_heaven_bank", "ox": -100, "oy": 0 },
+    { "poi_id": "poi:lost_heaven_cantina", "ox": 100, "oy": 0 },
+    { "poi_id": "poi:lost_heaven_inn", "ox": 0, "oy": 100 },
+    { "poi_id": "poi:lost_heaven_starport", "ox": 0, "oy": -100 },
+    { "poi_id": "poi:lost_heaven_training_hall", "ox": 100, "oy": 100 },
+    { "poi_id": "poi:lost_heaven_clinic", "ox": -100, "oy": 100 },
+    { "poi_id": "poi:lost_heaven_mission_post", "ox": 100, "oy": -100 },
+    { "poi_id": "poi:lost_heaven_town_hall", "ox": -100, "oy": -100 },
+    { "poi_id": "poi:lost_heaven_artisan_hall", "ox": 200, "oy": 0 },
+    { "poi_id": "poi:lost_heaven_housing_npc", "ox": -200, "oy": 0 },
+    { "poi_id": "poi:lost_heaven_gate", "ox": 0, "oy": -200 }
+  ]
+}

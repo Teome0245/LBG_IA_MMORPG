@@ -44,6 +44,11 @@ def _resolve_speaker(ctx: dict[str, object]) -> str:
         v = ctx.get(key)
         if isinstance(v, str) and v.strip():
             return v.strip()
+    try:
+        if isinstance(ctx, dict) and dialogue_llm.resolve_lyra_engagement(ctx) == "local_assistant":
+            return "Assistant"
+    except Exception:
+        pass
     return "PNJ"
 
 
@@ -71,11 +76,17 @@ def _stub_turn(player: str, speaker: str, *, llm_error: str | None = None) -> tu
         err_short = (llm_error or "").strip()
         if len(err_short) > 280:
             err_short = err_short[:277] + "…"
+        tail = (
+            "Astuce : augmenter LBG_DIALOGUE_LLM_TIMEOUT si Ollama est lent ; vérifier le modèle (LBG_DIALOGUE_LLM_MODEL) et la charge."
+        )
+        if dialogue_llm.desktop_plan_env_enabled():
+            tail += (
+                " Si vous utilisez « Proposer via IA » (DESKTOP_JSON), "
+                "option LBG_DIALOGUE_LLM_TIMEOUT_DESKTOP_MIN pour un plancher dédié quand context._desktop_plan est vrai."
+            )
         lines.append(
             _truncate(
-                f"{speaker} — Échec LLM : {err_short} "
-                "(modèle LBG_DIALOGUE_LLM_MODEL, charge Ollama, LBG_DIALOGUE_LLM_TIMEOUT ; "
-                "mode Pilot desktop : LBG_DIALOGUE_DESKTOP_PLAN=1 sur cet agent).",
+                f"{speaker} — Échec LLM : {err_short} ({tail})",
                 _MAX_LINE_CHARS,
             )
         )

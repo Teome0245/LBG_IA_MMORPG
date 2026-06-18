@@ -1,0 +1,11 @@
+{
+  "tre": "patch_terrain_00.tre",
+  "files_count": 4,
+  "md5": "b5157b1b0b09664d251ce966ec2c00af",
+  "paths": [
+    "terrain/poi_bowl.lay",
+    "terrain/poi_large.lay",
+    "terrain/poi_medium.lay",
+    "terrain/poi_small.lay"
+  ]
+}

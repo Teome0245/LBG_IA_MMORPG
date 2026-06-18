@@ -15,9 +15,39 @@ from lbg_agents.dialogue_llm import (
     _choice_assistant_text,
     _enforce_short_reply,
     _postprocess_llm_content,
+    _strip_model_reasoning_noise,
     _sanitize_desktop_action_proposal,
     _sanitize_world_action,
 )
+
+
+def test_strip_thinking_process_greeting_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_DIALOGUE_STRIP_REASONING", raising=False)
+    raw = (
+        'Thinking Process: 1. **Analyze the Request:** The user said "bonjour, comment va tu ?" '
+        "(Hello, how are you?). 2."
+    )
+    out = _strip_model_reasoning_noise(raw)
+    assert "Thinking Process" not in out
+    assert "Analyze the Request" not in out
+    assert "bonjour" in out.lower()
+
+
+def test_strip_thinking_process_answer_marker(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_DIALOGUE_STRIP_REASONING", raising=False)
+    raw = (
+        "Thinking Process:\nblabla\n\n"
+        "Réponse: Très bien, merci ! Nous poursuivons la mission lorsque vous voulez."
+    )
+    out = _strip_model_reasoning_noise(raw)
+    assert "Thinking Process" not in out
+    assert out.startswith("Très bien")
+
+
+def test_strip_reasoning_disabled_returns_raw(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_STRIP_REASONING", "0")
+    raw = "Thinking Process: analyse."
+    assert _strip_model_reasoning_noise(raw) == raw
 
 
 def test_enforce_short_reply_soft_cap_prefers_sentence_end(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -189,6 +219,19 @@ def test_build_system_prompt_uses_assistant_profile() -> None:
     s = build_system_prompt("Marc", {"dialogue_profile": "hal"})
     assert "HAL 9000" in s
     assert "Profil actif: hal" in s
+
+
+def test_build_system_prompt_local_assistant_skips_mmo_incarnation() -> None:
+    """ADR 0004 : lyra_engagement local_assistant + pas de world_npc_id → pas de masque PNJ MMORPG."""
+    s = build_system_prompt(
+        "PNJ",
+        {"lyra_engagement": "local_assistant", "dialogue_profile": "professionnel"},
+    )
+    assert "personnage non-joueur (PNJ)" not in s
+    assert "MMORPG médiéval-fantasy" not in s
+    assert "assistant LBG" in s
+    assert "ne contrôle pas le poste" in s.lower()
+    assert "proposer" in s.lower() and "exécuter" in s.lower()
 
 
 def test_build_system_prompt_uses_mmo_profile_when_world_npc() -> None:
@@ -628,6 +671,50 @@ def test_postprocess_llm_content_desktop_inline_same_line(monkeypatch: pytest.Mo
     assert ctx["_desktop_action_proposal"]["url"] == "https://example.org"
     assert "DESKTOP_JSON" not in reply
     assert "D’accord" in reply
+
+
+def test_postprocess_llm_content_desktop_infer_open_app_when_no_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    ctx: dict = {"_desktop_plan": True}
+    raw = "L'application s'ouvre. Profitez de votre session."
+    reply, world_act = _postprocess_llm_content(
+        raw=raw,
+        context=ctx,
+        player_text="ouvre l'application vghd (learn)",
+    )
+    assert world_act is None
+    assert ctx.get("_desktop_action_proposal") == {
+        "kind": "open_app",
+        "app": "vghd",
+        "args": [],
+        "learn": True,
+    }
+    assert "Profitez" in reply
+
+
+def test_postprocess_llm_content_desktop_infer_respects_negation(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    ctx: dict = {"_desktop_plan": True}
+    raw = "D'accord, je n'ouvre rien."
+    reply, _ = _postprocess_llm_content(
+        raw=raw,
+        context=ctx,
+        player_text="ne pas ouvrir vlc sur mon poste",
+    )
+    assert ctx.get("_desktop_action_proposal") is None
+    assert reply
+
+
+def test_postprocess_llm_content_desktop_json_wins_over_infer(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DIALOGUE_DESKTOP_PLAN", "1")
+    ctx: dict = {"_desktop_plan": True}
+    raw = 'DESKTOP_JSON: {"kind":"open_app","app":"notepad","args":[]}\nOK.'
+    _, _ = _postprocess_llm_content(
+        raw=raw,
+        context=ctx,
+        player_text="ouvre vlc",
+    )
+    assert ctx.get("_desktop_action_proposal") == {"kind": "open_app", "app": "notepad", "args": []}
 
 
 def test_coerce_openai_message_content_list_fragments() -> None:

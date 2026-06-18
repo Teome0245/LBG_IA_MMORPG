@@ -1,0 +1,12 @@
+-- Profil « clean » allégé pour VM 8 Go avec stock SWGEmu déjà actif (évite OOM).
+-- Fusionner avec config-local.lua ou remplacer les clés sur la VM.
+
+Core3.ZoneProcessingThreads = 4
+Core3.ZoneAllowedConnections = 500
+
+Core3.ZonesEnabled = {
+	"tatooine",
+	"tutorial",
+}
+
+Core3.SpaceZonesEnabled = {}

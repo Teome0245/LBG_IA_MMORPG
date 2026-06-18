@@ -1,0 +1,27 @@
+[Unit]
+Description=LBG joueur IA autonomie — %i (Core3 Prime)
+Documentation=file:///opt/LBG_IA_MMO/docs/core3_ia_phase_g_ai_players_population.md
+After=network.target lbg-core3-ia-sidecar.service lbg-core3-ia-player@%i.service
+Wants=lbg-core3-ia-sidecar.service lbg-core3-ia-player@%i.service
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/LBG_IA_MMO
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+EnvironmentFile=-/etc/lbg-core3-ia.env
+Environment=LBG_CORE3_IA_PLAYER_ID=%i
+Environment=LBG_CORE3_PLAYER_AUTONOMY_ENABLED=1
+Environment=LBG_CORE3_PLAYER_AUTONOMY_INTERVAL_S=80
+Environment=LBG_CORE3_PLAYER_AUTONOMY_MODE=orchestrator
+Environment=LBG_CORE3_IA_SIDECAR_URL=http://127.0.0.1:8791
+Environment=LBG_ORCHESTRATOR_URL=http://192.168.0.140:8010
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+ExecStart=/usr/bin/python3 /opt/LBG_IA_MMO/tools/core3_ia_player_autonomy_loop.py %i
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

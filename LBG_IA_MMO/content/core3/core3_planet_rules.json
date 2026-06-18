@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "planets": [
+    {
+      "zone": "tatooine",
+      "label": "Terre1",
+      "geometry": "sphere",
+      "game_time": {
+        "real_hours_per_game_day": 6,
+        "phase_hours_real": { "work": 2, "rest": 2, "leisure": 2 }
+      },
+      "orbit_days": 91,
+      "moons": [
+        {
+          "id": "moon:tatooine_1",
+          "cycle_hours_real": 12,
+          "effects": ["tide_low", "ki_surge_chance"]
+        }
+      ],
+      "seasons": ["dry", "storm"],
+      "constraints": {
+        "tech_level": "mixed",
+        "magic_level": "low",
+        "gravity": 1.0
+      }
+    },
+    {
+      "zone": "dantooine",
+      "label": "Terre1 satellite",
+      "geometry": "sphere",
+      "game_time": {
+        "real_hours_per_game_day": 8,
+        "phase_hours_real": { "work": 3, "rest": 2, "leisure": 3 }
+      },
+      "constraints": {
+        "tech_level": "low",
+        "magic_level": "medium",
+        "gravity": 0.95
+      },
+      "status": "planned"
+    },
+    {
+      "zone": "flat_world",
+      "label": "Terre plate",
+      "geometry": "flat",
+      "game_time": {
+        "real_hours_per_game_day": 6,
+        "phase_hours_real": { "work": 2, "rest": 2, "leisure": 2 }
+      },
+      "constraints": {
+        "tech_level": "forbidden",
+        "magic_level": "high",
+        "gravity": "anomaly"
+      },
+      "status": "planned"
+    }
+  ]
+}

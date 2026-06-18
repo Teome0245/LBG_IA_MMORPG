@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "factions": [
+    {
+      "id": "faction:coalition",
+      "name": "Coalition des Mondes Brises",
+      "neutral": true,
+      "language_id": "lang:common",
+      "services": ["craft", "repair", "trade"]
+    },
+    {
+      "id": "faction:synthetika",
+      "name": "Convergence Synthetika",
+      "neutral": false,
+      "language_id": "lang:tech",
+      "services": ["hacking", "implants"]
+    },
+    {
+      "id": "faction:arcanes",
+      "name": "Cercle des Arcanes Primordiaux",
+      "neutral": false,
+      "language_id": "lang:arcane",
+      "services": ["alchemy", "leyline"]
+    }
+  ],
+  "languages": [
+    {
+      "id": "lang:common",
+      "label": "Galactique standard",
+      "scramble": false
+    },
+    {
+      "id": "lang:tech",
+      "label": "Code machine",
+      "scramble": true,
+      "scramble_prefix": "[Binaire] "
+    },
+    {
+      "id": "lang:arcane",
+      "label": "Runes",
+      "scramble": true,
+      "scramble_prefix": "[Runes] "
+    }
+  ],
+  "reputation": {
+    "min": -1000,
+    "max": 1000,
+    "trade_discount_per_100": 0.01,
+    "gate_quest_threshold": 50
+  }
+}

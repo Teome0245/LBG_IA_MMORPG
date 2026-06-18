@@ -1,0 +1,25 @@
+[Unit]
+Description=LBG joueur bot headless — compte Bot_IA, perso Lia Bot (Serveur Prime)
+Documentation=file:///opt/LBG_IA_MMO/docs/core3_ia_phase_d_headless_bot.md
+After=network-online.target lbg-core3-prime.service
+Wants=network-online.target lbg-core3-prime.service
+# Sidecar optionnel pour le garde « deja en ligne »
+After=lbg-core3-ia-sidecar.service
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/lbg-new-mmo-clean/MMOCoreORB/bin
+EnvironmentFile=-/etc/lbg-core3-ia.env
+Environment=CORE3_IA_SIDECAR_URL=http://127.0.0.1:8791
+# Prénom IG pour snapshot sidecar / screenplay (perso complet : Lia Bot)
+Environment=CORE3_IA_BOT_CHARACTER=Lia
+# Boucle : session ~24h puis reconnexion
+ExecStart=/bin/bash -lc 'while true; do /opt/LBG_IA_MMO/infra/scripts/run_core3_ia_bot_client_vm.sh || true; sleep 60; done'
+Restart=always
+RestartSec=30
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

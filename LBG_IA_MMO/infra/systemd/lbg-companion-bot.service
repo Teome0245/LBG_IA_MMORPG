@@ -1,0 +1,23 @@
+[Unit]
+Description=LBG_IA_MMO Companion Bot (chat autonome)
+After=network.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/LBG_IA_MMO/companion_bot
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONUNBUFFERED=1
+# Métriques opt-in (même schéma que backend/orchestrator) :
+Environment=LBG_METRICS_ENABLED=0
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/uvicorn lbg_companion_bot.main:app --host 0.0.0.0 --port 8065 --workers 2
+Restart=always
+RestartSec=2
+TimeoutStopSec=10
+KillMode=mixed
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
+

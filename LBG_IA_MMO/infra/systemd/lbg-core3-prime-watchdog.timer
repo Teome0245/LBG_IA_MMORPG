@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer watchdog login Core3 Prime (toutes les 5 min)
+
+[Timer]
+OnBootSec=12min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

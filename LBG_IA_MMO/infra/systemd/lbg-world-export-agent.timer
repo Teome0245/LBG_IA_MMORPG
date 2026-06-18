@@ -1,0 +1,11 @@
+[Unit]
+Description=Poll World Editor export queue every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=15s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

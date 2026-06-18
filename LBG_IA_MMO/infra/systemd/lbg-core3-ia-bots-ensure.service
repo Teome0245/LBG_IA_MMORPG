@@ -1,0 +1,20 @@
+[Unit]
+Description=LBG Core3 IA — reconnexion joueurs IA si hors ligne (Prime UP, sans restart serveur)
+After=network-online.target lbg-core3-prime.service lbg-core3-ia-sidecar.service
+Wants=lbg-core3-prime.service lbg-core3-ia-sidecar.service
+
+[Service]
+Type=oneshot
+User=lbg
+Group=lbg
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+EnvironmentFile=-/etc/lbg-core3-ia.env
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+Environment=LBG_CORE3_IA_SIDECAR_URL=http://127.0.0.1:8791
+Environment=LBG_CORE3_BOT_AUTO_CONNECT=1
+Environment=LBG_CORE3_IA_BOTS=lia,nix,mira
+Environment=LBG_CORE3_BOT_RECONNECT_COOLDOWN_S=180
+ExecStart=/opt/LBG_IA_MMO/infra/scripts/run_ensure_ia_bots.sh
+
+[Install]
+WantedBy=multi-user.target

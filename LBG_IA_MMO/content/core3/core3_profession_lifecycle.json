@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "description": "Cycles metier longs par joueur IA — apprentissage, maitrise, pratique, oubli progressif, transition. Pas de conscience collective.",
+  "real_hours": {
+    "learning": 48,
+    "mastery_practice": 120,
+    "decay": 72,
+    "transition": 12
+  },
+  "mastery_threshold_pct": 90,
+  "learning_progress_pct_per_tick": 0.15,
+  "decay_progress_pct_per_tick": 0.08,
+  "scene_focus_by_phase": {
+    "learning": "primary",
+    "mastery_practice": "primary",
+    "secondary_learning": "secondary",
+    "decay": "transition",
+    "transition": "transition"
+  },
+  "profession_scene_tags": {
+    "entertainer": ["dance", "cantina_dance", "spectacle", "entertainer_progress", "perform", "greet"],
+    "artisan": ["forage", "gather_search", "trainer", "artisan", "craft", "vendor_sell"],
+    "scout": ["forage", "search", "recon_move", "scout"],
+    "marksman": ["trainer", "marksman"],
+    "brawler": ["forage", "trainer", "recon", "vendor_sell", "social"],
+    "medic": ["trainer", "forage", "vendor_buy"],
+    "vendor": ["commerce", "vendor_buy", "vendor_sell", "barman"]
+  }
+}

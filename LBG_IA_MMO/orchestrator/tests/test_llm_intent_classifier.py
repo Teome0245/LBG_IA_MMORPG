@@ -22,6 +22,14 @@ def test_should_use_llm_context_llm() -> None:
     assert should_use_llm_intent({"_intent_classify": "LLM"}) is True
 
 
+def test_api_key_resolves_secret_ref(monkeypatch) -> None:
+    import introspection.llm_intent_classifier as mod
+
+    monkeypatch.setenv("GROQ_API_KEY", "gk-from-ref")
+    monkeypatch.setenv("LBG_ORCHESTRATOR_INTENT_LLM_API_KEY", "${GROQ_API_KEY}")
+    assert mod._api_key() == "gk-from-ref"
+
+
 def test_hybrid_prefers_deterministic_when_llm_low_conf(monkeypatch) -> None:
     monkeypatch.delenv("LBG_ORCHESTRATOR_INTENT_LLM", raising=False)
 

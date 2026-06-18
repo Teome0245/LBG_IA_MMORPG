@@ -1,0 +1,28 @@
+[Unit]
+Description=LBG Core3 IA — boucle autonome Lia (LLM + pending.jsonl)
+After=network.target lbg-core3-ia-sidecar.service lbg-core3-ia-bot-client.service
+Wants=lbg-core3-ia-sidecar.service
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/LBG_IA_MMO
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+EnvironmentFile=-/etc/lbg-core3-ia.env
+Environment=LBG_CORE3_LIA_AUTONOMY_ENABLED=1
+Environment=LBG_CORE3_LIA_AUTONOMY_MODE=sidecar
+Environment=LBG_CORE3_LIA_AUTONOMY_INTERVAL_S=80
+Environment=LBG_CORE3_BOT_AUTO_CONNECT=1
+Environment=LBG_CORE3_IA_BOTS=lia,nix,mira
+Environment=LBG_CORE3_BOT_RECONNECT_COOLDOWN_S=240
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+Environment=LBG_CORE3_NPC_AUTONOMY_ENABLED=1
+Environment=LBG_CORE3_POPULATION_AUTONOMY_ENABLED=1
+ExecStart=/usr/bin/python3 /opt/LBG_IA_MMO/tools/core3_ia_lia_autonomy_loop.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

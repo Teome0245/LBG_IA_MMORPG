@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "location_id": "loc:mos_eisley_starport_pilot",
+  "zone": "tatooine",
+  "label": "Spaceport Mos Eisley — lounge instructeurs pilote",
+  "description": "3 rosters × triplon. Salon circulaire starport (~3555, -4800). Recon IG 2026-05-29.",
+  "building_ref": "mos_eisley_starport_lounge",
+  "world_anchor": { "x": 3557, "y": -4802, "z": 5 },
+  "starport_terminal_cell": 1106372,
+  "posts": [
+    {
+      "role": "alliance_pilot",
+      "profession_label": "Alliance Starfighter Pilot",
+      "display_name_prefix": "[IA] Pilote Alliance",
+      "spawn": { "x": 3551, "y": -4800, "z": 5, "heading": 0, "cell": 0 },
+      "mobile_template_suggested": "stranded_rebel_pilot",
+      "mobile_template_alt": "kreezo",
+      "conversation": "kreezo_convo",
+      "conversation_phase": "3b_space_skills",
+      "recon_image": "image1",
+      "status": "confirmed"
+    },
+    {
+      "role": "imperial_navy_pilot",
+      "profession_label": "Imperial Navy Pilot",
+      "display_name_prefix": "[IA] Pilote Impérial",
+      "spawn": { "x": 3551, "y": -4805, "z": 5, "heading": 0, "cell": 0 },
+      "mobile_template_suggested": "imperial_pilot",
+      "mobile_template_alt": "imperial_officer",
+      "conversation": "TBD_imperial_space_trainer",
+      "conversation_phase": "3b_space_skills",
+      "recon_image": "image2",
+      "status": "confirmed",
+      "notes": "Éviter mobile ATTACKABLE en prod — préférer officier impérial CONVERSABLE custom."
+    },
+    {
+      "role": "freelance_pilot",
+      "profession_label": "Freelance Pilot",
+      "display_name_prefix": "[IA] Pilote indépendant",
+      "spawn": { "x": 3570, "y": -4801, "z": 5, "heading": 0, "cell": 0 },
+      "mobile_template_suggested": "freelance_pilot",
+      "conversation": "TBD_freelance_space_trainer",
+      "conversation_phase": "3b_space_skills",
+      "recon_image": "image3",
+      "status": "confirmed"
+    }
+  ],
+  "homes_default": {
+    "description": "Repos triplon — cantine / bunks starport à définir",
+    "leisure_anchor": { "x": 3555, "y": -4802, "z": 5, "cell": 0 }
+  },
+  "leisure_patrol_shared": [
+    { "x": 3551, "y": -4800, "z": 5 },
+    { "x": 3551, "y": -4805, "z": 5 },
+    { "x": 3570, "y": -4801, "z": 5 }
+  ],
+  "notes": "Cell 0 = salon world starport. Terminal vaisseaux / shipwright = cell 1106372 (autre aile). Pas le trainer_shipwright vanilla pour skills pilote."
+}

@@ -1,0 +1,269 @@
+Synthese d’analyse — De-starwarsisation bestiaire (Core3 -> Bestiaire MMORPG)
+Date: 2026-05-27
+
+Objectif (clarifie)
+- De-starwarsiser le serveur: remplacer les creatures/mobiles Core3 “Star Wars” par un bestiaire MMORPG (50 creatures) en conservant au maximum les squelettes/animations/IA existants (re-skin + rename + re-loot + FX), et en retirant les references explicites.
+
+Sources utilisees (dans nos workspaces)
+- Bestiaire MMORPG (cible): `/home/sdesh/projects/LBG_IA_MMORPG/Boite à idées/20260429_mmmorpg_bestiaire..txt`
+- Base JSON cote LBG: `/home/sdesh/projects/LBG_IA_MMORPG/LBG_IA_MMO/content/world/creatures.json`
+- Catalogue Core3 (templates/mobiles existants): `/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/object/mobile/*.lua`
+  - Exemples confirmes presents: `bantha.lua`, `dewback.lua`, `rancor.lua`, `tauntaun.lua`, `womp_rat.lua`, `sarlacc.lua`, `vesp.lua`, `fambaa.lua`, `bolma.lua`, `gaping_spider.lua`, `kaadu.lua`, `paralope.lua`, `roba.lua`, `gualama.lua`, `shaupaut.lua`.
+
+Convention
+- Mobile Core3 = nom de template (nom du fichier dans `object/mobile/` sans extension).
+- Remplacement MMORPG = creature cible (1..50) du bestiaire MMORPG.
+- Priorite de remplacement (de-starwarsisation):
+  - P0: reference Star Wars tres explicite (a remplacer en premier)
+  - P1: reference SW moyenne (peut rester temporairement si rename/re-skin rapide)
+  - P2: reference faible (faune generique; peut attendre)
+
+================================================================================
+Mapping propose (Core3 -> MMORPG)
+================================================================================
+
+Note
+- Le bestiaire MMORPG (50) est plus petit que le catalogue Core3: plusieurs mobiles Core3 peuvent converger vers un meme remplaçant MMORPG (variantes/skins).
+
+[P0 — Noms ultra Star Wars (priorite max)]
+- rancor / rancor_hue / rancor_youth ->
+  - Remplacement MMORPG: 48 Colosse Mute (boss) OU 21 Titan Pyrique (boss) OU 31 Crocodile Ancien (mini-boss lourd)
+  - Notes: excellent “grand boss” a renommer en premier (nom + lore tres SW).
+
+- bantha / bantha_hue / dwarf_bantha / matriarch_bantha / bantha_saddle* ->
+  - Remplacement MMORPG: 28 Marcheur des Dunes (colosse lent, herbivore massif)
+  - Notes: fonctionne tres bien comme “colosse du desert” sans reference SW.
+
+- dewback / dewback_hue ->
+  - Remplacement MMORPG: 24 Serpent de Sable (reptile predateur) OU 28 Marcheur des Dunes (si usage monture) OU 25 Chacal Dore (si tu veux une faune plus petite/rapide en redesign)
+  - Notes: a choisir selon ton usage (mob hostile vs monture/transport).
+
+- tauntaun / tauntaun_hue ->
+  - Remplacement MMORPG: 11 Yeti Errant (gros) OU 09 Ours-Givre (predateur massif) OU 13 Loup-Hivernal (si version plus agile)
+  - Notes: bon support squelette “neige”, mais rename obligatoire (tres SW).
+
+- womp_rat / womp_rat_hue ->
+  - Remplacement MMORPG: 33 Moustique Geant (nuisible swarm) OU 50 Nuee Acide (nuisance corrosive)
+  - Notes: facile a re-loot (glandes/venin) et a re-skin.
+
+- sarlacc ->
+  - Remplacement MMORPG: 18 Ver de Cendres (piege/zone) OU 30 Horreur Fangeuse (si on veut plus “corruption”)
+  - Notes: parfait “piege vivant” fantasy avec FX.
+
+[P1 — Faune planetaire encore marquee mais “facile a renommer”]
+- kaadu / kaadu_hue ->
+  - Remplacement MMORPG: 02 Cerf-Ecorce (faune ressource) OU 29 Fennec Mirage (rare discret)
+
+- gualama / gualama_hue / gualama_patriarch ->
+  - Remplacement MMORPG: 02 Cerf-Ecorce (ressource) OU 34 Tortue Vaseuse (tank defensif)
+  - Notes: patriarch = variante alpha.
+
+- shaupaut / shaupaut_hue ->
+  - Remplacement MMORPG: 31 Crocodile Ancien (reptile massif) OU 23 Scorpion-Titan (elite)
+
+- fambaa / fambaa_hue ->
+  - Remplacement MMORPG: 08 Gardien de Clairiere (guardian) OU 34 Tortue Vaseuse (tank) OU 14 Golem de Glace (elite lente)
+
+[P2 — Faune generique (bonne base “MMORPG”)]
+- gaping_spider* ->
+  - Remplacement MMORPG: 39 Araignee de Cryptes (embuscade) OU 35 Liane-Sangsue (parasite/controle)
+  - Notes: queen/recluse = elite/boss.
+
+- bolma* ->
+  - Remplacement MMORPG: 06 Sanglier-Roche (tank naturel) OU 34 Tortue Vaseuse (defensif) OU 14 Golem de Glace (elite lente)
+
+- paralope ->
+  - Remplacement MMORPG: 02 Cerf-Ecorce (ressource)
+
+- roba* ->
+  - Remplacement MMORPG: 02 Cerf-Ecorce (ressource) OU 10 Renard Spectral (rare discret) selon tuning
+
+- vynock* ->
+  - Remplacement MMORPG: 19 Chauve-Feu (petit volant) OU 12 Harfang Geant (oiseau agressif)
+
+- vesp* ->
+  - Remplacement MMORPG: 33 Moustique Geant (swarm) OU 50 Nuee Acide (corrosif)
+
+================================================================================
+Rappels d’implementation (de-starwarsisation progressive, toutes planettes)
+================================================================================
+
+1) Prioriser les P0
+- Ce sont les noms “impossibles a cacher” meme si tu renomme les planettes.
+
+2) Masquer les noms Core3 cote joueur
+- Nom affiche = nom MMORPG
+- Lore/description = fantasy generique
+- Loot = ressources generiques (peau, viande, os, venin, fibres, essences, etc.)
+
+3) Biomes cible (MMORPG) a projeter sur les planettes renommees
+- Foret: 01..08
+- Neige: 09..15
+- Volcan/Cendres: 16..22 (souvent via FX/resistances)
+- Desert: 23..29
+- Marais: 30..36
+- Ruines/Donjons: 37..43
+- Corruption/Labos: 44..50
+
+================================================================================
+Etape suivante (si tu veux que je le fasse)
+================================================================================
+- Lister uniquement les mobiles Core3 effectivement utilises sur Prime (spawns/lairs/static_spawns),
+  puis appliquer ce mapping “Core3 -> MMORPG” a ce set reel (et pas au catalogue complet).
+
+================================================================================
+Mapping propose (50/50)
+================================================================================
+
+[FORET TEMPERee]
+01 Luporeve (loup en meute) ->
+   - slice_hound (Corellia) / boar_wolf (Endor) / feral_wookiee (si on veut plus “tribal”)
+02 Cerf-Ecorce (cervide ressource) ->
+   - paralope (Corellia) / roba (Endor) / gualama (Naboo)
+03 Dryade Sylvestre (esprit vegetal, elite) ->
+   - nightsister_ranger / singing_mountain_clan_arch_witch (humanoide “mystique”)
+   - alternative creature: whisper_bird (si on veut “esprit foret” non-humanoide mais ca downgrade l’elite)
+04 Griffe-Sombre (felin furtif) ->
+   - tusk_cat (Naboo) / sludge_panther (Talus)
+05 Hibou-Sage (neutre, vision magique) ->
+   - whisper_bird (Endor) / vynock (si tu veux un “rapace” plus menaçant)
+06 Sanglier-Roche (tank naturel) ->
+   - boar_wolf (Endor) / brackaset (Dathomir) / bol (Dantooine) (plus massif)
+07 Liane-Vive (plante predatrice / controle) ->
+   - gaping_spider (Dathomir) (role “immobilisation/poison” proche)
+   - alternative: kliknik (Yavin4) (controle via poison / swarm)
+08 Gardien de Clairiere (golem/elite protecteur) ->
+   - gurrek (Endor) / famba (Naboo) (gros “guardian”)
+
+[NEIGE / TOUNDRA]
+09 Ours-Givre (predateur massif, mini-boss) ->
+   - gurrek (Endor) (ours-like) / rancor (Dathomir) si tu veux vraiment “mini-boss” hard
+10 Renard Spectral (rare, discret) ->
+   - vynock (rare vibe) / whisper_bird_hatchling (si tu veux un petit “spirit animal”)
+11 Yeti Errant (humanoide isolé) ->
+   - gundark (Kashyyyk-like mais present en SWG; a remplacer par creature “ape” si dispo)
+   - fallback concret dispo dans notre arbre: wookiee (creature humanoide) / savage_wookiee (si present)
+12 Harfang Geant (oiseau agressif) ->
+   - vynock (volant agressif) / whisper_bird (si plus “rapace” calme)
+13 Loup-Hivernal (meute rapide) ->
+   - slice_hound / boar_wolf (selon planete)
+14 Golem de Glace (elite lente/resistante) ->
+   - famba (Naboo, ultra tank) / bolma (Endor/Rori, tanky) / brackaset (Dathomir)
+15 Esprit du Blizzard (entite boss) ->
+   - wampa n’est pas present comme creature mobile dans notre arbre Core3 ici (on a des items “wampa” ship parts, pas de mob).
+   - proposition boss “neige-like”: tauntaun_hue (avec scaling + FX) ou rancor (si boss “terreur”)
+
+[VOLCAN / CENDRES]
+16 Salamandre Magmatique (ranged) ->
+   - vesp (Lok) (projectiles/venin vibe “elementaire”) / voritor_lizard (Dantooine) (reptile)
+17 Golem de Basalte (boss) ->
+   - rancor / brackaset (gros boss sol) / krayt_dragon (si tu vas jusque-la cote desert)
+18 Ver de Cendres (souterrain) ->
+   - sarlacc (Tatooine) (ver/immobile) ou creature “worm” si presente (sinon sarlacc comme POI)
+19 Chauve-Feu (petit volant) ->
+   - vynock (chauve-souris SW) / krahbu (si dispo, insectoide)
+20 Gargouille de Lave (patrouilleur aerien) ->
+   - vynock (aerien) / une creature insectoide volante (selon dispo locale)
+21 Titan Pyrique (boss de zone) ->
+   - rancor (boss universel) / krayt_dragon (boss desert, mais “titan” OK)
+22 Crache-Scories (artilleur naturel) ->
+   - spined_snake (si attaque a distance) / vesp (projectiles)
+
+[DESERT]
+23 Scorpion-Titan (elite) ->
+   - kliknik (Yavin4) (arthropode) / dune_lizard (Tatooine) (reptile) selon dispo
+24 Serpent de Sable (boss) ->
+   - krayt_dragon (Tatooine) (boss iconique) / sarlacc (boss “piege”)
+25 Chacal Doré (meute opportuniste) ->
+   - womp_rat (Tatooine) (petit opportuniste) / slice_hound (si tu veux plus canin)
+26 Scarabee Obsidien (insecte blinde) ->
+   - kliknik / bark_mite / forest_mite (selon dispo) (meme role “carapace”)
+27 Djinn Mineur (esprit elementaire) ->
+   - droid (eg6/r5/r2 selon vibe) ou un “nightsister” si tu veux magie; Star Wars pur -> droid exotique
+28 Marcheur des Dunes (colosse lent) ->
+   - dewback (Tatooine) (version “mount” + gros) ou bantha (encore plus massif)
+29 Fennec Mirage (illusionniste rare) ->
+   - vynock (rare) / kaadu (si tu veux petit+rare mais ca perd l’illusion)
+
+[MARAIS]
+30 Horreur Fangeuse (masse amorphe) ->
+   - sludge_panther (Talus) (vibe “boue”) / arachne (Endor) (si tu veux horreur)
+31 Crocodile Ancien (reptile massif) ->
+   - shaupaut (Naboo) (reptile/prehistorique) / voritor_lizard (Dantooine)
+32 Sorciere des Boues (humanoide magique) ->
+   - nightsister / singing_mountain_clan (Dathomir) (sorcellerie SW-lore)
+33 Moustique Geant (swarm) ->
+   - vesp (Lok) (insecte) / kliknik_hatchling (si dispo) / swarm “mites”
+34 Tortue Vaseuse (tank defensif) ->
+   - famba (Naboo) (gros tank herbivore) / bolma (Endor/Rori)
+35 Liane-Sangsue (parasite / controle) ->
+   - gaping_spider (Dathomir) (controle/poison) / bark_mite (parasite vibe)
+36 Spectre Noye (mort-vivant aquatique) ->
+   - Pas d’equivalent “spectre” creature vanilla tres net en Core3.
+   - Proposition SW: droid aquatic-like (si dispo) ou “warren_irradiated_worker” (vibe horreur) selon zone scenario.
+
+[RUINES / DONJONS]
+37 Spectre Lie (gardien magique) ->
+   - droid (IT-0/lin demolition etc) ou “force” via nightsister (si tu veux “mystique”)
+38 Garde Squelettique (soldat mort-vivant) ->
+   - stormtrooper/warren_crazed_imperial (si on veut “ruines” + horreur) ou droid B1-like (selon dispo)
+39 Araignee de Cryptes (embuscade) ->
+   - gaping_spider (Dathomir) / arachne (Endor)
+40 Goule Affamee (agressive) ->
+   - warren_escapee / warren_insane_comp_sci / warren_crazed_imperial (The Warren = labo/horreur)
+41 Chevalier Dechu (elite) ->
+   - dark_trooper / elite_nightsister / rancor_tamer (selon theme) (humanoide elite)
+42 Gargouille de Pierre (sentinelle tank) ->
+   - droideka (warren_droideka_loyalist) (sentinelle) / droid de securite
+43 Ombre Errante (furtive) ->
+   - assassin droid (si dispo) / nightsister_stalker (furtif humanoide)
+
+[CORRUPTION / LABORATOIRES]
+44 Aberration Instable (mutation chaotique, elite) ->
+   - mutant_rancor (Dathomir) / warren_cyborg_* (hybrides)
+45 Drone Organique (bio-mecanique, swarm) ->
+   - warren_agro_droid_* (drones) / droids_mse_droid (si petit swarm) selon tuning
+46 Fusion Ratee (monstre experimental) ->
+   - warren_cyborg_worker / warren_cyborg_* (templates cyborgs)
+47 Parasite Mental (psychique, possession) ->
+   - Pas d’equivalent “possession” direct; proposition gameplay: creature poison/DoT (vesp) + effet debuff
+48 Colosse Mute (boss) ->
+   - mutant_rancor / bull_rancor / rancor (selon difficulte)
+49 Chien de Laboratoire Alteré (agressif rapide) ->
+   - warren_cyborg_slicehound (deja parfait) / slice_hound (Corellia)
+50 Nuee Acide (essaim corrosif) ->
+   - vesp (Lok) / mites (forest_mite/wood_mite) + damage type acid/poison
+
+================================================================================
+Ecarts principaux a prevoir (quand on remplace)
+================================================================================
+
+1) “Magie / esprit / undead” vs Star Wars vanilla
+- Les “spectres/goules/gargouilles” n’existent pas en tant que tels: on remplace par
+  - nightsisters (mystique SW canon dans SWG)
+  - droids (sentinelles / gardiens)
+  - The Warren (mutants/cyborgs) pour l’horreur “laboratoire”.
+
+2) Volcan / lave
+- Core3 vanilla est surtout planetaire (Tatooine desert, Naboo marais, Dathomir sombre, Endor foret).
+- Pour un biome “volcan”, le plus simple est de:
+  - reutiliser des creatures agressives existantes (rancor/brackaset/voritor/vesp)
+  - appliquer FX + palette (cendres/rouge) + resistances feu.
+
+3) Neige / Hoth
+- Tauntaun est present.
+- Wampa: pas trouve comme creature mobile dans l’arbre Core3 ici (seulement des items ship “wampa”).
+  -> Si on veut un “wampa”, il faudra soit:
+     - creer un nouveau mobile template (nouveau fichier + shared template), soit
+     - reskin/rename d’un gros mob existant (gurrek/rancor) cote LBG.
+
+================================================================================
+Recommandation concrete “version 1” (actionnable)
+================================================================================
+- Garder la structure en 50 creatures, mais remplacer les `id` et `name` par des noms Star Wars (ou “alias LBG”)
+  tout en pointant vers un `mobile_template` Core3 existant (slice_hound, paralope, dewback, bantha, rancor, vynock, gaping_spider, vesp, famba, etc.).
+- Prioriser les mobs dont on a deja:
+  - un template mobile clair (`object/mobile/<name>.lua`)
+  - des lairs/POI existants (ex: rancor, sarlacc) si on veut des spawns “naturels”.
+
+Fin du fichier.

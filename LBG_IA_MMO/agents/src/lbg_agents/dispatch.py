@@ -28,7 +28,11 @@ from lbg_agents.pm_stub import run_pm_stub
 from lbg_agents.quests_stub import run_quests_stub
 from lbg_agents.world_stub import run_world_stub
 from lbg_agents.desktop_executor import run_desktop_action
+from lbg_agents.desktop_apps import hint_for_desktop_error, open_app_action_from_goal
+from lbg_agents.desktop_targets import resolve_desktop_target
 from lbg_agents.opengame_executor import run_opengame_action
+from lbg_agents.core3_bridge import run_core3_bridge
+from lbg_agents.network_inventory import run_network_inventory
 
 
 def _dialogue_http_timeout() -> httpx.Timeout:
@@ -276,6 +280,10 @@ def _pm(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
     return run_pm_stub(actor_id=actor_id, text=text, context=context)
 
 
+def _network(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
+    return run_network_inventory(actor_id=actor_id, text=text, context=context)
+
+
 def _devops(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
     raw = context.get("devops_action")
     if context.get("devops_selfcheck") is True:
@@ -305,51 +313,93 @@ def _desktop(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any
     """
     Hybrid desktop control.
 
-    Par design, on exige `context.desktop_action` structuré, sinon on refuse :
-    éviter qu’un texte ambigu déclenche une action PC.
+    On privilégie `context.desktop_action` structuré. À défaut (parité P03), on tente
+    d'inférer une action `open_app` depuis le texte libre (« lance vghd sur mon pc ») ;
+    l'exécution reste soumise au dry-run / approbation (policy + worker).
     """
-    base = os.environ.get("LBG_AGENT_DESKTOP_URL", "").strip().rstrip("/")
+    resolved = resolve_desktop_target(context, text)
+    base = resolved.url if resolved is not None else ""
     raw = context.get("desktop_action")
+    ctx = dict(context)
+    if resolved is not None:
+        ctx["desktop_target"] = resolved.target_id
+        ctx["desktop_target_host"] = resolved.host
     if not isinstance(raw, dict):
-        return {
-            "agent": "desktop_dispatch",
-            "handler": "desktop",
-            "actor_id": actor_id,
-            "request_text": text,
-            "ok": False,
-            "outcome": "bad_request",
-            "error": "Aucune desktop_action dans context.",
-            "hint": 'Ex. {"desktop_action": {"kind":"open_url","url":"https://example.org"}} ; search_web_open / mail_imap_preview si variables d’activation correspondantes',
-        }
+        inferred = open_app_action_from_goal(text)
+        if inferred is not None:
+            raw = inferred
+            ctx = {**context, "desktop_action": raw}
+        else:
+            return {
+                "agent": "desktop_dispatch",
+                "handler": "desktop",
+                "actor_id": actor_id,
+                "request_text": text,
+                "ok": False,
+                "outcome": "bad_request",
+                "error": "Aucune desktop_action dans context.",
+                "hint": 'Ex. « lance vlc sur mon pc » ou {"desktop_action": {"kind":"open_url","url":"https://example.org"}} ; search_web_open / mail_imap_preview si variables d’activation correspondantes',
+            }
 
     # Mode hybride : exécution attendue sur un worker Windows.
     if base:
         try:
             with httpx.Client(timeout=15.0) as client:
-                r = client.post(f"{base}/invoke", json={"actor_id": actor_id, "text": text, "context": context})
+                r = client.post(f"{base}/invoke", json={"actor_id": actor_id, "text": text, "context": ctx})
             if r.status_code >= 400:
-                return {
+                return _with_desktop_hint({
                     "agent": "http_desktop",
+                    "handler": "desktop",
+                    "ok": False,
                     "error": f"HTTP {r.status_code}",
                     "body_preview": r.text[:200],
-                }
+                })
             data = r.json()
             if not isinstance(data, dict):
-                return {"agent": "http_desktop", "remote": data}
+                return {"agent": "http_desktop", "handler": "desktop", "remote": data}
             merged = dict(data)
             merged["agent"] = merged.get("agent") or "http_desktop"
-            return merged
+            merged["handler"] = "desktop"
+            if resolved is not None:
+                merged["desktop_target"] = resolved.target_id
+                merged["desktop_target_label"] = resolved.label
+                merged["desktop_target_host"] = resolved.host
+                merged["desktop_url"] = base
+                merged["desktop_route_source"] = resolved.source
+            return _with_desktop_hint(merged)
         except Exception as e:
             detail = f"{type(e).__name__}: {e}"
-            return {
+            err_out: dict[str, Any] = {
                 "agent": "http_desktop",
+                "handler": "desktop",
+                "ok": False,
                 "error": (
-                    f"{detail} | appel {base}/invoke échoué — vérifier l’agent desktop Windows et le réseau."
+                    f"{detail} | appel {base}/invoke échoué — vérifier l’agent desktop Windows, "
+                    "le pare-feu (TCP 5005) et le réseau."
                 ),
             }
+            if resolved is not None:
+                err_out["desktop_target"] = resolved.target_id
+                err_out["desktop_target_host"] = resolved.host
+                err_out["desktop_url"] = base
+            return _with_desktop_hint(err_out)
 
     # Fallback dev (si on veut lancer le worker sur Linux pour tests) : exécution locale.
-    return run_desktop_action(actor_id=actor_id, text=text, action=raw, context=context)
+    return _with_desktop_hint(run_desktop_action(actor_id=actor_id, text=text, action=raw, context=ctx))
+
+
+def _with_desktop_hint(out: dict[str, Any]) -> dict[str, Any]:
+    """Attache un conseil actionnable (chemin/allowlist/approval) si l'erreur le permet."""
+    if not isinstance(out, dict) or out.get("hint"):
+        return out
+    msg = " ".join(
+        str(out.get(k) or "")
+        for k in ("error", "body_preview", "outcome")
+    ).strip()
+    hint = hint_for_desktop_error(msg)
+    if hint:
+        out["hint"] = hint
+    return out
 
 
 def _opengame(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
@@ -381,14 +431,20 @@ def _world(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
     return run_world_stub(actor_id=actor_id, text=text, context=context)
 
 
+def _core3(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
+    return run_core3_bridge(actor_id=actor_id, text=text, context=context)
+
+
 _HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
     "agent.dialogue": _dialogue,
     "agent.quests": _quests,
     "agent.combat": _combat,
     "agent.pm": _pm,
     "agent.devops": _devops,
+    "agent.network": _network,
     "agent.desktop": _desktop,
     "agent.opengame": _opengame,
     "agent.world": _world,
+    "agent.core3": _core3,
     "agent.fallback": _fallback,
 }

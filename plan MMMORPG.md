@@ -5,7 +5,40 @@
 \> Il **n’est pas** la source de vérité d’implémentation.  
 \> La référence structurée à intégrer au projet est `LBG_IA_MMO/docs/plan_mmorpg.md` (et la feuille de route globale `LBG_IA_MMO/docs/plan_de_route.md`).
 
+\> **État opérationnel LAN — juin 2026 (Prime = serveur jeu principal)**  
+\> Ce carnet reste aspirational ; la section ci‑dessous fixe la **réalité déployée** pour ne pas confondre vision long terme et infra actuelle.
 
+\### Serveur de jeu principal : **Prime** (VM **192.168.0.246**, Proxmox)
+
+| Rôle | Hôte | Détail |
+|------|------|--------|
+| **Prime** (prod jeu SWG) | **246** | `core3-clean`, galaxie **3**, login UDP **44553**, pont IA sidecar **:8791** |
+| **PreCU** (legacy + DB) | **245** | VMware ESXi **.217**, `core3-swgemu` galaxie **2**, **MariaDB** (comptes Prime galaxy 3) |
+| **Core** (orchestrateur IA) | **140** | agents, planner, watchdog infra |
+| **Front** (LLM / pilot) | **110** | Ollama |
+| **Hyperviseur** | **200** | Proxmox (VM 140, 246…) ; **245 hors Proxmox** |
+
+\### Joueurs IA headless (Prime 246)
+
+| Perso | Compte | État juin 2026 |
+|-------|--------|----------------|
+| **Lia** | Bot_IA | En ligne — autonomie / orchestrateur |
+| **Nix** | Bot_IA_2 | En ligne — scout |
+| **Mira** | Bot_IA_3 | En ligne — **téléport spawn Lost Heaven** (4809, -802) ; hub **pas encore construit** IG |
+
+\### Lost Heaven / Scrapaltai (hub cible)
+
+\- Ancre Lua confirmée : **/way 4809 -802** (Tatooine) — voir `ia_bridge_screenplay.lua` (`maybeRedirectPlayerToLostHeaven`).  
+\- **Le hub n’est pas encore déployé** sur Prime (pas de `LbgLostHeavenScreenPlay` actif / rebuild terrain).  
+\- Effet connu post‑rebuild : nouveaux persos (ex. **Mira**) peuvent être **redirigés vers les coords hub** sans assets visuels → à traiter **demain** (freeze redirect ou rebuild LH v9).  
+\- Doc technique : `LBG_IA_MMO/docs/core3_prime_runbook.md`, `content/core3/lua/lbg_lost_heaven_screenplay.lua`.
+
+\### Suite prévue (reprise)
+
+1. Autonomie population (Lia + Nix + Mira) + timer `bots-ensure`  
+2. Valider PNJ cantina (Jax) + artisan trainer  
+3. Lost Heaven : rebuild ou désactiver redirect temporaire jusqu’au hub prêt  
+4. World Director phase B (économie) — voir `docs/plan_world_director_integration.md`
 
 \## 1. 🎯 \*\*Vision générale du projet\*\*
 
@@ -31,9 +64,9 @@
 
 \- OS : Linux  
 
-\- Langage : Python  
+\- **Déploiement actuel (juin 2026)** : serveur de jeu **SWG Prime** sur VM **246** (`core3-clean`) ; persistance comptes via MariaDB sur **245** ; orchestration IA sur **140**. Le stack Python/WebSocket (`mmo_server`, `mmmorpg_server`) reste sur **245** en parallèle du fork Core3.
 
-\- Architecture : microservices ou modules orchestrés  
+\- Langage cible long terme : Python (modules orchestrés) + **Core3** (simulation monde SWG Prime)
 
 \- Modules principaux :
 

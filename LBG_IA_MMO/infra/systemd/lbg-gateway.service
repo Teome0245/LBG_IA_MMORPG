@@ -1,0 +1,17 @@
+[Unit]
+Description=LBG Gateway WebSocket lbg-ws/1 (Core3 Prime)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/home/lbg/lbg-gateway
+EnvironmentFile=-/home/lbg/lbg-gateway/gateway.env
+ExecStart=/usr/bin/python3 /home/lbg/lbg-gateway/main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

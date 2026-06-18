@@ -1,0 +1,5 @@
+-- Lab LAN : pas de limite « 1 perso / heure » (après rebuild C++ avec le patch).
+-- 3600000 = 1 h (SWGEmu public). 0 = désactivé.
+Core3.PlayerCreationManager = {
+	CharacterCreateCooldownMs = 0,
+}

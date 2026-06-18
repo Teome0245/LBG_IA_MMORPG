@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "description": "Mapping 1:1 espèce SWG (création perso) → race LBG primaire. Aligné suggested_primary_slot + tailles serveur v3.",
+  "slots": [
+    { "species_key": "human", "species_id": 0, "race_id": "race:fel_rani", "target_height_m": [1.40, 1.80] },
+    { "species_key": "rodian", "species_id": 1, "race_id": "race:pykrel", "target_height_m": [0.35, 0.45] },
+    { "species_key": "trandoshan", "species_id": 2, "race_id": "race:plimp", "target_height_m": [0.35, 0.50], "note": "Mesh grand ; scale minimum" },
+    { "species_key": "moncal", "species_id": 3, "race_id": "race:mechari", "target_height_m": [1.60, 2.10] },
+    { "species_key": "wookiee", "species_id": 4, "race_id": "race:varkoon", "target_height_m": [2.15, 2.50] },
+    { "species_key": "bothan", "species_id": 5, "race_id": "race:murrik", "target_height_m": [0.55, 0.70] },
+    { "species_key": "twilek", "species_id": 6, "race_id": "race:fae_lume", "target_height_m": [0.40, 0.55] },
+    { "species_key": "zabrak", "species_id": 7, "race_id": "race:kmiri", "target_height_m": [1.47, 1.70] },
+    { "species_key": "sullustan", "species_id": 49, "species_id_hex": "0x31", "race_id": "race:tinkling", "target_height_m": [0.55, 0.80] },
+    { "species_key": "ithorian", "species_id": 33, "species_id_hex": "0x21", "race_id": "race:mogrul", "target_height_m": [0.50, 1.20], "note": "Mogrul : curseur scale bas sur mesh Ithorian" }
+  ],
+  "twilek_dual_role": {
+    "race_id_low_scale": "race:fae_lume",
+    "race_id_high_scale": "race:mogrul",
+    "note": "Même mesh Twi'lek : getSpeciesName retourne fae_lume ; joueurs Mogrul utilisent scale 0,50–1,20 m (même espèce, affichage fae_lume côté serveur sauf évolution future)"
+  },
+  "resolution_notes": [
+    "Pykrel → Rodian (min 0,35 m) ; K'Miri → Zabrak ; Plimp → Trandoshan (scale bas)",
+    "Fae-Lumes → Twi'lek (scale bas) ; Mogruls → Ithorian (scale bas) ou Twi'lek scale haut (même mesh)",
+    "Fel'Ranis → Humain ; Murriks → Bothan ; Tinklings → Sullustan ; Varkoons → Wookiee ; Mechari → Mon Cal"
+  ]
+}

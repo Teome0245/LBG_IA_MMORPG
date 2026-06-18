@@ -13,4 +13,9 @@ if [ "${LBG_SKIP_MMMORPG_WS:-0}" != "1" ]; then
   "${VENV_DIR}/bin/pip" install -e "${ROOT_DIR}/mmmorpg_server"
 fi
 
+# Boucles Lia / joueurs IA (lbg-core3-ia-lia-autonomy, player-autonomy@)
+if [ -f "${ROOT_DIR}/agents/pyproject.toml" ]; then
+  "${VENV_DIR}/bin/pip" install -e "${ROOT_DIR}/agents"
+fi
+
 echo "Installed mmo_server (and mmmorpg_server unless LBG_SKIP_MMMORPG_WS=1) into ${VENV_DIR}"

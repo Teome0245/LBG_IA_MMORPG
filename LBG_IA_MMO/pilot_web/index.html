@@ -596,6 +596,41 @@
       vertical-align: middle;
       border: 1px solid transparent;
     }
+    /* Jobs autonomes */
+    .jobs-card { border: 1px solid #d0d4da; border-radius: 8px; padding: 0.55rem 0.7rem; margin-bottom: 0.5rem; cursor: pointer; background: #fafbfc; }
+    .jobs-card:hover { border-color: #94a3b8; }
+    .jobs-card.jobs-card--active { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb33; }
+    .jobs-card .jobs-card-obj { font-weight: 600; font-size: 0.92rem; }
+    .jobs-card .jobs-card-meta { font-size: 0.78rem; color: #555; margin-top: 0.2rem; }
+    .jobs-badge { display: inline-block; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 0.12rem 0.42rem; border-radius: 6px; border: 1px solid transparent; }
+    .jobs-badge--queued, .jobs-badge--planning { color: #475569; background: #e2e8f0; }
+    .jobs-badge--running { color: #1e40af; background: #dbeafe; }
+    .jobs-badge--waiting_approval { color: #92400e; background: #fde68a; }
+    .jobs-badge--done { color: #065f46; background: #d1fae5; }
+    .jobs-badge--failed { color: #991b1b; background: #fee2e2; }
+    .jobs-badge--cancelled { color: #475569; background: #e5e7eb; }
+    .jobs-step { border-left: 3px solid #cbd5e1; padding: 0.3rem 0.6rem; margin: 0.3rem 0; font-size: 0.85rem; }
+    .jobs-step--done { border-left-color: #10b981; }
+    .jobs-step--failed { border-left-color: #ef4444; }
+    .jobs-step--running { border-left-color: #3b82f6; }
+    .jobs-step--waiting_approval { border-left-color: #f59e0b; }
+    .jobs-step--queued, .jobs-step--skipped { border-left-color: #cbd5e1; }
+    .jobs-step .jobs-step-cap { font-family: ui-monospace, monospace; font-size: 0.78rem; color: #334155; }
+    .jobs-tl-row { padding: 0.1rem 0; }
+    .jobs-readable { border-radius: 8px; padding: 0.75rem 1rem; margin: 0.65rem 0 0.5rem 0; border: 1px solid #bbf7d0; background: #f0fdf4; }
+    .jobs-readable.jobs-readable--muted { border-color: #e2e8f0; background: #f8fafc; }
+    .jobs-readable h3 { margin: 0 0 0.45rem 0; font-size: 0.95rem; font-weight: 700; color: #14532d; }
+    .jobs-readable.jobs-readable--muted h3 { color: #334155; }
+    .jobs-readable-block { margin-top: 0.55rem; }
+    .jobs-readable-block:first-child { margin-top: 0; }
+    .jobs-readable-kicker { font-size: 0.78rem; font-weight: 600; color: #64748b; margin-bottom: 0.2rem; }
+    .jobs-readable-text { white-space: pre-wrap; line-height: 1.5; font-size: 0.92rem; color: #0f172a; }
+    .jobs-cap-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 0.35rem; }
+    .jobs-cap-table th, .jobs-cap-table td { border: 1px solid #cbd5e1; padding: 0.28rem 0.45rem; text-align: left; vertical-align: top; }
+    .jobs-cap-table th { background: #e2e8f0; font-weight: 600; }
+    .jobs-cap-table code { font-size: 0.78rem; }
+    .jobs-readable-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; margin: 0.35rem 0 0.5rem 0; }
+    .jobs-step-snippet { margin-top: 0.35rem; padding: 0.35rem 0.5rem; background: #f1f5f9; border-radius: 6px; font-size: 0.82rem; white-space: pre-wrap; max-height: 8rem; overflow: auto; }
     .assistant-route-badge--llm {
       color: #a7f3d0;
       background: rgba(6, 78, 59, 0.45);
@@ -835,6 +870,7 @@
       <a href="#/">Accueil</a>
       <a href="#/chat">Chat & presets</a>
       <a href="#/assistant">Assistant Core</a>
+      <a href="#/jobs">Jobs autonomes</a>
       <a href="#/ops">Ops & santé</a>
       <a href="#/pm">Chef de projet</a>
       <a href="#/lyra">Lyra (hors MMO)</a>
@@ -860,6 +896,7 @@
         <div class="pilot-home-cards">
           <a class="pilot-home-card" href="#/chat"><h3>Chat & presets</h3><p>Intentions, PNJ, quêtes, combat, DevOps, Lyra via le monde MMO.</p></a>
           <a class="pilot-home-card" href="#/assistant"><h3>Assistant Core</h3><p>Texte naturel → proposition éditable → policy → exécution dry-run ou réelle avec approval.</p></a>
+          <a class="pilot-home-card" href="#/jobs"><h3>Jobs autonomes</h3><p>Objectif en langage naturel → plan → exécution en tâche de fond auto-corrigée (« type Cowork », sous garde-fous).</p></a>
           <a class="pilot-home-card" href="#/ops"><h3>Ops & santé</h3><p>Statut agrégé, capabilities, benchmark, cache, métriques.</p></a>
           <a class="pilot-home-card" href="#/pm"><h3>Chef de projet</h3><p>Jalons, tâches, étape actuelle, file d’attente ; chemins <code>docs/</code> copiables ; export Markdown.</p></a>
           <a class="pilot-home-card" href="#/lyra"><h3>Lyra (hors MMO)</h3><p>Lyra via <code>/v1/pilot/route</code> (modes PNJ monde / assistant), échelles alignées en UI.</p></a>
@@ -1305,6 +1342,88 @@
     </section>
   </div>
 
+  <div id="pilot-page-jobs" class="pilot-page" hidden>
+    <header>
+      <h1>Jobs autonomes <span class="muted" style="font-size:0.9rem;">(« type Cowork », sous garde-fous)</span></h1>
+      <p class="muted">
+        Décris un <strong>objectif en langage naturel</strong> : l'orchestrateur le <strong>planifie</strong>, l'exécute
+        <strong>en tâche de fond</strong> et <strong>s'auto-corrige</strong>. Chaque étape passe par la policy ; une action à effet
+        de bord exige un <strong>token d'approbation</strong> (sinon le job se met en <code>waiting_approval</code>).
+        Endpoints proxifiés sous <code>/v1/pilot/jobs</code>.
+      </p>
+    </header>
+
+    <div class="dashboard" style="grid-template-columns: minmax(20rem, 1fr) minmax(24rem, 1.6fr);">
+      <div class="col">
+        <section>
+          <div class="panel-title"><h2>Nouvel objectif</h2></div>
+          <label for="jobs-actor">actor_id</label>
+          <input type="text" id="jobs-actor" value="pilot:jobs" />
+          <label for="jobs-objective">Objectif (langage naturel)</label>
+          <textarea id="jobs-objective" style="min-height:5rem;">vérifie l'état du backend puis cherche le site de Cursor AI</textarea>
+          <label for="jobs-context">context (JSON) — optionnel</label>
+          <textarea id="jobs-context" style="font-family: ui-monospace, monospace; font-size: 0.82rem;">{}</textarea>
+          <label for="jobs-token" title="Pré-autorise le job et propage le jeton vers desktop_approval / devops_approval (ex. même valeur que LBG_DESKTOP_APPROVAL_TOKEN sur le worker Windows). LBG_JOBS_APPROVAL_TOKEN sur le core si défini.">
+            Token d'approbation — optionnel (autonomie semi-auto)
+          </label>
+          <input type="text" id="jobs-token" placeholder="ex. CHANGE-MOI si défini dans C:\Agent_IA\desktop.env" />
+          <p style="margin:0.5rem 0 0 0; display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
+            <label class="muted" style="margin:0; font-weight:400;"><input type="checkbox" id="jobs-autostart" checked /> démarrer tout de suite</label>
+            <label class="muted" style="margin:0; font-weight:400;" title="Si le runner de fond est désactivé (LBG_JOBS_RUNNER_ENABLED=0), le Pilot fait avancer le job étape par étape via /advance.">
+              <input type="checkbox" id="jobs-manual-advance" /> avancer manuellement (runner off)
+            </label>
+          </p>
+          <button type="button" id="btn-jobs-create">Lancer un job</button>
+          <span id="jobs-create-hint" class="muted" style="margin-left:0.6rem;">—</span>
+        </section>
+
+        <section>
+          <div class="panel-title">
+            <h2>Jobs récents</h2>
+            <button type="button" id="btn-jobs-refresh" style="margin:0; padding:0.2rem 0.6rem; font-size:0.8rem;">Rafraîchir</button>
+          </div>
+          <label class="muted" style="font-weight:400;"><input type="checkbox" id="jobs-filter-mine" checked /> seulement mes jobs (actor_id ci-dessus)</label>
+          <div id="jobs-list" style="margin-top:0.6rem;">—</div>
+        </section>
+      </div>
+
+      <div class="col">
+        <section>
+          <div class="panel-title">
+            <h2>Détail du job</h2>
+            <span id="jobs-detail-status" class="assistant-route-badge" hidden></span>
+          </div>
+          <p id="jobs-detail-empty" class="muted">Sélectionne un job dans la liste pour voir son plan, sa timeline et agir dessus.</p>
+          <div id="jobs-detail" hidden>
+            <p class="muted" id="jobs-detail-objective" style="margin:0 0 0.5rem 0;"></p>
+            <p id="jobs-detail-actions" style="display:flex; gap:0.5rem; flex-wrap:wrap; margin:0 0 0.75rem 0;">
+              <input type="text" id="jobs-approve-token" placeholder="token d'approbation" style="max-width:16rem; margin:0;" />
+              <button type="button" id="btn-jobs-approve" style="margin:0;">Approuver & reprendre</button>
+              <button type="button" id="btn-jobs-advance" style="margin:0;" title="Avancer d'une étape (utile si le runner de fond est off)">Avancer 1 étape</button>
+              <button type="button" id="btn-jobs-cancel" class="assistant-btn-real" style="margin:0;">Annuler</button>
+            </p>
+            <h3 style="margin:0.5rem 0 0.25rem 0; font-size:1rem;">Étapes</h3>
+            <div id="jobs-detail-steps"></div>
+            <div id="jobs-detail-readable" class="jobs-readable jobs-readable--muted" hidden>
+              <h3>Réponse</h3>
+              <div id="jobs-detail-readable-toolbar" class="jobs-readable-toolbar" hidden>
+                <button type="button" id="btn-jobs-copy-devices" style="margin:0; font-size:0.8rem; padding:0.25rem 0.6rem;">Copier JSON appareils</button>
+                <button type="button" id="btn-jobs-copy-catalog" style="margin:0; font-size:0.8rem; padding:0.25rem 0.6rem;">Copier JSON catalogue</button>
+                <span id="jobs-catalog-copy-hint" class="muted" style="font-size:0.78rem;">—</span>
+              </div>
+              <div id="jobs-detail-readable-body"><span class="muted">—</span></div>
+            </div>
+            <h3 style="margin:0.75rem 0 0.25rem 0; font-size:1rem;">Timeline</h3>
+            <div id="jobs-detail-timeline" class="muted" style="font-size:0.82rem;"></div>
+            <details style="margin-top:0.6rem;"><summary class="muted">JSON brut (technique)</summary>
+              <pre id="jobs-detail-raw" class="muted" style="font-size:0.78rem; max-height:18rem;">—</pre>
+            </details>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
   <div id="pilot-page-work" class="pilot-page" hidden>
     <header>
       <h1 id="pilot-work-title">Pilotage</h1>
@@ -1468,6 +1587,10 @@
           <label style="margin:0; font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
             <input type="checkbox" id="toggle-devops-dry-run">
             DevOps dry-run (<code>context.devops_dry_run</code>)
+          </label>
+          <label style="margin:0; font-weight:600; display:inline-flex; align-items:center; gap:0.35rem;">
+            <input type="checkbox" id="toggle-agentic">
+            Mode agentique (<code>context.prefer_agentic</code> → job de fond)
           </label>
           <span class="muted" style="font-size:0.88rem">Exécution réelle : si <code>LBG_DEVOPS_APPROVAL_TOKEN</code> est défini sur l’orchestrator, ajouter <code>devops_approval</code> dans le JSON context (ne pas committer le secret).</span>
           <button type="button" id="btn-reset-history">Reset history</button>
@@ -1634,7 +1757,7 @@
 
     /**
      * URL du backend FastAPI (lbg-backend) servant /v1/pilot/* .
-     * Sur front LAN statique (110:8080), sans reverse-proxy /v1, le navigateur doit cibler le core (voir fusion_env_lan.md).
+     * Sur front LAN (110:8080 + Nginx proxy /v1/), préférer la même origine (pas de CORS, pas de blocage réseau vers 140).
      * Surcharge optionnelle : définir window.__LBG_PILOT_DEFAULT_API_BASE__ avant ce script.
      */
     function pilotInferDefaultApiBase() {
@@ -1652,8 +1775,9 @@
       try {
         const h = String(window.location.hostname || "");
         const port = String(window.location.port || "");
-        if (h === "192.168.0.110" && port === "8080") {
-          return "http://192.168.0.140:8000";
+        const originNorm = String(window.location.origin || "").replace(/\/$/, "");
+        if (h === "192.168.0.110" && (port === "8080" || port === "80") && originNorm) {
+          return originNorm;
         }
       } catch (_) {}
       try {
@@ -1690,11 +1814,13 @@
           try {
             const h = String(window.location.hostname || "");
             const port = String(window.location.port || "");
-            if (h === "192.168.0.110" && port === "8080" && vs === originNorm) {
-              vs = "http://192.168.0.140:8000";
-              try {
-                localStorage.setItem(STORAGE_KEY, vs);
-              } catch (_) {}
+            if (h === "192.168.0.110" && (port === "8080" || port === "80") && originNorm) {
+              if (vs === "http://192.168.0.140:8000" || vs === originNorm) {
+                vs = originNorm;
+                try {
+                  localStorage.setItem(STORAGE_KEY, vs);
+                } catch (_) {}
+              }
             }
           } catch (_) {}
           el.value = vs;
@@ -2527,6 +2653,13 @@
         context.devops_dry_run = true;
       }
 
+      const agentic = document.getElementById("toggle-agentic");
+      if (agentic && agentic.checked) {
+        context.prefer_agentic = true;
+      } else if (context && typeof context === "object") {
+        delete context.prefer_agentic;
+      }
+
       const noCache = document.getElementById("toggle-no-cache");
       if (noCache && noCache.checked) {
         context._no_cache = true;
@@ -3203,15 +3336,21 @@
       btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
     }
 
-    async function postJson(url, payload) {
+    async function postJson(url, payload, timeoutMs) {
       const token = getServiceToken();
       const headers = { "content-type": "application/json" };
       if (token) headers["X-LBG-Service-Token"] = token;
-      const r = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-      });
+      let r;
+      try {
+        r = await pilotFetchWithTimeout(
+          url,
+          { method: "POST", headers: headers, body: JSON.stringify(payload) },
+          timeoutMs || 120000
+        );
+      } catch (e) {
+        const msg = e && e.name === "AbortError" ? "délai dépassé" : String(e && e.message ? e.message : e);
+        return { status: 0, json: { ok: false, error: msg }, text: "" };
+      }
       const t = await r.text();
       let j = null;
       try { j = t ? JSON.parse(t) : null; } catch (_) {}
@@ -4480,6 +4619,7 @@
       if (!seg) return "home";
       if (seg === "chat") return "chat";
       if (seg === "assistant") return "assistant";
+      if (seg === "jobs") return "jobs";
       if (seg === "ops") return "ops";
       if (seg === "pm") return "pm";
       if (seg === "lyra") return "lyra";
@@ -4488,24 +4628,688 @@
       return "home";
     }
 
+    /* ===================== Jobs autonomes ("type Cowork") ===================== */
+    let __jobsPoll = null;
+    let __jobsSelectedId = null;
+    let __jobsBound = false;
+    let __jobsCatalogJsonCopy = null;
+    let __jobsDevicesJsonCopy = null;
+
+    function jobsGetActor() {
+      const el = document.getElementById("jobs-actor");
+      return (el && el.value ? el.value.trim() : "") || "pilot:jobs";
+    }
+
+    function jobsManualAdvance() {
+      const el = document.getElementById("jobs-manual-advance");
+      return !!(el && el.checked);
+    }
+
+    function jobsHint(msg, isError) {
+      pilotInlineHint("jobs-create-hint", msg || "—", !!isError);
+    }
+
+    function jobsIsTerminal(status) {
+      return status === "done" || status === "failed" || status === "cancelled" || status === "waiting_approval";
+    }
+
+    async function pilotFetchWithTimeout(url, opts, timeoutMs) {
+      const ms = typeof timeoutMs === "number" && timeoutMs > 0 ? timeoutMs : 20000;
+      const ctrl = new AbortController();
+      const tid = window.setTimeout(function () { ctrl.abort(); }, ms);
+      try {
+        return await fetch(url, Object.assign({}, opts || {}, { signal: ctrl.signal }));
+      } finally {
+        window.clearTimeout(tid);
+      }
+    }
+
+    async function jobsGet(url) {
+      let r;
+      try {
+        r = await pilotFetchWithTimeout(url, { method: "GET" }, 15000);
+      } catch (e) {
+        const msg = e && e.name === "AbortError" ? "délai dépassé (15s)" : String(e && e.message ? e.message : e);
+        return { status: 0, json: { ok: false, error: msg } };
+      }
+      const t = await r.text();
+      let j = null;
+      try { j = t ? JSON.parse(t) : null; } catch (_) {}
+      return { status: r.status, json: j };
+    }
+
+    function jobsResetDetailPanel(msg) {
+      __jobsSelectedId = null;
+      const empty = document.getElementById("jobs-detail-empty");
+      const detail = document.getElementById("jobs-detail");
+      if (detail) detail.hidden = true;
+      if (empty) {
+        empty.hidden = false;
+        empty.textContent = msg || "Sélectionne un job dans la liste pour voir son plan, sa timeline et agir dessus.";
+        empty.classList.remove("err");
+        if (msg && msg.indexOf("introuvable") >= 0) empty.classList.add("err");
+      }
+      document.querySelectorAll(".jobs-card").forEach(function (c) { c.classList.remove("jobs-card--active"); });
+    }
+
+    async function jobsCreate() {
+      const objectiveEl = document.getElementById("jobs-objective");
+      const objective = objectiveEl && objectiveEl.value ? objectiveEl.value.trim() : "";
+      if (!objective) { jobsHint("Objectif vide.", true); return; }
+      let context = {};
+      try {
+        const raw = (document.getElementById("jobs-context") || {}).value || "{}";
+        context = raw.trim() ? JSON.parse(raw) : {};
+        if (typeof context !== "object" || Array.isArray(context)) throw new Error("context doit être un objet JSON");
+      } catch (e) { jobsHint("context JSON invalide : " + e.message, true); return; }
+      const token = (document.getElementById("jobs-token") || {}).value || "";
+      const autoStart = !!(document.getElementById("jobs-autostart") || {}).checked;
+      jobsHint("Création…");
+      const payload = { actor_id: jobsGetActor(), objective: objective, context: context, auto_start: autoStart };
+      if (token.trim()) payload.approval_token = token.trim();
+      const out = await postJson(getBase() + "/v1/pilot/jobs", payload, 60000);
+      if (out.status !== 200 || !out.json || out.json.ok === false) {
+        jobsHint("Échec création : " + ((out.json && (out.json.error || out.json.detail)) || out.status), true);
+        return;
+      }
+      const job = out.json;
+      jobsHint("Job créé (" + (job.plan_source || "?") + ", " + (job.steps ? job.steps.length : 0) + " étape(s)).");
+      __jobsSelectedId = job.id;
+      if (autoStart && jobsManualAdvance()) {
+        await jobsAdvanceLoop(job.id);
+      }
+      await jobsListRefresh();
+      await jobsSelect(job.id);
+    }
+
+    async function jobsListRefresh() {
+      const listEl = document.getElementById("jobs-list");
+      if (!listEl) return;
+      const mine = !!(document.getElementById("jobs-filter-mine") || {}).checked;
+      let url = getBase() + "/v1/pilot/jobs";
+      if (mine) url += "?actor_id=" + encodeURIComponent(jobsGetActor());
+      const out = await jobsGet(url);
+      if (out.status !== 200 || !out.json || out.json.ok === false) {
+        listEl.innerHTML = '<span class="err">Liste indisponible (' + ((out.json && out.json.error) || out.status) + ").</span>";
+        return;
+      }
+      const jobs = (out.json.jobs || []);
+      jobsRenderList(jobs);
+      if (__jobsSelectedId && !jobs.some(function (j) { return j && j.id === __jobsSelectedId; })) {
+        jobsResetDetailPanel("Le job sélectionné n’existe plus (serveur redémarré ou liste réinitialisée). Choisis-en un autre ou relance un objectif.");
+      }
+    }
+
+    function jobsRenderList(jobs) {
+      const listEl = document.getElementById("jobs-list");
+      if (!listEl) return;
+      if (!jobs.length) { listEl.innerHTML = '<span class="muted">Aucun job.</span>'; return; }
+      listEl.innerHTML = jobs
+        .map(function (j) {
+          const active = j.id === __jobsSelectedId ? " jobs-card--active" : "";
+          const st = String(j.status || "");
+          return (
+            '<div class="jobs-card' + active + '" data-job-id="' + escapeHtml(j.id) + '">' +
+            '<div class="jobs-card-obj">' + escapeHtml(j.objective || "(sans objectif)") + "</div>" +
+            '<div class="jobs-card-meta">' +
+            '<span class="jobs-badge jobs-badge--' + escapeHtml(st) + '">' + escapeHtml(st) + "</span> " +
+            escapeHtml(String(j.n_steps || 0)) + " étape(s) · " + escapeHtml(String(j.plan_source || "?")) +
+            (j.result_summary ? " · " + escapeHtml(j.result_summary) : "") +
+            "</div></div>"
+          );
+        })
+        .join("");
+      listEl.querySelectorAll(".jobs-card").forEach(function (card) {
+        card.addEventListener("click", function () { jobsSelect(card.getAttribute("data-job-id")); });
+      });
+    }
+
+    async function jobsSelect(id) {
+      if (!id) return;
+      __jobsSelectedId = id;
+      const out = await jobsGet(getBase() + "/v1/pilot/jobs/" + encodeURIComponent(id));
+      if (out.status !== 200 || !out.json || out.json.ok === false) {
+        const err = (out.json && (out.json.error || out.json.detail)) || ("HTTP " + out.status);
+        jobsResetDetailPanel("Détail indisponible : " + err + ". Vérifiez l’URL du backend (même origine que le pilot si Nginx proxy /v1/).");
+        return;
+      }
+      jobsRenderDetail(out.json);
+      // Met en évidence la carte sélectionnée.
+      document.querySelectorAll(".jobs-card").forEach(function (c) {
+        c.classList.toggle("jobs-card--active", c.getAttribute("data-job-id") === id);
+      });
+    }
+
+    function jobsPickString(obj, keys) {
+      if (!obj || typeof obj !== "object") return "";
+      for (let i = 0; i < keys.length; i++) {
+        const v = obj[keys[i]];
+        if (typeof v === "string" && v.trim()) return v.trim();
+      }
+      return "";
+    }
+
+    function jobsExtractStepReply(step) {
+      const r = step && step.result;
+      if (!r || typeof r !== "object") return "";
+      let reply = jobsPickString(r, ["reply", "assistant_reply", "text"]);
+      const remote = r.remote;
+      if (!reply && remote && typeof remote === "object") {
+        reply = jobsPickString(remote, ["reply", "text", "assistant_reply", "narration"]);
+        if (!reply && Array.isArray(remote.lines)) {
+          reply = remote.lines
+            .map(function (ln) {
+              if (typeof ln === "string") return ln;
+              if (ln && typeof ln === "object" && typeof ln.text === "string") return ln.text;
+              return "";
+            })
+            .filter(Boolean)
+            .join("\n");
+        }
+      }
+      if (!reply && r.lyra && typeof r.lyra === "object") {
+        reply = jobsPickString(r.lyra, ["reply", "narration", "text"]);
+      }
+      if (!reply && typeof r.echo === "string") reply = r.echo;
+      if (!reply && r.agent === "minimal_stub") {
+        if (step && step.capability === "unknown") {
+          return (
+            "Aucune action technique reconnue pour cette formulation — le job s'est contenté de noter l'objectif. " +
+            "Essayez par ex. « selfcheck », « chemin du fichier X », « ajoute des logs avec rétention 30j », " +
+            "ou précisez le fichier dans le contexte JSON."
+          );
+        }
+        return "(agent dialogue non joignable — vérifier lbg-agent-dialogue sur le core, port 8020)";
+      }
+      if (!reply && typeof r.text_snippet === "string" && r.text_snippet.trim()) {
+        return "(stub) " + r.text_snippet.trim();
+      }
+      return reply;
+    }
+
+    function jobsExtractSelfcheckText(step) {
+      if (!step || step.capability !== "devops_probe") return "";
+      const r = step.result;
+      if (!r || typeof r !== "object") return "";
+      let inner = r.result;
+      if (!inner || typeof inner !== "object") inner = r;
+      const lines = [];
+      const ok = inner.ok;
+      const dry = inner.dry_run;
+      lines.push("Selfcheck : " + (ok === true ? "OK" : ok === false ? "KO" : "?") + (dry ? " (simulation dry-run)" : ""));
+      const hints = inner.remediation_hints;
+      if (Array.isArray(hints) && hints.length) {
+        lines.push("");
+        lines.push("Pistes d'amélioration :");
+        hints.forEach(function (h) {
+          if (typeof h === "string" && h.trim()) lines.push("• " + h.trim());
+        });
+      }
+      const scSteps = inner.steps;
+      if (Array.isArray(scSteps)) {
+        const bad = scSteps.filter(function (st) { return st && st.healthy === false; });
+        if (bad.length) {
+          lines.push("");
+          lines.push("Éléments non sains :");
+          bad.forEach(function (st) {
+            const label = st.kind || st.url || st.unit || "étape";
+            const err = st.result && st.result.error ? " — " + st.result.error : "";
+            lines.push("• " + label + err);
+          });
+        }
+      }
+      return lines.join("\n");
+    }
+
+    function jobsBuildCapabilitiesCatalogTable(catalog) {
+      if (!Array.isArray(catalog) || !catalog.length) return "";
+      const rows = catalog
+        .map(function (row) {
+          if (!row || typeof row !== "object") return "";
+          const tags = Array.isArray(row.tags) ? row.tags.join(", ") : "";
+          return (
+            "<tr><td><code>" + escapeHtml(String(row.capability || "")) + "</code></td>" +
+            "<td><code>" + escapeHtml(String(row.routed_to || "")) + "</code></td>" +
+            "<td>" + escapeHtml(String(row.risk_level || "")) + "</td>" +
+            "<td>" + escapeHtml(String(row.mode || "")) + "</td>" +
+            "<td>" + escapeHtml(String(row.action_context_key || "—")) + "</td>" +
+            "<td class=\"muted\">" + escapeHtml(String(row.description || "")) + (tags ? " [" + escapeHtml(tags) + "]" : "") + "</td></tr>"
+          );
+        })
+        .join("");
+      return (
+        '<table class="jobs-cap-table"><thead><tr>' +
+        "<th>Capability</th><th>Agent (routed_to)</th><th>Risque</th><th>Mode</th><th>Action key</th><th>Description</th>" +
+        "</tr></thead><tbody>" + rows + "</tbody></table>"
+      );
+    }
+
+    function jobsExtractNetworkInventoryStep(step) {
+      const r = step && step.result;
+      if (!r || typeof r !== "object") return null;
+      const devices = r.devices;
+      if (!Array.isArray(devices) || !devices.length) return null;
+      const exportRows = r.devices_export;
+      return {
+        devices: devices,
+        devicesExport: Array.isArray(exportRows) && exportRows.length ? exportRows : devices,
+        n: r.n_devices || devices.length,
+        ts: r.ts,
+        scan_cidr: r.scan_cidr,
+        reply: typeof r.reply === "string" ? r.reply : "",
+      };
+    }
+
+    function jobsExtractActionMatrixStep(step) {
+      const r = step && step.result;
+      if (!r || typeof r !== "object") return null;
+      const matrix = r.action_matrix;
+      if (!Array.isArray(matrix) || !matrix.length) return null;
+      return { matrix: matrix, n: r.n_action_matrix_rows || matrix.length };
+    }
+
+    function jobsBuildActionMatrixTable(matrix) {
+      if (!Array.isArray(matrix) || !matrix.length) return "";
+      const rows = matrix.map(function (row) {
+        const caps = (row.suggested_capabilities || []).map(function (c) {
+          const risk = c.risk_level ? (" <span class=\"muted\">(" + escapeHtml(String(c.risk_level)) + ")</span>") : "";
+          return "<code>" + escapeHtml(String(c.capability || "")) + "</code>→<code>" + escapeHtml(String(c.routed_to || "")) + "</code>" + risk;
+        }).join("<br>");
+        const host = row.host || "—";
+        const hn = row.hostname ? ("<br><span class=\"muted\">" + escapeHtml(String(row.hostname)) + "</span>") : "";
+        return (
+          "<tr><td>" + escapeHtml(String(row.label || row.host || "—")) + "</td>" +
+          "<td><code>" + escapeHtml(String(host)) + "</code>" + hn + "</td>" +
+          "<td class=\"muted\">" + (caps || "—") + "</td></tr>"
+        );
+      }).join("");
+      return (
+        "<table class=\"jobs-cap-table\"><thead><tr>" +
+        "<th>Appareil</th><th>IP / hostname</th><th>Capabilities suggérées</th>" +
+        "</tr></thead><tbody>" + rows + "</tbody></table>"
+      );
+    }
+
+    function jobsBuildNetworkDevicesTable(devices) {
+      if (!Array.isArray(devices) || !devices.length) return "";
+      const rows = devices.map(function (d) {
+        const ok = d.reachable ? "OK" : "KO";
+        const label = d.label || d.server_id || "—";
+        const hint = d.device_hint ? (" <span class=\"muted\">[" + escapeHtml(String(d.device_hint)) + "]</span>") : "";
+        const ports = Array.isArray(d.open_ports) && d.open_ports.length
+          ? d.open_ports.join(", ")
+          : (d.probe_results || []).filter(function (p) { return p.kind === "tcp" && p.ok; }).map(function (p) { return p.port; }).join(", ");
+        const probes = (d.probe_results || []).map(function (p) {
+          const lbl = p.label || p.kind || "?";
+          if (p.kind === "http") return lbl + (p.ok ? " OK" : " KO");
+          if (p.kind === "tcp") return lbl + " :" + p.port + (p.ok ? " open" : " closed");
+          return lbl;
+        }).join(", ");
+        const detail = ports ? ("ports: " + ports) : probes;
+        const hn = d.hostname ? ("<br><span class=\"muted\">" + escapeHtml(String(d.hostname)) + "</span>") : "";
+        const caps = Array.isArray(d.action_suggestions) && d.action_suggestions.length
+          ? d.action_suggestions.map(function (c) { return "<code>" + escapeHtml(String(c)) + "</code>"; }).join(" ")
+          : "";
+        return "<tr><td>" + escapeHtml(String(label)) + hint + "</td><td><code>" + escapeHtml(String(d.host || "")) + "</code>" + hn + "</td>" +
+          "<td>" + ok + "</td><td class=\"muted\">" + escapeHtml(detail || "—") + "</td>" +
+          "<td>" + (caps || "<span class=\"muted\">—</span>") + "</td></tr>";
+      }).join("");
+      return (
+        "<table class=\"jobs-cap-table\"><thead><tr>" +
+        "<th>Appareil</th><th>IP / hostname</th><th>État</th><th>Ports / sondes</th><th>Actions</th>" +
+        "</tr></thead><tbody>" + rows + "</tbody></table>"
+      );
+    }
+
+    function jobsExtractCapabilitiesCatalogStep(step) {
+      const r = step && step.result;
+      if (!r || typeof r !== "object") return null;
+      const catalog = r.capabilities_catalog;
+      if (!Array.isArray(catalog) || !catalog.length) return null;
+      return {
+        catalog: catalog,
+        n: r.n_capabilities || catalog.length,
+        ts: r.ts,
+        reply: typeof r.reply === "string" ? r.reply : "",
+      };
+    }
+
+    function jobsBuildReadableBlocks(job) {
+      const blocks = [];
+      const steps = job.steps || [];
+      for (let c = 0; c < steps.length; c++) {
+        const net = jobsExtractNetworkInventoryStep(steps[c]);
+        if (net) {
+          blocks.push({
+            title: "Appareils LAN (instantané T — " + net.n + " hôte(s)" + (net.scan_cidr ? " · " + net.scan_cidr : "") + ")",
+            html: jobsBuildNetworkDevicesTable(net.devices),
+            devicesJson: JSON.stringify(net.devicesExport, null, 2),
+            isHtml: true,
+            primary: true,
+          });
+          if (net.reply) {
+            blocks.push({ title: "Inventaire réseau (texte)", text: net.reply, primary: false });
+          }
+        }
+        const inv = jobsExtractCapabilitiesCatalogStep(steps[c]);
+        if (inv) {
+          blocks.push({
+            title: "Inventaire agents / capabilities (instantané T — " + inv.n + " entrées)",
+            html: jobsBuildCapabilitiesCatalogTable(inv.catalog),
+            catalogJson: JSON.stringify(inv.catalog, null, 2),
+            isHtml: true,
+            primary: !blocks.some(function (b) { return b.primary; }),
+          });
+          const mx = jobsExtractActionMatrixStep(steps[c]);
+          if (mx) {
+            blocks.push({
+              title: "Matrice LAN × capabilities (" + mx.n + " appareil(s))",
+              html: jobsBuildActionMatrixTable(mx.matrix),
+              isHtml: true,
+              primary: false,
+            });
+          }
+          if (inv.reply) {
+            blocks.push({ title: "Liste texte (copiable)", text: inv.reply, primary: false });
+          }
+          break;
+        }
+      }
+      let synthesis = "";
+      for (let i = steps.length - 1; i >= 0; i--) {
+        if (steps[i].capability === "npc_dialogue" || steps[i].context_patch && steps[i].context_patch._job_synthesis) {
+          synthesis = jobsExtractStepReply(steps[i]);
+          if (synthesis) break;
+        }
+      }
+      if (!synthesis) {
+        for (let j = steps.length - 1; j >= 0; j--) {
+          if (jobsExtractCapabilitiesCatalogStep(steps[j])) continue;
+          synthesis = jobsExtractStepReply(steps[j]);
+          if (synthesis) break;
+        }
+      }
+      if (synthesis && !blocks.some(function (b) { return b.primary; })) {
+        blocks.push({ title: "Synthèse", text: synthesis, primary: true });
+      } else if (synthesis && blocks.length) {
+        blocks.push({ title: "Synthèse", text: synthesis, primary: false });
+      }
+      for (let k = 0; k < steps.length; k++) {
+        const sc = jobsExtractSelfcheckText(steps[k]);
+        if (sc) blocks.push({ title: "Diagnostic DevOps", text: sc, primary: false });
+      }
+      if (!blocks.length && job.result_summary) {
+        blocks.push({ title: "Résumé", text: String(job.result_summary), primary: true });
+      }
+      return blocks;
+    }
+
+    async function jobsCopyTextToClipboard(json, emptyMsg, okPrefix) {
+      const hint = document.getElementById("jobs-catalog-copy-hint");
+      if (!json) {
+        if (hint) hint.textContent = emptyMsg;
+        return;
+      }
+      const setHint = function (msg, err) {
+        if (hint) {
+          hint.textContent = msg;
+          hint.style.color = err ? "#b91c1c" : "";
+        }
+      };
+      setHint("Copie…", false);
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(json);
+          setHint(okPrefix + " (" + json.length + " car.).", false);
+          return;
+        }
+      } catch (_) {}
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = json;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (ok) {
+          setHint(okPrefix + " (" + json.length + " car.).", false);
+          return;
+        }
+      } catch (_) {}
+      setHint("Copie impossible (HTTPS ou permission presse-papiers).", true);
+    }
+
+    async function jobsCopyCatalogJson() {
+      await jobsCopyTextToClipboard(__jobsCatalogJsonCopy, "Aucun catalogue à copier.", "JSON catalogue copié");
+    }
+
+    async function jobsCopyDevicesJson() {
+      await jobsCopyTextToClipboard(__jobsDevicesJsonCopy, "Aucun inventaire appareils à copier.", "JSON appareils copié");
+    }
+
+    function jobsRenderReadable(job) {
+      const wrap = document.getElementById("jobs-detail-readable");
+      const body = document.getElementById("jobs-detail-readable-body");
+      const toolbar = document.getElementById("jobs-detail-readable-toolbar");
+      const copyHint = document.getElementById("jobs-catalog-copy-hint");
+      if (!wrap || !body) return;
+      const blocks = jobsBuildReadableBlocks(job);
+      __jobsCatalogJsonCopy = null;
+      __jobsDevicesJsonCopy = null;
+      blocks.forEach(function (b) {
+        if (b.catalogJson) __jobsCatalogJsonCopy = b.catalogJson;
+        if (b.devicesJson) __jobsDevicesJsonCopy = b.devicesJson;
+      });
+      if (!blocks.length) {
+        wrap.hidden = true;
+        if (toolbar) toolbar.hidden = true;
+        return;
+      }
+      wrap.hidden = false;
+      if (toolbar) toolbar.hidden = !(__jobsCatalogJsonCopy || __jobsDevicesJsonCopy);
+      if (copyHint && !__jobsCatalogJsonCopy && !__jobsDevicesJsonCopy) copyHint.textContent = "—";
+      const copyDevBtn = document.getElementById("btn-jobs-copy-devices");
+      const copyCatBtn = document.getElementById("btn-jobs-copy-catalog");
+      if (copyDevBtn) copyDevBtn.style.display = __jobsDevicesJsonCopy ? "" : "none";
+      if (copyCatBtn) copyCatBtn.style.display = __jobsCatalogJsonCopy ? "" : "none";
+      wrap.classList.toggle("jobs-readable--muted", !blocks.some(function (b) { return b.primary; }));
+      body.innerHTML = blocks
+        .map(function (b) {
+          const bodyHtml = b.isHtml && b.html
+            ? '<div class="jobs-readable-text">' + b.html + "</div>"
+            : '<div class="jobs-readable-text">' + escapeHtml(b.text || "") + "</div>";
+          return (
+            '<div class="jobs-readable-block">' +
+            '<div class="jobs-readable-kicker">' + escapeHtml(b.title) + "</div>" +
+            bodyHtml + "</div>"
+          );
+        })
+        .join("");
+    }
+
+    function jobsRenderDetail(job) {
+      const empty = document.getElementById("jobs-detail-empty");
+      const detail = document.getElementById("jobs-detail");
+      if (!detail || !empty) return;
+      empty.hidden = true;
+      detail.hidden = false;
+
+      const badge = document.getElementById("jobs-detail-status");
+      if (badge) {
+        badge.hidden = false;
+        badge.textContent = job.status;
+        badge.className = "assistant-route-badge jobs-badge jobs-badge--" + String(job.status || "");
+      }
+      const obj = document.getElementById("jobs-detail-objective");
+      if (obj) obj.innerHTML = "<strong>Objectif :</strong> " + escapeHtml(job.objective || "") +
+        " <span class='muted'>(" + escapeHtml(String(job.plan_source || "?")) + (job.pre_authorized ? ", pré-autorisé" : "") + ")</span>" +
+        (job.result_summary ? "<br><span class='muted'>" + escapeHtml(job.result_summary) + "</span>" : "");
+
+      // Boutons selon l'état.
+      const approveBtn = document.getElementById("btn-jobs-approve");
+      const approveTok = document.getElementById("jobs-approve-token");
+      const advBtn = document.getElementById("btn-jobs-advance");
+      const cancelBtn = document.getElementById("btn-jobs-cancel");
+      const waiting = job.status === "waiting_approval";
+      const terminal = job.status === "done" || job.status === "failed" || job.status === "cancelled";
+      if (approveBtn) approveBtn.style.display = waiting ? "" : "none";
+      if (approveTok) approveTok.style.display = waiting ? "" : "none";
+      if (advBtn) advBtn.disabled = terminal || waiting;
+      if (cancelBtn) cancelBtn.disabled = terminal;
+
+      // Étapes.
+      const stepsEl = document.getElementById("jobs-detail-steps");
+      if (stepsEl) {
+        const steps = job.steps || [];
+        stepsEl.innerHTML = steps.length
+          ? steps.map(function (s, i) {
+              const dec = s.policy && s.policy.decision ? s.policy.decision : "";
+              const att = s.max_attempts ? (s.attempts || 0) + "/" + s.max_attempts : (s.attempts || 0);
+              let snippet = "";
+              if (s.status === "done" && s.result) {
+                if (s.capability === "devops_probe") snippet = jobsExtractSelfcheckText(s);
+                else snippet = jobsExtractStepReply(s);
+                if (snippet && snippet.length > 400) snippet = snippet.slice(0, 397) + "…";
+              }
+              return (
+                '<div class="jobs-step jobs-step--' + escapeHtml(String(s.status || "")) + '">' +
+                "<strong>#" + (i + 1) + "</strong> " + escapeHtml(s.summary || s.capability || "") +
+                ' <span class="jobs-step-cap">[' + escapeHtml(s.capability || "") + "]</span>" +
+                ' <span class="jobs-badge jobs-badge--' + escapeHtml(String(s.status || "")) + '">' + escapeHtml(String(s.status || "")) + "</span>" +
+                '<div class="muted" style="font-size:0.76rem;margin-top:0.15rem;">tentatives ' + escapeHtml(String(att)) +
+                (dec ? " · policy " + escapeHtml(dec) : "") +
+                (s.error ? ' · <span class="err">' + escapeHtml(s.error) + "</span>" : "") + "</div>" +
+                (snippet ? '<div class="jobs-step-snippet">' + escapeHtml(snippet) + "</div>" : "") +
+                "</div>"
+              );
+            }).join("")
+          : '<span class="muted">Aucune étape.</span>';
+      }
+
+      jobsRenderReadable(job);
+
+      // Timeline.
+      const tlEl = document.getElementById("jobs-detail-timeline");
+      if (tlEl) {
+        const events = (job.events || []).slice(-24);
+        tlEl.innerHTML = events.length
+          ? events.map(function (e) {
+              const when = e.ts ? new Date(e.ts * 1000).toLocaleTimeString() : "";
+              const extra = [];
+              if (e.capability) extra.push(e.capability);
+              if (e.decision) extra.push(e.decision);
+              if (e.error) extra.push(e.error);
+              if (typeof e.attempt !== "undefined") extra.push("essai " + e.attempt);
+              return '<div class="jobs-tl-row"><code>' + escapeHtml(when) + "</code> · <strong>" +
+                escapeHtml(e.kind || "") + "</strong>" + (extra.length ? " — " + escapeHtml(extra.join(" · ")) : "") + "</div>";
+            }).join("")
+          : '<span class="muted">—</span>';
+      }
+
+      const raw = document.getElementById("jobs-detail-raw");
+      if (raw) raw.textContent = JSON.stringify(job, null, 2);
+    }
+
+    async function jobsAdvanceOnce(id) {
+      const out = await postJson(getBase() + "/v1/pilot/jobs/" + encodeURIComponent(id) + "/advance", {});
+      return out.json && out.json.ok !== false ? out.json : null;
+    }
+
+    async function jobsAdvanceLoop(id) {
+      for (let i = 0; i < 24; i++) {
+        const job = await jobsAdvanceOnce(id);
+        if (!job) break;
+        jobsRenderDetail(job);
+        if (jobsIsTerminal(job.status)) break;
+      }
+    }
+
+    async function jobsApprove() {
+      if (!__jobsSelectedId) return;
+      const tok = (document.getElementById("jobs-approve-token") || {}).value || "";
+      if (!tok.trim()) { jobsHint("Token d'approbation requis.", true); return; }
+      const out = await postJson(getBase() + "/v1/pilot/jobs/" + encodeURIComponent(__jobsSelectedId) + "/approve", { token: tok.trim() });
+      if (out.status !== 200 || !out.json || out.json.ok === false) { jobsHint("Approbation refusée.", true); return; }
+      jobsHint("Approuvé.");
+      if (jobsManualAdvance()) await jobsAdvanceLoop(__jobsSelectedId);
+      await jobsSelect(__jobsSelectedId);
+      await jobsListRefresh();
+    }
+
+    async function jobsCancel() {
+      if (!__jobsSelectedId) return;
+      const out = await postJson(getBase() + "/v1/pilot/jobs/" + encodeURIComponent(__jobsSelectedId) + "/cancel", {});
+      if (out.json && out.json.ok !== false) {
+        await jobsSelect(__jobsSelectedId);
+        await jobsListRefresh();
+      }
+    }
+
+    function jobsBindPage() {
+      if (__jobsBound) return;
+      __jobsBound = true;
+      const c = document.getElementById("btn-jobs-create");
+      if (c) c.addEventListener("click", function () { jobsCreate().catch(function () {}); });
+      const rf = document.getElementById("btn-jobs-refresh");
+      if (rf) rf.addEventListener("click", function () { jobsListRefresh().catch(function () {}); });
+      const ap = document.getElementById("btn-jobs-approve");
+      if (ap) ap.addEventListener("click", function () { jobsApprove().catch(function () {}); });
+      const ad = document.getElementById("btn-jobs-advance");
+      if (ad) ad.addEventListener("click", function () {
+        if (!__jobsSelectedId) return;
+        jobsAdvanceOnce(__jobsSelectedId).then(function (j) { if (j) jobsRenderDetail(j); jobsListRefresh(); }).catch(function () {});
+      });
+      const cancel = document.getElementById("btn-jobs-cancel");
+      if (cancel) cancel.addEventListener("click", function () { jobsCancel().catch(function () {}); });
+      const copyDev = document.getElementById("btn-jobs-copy-devices");
+      if (copyDev) copyDev.addEventListener("click", function () { jobsCopyDevicesJson().catch(function () {}); });
+      const copyCat = document.getElementById("btn-jobs-copy-catalog");
+      if (copyCat) copyCat.addEventListener("click", function () { jobsCopyCatalogJson().catch(function () {}); });
+      const filt = document.getElementById("jobs-filter-mine");
+      if (filt) filt.addEventListener("change", function () { jobsListRefresh().catch(function () {}); });
+    }
+
+    function jobsPollStart() {
+      jobsPollStop();
+      __jobsPoll = window.setInterval(function () {
+        jobsListRefresh().catch(function () {});
+        if (__jobsSelectedId) jobsSelect(__jobsSelectedId).catch(function () {});
+      }, 2800);
+    }
+
+    function jobsPollStop() {
+      if (__jobsPoll) { window.clearInterval(__jobsPoll); __jobsPoll = null; }
+    }
+
     function pilotApplyRoute() {
       try {
         assistantLbgiaPollStop();
       } catch (_) {}
+      try { jobsPollStop(); } catch (_) {}
       const r = pilotParseRoute();
       document.body.dataset.pilotRoute = r;
       const home = document.getElementById("pilot-page-home");
       const work = document.getElementById("pilot-page-work");
       const assistantPage = document.getElementById("pilot-page-assistant");
+      const jobsPage = document.getElementById("pilot-page-jobs");
       const pm = document.getElementById("pilot-page-pm");
       const ly = document.getElementById("pilot-page-lyra");
       const de = document.getElementById("pilot-page-desktop");
       if (home) home.hidden = r !== "home";
       if (work) work.hidden = r !== "chat" && r !== "ops";
       if (assistantPage) assistantPage.hidden = r !== "assistant";
+      if (jobsPage) jobsPage.hidden = r !== "jobs";
       if (pm) pm.hidden = r !== "pm";
       if (ly) ly.hidden = r !== "lyra";
       if (de) de.hidden = r !== "desktop";
+      if (r === "jobs") {
+        try { jobsBindPage(); } catch (_) {}
+        try { jobsListRefresh(); } catch (_) {}
+        try { jobsPollStart(); } catch (_) {}
+      }
       if (r === "desktop") {
         try { pilotDesktopRefreshConfigHint(); } catch (_) {}
         try { pilotDesktopLoadMmoSummaryFromStorage(); } catch (_) {}

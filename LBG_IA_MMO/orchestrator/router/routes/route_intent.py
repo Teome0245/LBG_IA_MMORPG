@@ -9,7 +9,9 @@ from introspection.deterministic_classifier import DeterministicIntentClassifier
 from introspection.llm_intent_classifier import hybrid_classify
 from services.action_policy import evaluate_action_policy
 from services import metrics as svc_metrics
+from services import proactive as svc_proactive
 from shared_registry import capability_registry
+from router.agentic import elevate_to_job, should_elevate_to_agentic
 
 router = APIRouter()
 
@@ -68,6 +70,9 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
     # Chef de projet : priorité explicite (payload ou drapeau).
     elif ctx.get("pm_focus") is True or isinstance(ctx.get("project_pm"), dict):
         intent, confidence = ("project_pm", 1.0)
+    # Core3 Prime : bot joueur / PNJ pilotes (sidecar 245)
+    elif isinstance(ctx.get("core3_action"), dict):
+        intent, confidence = ("core3_bot_action", 1.0)
     # Gameplay monde (v1) : commit aid déterministe
     elif isinstance(ctx.get("world_action"), dict):
         intent, confidence = ("world_aid", 1.0)
@@ -119,7 +124,60 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
                 ensure_ascii=False,
             )
         )
+        svc_proactive.enrich_route_output(
+            actor_id=payload.actor_id,
+            text=payload.text,
+            intent=intent,
+            context=ctx,
+            out_body=out_body,
+        )
         return RouteResponse(intent=intent, confidence=confidence, routed_to=cap.routed_to, output=out_body)
+    # Élévation agentique : si activée et intent actionnable, on délègue au moteur de jobs
+    # (planification + exécution de fond + auto-correction) au lieu d'un dispatch one-shot.
+    if should_elevate_to_agentic(intent, ctx):
+        try:
+            agentic_out = elevate_to_job(
+                text=payload.text,
+                actor_id=payload.actor_id,
+                intent=intent,
+                context=dict(ctx_for_agent),
+            )
+        except Exception:
+            svc_metrics.inc("orchestrator_route_errors_total")
+            raise
+        elapsed_ms = int((time.perf_counter() - t0) * 1000)
+        svc_metrics.inc("orchestrator_route_success_total")
+        svc_metrics.inc("orchestrator_route_agentic_total")
+        out_body = {"capability": cap.name, "policy": policy.model_dump(), **agentic_out}
+        if route_meta:
+            out_body["orchestrator_route_meta"] = route_meta
+        print(
+            json.dumps(
+                {
+                    "event": "orchestrator.route",
+                    "trace_id": trace_id,
+                    "actor_id": payload.actor_id,
+                    "intent": intent,
+                    "confidence": confidence,
+                    "routed_to": cap.routed_to,
+                    "elapsed_ms": elapsed_ms,
+                    "agentic": True,
+                    "job_id": agentic_out.get("job_id"),
+                    "policy_decision": policy.decision,
+                    "policy_allowed": policy.allowed,
+                },
+                ensure_ascii=False,
+            )
+        )
+        svc_proactive.enrich_route_output(
+            actor_id=payload.actor_id,
+            text=payload.text,
+            intent=intent,
+            context=ctx,
+            out_body=out_body,
+        )
+        return RouteResponse(intent=intent, confidence=confidence, routed_to=cap.routed_to, output=out_body)
+
     try:
         agent_out = invoke_after_route(
             cap.routed_to,
@@ -151,6 +209,13 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
             },
             ensure_ascii=False,
         )
+    )
+    svc_proactive.enrich_route_output(
+        actor_id=payload.actor_id,
+        text=payload.text,
+        intent=intent,
+        context=ctx,
+        out_body=out_body,
     )
     return RouteResponse(
         intent=intent,

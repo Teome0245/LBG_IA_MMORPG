@@ -75,7 +75,7 @@ def test_invoke_llm_failure_stub_mentions_error_not_only_base_url(monkeypatch: p
 
     import lbg_agents.dialogue_llm as llm_mod
 
-    def _boom(**_a: object, **_k: object) -> str:
+    def _boom(**_kwargs: object) -> str:
         raise RuntimeError("Réponse LLM vide")
 
     monkeypatch.setattr(llm_mod, "run_dialogue_turn", _boom)
@@ -104,6 +104,20 @@ def test_invoke_default_speaker_when_no_npc_in_context() -> None:
     )
     assert r.status_code == 200
     assert r.json()["speaker"] == "PNJ"
+
+
+def test_invoke_speaker_assistant_when_local_engagement() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/invoke",
+        json={
+            "actor_id": "ui:assistant",
+            "text": "Salut",
+            "context": {"lyra_engagement": "local_assistant"},
+        },
+    )
+    assert r.status_code == 200
+    assert r.json()["speaker"] == "Assistant"
 
 
 def test_invoke_uses_llm_when_configured(monkeypatch: pytest.MonkeyPatch) -> None:

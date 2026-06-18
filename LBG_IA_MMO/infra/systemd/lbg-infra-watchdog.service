@@ -1,0 +1,21 @@
+[Unit]
+Description=LBG infra watchdog — Proxmox + mémoire LAN (sans Prime si rebuild)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=lbg
+Group=lbg
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+Environment=LBG_INFRA_WATCHDOG_ENABLED=1
+Environment=LBG_INFRA_WATCHDOG_EXCLUDE_PRIME=0
+Environment=LBG_INFRA_WATCHDOG_STATE=/var/lib/lbg/infra_watchdog/state.json
+Environment=LBG_VM_MEMORY_PROBE_EXCLUDE=
+# SSH read-only vers 140/245/110 (clés lbg sur core)
+Environment=LBG_MCP_SSH_ENABLED=1
+Environment=LBG_VM_MEMORY_PROBE_ENABLED=1
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python -m lbg_agents.infra_watchdog
+
+[Install]
+WantedBy=multi-user.target

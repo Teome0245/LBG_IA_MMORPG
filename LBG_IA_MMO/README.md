@@ -57,4 +57,6 @@ Dans `docs/` :
 - `docs/fusion_env_lan.md` : **IPs 140 / 245 / 110**, variables `LBG_*`, `deploy_vm.sh`, option front sur 110
 - `docs/ops_devops_audit.md` : VM — audit DevOps JSONL (logrotate), rotation du jeton d’approbation
 - `docs/ops_vm_user.md` : compte **`lbg`** (sudoer, SSH, services systemd)
+- `docs/core3_mmoorb_vm.md` : **SWGEmu Core3** (`MMOCoreORB`) — rsync VM, build, lancement **`core3`** (module **login3** intégré), checklist `.tre` / `config-local.lua`, **§8 synthèse** (IP `galaxy`, UDP, client LAN)
+- `infra/snippets/core3-config-local.lua.example` : modèle **`config-local.lua`** pour la VM (TrePath, MariaDB)
 

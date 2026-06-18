@@ -1,0 +1,24 @@
+[Unit]
+Description=LBG SWGEMU PreCu (core3-swgemu, galaxy 2)
+Documentation=file:///opt/LBG_IA_MMO/docs/core3_mmoorb_vm.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/lbg-new-mmo/MMOCoreORB/bin
+ExecStart=/bin/bash -lc 'cd /opt/lbg-new-mmo/MMOCoreORB/bin && exec ./core3-swgemu >>/tmp/core3-swgemu.log 2>&1'
+Restart=always
+RestartSec=45
+TimeoutStartSec=900
+TimeoutStopSec=120
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

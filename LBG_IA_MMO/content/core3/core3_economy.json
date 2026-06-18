@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "zone": "tatooine",
+  "currency": "credits",
+  "shops": [
+    {
+      "shop_id": "shop:mos_scribe_supplies",
+      "pilot_id": "npc:core3_scribe",
+      "display_name": "Etal Archiviste",
+      "items": [
+        {
+          "template": "object/tangible/food/foraged/foraged_fruit_s1.iff",
+          "price": 25,
+          "stock": 20
+        },
+        {
+          "template": "object/tangible/food/foraged/foraged_fruit_s2.iff",
+          "price": 40,
+          "stock": 12
+        }
+      ]
+    },
+    {
+      "shop_id": "shop:mos_guard_gear",
+      "pilot_id": "npc:core3_guard",
+      "display_name": "Depot du garde",
+      "items": [
+        {
+          "template": "object/tangible/food/foraged/foraged_fruit_s3.iff",
+          "price": 35,
+          "stock": 15
+        }
+      ]
+    },
+    {
+      "shop_id": "shop:mos_cantina_bar",
+      "pilot_id": "npc:core3_barman_jax",
+      "display_name": "Comptoir cantina",
+      "location_id": "mos_eisley_cantina_bar",
+      "items": [
+        {
+          "template": "object/tangible/food/foraged/foraged_fruit_s1.iff",
+          "price": 15,
+          "stock": 50,
+          "label": "Jus desert"
+        },
+        {
+          "template": "object/tangible/food/foraged/foraged_fruit_s2.iff",
+          "price": 25,
+          "stock": 40,
+          "label": "Cocktail ME"
+        },
+        {
+          "template": "object/tangible/food/foraged/foraged_fruit_s3.iff",
+          "price": 40,
+          "stock": 30,
+          "label": "Reserve du barman"
+        }
+      ],
+      "buyback_templates_v2": [
+        "object/tangible/food/foraged/foraged_fruit_s1.iff",
+        "object/tangible/food/foraged/foraged_fruit_s2.iff"
+      ],
+      "notes": "v2: vendor_sell pour rachat inventaire joueur"
+    }
+  ],
+  "craft_chains": [
+    {
+      "id": "craft:mos_ration_pack",
+      "inputs": [
+        "object/tangible/food/foraged/foraged_fruit_s1.iff",
+        "object/tangible/food/foraged/foraged_fruit_s2.iff"
+      ],
+      "output": "object/tangible/food/foraged/foraged_fruit_s3.iff",
+      "notes": "MVP Prime — combiner 2 fruits en ration via commande craft_combine"
+    },
+    {
+      "id": "craft:mos_bar_drink",
+      "pilot_id": "npc:core3_barman_jax",
+      "inputs": [
+        "object/tangible/food/foraged/foraged_fruit_s1.iff",
+        "object/tangible/food/foraged/foraged_fruit_s2.iff"
+      ],
+      "output": "object/tangible/food/foraged/foraged_fruit_s3.iff",
+      "notes": "Barman — preparer boisson (craft_combine via pont IA ou v2 conversation)"
+    }
+  ]
+}

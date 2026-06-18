@@ -6,6 +6,7 @@ infra/secrets/lbg.env
 **/__pycache__/
 *.pyc
 .venv/
+.venv-smoke-ws/
 
 # Moteur jeu Core3 (clone local non versionné — voir third_party/README.md)
 third_party/new_mmo/

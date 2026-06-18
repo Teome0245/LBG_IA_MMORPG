@@ -1,0 +1,6 @@
+-- Pont IA Serveur Prime : une seule planète (id zone Core3).
+-- Copier dans /opt/lbg-new-mmo-clean/MMOCoreORB/bin/conf/config-local.lua
+-- Si la planète est renommée côté client, garder l'id zone ici et dans ia_bridge_screenplay.lua (IA_BRIDGE_ZONE).
+
+Core3.ZonesEnabled = { "tatooine" }
+Core3.SpaceZonesEnabled = {}

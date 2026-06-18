@@ -1716,21 +1716,25 @@ async def invoke(payload: InvokeRequest):
             _audit_write({"event": "agents.desktop.audit", "trace_id": trace_id, **out})
             return out
 
-        map_raw = _get_desktop_cfg("LBG_DESKTOP_APP_MAP_JSON").strip()
-        try:
-            mapping = json.loads(map_raw) if map_raw else {}
-        except Exception:
-            mapping = {}
-        cmd = mapping.get(app_id) if isinstance(mapping, dict) else None
-
-        cmd_list: list[str] | None = None
-        if isinstance(cmd, str) and cmd.strip():
-            cmd_list = [cmd.strip()]
-        elif isinstance(cmd, list) and all(isinstance(x, str) for x in cmd) and cmd:
-            cmd_list = [x.strip() for x in cmd if x.strip()]
+        cmd_override = action.get("command") or action.get("exe")
+        if isinstance(cmd_override, str) and cmd_override.strip():
+            cmd_list = [cmd_override.strip().replace("/", "\\")]
         else:
-            # fallback: essayer l'id comme exécutable
-            cmd_list = [app_id]
+            map_raw = _get_desktop_cfg("LBG_DESKTOP_APP_MAP_JSON").strip()
+            try:
+                mapping = json.loads(map_raw) if map_raw else {}
+            except Exception:
+                mapping = {}
+            cmd = mapping.get(app_id) if isinstance(mapping, dict) else None
+
+            cmd_list = None
+            if isinstance(cmd, str) and cmd.strip():
+                cmd_list = [cmd.strip()]
+            elif isinstance(cmd, list) and all(isinstance(x, str) for x in cmd) and cmd:
+                cmd_list = [x.strip() for x in cmd if x.strip()]
+            else:
+                # fallback: essayer l'id comme exécutable
+                cmd_list = [app_id]
 
         try:
             subprocess.Popen([*cmd_list, *args_list], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

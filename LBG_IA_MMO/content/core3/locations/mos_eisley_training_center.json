@@ -117,27 +117,32 @@
   "homes_default": {
     "description": "Repos triplon — logements ME à définir (cantina / auberge / cellules)",
     "leisure_anchor": {
-      "x": 3526,
-      "y": -4799,
-      "z": 5,
-      "cell": 0
+      "x": 0.34,
+      "y": 51.19,
+      "z": 2.13,
+      "heading": 173.9,
+      "cell": 1105851
     }
   },
   "leisure_patrol_shared": [
     {
-      "x": 3468,
-      "y": -4671,
-      "z": 6
+      "x": 0.34,
+      "y": 51.19,
+      "z": 2.13,
+      "cell": 1105851
     },
     {
-      "x": 3463,
-      "y": -4678,
-      "z": 6
+      "x": -1.2,
+      "y": 51.19,
+      "z": 2.13,
+      "cell": 1105851
     },
     {
-      "x": 3457,
-      "y": -4669,
-      "z": 6
+      "x": 1.8,
+      "y": 51.19,
+      "z": 3.4,
+      "cell": 1105851
     }
-  ]
+  ],
+  "theatre_stage_notes": "Cell 1105851 = scene (dump Teome). Cell 1105853 = mezzanine theater_manager."
 }

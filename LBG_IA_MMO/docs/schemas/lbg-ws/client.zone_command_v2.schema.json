@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lbg-ws/client.zone_command_v2",
+  "title": "lbg-ws/2 commandes client → ZoneServer (via gateway)",
+  "type": "object",
+  "required": ["type", "proto"],
+  "properties": {
+    "type": {
+      "enum": ["login", "select_character", "enter_zone", "move", "say", "interact", "disconnect"]
+    },
+    "proto": { "const": "lbg-ws/2" }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "type": { "const": "login" },
+        "username": { "type": "string" },
+        "password": { "type": "string" }
+      },
+      "required": ["username", "password"]
+    },
+    {
+      "properties": {
+        "type": { "const": "select_character" },
+        "character_id": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["character_id"]
+    },
+    {
+      "properties": {
+        "type": { "const": "enter_zone" },
+        "zone": { "type": "string" }
+      },
+      "required": ["zone"]
+    },
+    {
+      "properties": {
+        "type": { "const": "move" },
+        "pos": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "type": "number" }
+        },
+        "heading": { "type": "number" },
+        "cell": { "type": "integer" },
+        "seq": { "type": "integer", "description": "Numéro de séquence client anti-replay" }
+      },
+      "required": ["pos"]
+    },
+    {
+      "properties": {
+        "type": { "const": "interact" },
+        "target_id": { "type": "string" },
+        "message": { "type": "string" }
+      },
+      "required": ["target_id", "message"]
+    }
+  ]
+}

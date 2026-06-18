@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "default_visual": "res://scenes/avatars/PlaceholderHumanoid.tscn",
+  "species": {
+    "human": "res://assets/avatars/base/human_male_base.glb",
+    "wookiee": "res://assets/avatars/base/wookiee_base.glb"
+  },
+  "mobile_template": {
+    "trainer_brawler": "res://assets/avatars/npc/trainer_brawler.glb",
+    "trainer_marksman": "res://assets/avatars/npc/trainer_marksman.glb",
+    "bartender": "res://assets/avatars/npc/bartender.glb"
+  },
+  "pilot_id": {
+    "npc:core3_barman_jax": "res://assets/avatars/npc/bartender.glb"
+  },
+  "notes": "Les chemins .glb sont utilisés dès que le fichier existe ; sinon PlaceholderHumanoid.tscn."
+}

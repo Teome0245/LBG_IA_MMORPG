@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lbg-ws/server.world_state",
+  "title": "lbg-ws world_state (serveur → client)",
+  "type": "object",
+  "required": ["type", "proto", "entities"],
+  "properties": {
+    "type": { "const": "world_state" },
+    "proto": { "const": "lbg-ws/1" },
+    "tick": { "type": "integer", "minimum": 0 },
+    "entities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "name", "pos"],
+        "properties": {
+          "id": { "type": ["string", "integer"] },
+          "kind": { "enum": ["player", "npc"] },
+          "name": { "type": "string" },
+          "pos": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": { "type": "number" }
+          },
+          "cell": { "type": "integer" },
+          "heading": { "type": "number" },
+          "pilot_id": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

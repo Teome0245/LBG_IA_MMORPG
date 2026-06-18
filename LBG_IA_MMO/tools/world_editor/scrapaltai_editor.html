@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>LBG — Éditeur Scrapaltai v2 / Tatooine</title>
+  <style>
+    :root {
+      --bg: #1a1510;
+      --panel: #2a2218;
+      --sand: #c4a574;
+      --accent: #e8a317;
+      --danger: #ff6b6b;
+      --ok: #7bc96f;
+      --text: #f0e6d2;
+      --muted: #998870;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      padding: 10px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid #443828;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+    header h1 { font-size: 1rem; margin: 0 12px 0 0; color: var(--accent); }
+    button, label.btn {
+      background: #3d3224;
+      border: 1px solid #5a4832;
+      color: var(--text);
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    button:hover, label.btn:hover { background: #4d4030; }
+    button.primary { background: #6b4f12; border-color: var(--accent); }
+    input[type="number"], select {
+      background: #1a1510;
+      border: 1px solid #5a4832;
+      color: var(--text);
+      padding: 4px 8px;
+      border-radius: 4px;
+      width: 80px;
+    }
+    .tabs { display: flex; gap: 4px; }
+    .tabs button.active { background: #6b4f12; border-color: var(--accent); }
+    main { flex: 1; display: flex; min-height: 0; }
+    aside {
+      width: 280px;
+      background: var(--panel);
+      border-right: 1px solid #443828;
+      padding: 12px;
+      overflow-y: auto;
+      font-size: 0.85rem;
+    }
+    aside h2 { font-size: 0.9rem; margin: 12px 0 6px; color: var(--sand); }
+    aside h2:first-child { margin-top: 0; }
+    .canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+    canvas { display: block; width: 100%; height: 100%; cursor: crosshair; }
+    .status {
+      padding: 6px 16px;
+      background: #221c14;
+      border-top: 1px solid #443828;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .status.error { color: var(--danger); }
+    .status.ok { color: var(--ok); }
+    .field { margin-bottom: 8px; }
+    .field label { display: block; color: var(--muted); margin-bottom: 2px; }
+    .poi-list { list-style: none; padding: 0; margin: 0; }
+    .poi-list li {
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      border-radius: 4px;
+      border: 1px solid #443828;
+      cursor: grab;
+    }
+    .poi-list li.selected { outline: 2px solid var(--accent); }
+    .poi-list li.conflict { border-color: var(--danger); }
+    pre.hint {
+      background: #1a1510;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    input[type="file"] { display: none; }
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--panel);
+      border: 1px solid #5a4832;
+      border-radius: 8px;
+      padding: 16px;
+      width: min(520px, 92vw);
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+    .modal h3 { margin: 0 0 10px; color: var(--accent); font-size: 1rem; }
+    .modal textarea {
+      width: 100%;
+      min-height: 120px;
+      background: #1a1510;
+      border: 1px solid #5a4832;
+      color: var(--text);
+      border-radius: 4px;
+      padding: 8px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+    }
+    .modal-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .coords-hud {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(26,21,16,0.85);
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      color: var(--sand);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Scrapaltai Editor</h1>
+    <div class="tabs">
+      <button type="button" id="tab-city" class="active">Ville (grille)</button>
+      <button type="button" id="tab-planet">Planète Tatooine</button>
+    </div>
+    <button type="button" id="btn-snap" class="primary">Snap grille: ON</button>
+    <button type="button" id="btn-import-dump">Import dump IG</button>
+    <button type="button" id="btn-export">Exporter JSON</button>
+    <label class="btn">Layout JSON<input type="file" id="file-import" accept=".json" /></label>
+    <label class="btn">Session VM<input type="file" id="file-session" accept=".txt,.json" /></label>
+    <button type="button" id="btn-apply-cmd">Copier cmd apply</button>
+  </header>
+  <main>
+    <aside>
+      <h2>Ancre monde (centre bazar)</h2>
+      <div class="field"><label>X</label><input type="number" id="anchor-x" value="4809" /></div>
+      <div class="field"><label>Y</label><input type="number" id="anchor-y" value="-802" /></div>
+      <div class="field"><label>Z</label><input type="number" id="anchor-z" value="9" /></div>
+      <h2>Grille</h2>
+      <div class="field"><label>Espacement (m)</label><input type="number" id="grid-spacing" value="100" min="80" step="10" /></div>
+      <div class="field"><label>Centre civique</label>
+        <select id="civic-center"></select>
+      </div>
+      <h2>Plateau serveur</h2>
+      <div class="field"><label>Pas terrain (m)</label><input type="number" id="terrain-step" value="48" /></div>
+      <div class="field"><label>Rayon cellules</label><input type="number" id="terrain-cells" value="6" /></div>
+      <h2>Bâtiments</h2>
+      <ul class="poi-list" id="poi-list"></ul>
+      <h2>Workflow</h2>
+      <pre class="hint" id="workflow-hint">IG (client SWG) :
+1. lbg_we session on
+2. Se placer au centre bazar → lbg_we dump json
+3. Coller ici (Import dump IG) → ancre
+
+Hors jeu :
+4. Ajuster grille → Exporter JSON
+5. apply_scrapaltai_layout.py + deploy + hub clean/build</pre>
+    </aside>
+    <div class="canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div class="coords-hud" id="coords-hud"></div>
+    </div>
+  </main>
+  <div class="status" id="status">Prêt — v2 carte Tatooine + import dump IG</div>
+
+  <div class="modal-backdrop" id="modal-import">
+    <div class="modal">
+      <h3>Import coords in-game</h3>
+      <p style="font-size:0.85rem;color:var(--muted);margin:0 0 8px">
+        Collez la sortie <code>lbg_we dump</code> ou <code>lbg_we dump json</code>, ou un export <code>scrapaltai.json</code>.
+      </p>
+      <textarea id="import-text" placeholder='dump x=4809.00 y=-802.00 z=9.00 cell=0 heading=90.0 zone=tatooine'></textarea>
+      <div class="modal-actions">
+        <button type="button" class="primary" id="btn-import-anchor">Définir ancre</button>
+        <button type="button" id="btn-import-pois">Ancre + POI (export)</button>
+        <button type="button" id="btn-import-cancel">Fermer</button>
+      </div>
+    </div>
+  </div>
+
+<script src="scrapaltai_import.js"></script>
+<script>
+const CATALOG_URL = "scrapaltai_poi_catalog.json";
+const DEFAULT_LAYOUT_URL = "layouts/scrapaltai_v7_default.json";
+const MAP_CONFIG_URL = "tatooine_map_config.json";
+
+let catalog = { pois: [], tatooine_landmarks: [], min_center_spacing_m: 100 };
+let layout = null;
+let mapConfig = { bounds: { minX: -6500, maxX: 6500, minY: -6500, maxY: 6500 }, north_up: true, image: "assets/tatooine_map.svg" };
+let mapImage = null;
+let mode = "city";
+let snapGrid = true;
+let selectedPoiId = null;
+let drag = null;
+let pan = { x: 0, y: 0, active: false, lastX: 0, lastY: 0 };
+let planetPan = { x: 0, y: 0, active: false, lastX: 0, lastY: 0 };
+let scale = 1.2;
+let planetScale = 1;
+let cursorWorld = null;
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const statusEl = document.getElementById("status");
+const coordsHud = document.getElementById("coords-hud");
+
+function planetBounds() {
+  return mapConfig.bounds || { minX: -6500, maxX: 6500, minY: -6500, maxY: 6500 };
+}
+
+function footprint(poiId) {
+  const p = catalog.pois.find(x => x.poi_id === poiId);
+  return (p && p.footprint_m) || catalog.footprint_default_m || 64;
+}
+
+function poiMeta(poiId) {
+  return catalog.pois.find(x => x.poi_id === poiId) || { label: poiId, color: "#888" };
+}
+
+function defaultLayout() {
+  return {
+    schema_version: 1,
+    layout_id: "custom",
+    label: "Layout custom",
+    zone_id: "tatooine",
+    civic_center_poi: "poi:lost_heaven_market",
+    anchor: { x: 4809, y: -802, z: 9 },
+    grid_spacing_m: 100,
+    plateau: { theater_step_m: 48, theater_half_cells: 6, terrain_mod_step_m: 48, terrain_mod_half_cells: 6, lay_file: "terrain/poi_small.lay" },
+    buildings: []
+  };
+}
+
+function syncFormFromLayout() {
+  document.getElementById("anchor-x").value = layout.anchor.x;
+  document.getElementById("anchor-y").value = layout.anchor.y;
+  document.getElementById("anchor-z").value = layout.anchor.z;
+  document.getElementById("grid-spacing").value = layout.grid_spacing_m;
+  document.getElementById("terrain-step").value = layout.plateau.terrain_mod_step_m;
+  document.getElementById("terrain-cells").value = layout.plateau.terrain_mod_half_cells;
+  const sel = document.getElementById("civic-center");
+  sel.innerHTML = catalog.pois.map(p => `<option value="${p.poi_id}">${p.label}</option>`).join("");
+  sel.value = layout.civic_center_poi;
+  renderPoiList();
+}
+
+function syncLayoutFromForm() {
+  layout.anchor.x = +document.getElementById("anchor-x").value;
+  layout.anchor.y = +document.getElementById("anchor-y").value;
+  layout.anchor.z = +document.getElementById("anchor-z").value;
+  layout.grid_spacing_m = +document.getElementById("grid-spacing").value;
+  layout.plateau.terrain_mod_step_m = +document.getElementById("terrain-step").value;
+  layout.plateau.theater_step_m = layout.plateau.terrain_mod_step_m;
+  layout.plateau.terrain_mod_half_cells = +document.getElementById("terrain-cells").value;
+  layout.plateau.theater_half_cells = layout.plateau.terrain_mod_half_cells;
+  layout.civic_center_poi = document.getElementById("civic-center").value;
+}
+
+function buildingMap() {
+  const m = {};
+  layout.buildings.forEach(b => { m[b.poi_id] = b; });
+  return m;
+}
+
+function ensureAllBuildings() {
+  const bm = buildingMap();
+  catalog.pois.forEach(p => {
+    if (!bm[p.poi_id]) {
+      layout.buildings.push({ poi_id: p.poi_id, ox: 0, oy: 0 });
+    }
+  });
+}
+
+function conflicts() {
+  const bad = new Set();
+  const minD = Math.max(catalog.min_center_spacing_m || 100, layout.grid_spacing_m - 5);
+  for (let i = 0; i < layout.buildings.length; i++) {
+    for (let j = i + 1; j < layout.buildings.length; j++) {
+      const a = layout.buildings[i], b = layout.buildings[j];
+      const dx = a.ox - b.ox, dy = a.oy - b.oy;
+      const d = Math.hypot(dx, dy);
+      if (d > 0.1 && d < minD) { bad.add(a.poi_id); bad.add(b.poi_id); }
+    }
+  }
+  return bad;
+}
+
+function renderPoiList() {
+  const ul = document.getElementById("poi-list");
+  const bad = conflicts();
+  ul.innerHTML = layout.buildings.map(b => {
+    const m = poiMeta(b.poi_id);
+    const cls = [b.poi_id === selectedPoiId ? "selected" : "", bad.has(b.poi_id) ? "conflict" : ""].filter(Boolean).join(" ");
+    return `<li class="${cls}" data-id="${b.poi_id}">${m.label}<br><small>${b.ox}, ${b.oy} m</small></li>`;
+  }).join("");
+  ul.querySelectorAll("li").forEach(li => {
+    li.onclick = () => { selectedPoiId = li.dataset.id; renderPoiList(); draw(); };
+  });
+  const n = bad.size;
+  statusEl.className = n ? "status error" : "status ok";
+  statusEl.textContent = n ? `${n / 2} collision(s) — espacement min ${layout.grid_spacing_m} m` : "Layout OK — prêt à exporter";
+}
+
+function resizeCanvas() {
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.clientWidth;
+  canvas.height = wrap.clientHeight;
+  draw();
+}
+
+function cityToScreen(ox, oy) {
+  const cx = canvas.width / 2 + pan.x;
+  const cy = canvas.height / 2 + pan.y;
+  return [cx + ox * scale, cy - oy * scale];
+}
+
+function screenToCity(sx, sy) {
+  const cx = canvas.width / 2 + pan.x;
+  const cy = canvas.height / 2 + pan.y;
+  let ox = (sx - cx) / scale;
+  let oy = -(sy - cy) / scale;
+  if (snapGrid) {
+    const g = layout.grid_spacing_m;
+    ox = Math.round(ox / g) * g;
+    oy = Math.round(oy / g) * g;
+  }
+  return [ox, oy];
+}
+
+function planetToScreen(wx, wy) {
+  const b = planetBounds();
+  const pad = 24;
+  const w = canvas.width - pad * 2;
+  const h = canvas.height - pad * 2;
+  const cx = canvas.width / 2 + planetPan.x;
+  const cy = canvas.height / 2 + planetPan.y;
+  const nx = (wx - b.minX) / (b.maxX - b.minX) - 0.5;
+  const ny = mapConfig.north_up !== false
+    ? (b.maxY - wy) / (b.maxY - b.minY) - 0.5
+    : (wy - b.minY) / (b.maxY - b.minY) - 0.5;
+  const sx = cx + nx * w * planetScale;
+  const sy = cy + ny * h * planetScale;
+  return [sx, sy];
+}
+
+function screenToPlanet(sx, sy) {
+  const b = planetBounds();
+  const pad = 24;
+  const w = canvas.width - pad * 2;
+  const h = canvas.height - pad * 2;
+  const cx = canvas.width / 2 + planetPan.x;
+  const cy = canvas.height / 2 + planetPan.y;
+  const nx = (sx - cx) / (w * planetScale) + 0.5;
+  const ny = (sy - cy) / (h * planetScale) + 0.5;
+  const wx = b.minX + nx * (b.maxX - b.minX);
+  const wy = mapConfig.north_up !== false
+    ? b.maxY - ny * (b.maxY - b.minY)
+    : b.minY + ny * (b.maxY - b.minY);
+  return [wx, wy];
+}
+
+function drawCity() {
+  ctx.fillStyle = "#2a2218";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const g = layout.grid_spacing_m;
+  const half = layout.plateau.terrain_mod_half_cells * layout.plateau.terrain_mod_step_m;
+  ctx.strokeStyle = "#3d3224";
+  for (let i = -800; i <= 800; i += g) {
+    const [x1, yTop] = cityToScreen(i, -800);
+    const [x2, yBot] = cityToScreen(i, 800);
+    ctx.beginPath(); ctx.moveTo(x1, yTop); ctx.lineTo(x2, yBot); ctx.stroke();
+    const [xLeft, y1] = cityToScreen(-800, i);
+    const [xRight, y2] = cityToScreen(800, i);
+    ctx.beginPath(); ctx.moveTo(xLeft, y1); ctx.lineTo(xRight, y2); ctx.stroke();
+  }
+  ctx.fillStyle = "rgba(232, 163, 23, 0.08)";
+  ctx.strokeStyle = "rgba(232, 163, 23, 0.4)";
+  const [px, py] = cityToScreen(-half, -half);
+  const size = half * 2 * scale;
+  ctx.fillRect(px, py - size, size, size);
+  ctx.strokeRect(px, py - size, size, size);
+  ctx.fillStyle = varAccent();
+  ctx.font = "12px sans-serif";
+  ctx.fillText("Plateau serveur", px + 4, py - size + 14);
+  const bad = conflicts();
+  layout.buildings.forEach(b => {
+    const m = poiMeta(b.poi_id);
+    const [sx, sy] = cityToScreen(b.ox, b.oy);
+    const r = (footprint(b.poi_id) / 2) * scale;
+    ctx.beginPath();
+    ctx.fillStyle = bad.has(b.poi_id) ? "rgba(255,107,107,0.5)" : m.color + "99";
+    ctx.strokeStyle = b.poi_id === selectedPoiId ? "#fff" : m.color;
+    ctx.lineWidth = b.poi_id === layout.civic_center_poi ? 3 : 1;
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#f0e6d2";
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(m.label.split(" ")[0], sx, sy + 4);
+    ctx.textAlign = "left";
+  });
+  ctx.fillStyle = "#e8a317";
+  ctx.beginPath();
+  ctx.arc(...cityToScreen(0, 0), 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#998870";
+  ctx.fillText(`Ancre IG ${layout.anchor.x}, ${layout.anchor.y}`, 12, canvas.height - 12);
+}
+
+function varAccent() { return "#e8a317"; }
+
+function drawPlanet() {
+  ctx.fillStyle = "#1a1510";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const b = planetBounds();
+  const [x0, y0] = planetToScreen(b.minX, b.maxY);
+  const [x1, y1] = planetToScreen(b.maxX, b.minY);
+  const mapW = x1 - x0;
+  const mapH = y1 - y0;
+  if (mapImage && mapImage.complete) {
+    ctx.drawImage(mapImage, x0, y0, mapW, mapH);
+  } else {
+    ctx.fillStyle = "#3d2e1a";
+    ctx.fillRect(x0, y0, mapW, mapH);
+  }
+  ctx.strokeStyle = "rgba(232,163,23,0.35)";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x0, y0, mapW, mapH);
+  (catalog.tatooine_landmarks || []).forEach(lm => {
+    const [sx, sy] = planetToScreen(lm.x, lm.y);
+    ctx.beginPath();
+    ctx.fillStyle = lm.id === "lost_heaven" ? "#e8a317" : "#6b5840";
+    ctx.arc(sx, sy, lm.id === "lost_heaven" ? 8 : 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#f0e6d2";
+    ctx.font = "11px sans-serif";
+    ctx.fillText(lm.label, sx + 10, sy + 4);
+  });
+  const [hx, hy] = planetToScreen(layout.anchor.x, layout.anchor.y);
+  ctx.strokeStyle = "#e8a317";
+  ctx.fillStyle = "rgba(232,163,23,0.25)";
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.arc(hx, hy, 22, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(hx, hy, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#c4a574";
+  ctx.font = "12px sans-serif";
+  ctx.fillText(`Ancre ${layout.anchor.x}, ${layout.anchor.y}`, 12, canvas.height - 28);
+  ctx.fillText("Clic = ancre · molette = zoom · Shift+glisser = pan", 12, canvas.height - 12);
+  if (cursorWorld) {
+    coordsHud.textContent = `x=${Math.round(cursorWorld[0])} y=${Math.round(cursorWorld[1])}`;
+  } else {
+    coordsHud.textContent = "";
+  }
+}
+
+function draw() {
+  syncLayoutFromForm();
+  coordsHud.textContent = mode === "planet" && cursorWorld
+    ? `x=${Math.round(cursorWorld[0])} y=${Math.round(cursorWorld[1])}`
+    : "";
+  if (mode === "city") drawCity();
+  else drawPlanet();
+  renderPoiList();
+}
+
+canvas.addEventListener("mousedown", e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  if (mode === "planet") {
+    if (e.button === 1 || e.shiftKey) {
+      planetPan.active = true;
+      planetPan.lastX = sx;
+      planetPan.lastY = sy;
+      return;
+    }
+    const [wx, wy] = screenToPlanet(sx, sy);
+    layout.anchor.x = Math.round(wx);
+    layout.anchor.y = Math.round(wy);
+    document.getElementById("anchor-x").value = layout.anchor.x;
+    document.getElementById("anchor-y").value = layout.anchor.y;
+    draw();
+    return;
+  }
+  if (e.button === 1 || e.shiftKey) {
+    pan.active = true; pan.lastX = sx; pan.lastY = sy;
+    return;
+  }
+  for (const b of layout.buildings) {
+    const [bx, by] = cityToScreen(b.ox, b.oy);
+    const r = (footprint(b.poi_id) / 2) * scale + 4;
+    if (Math.hypot(sx - bx, sy - by) < r) {
+      drag = { poiId: b.poi_id, offX: sx - bx, offY: sy - by };
+      selectedPoiId = b.poi_id;
+      return;
+    }
+  }
+  pan.active = true; pan.lastX = sx; pan.lastY = sy;
+});
+
+canvas.addEventListener("mousemove", e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  if (mode === "planet") {
+    cursorWorld = screenToPlanet(sx, sy);
+    if (planetPan.active) {
+      planetPan.x += sx - planetPan.lastX;
+      planetPan.y += sy - planetPan.lastY;
+      planetPan.lastX = sx;
+      planetPan.lastY = sy;
+      draw();
+      return;
+    }
+    draw();
+    return;
+  }
+  if (pan.active) {
+    pan.x += sx - pan.lastX; pan.y += sy - pan.lastY;
+    pan.lastX = sx; pan.lastY = sy;
+    draw(); return;
+  }
+  if (drag) {
+    const [ox, oy] = screenToCity(sx - drag.offX, sy - drag.offY);
+    const b = layout.buildings.find(x => x.poi_id === drag.poiId);
+    if (b) { b.ox = ox; b.oy = oy; }
+    draw();
+  }
+});
+
+canvas.addEventListener("mouseup", () => { drag = null; pan.active = false; planetPan.active = false; });
+canvas.addEventListener("mouseleave", () => { cursorWorld = null; draw(); });
+canvas.addEventListener("wheel", e => {
+  e.preventDefault();
+  if (mode === "planet") {
+    planetScale = Math.max(0.5, Math.min(4, planetScale * (e.deltaY > 0 ? 0.92 : 1.08)));
+  } else {
+    scale = Math.max(0.4, Math.min(4, scale * (e.deltaY > 0 ? 0.9 : 1.1)));
+  }
+  draw();
+}, { passive: false });
+
+document.getElementById("tab-city").onclick = () => {
+  mode = "city";
+  document.getElementById("tab-city").classList.add("active");
+  document.getElementById("tab-planet").classList.remove("active");
+  draw();
+};
+document.getElementById("tab-planet").onclick = () => {
+  mode = "planet";
+  document.getElementById("tab-planet").classList.add("active");
+  document.getElementById("tab-city").classList.remove("active");
+  draw();
+};
+document.getElementById("btn-snap").onclick = () => {
+  snapGrid = !snapGrid;
+  document.getElementById("btn-snap").textContent = "Snap grille: " + (snapGrid ? "ON" : "OFF");
+};
+document.getElementById("btn-export").onclick = () => {
+  syncLayoutFromForm();
+  const blob = new Blob([JSON.stringify(layout, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (layout.layout_id || "scrapaltai_layout") + ".json";
+  a.click();
+};
+document.getElementById("file-import").onchange = ev => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const raw = r.result;
+    if (raw.includes('"pois"') && raw.includes('"world"')) {
+      try {
+        ScrapaltaiImport.applyExportPoisToLayout(layout, ScrapaltaiImport.parseExportJson(raw), { snapGrid: snapGrid });
+        statusEl.textContent = "Export scrapaltai importé (ancre + offsets POI)";
+      } catch (err) {
+        layout = JSON.parse(raw);
+      }
+    } else {
+      layout = JSON.parse(raw);
+    }
+    ensureAllBuildings();
+    syncFormFromLayout();
+    draw();
+  };
+  r.readAsText(f);
+  ev.target.value = "";
+};
+document.getElementById("file-session").onchange = ev => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const sess = ScrapaltaiImport.parseSessionText(r.result);
+    if (sess.last_dump) {
+      ScrapaltaiImport.applyDumpToAnchor(layout, sess.last_dump);
+    }
+    ScrapaltaiImport.applySessionPoisToLayout(layout, sess, { snapGrid: snapGrid });
+    ensureAllBuildings();
+    syncFormFromLayout();
+    statusEl.textContent = `Session importée (${Object.keys(sess.poi || {}).length} POI)`;
+    draw();
+  };
+  r.readAsText(f);
+  ev.target.value = "";
+};
+
+const modalImport = document.getElementById("modal-import");
+document.getElementById("btn-import-dump").onclick = () => modalImport.classList.add("open");
+document.getElementById("btn-import-cancel").onclick = () => modalImport.classList.remove("open");
+document.getElementById("btn-import-anchor").onclick = () => {
+  const text = document.getElementById("import-text").value;
+  const dump = ScrapaltaiImport.parseDumpText(text);
+  if (!dump) {
+    statusEl.className = "status error";
+    statusEl.textContent = "Dump non reconnu — utilisez lbg_we dump ou dump json";
+    return;
+  }
+  ScrapaltaiImport.applyDumpToAnchor(layout, dump);
+  syncFormFromLayout();
+  modalImport.classList.remove("open");
+  statusEl.className = "status ok";
+  statusEl.textContent = `Ancre → ${layout.anchor.x}, ${layout.anchor.y}, z=${layout.anchor.z}`;
+  draw();
+};
+document.getElementById("btn-import-pois").onclick = () => {
+  const text = document.getElementById("import-text").value.trim();
+  try {
+    if (text.startsWith("{") && text.includes('"pois"')) {
+      ScrapaltaiImport.applyExportPoisToLayout(layout, ScrapaltaiImport.parseExportJson(text), { snapGrid: snapGrid });
+    } else if (text.includes("wpoi.")) {
+      const sess = ScrapaltaiImport.parseSessionText(text);
+      if (sess.last_dump) ScrapaltaiImport.applyDumpToAnchor(layout, sess.last_dump);
+      ScrapaltaiImport.applySessionPoisToLayout(layout, sess, { snapGrid: snapGrid });
+    } else {
+      const dump = ScrapaltaiImport.parseDumpText(text);
+      if (dump) ScrapaltaiImport.applyDumpToAnchor(layout, dump);
+    }
+    ensureAllBuildings();
+    syncFormFromLayout();
+    modalImport.classList.remove("open");
+    statusEl.className = "status ok";
+    statusEl.textContent = "Import POI / ancre appliqué";
+    draw();
+  } catch (err) {
+    statusEl.className = "status error";
+    statusEl.textContent = "Erreur import : " + err.message;
+  }
+};
+document.getElementById("btn-apply-cmd").onclick = () => {
+  const cmd = `bash tools/world_editor/apply_mod_lbg_layout.sh /mnt/j/swgemu/MOD_LBG/${layout.layout_id || "scrapaltai_layout"}.json 8`;
+  navigator.clipboard.writeText(cmd);
+  statusEl.textContent = "Cmd apply MOD_LBG copiée (WSL)";
+};
+
+["anchor-x","anchor-y","anchor-z","grid-spacing","terrain-step","terrain-cells","civic-center"].forEach(id => {
+  document.getElementById(id).addEventListener("change", draw);
+});
+
+async function loadMapImage() {
+  try {
+    mapConfig = await fetch(MAP_CONFIG_URL).then(r => r.json());
+  } catch (_) { /* defaults */ }
+  const img = new Image();
+  img.onload = () => { mapImage = img; if (mode === "planet") draw(); };
+  img.onerror = () => { mapImage = null; };
+  img.src = mapConfig.image || "assets/tatooine_map.svg";
+}
+
+async function init() {
+  try {
+    catalog = await fetch(CATALOG_URL).then(r => r.json());
+  } catch (e) {
+    statusEl.textContent = "Catalogue non chargé — servez le dossier: python3 -m http.server 8765";
+  }
+  try {
+    layout = await fetch(DEFAULT_LAYOUT_URL).then(r => r.json());
+  } catch (e) {
+    layout = defaultLayout();
+  }
+  await loadMapImage();
+  ensureAllBuildings();
+  syncFormFromLayout();
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lbg-ws/client.login",
+  "title": "lbg-ws login (client → serveur)",
+  "type": "object",
+  "required": ["type", "username", "password"],
+  "properties": {
+    "type": { "const": "login" },
+    "username": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "password": { "type": "string", "minLength": 1, "maxLength": 128 }
+  },
+  "additionalProperties": false
+}

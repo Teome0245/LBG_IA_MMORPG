@@ -67,8 +67,18 @@ def _model() -> str:
     return os.environ.get("LBG_ORCHESTRATOR_INTENT_LLM_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini"
 
 
+def _resolve_secret_ref(raw: str | None) -> str:
+    """Comme l’agent dialogue : ``FOO="${BAR}"`` dans EnvironmentFile systemd (pas d’expansion côté systemd)."""
+    s = (raw or "").strip()
+    if len(s) >= 4 and s.startswith("${") and s.endswith("}"):
+        key = s[2:-1].strip()
+        if key:
+            return os.environ.get(key, "").strip()
+    return s
+
+
 def _api_key() -> str:
-    return os.environ.get("LBG_ORCHESTRATOR_INTENT_LLM_API_KEY", "").strip()
+    return _resolve_secret_ref(os.environ.get("LBG_ORCHESTRATOR_INTENT_LLM_API_KEY", "")).strip()
 
 
 def _timeout_s() -> float:

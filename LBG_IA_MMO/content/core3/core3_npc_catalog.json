@@ -12,6 +12,91 @@
     },
     "notes": "C.4b — 24h reel = 4j IG ; cycle travail/repos/loisir par triplon (shift_offset 0..2)"
   },
+  "interior_outdoor_anchors": {
+    "description": "Poste exterieur de repli quand la cellule interieure n'est pas chargee (cycle de vie autonome, pas de spawn joueur).",
+    "by_cell": {
+      "1082877": {
+        "building_id": "mos_eisley_cantina",
+        "label": "entree cantina — comptoir bar",
+        "x": 3528,
+        "y": -4804,
+        "z": 5,
+        "heading": 90
+      },
+      "1082880": {
+        "building_id": "mos_eisley_cantina",
+        "label": "entree cantina — scene artiste",
+        "x": 3528,
+        "y": -4804,
+        "z": 5,
+        "heading": 90
+      },
+      "1105851": {
+        "building_id": "mos_eisley_cantina",
+        "label": "entree cantina — theatre",
+        "x": 3477.89,
+        "y": -4791.6,
+        "z": 5,
+        "heading": 215
+      },
+      "1105853": {
+        "building_id": "mos_eisley_cantina",
+        "label": "entree cantina — mezzanine",
+        "x": 3528,
+        "y": -4804,
+        "z": 5,
+        "heading": 90
+      },
+      "1189634": {
+        "building_id": "mos_eisley_training_center",
+        "label": "cour entrainement — hall principal",
+        "x": 3468,
+        "y": -4671,
+        "z": 6,
+        "heading": 180
+      },
+      "1189635": {
+        "building_id": "mos_eisley_training_center",
+        "label": "cour entrainement — medic",
+        "x": 3468,
+        "y": -4671,
+        "z": 6,
+        "heading": 180
+      },
+      "1189636": {
+        "building_id": "mos_eisley_training_center",
+        "label": "cour entrainement — scout",
+        "x": 3468,
+        "y": -4671,
+        "z": 6,
+        "heading": 180
+      },
+      "1189637": {
+        "building_id": "mos_eisley_training_center",
+        "label": "cour entrainement — brawler",
+        "x": 3468,
+        "y": -4671,
+        "z": 6,
+        "heading": 180
+      },
+      "1189638": {
+        "building_id": "mos_eisley_training_center",
+        "label": "cour entrainement — marksman",
+        "x": 3468,
+        "y": -4671,
+        "z": 6,
+        "heading": 180
+      },
+      "1189639": {
+        "building_id": "mos_eisley_training_center",
+        "label": "cour entrainement — artisan",
+        "x": 3465,
+        "y": -4682,
+        "z": 5,
+        "heading": 129
+      }
+    }
+  },
   "profiles": {
     "profile:scribe_ref": {
       "lbg_npc_id": "npc:scribe",
@@ -93,6 +178,75 @@
         "system_hint": "Instructeur Entertainer, troisieme du triplon Mos Eisley. Ton posé. Eviter les accents.",
         "max_tokens": 100
       }
+    },
+    "profile:cantina_barman_mos_v1": {
+      "lbg_npc_id": "npc:cantina_barman_mos",
+      "tier": "roster_triplet",
+      "role": "vendor",
+      "behavior_profile_id": "profile:cantina_vendor_v1",
+      "autonomy_enabled": true,
+      "autonomy_interval_s": 120,
+      "actions_allowed": [
+        "npc_say",
+        "npc_perform",
+        "npc_path",
+        "vendor_buy",
+        "vendor_sell",
+        "offer_quest",
+        "craft_combine",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Barman cantina Mos Eisley au comptoir. Une seule phrase courte (accueil ou reponse). Pas de lore long ni rumeurs sauf question explicite du client. Ne repete jamais le meme accueil. Eviter les accents.",
+        "max_tokens": 70
+      },
+      "quest_hooks": [
+        "quest:mos_gather_bar_fruit",
+        "quest:mos_gather_bar_spice"
+      ],
+      "evolution": {
+        "tracks": [
+          "rep:cantina_bar",
+          "recipes:bar_drinks"
+        ],
+        "notes": "v2: vendor_sell (rachat inventaire), SUI bartender vanilla, journal quetes Core3"
+      }
+    },
+    "profile:cantina_barman_mos_relief_v1": {
+      "lbg_npc_id": "npc:cantina_barman_mos_relief",
+      "tier": "roster_triplet",
+      "role": "vendor",
+      "actions_allowed": [
+        "npc_say",
+        "vendor_buy",
+        "offer_quest",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Relieve barman cantina. Une phrase courte, pas de dump lore. Eviter les accents.",
+        "max_tokens": 65
+      },
+      "quest_hooks": [
+        "quest:mos_gather_bar_fruit"
+      ]
+    },
+    "profile:cantina_barman_mos_relief2_v1": {
+      "lbg_npc_id": "npc:cantina_barman_mos_relief2",
+      "tier": "roster_triplet",
+      "role": "vendor",
+      "actions_allowed": [
+        "npc_say",
+        "vendor_buy",
+        "offer_quest",
+        "noop"
+      ],
+      "llm": {
+        "system_hint": "Troisieme barman cantina. Une phrase courte, ton sobre. Pas de rumeurs longues sauf si on te le demande. Eviter les accents.",
+        "max_tokens": 65
+      },
+      "quest_hooks": [
+        "quest:mos_gather_bar_spice"
+      ]
     },
     "profile:quest_giver_mos_v1": {
       "lbg_npc_id": "npc:quest_giver_mos",
@@ -402,8 +556,13 @@
       "tier": "simple_replace",
       "role": "trainer",
       "trainer_type": "artisan",
+      "behavior_profile_id": "profile:trainer_artisan_v1",
+      "autonomy_enabled": true,
+      "autonomy_interval_s": 150,
       "actions_allowed": [
         "npc_say",
+        "npc_perform",
+        "npc_path",
         "noop"
       ],
       "llm": {
@@ -648,7 +807,7 @@
         "heading": 348.3811340332,
         "cell": 1189634
       },
-      "description": "Centre entrainement ME — triplon entertainer (recon 2026-05-29)",
+      "description": "Centre entrainement ME — triplon entertainer. Loisir = scene theatre cell 1105851 (dump Teome 2026-06-01).",
       "slots": [
         {
           "pilot_id": "npc:core3_bige_coto",
@@ -665,28 +824,39 @@
               "heading": 348.3811340332,
               "cell": 1189634
             },
-            "home": {
-              "x": 0.18237507343292,
-              "y": -1.4937621355057,
-              "z": 1.1330564022064,
-              "heading": 348.3811340332,
-              "cell": 1189634
+            "cantina": {
+              "x": 0.34,
+              "y": 51.19,
+              "z": 2.13,
+              "heading": 173.9,
+              "cell": 1105851
             },
+            "home": {
+              "x": 0.34,
+              "y": 51.19,
+              "z": 2.13,
+              "heading": 173.9,
+              "cell": 1105851
+            },
+            "leisure_contain_m": 10,
             "leisure_patrol": [
               {
-                "x": 3468,
-                "y": -4671,
-                "z": 6
+                "x": 0.34,
+                "y": 51.19,
+                "z": 2.13,
+                "cell": 1105851
               },
               {
-                "x": 3463,
-                "y": -4678,
-                "z": 6
+                "x": -1.2,
+                "y": 51.19,
+                "z": 2.13,
+                "cell": 1105851
               },
               {
-                "x": 3457,
-                "y": -4669,
-                "z": 6
+                "x": 1.8,
+                "y": 51.19,
+                "z": 3.4,
+                "cell": 1105851
               }
             ]
           }
@@ -706,28 +876,39 @@
               "heading": 348.3811340332,
               "cell": 1189634
             },
-            "home": {
-              "x": 0.18237507343292,
-              "y": -1.4937621355057,
-              "z": 1.1330564022064,
-              "heading": 348.3811340332,
-              "cell": 1189634
+            "cantina": {
+              "x": -0.5,
+              "y": 51.19,
+              "z": 2.13,
+              "heading": 173.9,
+              "cell": 1105851
             },
+            "home": {
+              "x": -0.5,
+              "y": 51.19,
+              "z": 2.13,
+              "heading": 173.9,
+              "cell": 1105851
+            },
+            "leisure_contain_m": 10,
             "leisure_patrol": [
               {
-                "x": 3468,
-                "y": -4671,
-                "z": 6
+                "x": -0.5,
+                "y": 51.19,
+                "z": 2.13,
+                "cell": 1105851
               },
               {
-                "x": 3463,
-                "y": -4678,
-                "z": 6
+                "x": -1.8,
+                "y": 51.19,
+                "z": 2.8,
+                "cell": 1105851
               },
               {
-                "x": 3457,
-                "y": -4669,
-                "z": 6
+                "x": 0.6,
+                "y": 51.19,
+                "z": 3.2,
+                "cell": 1105851
               }
             ]
           },
@@ -748,32 +929,145 @@
               "heading": 348.3811340332,
               "cell": 1189634
             },
-            "home": {
-              "x": 0.18237507343292,
-              "y": -1.4937621355057,
-              "z": 1.1330564022064,
-              "heading": 348.3811340332,
-              "cell": 1189634
+            "cantina": {
+              "x": 1.2,
+              "y": 51.19,
+              "z": 2.13,
+              "heading": 173.9,
+              "cell": 1105851
             },
+            "home": {
+              "x": 1.2,
+              "y": 51.19,
+              "z": 2.13,
+              "heading": 173.9,
+              "cell": 1105851
+            },
+            "leisure_contain_m": 10,
             "leisure_patrol": [
               {
-                "x": 3468,
-                "y": -4671,
-                "z": 6
+                "x": 1.2,
+                "y": 51.19,
+                "z": 2.13,
+                "cell": 1105851
               },
               {
-                "x": 3463,
-                "y": -4678,
-                "z": 6
+                "x": 2.4,
+                "y": 51.19,
+                "z": 2.5,
+                "cell": 1105851
               },
               {
-                "x": 3457,
-                "y": -4669,
-                "z": 6
+                "x": 0.2,
+                "y": 51.19,
+                "z": 3.6,
+                "cell": 1105851
               }
             ]
           },
           "profile_id": "profile:entertainer_trainer_relief2_v1"
+        }
+      ]
+    },
+    {
+      "roster_id": "roster:mos_eisley_cantina_barman",
+      "profile_id": "profile:cantina_barman_mos_v1",
+      "status": "active",
+      "service_policy": "exactly_one",
+      "lifecycle": "game_time_triplet",
+      "service_post": {
+        "x": 7.26,
+        "y": 1.15,
+        "z": -0.89,
+        "heading": 30.2,
+        "cell": 1082877
+      },
+      "description": "Cantina ME — comptoir bar (cell 1082877). Poste cote client (y=1.15) pour conversation au comptoir.",
+      "location_id": "mos_eisley_cantina_bar",
+      "routine": {
+        "kind": "vendor",
+        "shop_id": "shop:mos_cantina_bar",
+        "states": [
+          "idle",
+          "bark",
+          "vendor_buy",
+          "offer_quest"
+        ]
+      },
+      "slots": [
+        {
+          "pilot_id": "npc:core3_barman_jax",
+          "display_name": "Jax Moro",
+          "shift_offset": 0,
+          "lbg_npc_id": "npc:cantina_barman_mos",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "bartender",
+            "combat_policy": "peaceful_static",
+            "post": {
+              "x": 7.26,
+              "y": 1.15,
+              "z": -0.89,
+              "heading": 30.2,
+              "cell": 1082877
+            },
+            "home": {
+              "x": 2.0,
+              "y": 4.5,
+              "z": -2.5,
+              "cell": 1082877
+            }
+          }
+        },
+        {
+          "pilot_id": "npc:core3_barman_sira",
+          "display_name": "Sira Vale",
+          "shift_offset": 1,
+          "profile_id": "profile:cantina_barman_mos_relief_v1",
+          "lbg_npc_id": "npc:cantina_barman_mos_relief",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "bartender",
+            "combat_policy": "peaceful_static",
+            "post": {
+              "x": 7.26,
+              "y": 1.15,
+              "z": -0.89,
+              "heading": 30.2,
+              "cell": 1082877
+            },
+            "home": {
+              "x": 14.0,
+              "y": 4.5,
+              "z": -2.5,
+              "cell": 1082877
+            }
+          }
+        },
+        {
+          "pilot_id": "npc:core3_barman_torrik",
+          "display_name": "Torrik Fenn",
+          "shift_offset": 2,
+          "profile_id": "profile:cantina_barman_mos_relief2_v1",
+          "lbg_npc_id": "npc:cantina_barman_mos_relief2",
+          "binding": {
+            "mode": "roster",
+            "mobile_template": "bartender",
+            "combat_policy": "peaceful_static",
+            "post": {
+              "x": 7.26,
+              "y": 1.15,
+              "z": -0.89,
+              "heading": 30.2,
+              "cell": 1082877
+            },
+            "home": {
+              "x": 18.0,
+              "y": 4.5,
+              "z": -2.5,
+              "cell": 1082877
+            }
+          }
         }
       ]
     },

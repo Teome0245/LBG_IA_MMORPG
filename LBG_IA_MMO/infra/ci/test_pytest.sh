@@ -18,6 +18,7 @@ python -m pip install -U pip
 
 python -m pip install \
   -e ./backend \
+  -e ./hybrid_proactive_agent \
   -e ./orchestrator \
   -e ./agents \
   -e "./mmo_server[dev]" \

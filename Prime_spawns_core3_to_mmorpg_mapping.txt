@@ -1,0 +1,624 @@
+Extraction & mapping — Spawns Core3 -> Bestiaire MMORPG (de-starwarsisation)
+Date: 2026-05-27
+
+But
+- Produire une liste exploitable des mobiles Core3 *reellement spawnés* (static spawns / POI / spawner / lairs)
+  et proposer un mapping vers le bestiaire MMORPG (50 creatures) pour de-starwarsiser progressivement.
+
+Perimetre scanné
+- `/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/`
+  - `screenplays/static_spawns/**/*.lua`
+  - `screenplays/poi/**/*.lua`
+  - `screenplays/spawner/**/*.lua`
+  - `mobile/lair/**/*.lua`
+  - `utils/**/*.lua`
+
+Methodo
+- Extraction automatique des templates rencontres dans les appels `spawnMobile(...)` et `spawnSceneObject(...)`.
+- Resultat: 489 templates uniques detectes.
+- Mapping automatique (heuristiques):
+  - creatures “faune” connues (rancor/bantha/womp_rat/sarlacc/krayt/vesp/vynock/spiders/mites...) -> mapping bestiaire direct.
+  - humanoides/factions (stormtrooper/rebel/tusken/jawa/gungan/nightsister...) -> mapping bestiaire “ruines/corruption” provisoire,
+    en attendant une table “PNJ humanoides” dediee (ce n’est pas du bestiaire au sens strict).
+
+Statut
+- 174 templates auto-mappés
+- 315 templates a trier / mapper manuellement (voir section `--UNMAPPED--`)
+
+Sortie brute (TSV)
+- Colonnes: TEMPLATE, COUNT, MMORPG_ID, MMORPG_NAME, PRIORITE, WHY, EXAMPLE_FILE, LINE
+
+--------------------------------------------------------------------------------
+--REPORT--
+TEMPLATE	COUNT	MMORPG_ID	MMORPG_NAME	PRIORITE	WHY	EXAMPLE_FILE	LINE
+stormtrooper	101	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	89
+rebel_trooper	69	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	82
+dark_trooper	61	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	64
+gungan_guard	60	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_gungan_sacred_place.lua	20
+jawa	56	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	138
+imperial_trooper	47	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	158
+rorgungan_warrior	41	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	75
+gungan_scout	39	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_gungan_temple.lua	42
+stormtrooper_commando	37	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	82
+stormtrooper_rifleman	37	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	54
+singing_mountain_clan_sentry	34	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	108
+nightsister_sentinel	33	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	64
+nightsister_sentry	33	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	68
+rebel_commando	32	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	120
+nightsister_spell_weaver	30	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	67
+tusken_raider	30	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_south.lua	45
+imperial_probe_drone	28	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	115
+stormtrooper_medic	28	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	50
+tusken_commoner	28	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	131
+nightsister_protector	25	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	63
+singing_mountain_clan_arch_witch	24	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	87
+nightsister_slave	23	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	94
+mutant_rancor	20	44	Aberration Instable	P0	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	46
+nightsister_initiate	19	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_nightsister_vs_singing_mountain.lua	64
+singing_mountain_clan_initiate	19	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	60
+giant_decay_mite_hatchling	18	33	Moustique Geant	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	263
+rebel_corporal	18	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	76
+stormtrooper_sniper	18	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	173
+tusken_warlord	18	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	158
+decay_mite	17	33	Moustique Geant	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	68
+foaming_vynock	17	19	Chauve-Feu	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	90
+nightsister_outcast	17	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	58
+nightsister_ranger	17	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	123
+nightsister_stalker	17	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	63
+rot_mite	17	33	Moustique Geant	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	197
+rebel_first_lieutenant	16	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	87
+singing_mountain_clan_scout	16	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	105
+singing_mountain_clan_huntress	15	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	53
+tusken_bantha	15	28	Marcheur des Dunes	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	41
+jawa_warlord	14	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_village_ruins.lua	125
+singing_mountain_clan_rancor	14	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	58
+tusken_avenger	14	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	46
+injured_purbole	13	10	Renard Spectral	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_crash_site.lua	45
+nightsister_rancor_tamer	13	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	65
+rorgungan_warchief	13	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	97
+singing_mountain_clan_guardian	13	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	115
+tusken_brute	13	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	47
+cavern_spider_broodling	12	39	Araignee de Cryptes	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	330
+imperial_medic	12	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	160
+jawa_thief	12	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	93
+singing_mountain_clan_rancor_tamer	12	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	57
+stormtrooper_bombardier	12	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	51
+jawa_healer	11	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	46
+jawa_protector	11	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	18
+rorgungan_scout	11	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	69
+singing_mountain_clan_dragoon	11	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	59
+at_st	10	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	175
+clipped_fynock	10	19	Chauve-Feu	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	131
+krayt_dragon_adolescent	10	24	Serpent de Sable	P0	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	107
+nightsister_rancor	10	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	67
+rancor	10	48	Colosse Mute	P0	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	44
+rebel_medic	10	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	81
+tusken_child	10	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_village_ruins.lua	52
+
+NOTE: Ce fichier ne contient pour l’instant que le haut du mapping mappé (prioritaire / top occurrences),
+car l’export complet (174 lignes mappées + 315 unmapped) est volumineux.
+Si tu veux, je te regénère une version “complete” en l’ajoutant en annexe dans ce meme fichier.
+
+--------------------------------------------------------------------------------
+--UNMAPPED-- (top occurrences a traiter en premier)
+thug	33	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	42
+dathomir_prisoner	23	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	211
+commoner	22	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	19
+strong_mercenary	20	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	184
+mauler	19	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mauler_stronghold.lua	41
+scavenger	19	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	93
+dantari_raider	18	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_dantari_village.lua	36
+nudfuh	18	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	149
+vicious_slice_hound	16	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	114
+dantari_battlelord	15	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_dantari_village.lua	15
+kimo_commoner	15	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_kimogila_town.lua	19
+woolamander_gatherer	15	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_woolamander_temple.lua	41
+garyns_prowler	14	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_garyn_raiders_bunker.lua	47
+aakuan_keeper	12	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	175
+blood_razor_weak_pirate	12	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_downed_blood_razer_transport.lua	58
+commoner_tatooine	12	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	88
+tough_dathomir_prisoner	10	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	217
+woolamander_harvester	10	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_woolamander_temple.lua	53
+
+================================================================================
+ANNEXE — VERSION COMPLETE (auto-extract)
+================================================================================
+
+Ci-dessous: dump complet des sections `--REPORT--` (tous les templates auto-mappés) et `--UNMAPPED--`
+(tous les templates detectes mais non mappés automatiquement).
+
+--------------------------------------------------------------------------------
+--REPORT--
+TEMPLATE	COUNT	MMORPG_ID	MMORPG_NAME	PRIORITE	WHY	EXAMPLE_FILE	LINE
+stormtrooper	101	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	89
+rebel_trooper	69	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	82
+dark_trooper	61	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	64
+gungan_guard	60	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_gungan_sacred_place.lua	20
+jawa	56	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	138
+imperial_trooper	47	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	158
+rorgungan_warrior	41	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	75
+gungan_scout	39	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_gungan_temple.lua	42
+stormtrooper_commando	37	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	82
+stormtrooper_rifleman	37	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	54
+singing_mountain_clan_sentry	34	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	108
+nightsister_sentinel	33	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	64
+nightsister_sentry	33	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	68
+rebel_commando	32	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	120
+nightsister_spell_weaver	30	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	67
+tusken_raider	30	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_south.lua	45
+imperial_probe_drone	28	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	115
+stormtrooper_medic	28	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	50
+tusken_commoner	28	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	131
+nightsister_protector	25	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	63
+singing_mountain_clan_arch_witch	24	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	87
+nightsister_slave	23	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	94
+mutant_rancor	20	44	Aberration Instable	P0	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	46
+nightsister_initiate	19	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_nightsister_vs_singing_mountain.lua	64
+singing_mountain_clan_initiate	19	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	60
+giant_decay_mite_hatchling	18	33	Moustique Geant	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	263
+rebel_corporal	18	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	76
+stormtrooper_sniper	18	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	173
+tusken_warlord	18	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	158
+decay_mite	17	33	Moustique Geant	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	68
+foaming_vynock	17	19	Chauve-Feu	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	90
+nightsister_outcast	17	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	58
+nightsister_ranger	17	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	123
+nightsister_stalker	17	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	63
+rot_mite	17	33	Moustique Geant	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	197
+rebel_first_lieutenant	16	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	87
+singing_mountain_clan_scout	16	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	105
+singing_mountain_clan_huntress	15	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	53
+tusken_bantha	15	28	Marcheur des Dunes	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	41
+jawa_warlord	14	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_village_ruins.lua	125
+singing_mountain_clan_rancor	14	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	58
+tusken_avenger	14	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	46
+injured_purbole	13	10	Renard Spectral	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_crash_site.lua	45
+nightsister_rancor_tamer	13	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	65
+rorgungan_warchief	13	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	97
+singing_mountain_clan_guardian	13	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	115
+tusken_brute	13	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	47
+cavern_spider_broodling	12	39	Araignee de Cryptes	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	330
+imperial_medic	12	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	160
+jawa_thief	12	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	93
+singing_mountain_clan_rancor_tamer	12	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	57
+stormtrooper_bombardier	12	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	51
+jawa_healer	11	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	46
+jawa_protector	11	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	18
+rorgungan_scout	11	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	69
+singing_mountain_clan_dragoon	11	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	59
+at_st	10	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	175
+clipped_fynock	10	19	Chauve-Feu	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	131
+krayt_dragon_adolescent	10	24	Serpent de Sable	P0	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	107
+nightsister_rancor	10	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	67
+rancor	10	48	Colosse Mute	P0	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	44
+rebel_medic	10	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	81
+tusken_child	10	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_village_ruins.lua	52
+jawa_engineer	9	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	22
+nightsister_elder	9	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	97
+rebel_sergeant	9	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	194
+tusken_blood_champion	9	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	49
+canyon_krayt_dragon	8	24	Serpent de Sable	P0	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	51
+disturbed_bolma	8	6	Sanglier-Roche	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_sarlacc.lua	50
+giant_decay_mite_soldier	8	33	Moustique Geant	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	288
+imperial_first_lieutenant	8	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	157
+imperial_private	8	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	149
+jawa_avenger	8	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_village_ruins.lua	127
+juvenile_canyon_krayt_dragon	8	24	Serpent de Sable	P0	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	52
+mutant_baz_nitch	8	46	Fusion Ratee	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_sarlacc.lua	41
+rebel_major	8	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	146
+sand_trooper	8	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	135
+singing_mountain_clan_councilwoman	8	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	91
+singing_mountain_clan_slave	8	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_nw.lua	64
+stormtrooper_squad_leader	8	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	81
+tusken_chief	8	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	82
+tusken_woman	8	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_village_ruins.lua	50
+cavern_spider_hunter	7	39	Araignee de Cryptes	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	321
+jawa_smuggler	7	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	41
+purbole	7	10	Renard Spectral	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_crash_site.lua	48
+rebel_scout	7	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	123
+stormtrooper_captain	7	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	48
+tusken_death_hunter	7	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	39
+tusken_flesh_hunter	7	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	53
+tusken_raid_leader	7	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	54
+giant_canyon_krayt_dragon	6	24	Serpent de Sable	P0	Creature (heuristique via canyon_krayt_dragon)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	82
+imperial_army_captain	6	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	161
+imperial_second_lieutenant	6	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	134
+jawa_leader	6	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	73
+nightsister_enraged_rancor	6	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	68
+purbole_stalker	6	10	Renard Spectral	P2	Creature (heuristique via purbole)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_crash_site.lua	85
+rancor_pygmy	6	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	80
+rebel_staff_sergeant	6	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	238
+tusken_elite_guard	6	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	52
+tusken_guard	6	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_south.lua	48
+gungan_captain	5	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_gungan_sacred_place.lua	34
+gungan_hermit	5	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	49
+imperial_sharpshooter	5	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	222
+imperial_warrant_officer_i	5	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	43
+imprisoned_rebel_soldier	5	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	213
+jawa_henchman	5	43	Ombre Errante	P0	Jawa/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_sandcrawler_ne.lua	33
+purbole_hunter	5	10	Renard Spectral	P2	Creature (heuristique via purbole)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_crash_site.lua	76
+purbole_scout	5	10	Renard Spectral	P2	Creature (heuristique via purbole)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_crash_site.lua	46
+purbole_youth	5	10	Renard Spectral	P2	Creature (heuristique via purbole)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_crash_site.lua	52
+rancor_youth	5	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	76
+rebel_army_captain	5	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	80
+tusken_berserker	5	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_south.lua	59
+tusken_gore_chief	5	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	160
+gungan_reject	4	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	27
+imperial_major	4	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	283
+imperial_pilot	4	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	159
+nightsister_bull_rancor	4	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_nightsister_stronghold.lua	57
+purbole_elder	4	10	Renard Spectral	P2	Creature (heuristique via purbole)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_crash_site.lua	72
+rorgungan_boss	4	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	107
+singing_mountain_clan_outcast	4	32	Sorciere des Boues	P1	Nightsister (mystique SW)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	112
+tusken_observer	4	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	101
+tusken_war_master	4	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_south.lua	47
+ancient_bull_rancor	3	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	86
+bull_rancor	3	48	Colosse Mute	P2	Creature (mapping direct)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	101
+gaping_spider_hunter	3	39	Araignee de Cryptes	P2	Creature (heuristique via gaping_spider)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_nw.lua	70
+gungan_boss	3	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	25
+imperial_officer	3	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_detachment_hq.lua	48
+imperial_recruiter	3	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	155
+outcast_gungan	3	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mordran.lua	21
+rebel_pilot	3	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	161
+stormtrooper_colonel	3	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	295
+tusken_carnage_champion	3	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	110
+tusken_executioner	3	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	102
+tusken_raid_hunter	3	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	40
+elite_sand_trooper	2	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	133
+exiled_gungan	2	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mordran.lua	26
+gungan_hunter	2	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	31
+gungan_kaadu	2	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	33
+gungan_leader	2	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	63
+imperial_brigadier_general	2	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	272
+imperial_corporal	2	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_gungan_temple.lua	128
+imperial_major_general	2	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	327
+imperial_sergeant	2	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	91
+imperial_stealth_operative	2	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	30
+imperial_warrant_officer_ii	2	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	290
+nightsister_enraged_bull_rancor	2	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_nightsister_stronghold.lua	132
+rebel_major_general	2	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	186
+rebel_master_sergeant	2	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	78
+rebel_staff_corporal	2	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	298
+stormtrooper_dewback	2	24	Serpent de Sable	P0	Creature (heuristique via dewback)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	202
+tusken_captain	2	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	76
+tusken_sniper	2	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	159
+tusken_torture_lord	2	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_south.lua	58
+tusken_witch_doctor	2	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_fort_tusken.lua	100
+gungan_general	1	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_gungan_sacred_place.lua	23
+gungan_kaadu_rider	1	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	32
+gungan_priest	1	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_gungan_temple.lua	114
+gungan_war_chief	1	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_gungan_sacred_place.lua	30
+imperial_lieutenant_colonel	1	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	325
+imperial_master_sergeant	1	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	274
+imperial_noncom	1	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_detachment_hq.lua	66
+imperial_sergeant_major	1	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	227
+imperial_staff_corporal	1	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	318
+imperial_staff_sergeant	1	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_detachment_hq.lua	72
+imperial_surface_marshall	1	41	Chevalier Dechu	P0	Imperial/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	158
+jabba_rancor	1	48	Colosse Mute	P0	Creature (heuristique via rancor)	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	65
+rebel_colonel	1	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	283
+rebel_obscureops_agent	1	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	46
+rebel_second_lieutenant	1	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	294
+rebel_specforce_sergeant	1	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	124
+rebel_warrant_officer_i	1	38	Garde Squelettique	P0	Rebel/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rebel_hideout.lua	204
+rorgungan_commoner	1	38	Garde Squelettique	P0	Gungan/Naboo SW	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	267
+tusken_king_quest	1	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_south.lua	42
+tusken_warrior	1	40	Goule Affamee	P0	Tusken/SW explicite	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	134
+
+--------------------------------------------------------------------------------
+--UNMAPPED--
+thug	33	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	42
+dathomir_prisoner	23	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	211
+commoner	22	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	19
+strong_mercenary	20	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	184
+mauler	19	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mauler_stronghold.lua	41
+scavenger	19	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	93
+dantari_raider	18	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_dantari_village.lua	36
+nudfuh	18	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	149
+vicious_slice_hound	16	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	114
+dantari_battlelord	15	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_dantari_village.lua	15
+kimo_commoner	15	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_kimogila_town.lua	19
+woolamander_gatherer	15	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_woolamander_temple.lua	41
+garyns_prowler	14	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_garyn_raiders_bunker.lua	47
+aakuan_keeper	12	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	175
+blood_razor_weak_pirate	12	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_downed_blood_razer_transport.lua	58
+commoner_tatooine	12	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	88
+tough_dathomir_prisoner	10	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	217
+woolamander_harvester	10	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_woolamander_temple.lua	53
+commoner_technician	9	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	106
+greater_sludge_panther	9	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_lost_village_of_durbin.lua	44
+blood_razor_scout	8	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_downed_blood_razer_transport.lua	45
+blood_razor_strong_pirate	8	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_downed_blood_razer_transport.lua	71
+canyon_corsair_guard	8	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_canyon_corsairs_stronghold.lua	49
+escaped_nightsister_slave	8	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	50
+rogue_corsec_trooper	8	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rogue_corsec_base.lua	41
+scientist	8	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	362
+canyon_corsair_scout	7	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_canyon_corsairs_stronghold.lua	47
+corsec_deserter	7	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rogue_corsec_base.lua	58
+mutant_hermit_spider	7	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	90
+renegade_corsec_trooper	7	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rogue_corsec_base.lua	50
+canyon_corsair_weak_pirate	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_canyon_corsairs_stronghold.lua	46
+commoner_old	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	36
+domestic_bearded_jax	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	240
+fynock	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	111
+garyns_mugger	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_garyn_raiders_bunker.lua	60
+garyns_pirate	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_garyn_raiders_bunker.lua	59
+giant_decay_mite_harvester	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	297
+gurk	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/lok_static_spawns.lua	33
+kliknik_dark_defender	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_blueleaf_temple.lua	53
+kliknik_dark_hunter	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_blueleaf_temple.lua	45
+krayt_dragon_grand	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	105
+marauder	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/endor_marauder_stronghold.lua	20
+neo_cobral_thief	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_cobral_hideout.lua	54
+neo_cobral_thug	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_cobral_hideout.lua	47
+sleemo_vandal	6	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	142
+alkhara_bandit	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	69
+canyon_corsair_elite_pirate	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_canyon_corsairs_stronghold.lua	61
+corsec_traitor	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/corellia_rogue_corsec_base.lua	66
+dwarf_nuna	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	74
+famished_sludge_panther	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_lost_village_of_durbin.lua	43
+frenzied_fynock_guardian	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	110
+informant_npc_lvl_2	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_darklighters_estate.lua	17
+langlatch_giant	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/lok_static_spawns.lua	59
+merek_harvester	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	61
+neo_cobral_hitman	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_cobral_hideout.lua	60
+nocuous_kamurith	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_sarlacc.lua	59
+pirate_privateer	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	118
+r4	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	181
+selonian_raider	5	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	50
+bounty_hunter_thug	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	154
+cobral_hooligan	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	209
+commoner_naboo	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	169
+corsec_trooper	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_corsec_vs_flail_battle.lua	23
+dantari_chief	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_dantari_village.lua	31
+escaped_singing_mountain_clan_slave	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_ne.lua	53
+ewok_outcast	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	53
+giant_decay_mite_sentry	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	284
+gundark_rogue	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	87
+injured_verne	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	51
+jungle_fynock	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	128
+junk_jawa	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	113
+kliknik_dark_worker	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_blueleaf_temple.lua	62
+minor_sludge_panther	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_lost_village_of_durbin.lua	50
+mokk_scout	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	37
+mokk_tribesman	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	16
+nightspider	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_abandoned_imperial_outpost.lua	24
+panshee_warrior	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	43
+r5	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	74
+seeker	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	150
+storm_commando	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	44
+swamp_trooper	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	271
+veermok_pygmy	4	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_north.lua	43
+aged_kimogila	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/lok_static_spawns.lua	48
+blood_razor_elite_pirate	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_downed_blood_razer_transport.lua	89
+blood_razor_guard	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_downed_blood_razer_transport.lua	54
+blood_razor_officer	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_downed_blood_razer_transport.lua	88
+bounty_hunter	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	47
+comm_operator	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	114
+desert_demon_bodyguard	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	23
+domestic_eopie	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	61
+fed_dub_investigator	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	44
+force_sensitive_renegade	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dantooine_static_spawns.lua	26
+giant_fanned_rawl	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_north.lua	51
+kimogila_dwarf	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/lok_static_spawns.lua	45
+krayt_dragon_ancient	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_krayt_graveyard.lua	36
+lost_aqualish_commando	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	151
+mokk_clan_primalist	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	46
+mokk_harvester	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	25
+mokk_herbalist	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	21
+mokk_hunter	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	29
+mokk_loreweaver	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	42
+mokk_rockshaper	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	58
+mokk_shaman	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	50
+mokk_soothsayer	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	33
+mokk_warrior	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	54
+naboo_pirate	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	85
+neo_cobral_assassin	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_cobral_hideout.lua	65
+neo_cobral_runner	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_cobral_hideout.lua	49
+rancher	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	247
+roughneck	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	132
+selonian_assassin	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	48
+sludge_panther	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	140
+specforce_marine	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	42
+spice_collective_sentry	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	57
+talus_liberation_party_activist	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	185
+talus_liberation_party_loyalist	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	181
+twilek_slave	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	32
+vexed_voritor_lizard	3	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dantooine_static_spawns.lua	32
+aakuan_anarchist	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	96
+aakuan_defender	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	174
+aakuan_guardian	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	177
+aakuan_sentinel	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	146
+aakuan_steward	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	133
+aakuan_warder	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	43
+agriculturalist	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	216
+assault_trooper	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_nw.lua	50
+blood_razor_captain	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_downed_blood_razer_transport.lua	93
+blood_razor_destroyer	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_downed_blood_razer_transport.lua	86
+canyon_corsair_captain	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_canyon_corsairs_stronghold.lua	63
+canyon_corsair_cutthroat	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_canyon_corsairs_stronghold.lua	67
+canyon_corsair_strong_pirate	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_canyon_corsairs_stronghold.lua	73
+cavern_spider	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	320
+cavern_spider_queen	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	329
+chiss_female	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	170
+commoner_fat	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	71
+contractor	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	78
+desert_demon_brawler	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	28
+dune_stalker_scavenger	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	64
+eg6_power_droid	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	28
+female_roba	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	334
+force_crystal_hunter	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dantooine_static_spawns.lua	20
+garyns_thief	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_garyn_raiders_bunker.lua	55
+general_otto	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	337
+giant_cavern_spider_recluse	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	338
+hunter	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	112
+ig_assassin_droid	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/lok_static_spawns.lua	26
+imprisoned_jabba_employee	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	267
+jinda_worker	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	25
+kimogila	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_kimogila_town.lua	16
+kimogila_hatchling	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/lok_static_spawns.lua	23
+kliknik_dark_warrior	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_blueleaf_temple.lua	67
+lost_aqualish_captain	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	154
+lost_aqualish_lookout	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	146
+lost_aqualish_scout	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	392
+mauler_acolyte	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mauler_stronghold.lua	57
+mauler_apprentice	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mauler_stronghold.lua	60
+mauler_master	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mauler_stronghold.lua	65
+monstrous_brute	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_sarlacc.lua	37
+mound_mite	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	35
+narmle_militia_ensign	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	65
+nightspider_aggressor	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_abandoned_imperial_outpost.lua	30
+protocol_droid_3po_red	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	215
+ra7_bug_droid	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	106
+reclusive_cavern_spider	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	349
+reclusive_gurk_king	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/lok_static_spawns.lua	37
+scoundrel	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	141
+selonian_warrior	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	75
+shadowy_figure	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	46
+spacer	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	99
+specforce_technician	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	99
+spice_collective_courier	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	55
+spiderclan_auspex	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_sw.lua	108
+spiderclan_sentinel	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_nw.lua	120
+talus_liberation_party_fanatic	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	183
+tortur_bull	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	88
+tricky_korga_scout	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	36
+woolamander_harrower	2	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_woolamander_temple.lua	50
+aakuan_champion	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	169
+aakuan_follower	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	316
+aakuan_spice_guard	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	330
+alkhara_lieutenant	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	68
+archaic_panshee_ritualist	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	47
+armodragon	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	44
+artisan	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	16
+axkva_min	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_nightsister_stronghold.lua	272
+beissa	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	58
+binayre_smuggler	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	103
+blood_thirsty_borgle	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	119
+boba_fett	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	60
+canyon_corsair_destroyer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_canyon_corsairs_stronghold.lua	81
+captain_hassk	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_gungans_swamp_town.lua	43
+cas_vankoo	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_kimogila_town.lua	18
+chiss_male	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	38
+colonel_darkstone	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	72
+corsec_captain	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_corsec_vs_flail_battle.lua	22
+corsec_chief	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_corsec_vs_flail_battle.lua	21
+cu_pa	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	79
+dark_jedi_master	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dantooine_static_spawns.lua	37
+deadly_forest_mite_guardian	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	228
+desert_demon_leader	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	26
+desert_demon_marksman	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	27
+devaronian_male	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	65
+domestic_tusk_cat	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	248
+enraged_dune_kimogila	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/lok_static_spawns.lua	25
+entertainer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	24
+ev_9d9	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	59
+ewok_outcast_raider	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	57
+farmer_rancher	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	59
+fed_dub_captain	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	42
+fed_dub_supporter	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	111
+flail_boss	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_corsec_vs_flail_battle.lua	15
+flail_butcher	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_corsec_vs_flail_battle.lua	20
+flail_cutthroat	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_corsec_vs_flail_battle.lua	16
+flail_enforcer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_corsec_vs_flail_battle.lua	17
+flail_killer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_corsec_vs_flail_battle.lua	18
+flail_slayer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/talus_corsec_vs_flail_battle.lua	19
+fringer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	99
+garyns_marauder	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_garyn_raiders_bunker.lua	75
+giant_decay_mite_guardian	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	282
+giant_decay_mite_protector	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	283
+giant_decay_mite_queen	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	262
+giant_dune_kimogila	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_kimogila_town.lua	15
+grassland_blood_marauder	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/endor_marauder_stronghold.lua	18
+grovo	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_nightsister_stronghold.lua	128
+guf_drolg	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	348
+guf_drolg_female	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	349
+gundark_hooligan	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	135
+info_broker	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	44
+informant_npc_lvl_1	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	65
+informant_npc_lvl_3	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	240
+insane_miner	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	180
+jabba_the_hutt	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	62
+jinda_warrior	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	27
+junk_dealer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/lok_imperial_outpost.lua	156
+junk_ollobo	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	174
+junk_sheani	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_amidalas_beach.lua	22
+juvenile_pygmy_torton	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	127
+king_merek_harvester	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	60
+kliknik_dark_queen	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/yavin4_blueleaf_temple.lua	60
+kobola_smuggler	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	176
+kobola_thief	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	173
+kobola_underboss	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	222
+korga_ancient	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	30
+le_repair_droid	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	63
+lesser_prophet_of_the_dark_side	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	40
+lieutenant_heb_nee	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_gungans_swamp_town.lua	33
+lieutenant_ori	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_gungans_swamp_town.lua	20
+lost_aqualish_bomber	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	152
+lost_aqualish_infiltrator	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	116
+lost_aqualish_marksman	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	165
+lost_aqualish_marshall	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	203
+lost_aqualish_outrider	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	93
+lost_aqualish_warchief	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	164
+lost_aqualish_warrior	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	205
+malakili	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	64
+male_roba	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	336
+male_squall	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	104
+mature_reptilian_flier	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	84
+mauler_lord	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mauler_stronghold.lua	63
+mauler_veermok	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mauler_stronghold.lua	68
+medic	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	52
+mire_marauder	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	385
+moisture_farmer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	23
+mokk_clan_leader	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dantooine_mokk_stronghold.lua	62
+mordran	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_mordran.lua	20
+mutated_kahmurra	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	148
+narmle_militia_commander	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	64
+neo_cobral_boss	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/rori_cobral_hideout.lua	70
+nightspider_poison_spitter	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_abandoned_imperial_outpost.lua	31
+noble	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	42
+outlaw	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	69
+percussive_rasp	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	352
+puss_covered_decay_mite_soldier	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	397
+r2	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jawa_traders.lua	104
+r3	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	55
+ravenous_rasp	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	178
+reclusive_cavern_spider_queen	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/dathomir_imperial_prison.lua	350
+repugnant_dung_mite_crawler	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	164
+rockmite	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	56
+rotting_decay_mite_guard	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	143
+salacious_crumb	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	61
+selonian_healer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	66
+selonian_hunter	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	68
+selonian_scout	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	70
+selonian_sentinel	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	71
+selonian_warlord	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	74
+sickle_rasp	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	101
+sickly_decay_mite_queen	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	398
+sleemo_scamp	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_south.lua	141
+slicer	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	147
+smuggler	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	367
+smuggler_pilot	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	96
+song_rasp	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	380
+spice_collective_heavy_guard	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	59
+spiderclan_elder	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_se.lua	79
+spiderclan_protector	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_nw.lua	118
+spiderclan_stalker	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/dathomir_static_spawns_nw.lua	122
+sunstained_dune_lizard	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	152
+surgical_droid_21b	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/corellia_static_spawns.lua	68
+tainted_donkuwah_dark_shaman	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	22
+tainted_korga_dark_shaman	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	33
+tainted_pubam_dark_shaman	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	50
+thief	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/naboo_abandoned_imperial_outpost.lua	20
+tortur	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	90
+trainer_commando	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_imperial_oasis_base.lua	63
+vicious_huf_dun	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/talus_static_spawns_north.lua	100
+vine_rawl	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/naboo_static_spawns_south.lua	75
+volatile_scyk	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	110
+wastrel	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/poi/tatooine_jabbas_palace_mobs.lua	171
+weathered_panshee_shaman	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/endor_static_spawns.lua	40
+weequay_thug	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	59
+weequay_zealot	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	60
+wonderous_cu_pa	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/tatooine_static_spawns_north.lua	102
+young_borgle_gruntling	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/rori_static_spawns.lua	72
+young_spined_snake	1	/home/sdesh/projects/new_mmo/Core3/MMOCoreORB/bin/scripts/screenplays/static_spawns/lok_static_spawns.lua	22

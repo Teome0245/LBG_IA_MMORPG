@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "description": "Apparence LBG des PNJ pilotes IA — mesh SWG, scale (matrice tailles), nom de race affiché.",
+  "defaults": {
+    "lbg_race_id": "race:fel_rani",
+    "lbg_race_display": "Fel'Rani",
+    "species_key": "human",
+    "gender": "male",
+    "height_m": 1.65
+  },
+  "pilots": {
+    "npc:core3_scribe": {
+      "lbg_race_id": "race:tinkling",
+      "lbg_race_display": "Tinkling",
+      "species_key": "sullustan",
+      "gender": "male",
+      "height_m": 0.68
+    },
+    "npc:core3_guard": {
+      "lbg_race_id": "race:mechari",
+      "lbg_race_display": "Mechari",
+      "species_key": "moncal",
+      "gender": "male",
+      "height_m": 1.85
+    },
+    "npc:core3_kisreudi": {
+      "lbg_race_id": "race:fel_rani",
+      "lbg_race_display": "Fel'Rani",
+      "species_key": "human",
+      "gender": "female",
+      "height_m": 1.55
+    },
+    "npc:core3_bige_coto": {
+      "lbg_race_id": "race:fel_rani",
+      "lbg_race_display": "Fel'Rani",
+      "species_key": "human",
+      "gender": "female",
+      "height_m": 1.60
+    },
+    "npc:core3_lyra_velo": {
+      "lbg_race_id": "race:fae_lume",
+      "lbg_race_display": "Fae-Lume",
+      "species_key": "twilek",
+      "gender": "female",
+      "height_m": 0.48
+    },
+    "npc:core3_talen_ress": {
+      "lbg_race_id": "race:fel_rani",
+      "lbg_race_display": "Fel'Rani",
+      "species_key": "human",
+      "gender": "male",
+      "height_m": 1.72
+    },
+    "npc:core3_vex_sorn": {
+      "lbg_race_id": "race:fel_rani",
+      "lbg_race_display": "Fel'Rani",
+      "species_key": "human",
+      "gender": "male",
+      "height_m": 1.65
+    },
+    "npc:core3_nira_kell": {
+      "lbg_race_id": "race:fel_rani",
+      "lbg_race_display": "Fel'Rani",
+      "species_key": "human",
+      "gender": "female",
+      "height_m": 1.58
+    },
+    "npc:core3_daan_oth": {
+      "lbg_race_id": "race:murrik",
+      "lbg_race_display": "Murrik",
+      "species_key": "bothan",
+      "gender": "male",
+      "height_m": 0.62
+    },
+    "npc:core3_guide_quartier": {
+      "lbg_race_id": "race:fel_rani",
+      "lbg_race_display": "Fel'Rani",
+      "species_key": "human",
+      "gender": "male",
+      "height_m": 1.62
+    },
+    "npc:core3_sergent_rue": {
+      "lbg_race_id": "race:mechari",
+      "lbg_race_display": "Mechari",
+      "species_key": "moncal",
+      "gender": "male",
+      "height_m": 1.90
+    },
+    "npc:core3_rumeuriste": {
+      "lbg_race_id": "race:murrik",
+      "lbg_race_display": "Murrik",
+      "species_key": "bothan",
+      "gender": "female",
+      "height_m": 0.58
+    },
+    "npc:core3_agent_circulation": {
+      "lbg_race_id": "race:fel_rani",
+      "lbg_race_display": "Fel'Rani",
+      "species_key": "human",
+      "gender": "male",
+      "height_m": 1.68
+    },
+    "npc:core3_maitre_salle": {
+      "lbg_race_id": "race:fae_lume",
+      "lbg_race_display": "Fae-Lume",
+      "species_key": "twilek",
+      "gender": "male",
+      "height_m": 0.95
+    },
+    "npc:core3_artiste_scene": {
+      "lbg_race_id": "race:fae_lume",
+      "lbg_race_display": "Fae-Lume",
+      "species_key": "twilek",
+      "gender": "female",
+      "height_m": 0.50
+    },
+    "npc:core3_habitue_cantina": {
+      "lbg_race_id": "race:mogrul",
+      "lbg_race_display": "Mogrul",
+      "species_key": "ithorian",
+      "gender": "male",
+      "height_m": 1.00
+    },
+    "npc:core3_videur": {
+      "lbg_race_id": "race:plimp",
+      "lbg_race_display": "Plimp",
+      "species_key": "rodian",
+      "gender": "male",
+      "height_m": 0.42
+    },
+    "npc:core3_barman_jax": {
+      "lbg_race_id": "race:fel_rani",
+      "lbg_race_display": "Fel'Rani",
+      "species_key": "human",
+      "gender": "male",
+      "height_m": 1.72
+    },
+    "npc:core3_barman_sira": {
+      "lbg_race_id": "race:mechari",
+      "lbg_race_display": "Mechari",
+      "species_key": "twilek",
+      "gender": "female",
+      "height_m": 1.58
+    },
+    "npc:core3_barman_torrik": {
+      "lbg_race_id": "race:mogrul",
+      "lbg_race_display": "Mogrul",
+      "species_key": "gran",
+      "gender": "male",
+      "height_m": 1.45
+    }
+  }
+}

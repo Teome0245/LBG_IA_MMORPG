@@ -1,0 +1,60 @@
+{
+  "id": "lia_perform_catalog",
+  "version": 1,
+  "description": "Gestes métier Lia (orchestrateur) — message = id perform",
+  "performs": [
+    {
+      "id": "dance",
+      "label": "Danse (entertainer)",
+      "anims": ["social_dance_medium", "social_spin", "bounce"],
+      "system_message": "[Lia] Danse pour les voyageurs."
+    },
+    {
+      "id": "dance_floor",
+      "label": "Danse piste",
+      "anims": ["wave_on_dance_floor", "social_dance_medium", "celebrate"]
+    },
+    {
+      "id": "greet",
+      "label": "Salut accueil",
+      "anims": ["wave_hail", "greet", "nod"]
+    },
+    {
+      "id": "bow",
+      "label": "Révérence",
+      "anims": ["bow", "curtsy"]
+    },
+    {
+      "id": "cheer",
+      "label": "Applaudir / encourager",
+      "anims": ["applause_polite", "celebrate", "clap"]
+    },
+    {
+      "id": "think",
+      "label": "Réflexion (orchestrateur)",
+      "anims": ["pound_fist_palm", "scratch_head", "inspect"]
+    },
+    {
+      "id": "search",
+      "label": "Fouiller / examiner le sol",
+      "anims": ["crouch", "pickup", "inspect"],
+      "system_message": "[Lia] Fouille les environs…"
+    },
+    {
+      "id": "forage",
+      "label": "Prospection (scout, visuel)",
+      "anims": ["survey", "inspect", "crouch"],
+      "system_message": "[Lia] Analyse le terrain."
+    },
+    {
+      "id": "meditate",
+      "label": "Méditation / pause",
+      "anims": ["sit", "sit_ground", "meditate"]
+    },
+    {
+      "id": "conduct",
+      "label": "Diriger / pointer (chef d'orchestre IG)",
+      "anims": ["point", "point_forward", "wave"]
+    }
+  ]
+}

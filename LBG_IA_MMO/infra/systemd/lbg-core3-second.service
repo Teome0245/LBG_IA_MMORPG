@@ -1,0 +1,24 @@
+[Unit]
+Description=LBG MMO Serveur Second (core3-second, galaxy 4)
+Documentation=file:///opt/LBG_IA_MMO/docs/core3_mmoorb_vm.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/lbg-new-mmo-clean/MMOCoreORB/bin
+ExecStart=/bin/bash -lc 'cd /opt/lbg-new-mmo-clean/MMOCoreORB/bin && exec ./core3-second >>/tmp/core3-second.log 2>&1'
+Restart=always
+RestartSec=45
+TimeoutStartSec=900
+TimeoutStopSec=120
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

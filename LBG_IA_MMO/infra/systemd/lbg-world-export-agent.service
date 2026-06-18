@@ -1,0 +1,16 @@
+[Unit]
+Description=LBG World Editor export agent (merge JSON + Git)
+After=network-online.target lbg-core3-prime.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=lbg
+Group=lbg
+Environment=LBG_IA_MMO_ROOT=/opt/LBG_IA_MMO
+Environment=CORE3_BIN=/opt/lbg-new-mmo-clean/MMOCoreORB/bin
+ExecStart=/opt/LBG_IA_MMO/infra/scripts/lbg_world_export_agent.sh
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

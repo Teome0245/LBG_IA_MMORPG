@@ -7,6 +7,8 @@ VENV_DIR="${ROOT_DIR}/.venv"
 python3 -m venv "${VENV_DIR}"
 "${VENV_DIR}/bin/pip" install -U pip
 
+"${VENV_DIR}/bin/pip" install -e "${ROOT_DIR}/hybrid_proactive_agent"
+"${VENV_DIR}/bin/pip" install -e "${ROOT_DIR}/companion_bot"
 "${VENV_DIR}/bin/pip" install -e "${ROOT_DIR}/agents[dialogue_http_service]"
 "${VENV_DIR}/bin/pip" install -e "${ROOT_DIR}/backend"
 "${VENV_DIR}/bin/pip" install -e "${ROOT_DIR}/orchestrator"

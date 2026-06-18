@@ -135,7 +135,7 @@ Avec :
 - housing,
 - vol atmosphérique,
 - nage,
-- refonte graphique sous Godot Engine.
+- refonte graphique definir l'outils
 
 L’orchestrateur devient :
 
@@ -144,7 +144,7 @@ L’orchestrateur devient :
 - le **système de décision**,  
 - le **simulateur d’êtres vivants**.
 
-Lyra devient un **personnage vivant** dans ce monde.
+Lyra devient un **personnage vivant** dans ce monde. (peut être plusieurs ?)
 
 ---
 

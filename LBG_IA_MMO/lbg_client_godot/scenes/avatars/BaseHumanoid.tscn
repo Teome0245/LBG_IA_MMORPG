@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://base_humanoid01"]
+
+[ext_resource type="Script" path="res://scenes/avatars/BaseHumanoid.gd" id="1_bh"]
+
+[node name="BaseHumanoid" type="Node3D"]
+script = ExtResource("1_bh")
+
+[node name="ModelRoot" type="Node3D" parent="."]

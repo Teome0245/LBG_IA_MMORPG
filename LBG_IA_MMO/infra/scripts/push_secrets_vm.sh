@@ -34,9 +34,10 @@ LOCAL="${LBG_SECRETS_FILE:-${ROOT_DIR}/infra/secrets/lbg.env}"
 RESTART="${LBG_RESTART_SERVICES:-1}"
 
 LAN_CORE="${LBG_LAN_HOST_CORE:-192.168.0.140}"
-LAN_MMO="${LBG_LAN_HOST_MMO:-192.168.0.245}"
+LAN_MMO_SERVER="${LBG_LAN_HOST_MMO_SERVER:-192.168.0.245}"
+LAN_CORE3_PRIME="${LBG_LAN_HOST_CORE3_PRIME:-${LBG_LAN_HOST_MMO:-192.168.0.246}}"
 LAN_FRONT="${LBG_LAN_HOST_FRONT:-192.168.0.110}"
-DEFAULT_HOSTS="${LAN_CORE} ${LAN_MMO} ${LAN_FRONT}"
+DEFAULT_HOSTS="${LAN_CORE} ${LAN_MMO_SERVER} ${LAN_CORE3_PRIME} ${LAN_FRONT}"
 
 if [ -n "${LBG_VM_HOSTS:-}" ]; then
   TARGETS="${LBG_VM_HOSTS}"
@@ -74,7 +75,7 @@ push_one() {
     echo \"OK: /etc/lbg-ia-mmo.env (640 root:${SECRETS_GROUP})\"
     if [ \"${RESTART}\" = \"1\" ]; then
       echo \"Restart services (unités présentes uniquement)…\"
-      for svc in lbg-agent-dialogue lbg-agent-quests lbg-agent-combat lbg-agent-pm lbg-orchestrator lbg-backend lbg-mmo-server lbg-mmmorpg-ws; do
+      for svc in lbg-agent-dialogue lbg-agent-quests lbg-agent-combat lbg-agent-pm lbg-orchestrator lbg-backend lbg-mmo-server lbg-mmmorpg-ws lbg-core3-ia-sidecar; do
         if sudo -n systemctl cat \"\${svc}.service\" >/dev/null 2>&1; then
           sudo -n systemctl restart \"\${svc}\"
         fi

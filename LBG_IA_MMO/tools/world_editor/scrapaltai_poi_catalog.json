@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "zone_id": "tatooine",
+  "footprint_default_m": 64,
+  "min_center_spacing_m": 100,
+  "pois": [
+    {
+      "poi_id": "poi:lost_heaven_market",
+      "label": "Bazar / marché",
+      "role": "civic_center",
+      "color": "#e8a317",
+      "template": "object/building/tatooine/guild_commerce_tatooine_style_01.iff",
+      "footprint_m": 64
+    },
+    {
+      "poi_id": "poi:lost_heaven_bank",
+      "label": "Banque",
+      "color": "#4a9eff",
+      "template": "object/building/tatooine/bank_tatooine.iff",
+      "footprint_m": 56
+    },
+    {
+      "poi_id": "poi:lost_heaven_cantina",
+      "label": "Cantina",
+      "color": "#c45cff",
+      "template": "object/building/tatooine/cantina_tatooine.iff",
+      "footprint_m": 64
+    },
+    {
+      "poi_id": "poi:lost_heaven_inn",
+      "label": "Auberge",
+      "color": "#7bc96f",
+      "template": "object/building/tatooine/hotel_tatooine_general.iff",
+      "footprint_m": 64
+    },
+    {
+      "poi_id": "poi:lost_heaven_starport",
+      "label": "Starport",
+      "color": "#ff6b6b",
+      "template": "object/building/tatooine/shuttleport_tatooine.iff",
+      "footprint_m": 72
+    },
+    {
+      "poi_id": "poi:lost_heaven_training_hall",
+      "label": "Hall combat",
+      "color": "#ff8844",
+      "template": "object/building/tatooine/guild_combat_tatooine_style_01.iff",
+      "footprint_m": 64
+    },
+    {
+      "poi_id": "poi:lost_heaven_clinic",
+      "label": "Clinique",
+      "color": "#56d9d9",
+      "template": "object/building/tatooine/hospital_tatooine.iff",
+      "footprint_m": 64
+    },
+    {
+      "poi_id": "poi:lost_heaven_mission_post",
+      "label": "Missions",
+      "color": "#aabb66",
+      "template": "object/building/tatooine/salon_tatooine.iff",
+      "footprint_m": 56
+    },
+    {
+      "poi_id": "poi:lost_heaven_town_hall",
+      "label": "Mairie",
+      "color": "#d4a574",
+      "template": "object/building/tatooine/capitol_tatooine.iff",
+      "footprint_m": 72
+    },
+    {
+      "poi_id": "poi:lost_heaven_artisan_hall",
+      "label": "Artisan",
+      "color": "#8899aa",
+      "template": "object/building/tatooine/housing_tatt_style01_med.iff",
+      "footprint_m": 48
+    },
+    {
+      "poi_id": "poi:lost_heaven_housing_npc",
+      "label": "Logements PNJ",
+      "color": "#778899",
+      "template": "object/building/tatooine/housing_tatt_style01_small.iff",
+      "footprint_m": 40
+    },
+    {
+      "poi_id": "poi:lost_heaven_gate",
+      "label": "Porte sud",
+      "color": "#666666",
+      "template": "object/building/tatooine/filler_building_block_64x32_style_01.iff",
+      "footprint_m": 64
+    }
+  ],
+  "tatooine_landmarks": [
+    { "id": "lost_heaven", "label": "Lost Heaven (Scrapaltai)", "x": 4809, "y": -802 },
+    { "id": "mos_eisley", "label": "Mos Eisley", "x": 3520, "y": -4800 },
+    { "id": "anchorhead", "label": "Anchorhead", "x": -100, "y": -5400 },
+    { "id": "bestine", "label": "Bestine", "x": -4000, "y": -6000 },
+    { "id": "mos_espa", "label": "Mos Espa", "x": -2900, "y": 2200 },
+    { "id": "wayfar", "label": "Wayfar", "x": 4200, "y": 5200 }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "username": "Bot_IA_3",
+  "loginHost": "192.168.0.246",
+  "loginPort": 44553,
+  "clientVersion": "20050408-18:00",
+  "loginTimeout": 15,
+  "zoneTimeout": 120,
+  "logLevel": 3,
+  "waitAfterZone": 86400,
+  "stayConnected": true,
+  "botCharacterName": "Mira",
+  "botMoveQueue": "ia_bridge/bot_move.jsonl",
+  "botMoveTickMs": 450,
+  "characterOid": 0,
+  "actions": [
+    {
+      "action": "selectContext",
+      "galaxyId": 3,
+      "characterOid": 0
+    },
+    {
+      "action": "connectToZone"
+    },
+    {
+      "action": "zoneInCharacter"
+    }
+  ],
+  "_note": "Remplacer characterOid apres creation du perso Mira Bot en jeu (galaxy 3)"
+}

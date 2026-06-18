@@ -1,0 +1,30 @@
+[Unit]
+Description=LBG MMO Serveur Prime (core3-clean, galaxy 3)
+Documentation=file:///opt/LBG_IA_MMO/docs/core3_ia_prime_tatooine.md
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/lbg-new-mmo-clean/MMOCoreORB/bin
+# append: non supporté sur certains systemd — redirection bash
+ExecStart=/bin/bash -lc 'cd /opt/lbg-new-mmo-clean/MMOCoreORB/bin && exec ./core3-clean >>/tmp/core3-clean.log 2>&1'
+# PreCu coupé quand Prime tourne (stabilité VM / pont IA)
+ExecStartPre=-/usr/bin/pkill -x core3-swgemu
+ExecStartPre=-/bin/sleep 1
+Restart=always
+RestartSec=45
+# Boot Core3 ~2–3 min
+TimeoutStartSec=900
+TimeoutStopSec=120
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+# Évite une boucle infinie si le binaire est absent
+StartLimitIntervalSec=600
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target

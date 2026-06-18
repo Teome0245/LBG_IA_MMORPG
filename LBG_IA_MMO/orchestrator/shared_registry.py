@@ -101,6 +101,67 @@ capability_registry = InMemoryCapabilityRegistry(
             tags=["mmo", "combat"],
         ),
         CapabilitySpec(
+            name="core3_bot_action",
+            routed_to="agent.core3",
+            description="Joueurs IA Core3 (Lia, Nix, futurs bots) ou PNJ pilotes via sidecar HTTP",
+            mode="mmo_persona",
+            risk_level="medium",
+            action_context_key="core3_action",
+            input_schema=_object_schema(
+                {
+                    "text": {"type": "string"},
+                    "context": _object_schema(
+                        {
+                            "core3_action": _object_schema(
+                                {
+                                    "kind": {
+                                        "type": "string",
+                                        "enum": ["npc_think", "player_think", "npc_say"],
+                                    },
+                                    "npc_id": {"type": "string"},
+                                    "pilot_id": {"type": "string"},
+                                    "player": {"type": "string"},
+                                    "prompt": {"type": "string"},
+                                    "enqueue": {"type": "boolean"},
+                                },
+                                required=["kind"],
+                            ),
+                            "core3_npc_id": {"type": "string"},
+                            "world_npc_id": {"type": "string"},
+                            "core3_player_id": {"type": "string"},
+                            "core3_player_role": {"type": "string"},
+                            "core3_profession_current": {"type": "string"},
+                            "core3_profession_dynamic": {"type": "boolean"},
+                            "core3_capabilities": {"type": "array", "items": {"type": "string"}},
+                            "core3_autonomy": {"type": "boolean"},
+                        }
+                    ),
+                },
+                required=["text"],
+            ),
+            output_schema=_object_schema(
+                {
+                    "sidecar": {"type": "object"},
+                    "line": {"type": "string"},
+                    "observation": {"type": "string"},
+                }
+            ),
+            preconditions=["Requires context.core3_action and LBG_CORE3_IA_SIDECAR_URL on the orchestrator host."],
+            effects=["May enqueue say/perform/interact/move/npc_say/switch_zone on Core3 via ia_bridge/pending.jsonl."],
+            errors=["sidecar_unreachable", "player_offline", "npc_offline", "configuration_error"],
+            constraints=[
+                CapabilityConstraint(
+                    name="tatooine_scope",
+                    description="Pont limité à Serveur Prime / zone tatooine (ADR 0007).",
+                ),
+                CapabilityConstraint(
+                    name="lan_sidecar",
+                    description="Sidecar must be reachable from the orchestrator network.",
+                ),
+            ],
+            tags=["mmo", "core3", "bridge"],
+        ),
+        CapabilitySpec(
             name="world_aid",
             routed_to="agent.world",
             description="Deterministic world-side aid commit (gauges + reputation deltas)",
@@ -185,6 +246,38 @@ capability_registry = InMemoryCapabilityRegistry(
             tags=["local_assistant", "infra", "devops", "audit"],
         ),
         CapabilitySpec(
+            name="network_inventory",
+            routed_to="agent.network",
+            description="Inventaire réseau LAN read-only (scan sous-réseau 192.168.0.0/24 + sondes HTTP/TCP + hôtes connus)",
+            mode="local_assistant",
+            risk_level="low",
+            action_context_key=None,
+            input_schema=_object_schema(
+                {
+                    "text": {"type": "string"},
+                    "context": _object_schema({}),
+                },
+                required=["text"],
+            ),
+            output_schema=_object_schema(
+                {
+                    "devices": {"type": "array"},
+                    "n_devices": {"type": "integer"},
+                    "reply": {"type": "string"},
+                }
+            ),
+            preconditions=[],
+            effects=["Probes read-only sur les hôtes LAN configurés (instantané T)."],
+            errors=["probe_error", "configuration_error"],
+            constraints=[
+                CapabilityConstraint(
+                    name="read_only_probes",
+                    description="Aucune modification réseau ; sondes HTTP GET et connect TCP uniquement.",
+                ),
+            ],
+            tags=["local_assistant", "infra", "network", "lan"],
+        ),
+        CapabilitySpec(
             name="project_pm",
             routed_to="agent.pm",
             description="Chef de projet — brief jalons/risques (stub ou HTTP LBG_AGENT_PM_URL)",
@@ -221,6 +314,8 @@ capability_registry = InMemoryCapabilityRegistry(
                     "context": _object_schema(
                         {
                             "desktop_action": {"type": "object"},
+                            "desktop_target": {"type": "string"},
+                            "desktop_target_host": {"type": "string"},
                             "desktop_dry_run": {"type": "boolean"},
                             "desktop_approval": {"type": "string"},
                         },

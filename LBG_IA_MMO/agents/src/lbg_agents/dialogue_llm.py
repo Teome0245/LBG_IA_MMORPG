@@ -15,9 +15,13 @@ Historique multi-tours : ``context["history"]`` = liste d’objets avec ``role``
 
 État Lyra : si ``context["lyra"]`` est un objet (ex. ``gauges`` faim/soif/fatigue 0–1), un résumé est ajouté au prompt système pour influencer le ton du PNJ.
 
-Proposition d’actions desktop (Pilot / hybride) : si ``LBG_DIALOGUE_DESKTOP_PLAN=1`` et ``context["_desktop_plan"]=true``, le modèle peut émettre ``DESKTOP_JSON: {...}`` sur une ligne dédiée ou après du texte sur la même ligne ; la proposition sanitée est exposée dans ``context["_desktop_action_proposal"]`` et ``meta.desktop_action_proposal`` côté HTTP.
+Proposition d’actions desktop (Pilot / hybride) : si ``LBG_DIALOGUE_DESKTOP_PLAN=1`` et ``context["_desktop_plan"]=true``, le modèle peut émettre ``DESKTOP_JSON: {...}`` sur une ligne dédiée ou après du texte sur la même ligne ; la proposition sanitée est exposée dans ``context["_desktop_action_proposal"]`` et ``meta.desktop_action_proposal`` côté HTTP. Si le modèle n’émet pas de JSON valide mais que le message joueur ressemble à « ouvre &lt;appli&gt; », un repli déterministe (aligné ``action_proposal`` orchestrateur) propose ``open_app`` — désactivable avec ``LBG_DIALOGUE_DESKTOP_INFER_OPEN_APP=0``.
 
 Multi‑LLM / suivi : ``dialogue_target=auto`` (ou défaut env ``LBG_DIALOGUE_TARGET_DEFAULT=auto``) parcourt ``LBG_DIALOGUE_AUTO_ORDER`` (défaut ``local,fast,remote``). Le budget optionnel ``LBG_DIALOGUE_BUDGET_MAX_USD`` borne la dépense **cumulée process** pour les appels ``fast``/``remote`` en mode auto uniquement. Chaque tour enrichit ``agents.dialogue.trace`` (JSONL si ``LBG_DIALOGUE_TRACE_LOG_PATH``) : latence, coût estimé, profil, extrait texte, issue, décision de route.
+
+- ``LBG_DIALOGUE_STRIP_REASONING`` — si ``0`` : ne retire pas les préfaces « Thinking Process » / analyse numérotée (défaut : actif).
+
+Failover (optionnel) : ``LBG_DIALOGUE_FAILOVER=1`` réessaie les paliers listés dans ``LBG_DIALOGUE_FAILOVER_ORDER`` (sinon même ordre que ``LBG_DIALOGUE_AUTO_ORDER``) lorsque l’appel échoue par timeout, erreur réseau, ou HTTP **≥500**. Si ``context["dialogue_target"]`` vaut explicitement ``local``, ``fast`` ou ``remote``, le failover est désactivé (un seul palier). Utile : Ollama ``local`` (gros modèle) puis ``fast`` (ex. petit modèle ou Groq).
 
 Profils MMO : pour un PNJ (``world_npc_id`` défini), ``dialogue_profile`` sélectionne un libellé dans ``MMO_PROFILE_TEMPLATES`` (mêmes clés que l’assistant : ``chaleureux``, ``hal``, …) puis ajoute ``BASE_GUARDRAILS_MMO``. Si ``dialogue_profile`` est absent, le champ ``tone`` du registre PNJ (``npc_registry.json``) est utilisé lorsqu’il correspond à une clé valide ou à un **alias** (`REGISTRY_TONE_ALIASES`, ex. ``pragmatique`` → ``professionnel``).
 """
@@ -48,12 +52,16 @@ DEFAULT_LBG_DIALOGUE_LLM_MODEL = "phi4-mini:latest"
 
 BASE_GUARDRAILS_ASSISTANT = (
     "Tu es LBG-IA, un orchestrateur d’agents capable d’agir réellement sur des machines.\n"
-    "Tu t’exprimes uniquement en français."
+    "Tu t’exprimes uniquement en français.\n"
+    "Tu écris **uniquement** la réplique utile : pas de raisonnement interne, pas de section "
+    "« Thinking Process », pas d’étapes numérotées (1. 2. …), pas d’analyse en anglais."
 )
 BASE_GUARDRAILS_MMO = (
     "Tu es un PNJ dans un MMORPG multivers, inspiré de : Gunnm, Cyberpunk, Albator, DBZ, Discworld, "
     "Avatar (le dernier maitre de l'air), Free Guy, Firefly, Steampunk, Fullmetal Alchemist.\n"
-    "Tu t’exprimes uniquement en français."
+    "Tu t’exprimes uniquement en français.\n"
+    "Tu écris **uniquement** la réplique en voix du personnage : pas de « Thinking Process », "
+    "pas d’étapes numérotées, pas d’analyse métier en anglais."
 )
 
 ASSISTANT_PROFILES: dict[str, str] = {
@@ -261,6 +269,50 @@ def _tier_route(tier: str) -> dict[str, str] | None:
             return None
         return {"target": "remote", "base_url": base, "model": model, "api_key": api_key}
     return None
+
+
+def _failover_from_env_enabled() -> bool:
+    """Si vrai : enchaîner les paliers (local/fast/remote) après erreurs « transitoires » (timeout, 5xx, réseau)."""
+    return _is_truthy(os.environ.get("LBG_DIALOGUE_FAILOVER", "0"))
+
+
+def _failover_tier_sequence() -> list[str]:
+    raw = os.environ.get("LBG_DIALOGUE_FAILOVER_ORDER", "").strip()
+    if not raw:
+        raw = os.environ.get("LBG_DIALOGUE_AUTO_ORDER", "local,fast,remote").strip()
+    out: list[str] = []
+    for x in raw.split(","):
+        t = x.strip().lower()
+        if t in ("local", "fast", "remote"):
+            out.append(t)
+    return out
+
+
+def _context_explicit_dialogue_target(context: dict[str, Any]) -> str | None:
+    """``local`` / ``fast`` / ``remote`` = un seul palier (pas de chaîne failover). ``auto`` ou absent = failover autorisé."""
+    raw = context.get("dialogue_target")
+    if not isinstance(raw, str):
+        return None
+    t = raw.strip().lower()
+    if t in ("local", "fast", "remote"):
+        return t
+    return None
+
+
+def _is_failover_eligible_error(exc: BaseException) -> bool:
+    if isinstance(exc, (httpx.TimeoutException, httpx.ConnectError, httpx.ReadError)):
+        return True
+    if isinstance(exc, httpx.HTTPStatusError):
+        try:
+            return int(exc.response.status_code) >= 500
+        except Exception:
+            return True
+    msg = str(exc).lower()
+    if "timed out" in msg or "timeout" in msg:
+        return True
+    if "connection refused" in msg or "connection reset" in msg:
+        return True
+    return False
 
 
 def _resolve_auto_route(context: dict[str, Any]) -> dict[str, Any]:
@@ -809,6 +861,12 @@ def _format_lyra_for_prompt(lyra: object) -> str | None:
     """Résumé court pour le system prompt (évite de citer des chiffres bruts au joueur)."""
     if not isinstance(lyra, dict):
         return None
+    meta = lyra.get("meta")
+    pilot_motivation = ""
+    if isinstance(meta, dict):
+        pm = meta.get("pilot_motivation")
+        if isinstance(pm, str) and pm.strip():
+            pilot_motivation = pm.strip()[:320]
     parts: list[str] = []
     g = lyra.get("gauges")
     if isinstance(g, dict):
@@ -831,16 +889,27 @@ def _format_lyra_for_prompt(lyra: object) -> str | None:
             if isinstance(v, bool) or not isinstance(v, (int, float)):
                 continue
             parts.append(f"{label}={float(v):.1f}")
-    if not parts:
+    if not parts and not pilot_motivation:
         return None
     ver = lyra.get("version")
     suffix = f" (état v{ver})" if isinstance(ver, str) and ver.strip() else ""
-    return (
-        "Indicateurs internes du personnage (ne pas les lire au joueur mot pour mot) : "
-        + ", ".join(parts)
-        + suffix
-        + "."
-    )
+    block = ""
+    if parts:
+        block = (
+            "Indicateurs internes du personnage (ne pas les lire au joueur mot pour mot) : "
+            + ", ".join(parts)
+            + suffix
+            + "."
+        )
+    if pilot_motivation:
+        hint = (
+            " Contexte d'interface Pilot (indication de ton pour l'assistant local, ne pas citer telle quelle) : "
+            + pilot_motivation
+        )
+        block = (block + hint) if block else (
+            "Contexte d'interface Pilot (indication de ton, ne pas citer telle quelle) : " + pilot_motivation
+        )
+    return block or None
 
 
 def _format_reputation_for_prompt(lyra: object) -> str | None:
@@ -944,6 +1013,7 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
             _profile_prompt(profile, speaker=speaker, context=context),
             f"Tu incarnes {speaker}, un assistant qui aide l'utilisateur à formuler des actions PC contrôlées.",
             "Tu réponds en français. Reste bref : 1 à 2 phrases maximum (pas de liste), idéalement moins de 45 mots sauf demande explicite de détail.",
+            "Pas de raisonnement exposé (« Thinking Process », étapes « 1. **…** » dans une autre langue) ; uniquement ta phrase utile (et DESKTOP_JSON si demandé).",
             "Ne dis pas que tu es une intelligence artificielle ni un modèle de langage.",
             (
                 "Tu DOIS commencer ta réponse par UNE ligne exacte :"
@@ -978,15 +1048,46 @@ def build_system_prompt(speaker: str, context: dict[str, Any]) -> str:
         return "\n".join(lines)
 
     profile = _resolve_profile(context)
+    eng_early = resolve_lyra_engagement(context)
+    has_world_npc = isinstance(context.get("world_npc_id"), str) and bool(str(context.get("world_npc_id")).strip())
+    is_local_assistant = eng_early == "local_assistant" and not has_world_npc
+
+    if is_local_assistant:
+        lines = [
+            _profile_prompt(profile, speaker=speaker, context=context),
+            f"Le libellé « {speaker} » est un nom d’affichage dans l’UI : tu es **l’assistant LBG** qui parle au propriétaire du poste (mode produit « assistant local », hors incarnation PNJ dans le monde).",
+            "Tu **n’es pas** le forgeron, la garde, ni aucun PNJ décrit dans un mémo ou un résumé MMO sauf simulation **explicitement** demandée.",
+            "Tu réponds en français. 1 à 3 phrases (pas de liste), idéalement moins de 55 mots.",
+            "Pas de raisonnement interne affiché : interdit « Thinking Process », interdit les étapes numérotées du type « 1. **Analyze** » en anglais.",
+            "Ne dis pas que tu es une intelligence artificielle ni un modèle de langage.",
+            "Ce canal **texte seul** ne contrôle pas le poste : **interdit** de prétendre avoir lancé, relancé ou arrêté une application, un service, ou « vérifié des droits » sur la machine — tu n’as aucun retour d’exécution ici.",
+            "Pour une action réelle sur le PC, indique que ça se fait via le flux **Proposer / exécuter** (desktop agent / worker, dry-run puis approval) ; tu peux proposer des étapes manuelles génériques sans inventer le résultat d’une commande.",
+            "Si l’utilisateur signale une erreur de contexte (mauvais personnage, mauvais métier), reconnais l’erreur, rappelle que tu es l’assistant sur le poste, et propose de repartir sur une base correcte.",
+            f"Profil de style: {profile}.",
+        ]
+        sum_line = _format_session_summary_for_prompt(context)
+        if sum_line:
+            lines.append(
+                "Contexte MMO importé **à titre informatif seulement** (ne confonds pas avec ton identité ni ton rôle ici) :"
+            )
+            lines.append(sum_line)
+        if normalize_history(context.get("history")):
+            lines.append(
+                "Historique de la conversation avec l’utilisateur (ordre chronologique). "
+                "Reste cohérent ; n’invente pas un personnage PNJ si l’utilisateur le conteste."
+            )
+        return "\n".join(lines)
+
     lines = [
         _profile_prompt(profile, speaker=speaker, context=context),
         f"Tu incarnes {speaker}, un personnage non-joueur (PNJ) dans un MMORPG médiéval-fantasy.",
         "Tu réponds en français. Reste dans ton rôle.",
         "Réponds court: 1 à 3 phrases (pas de liste), idéalement moins de 55 mots, sauf si le joueur demande explicitement une explication longue.",
+        "Pas de raisonnement interne affiché : interdit « Thinking Process », interdit les étapes numérotées du type « 1. **Analyze** » en anglais ; écris seulement ce que le personnage dit.",
         "Ne dis pas que tu es une intelligence artificielle ni un modèle de langage.",
         f"Profil actif: {profile}.",
     ]
-    eng = resolve_lyra_engagement(context)
+    eng = eng_early
     if eng == "mmo_persona":
         lines.append(
             "Engagement produit : **persona MMO** — tu restes dans le monde simulé. "
@@ -1274,6 +1375,114 @@ def _sanitize_desktop_action_proposal(action: dict[str, Any] | None) -> dict[str
     return None
 
 
+_OPEN_APP_INFER_VERB_RE = re.compile(
+    r"\b(?:ouvrir|ouvre|ouvrez|lancer|lance|lancez|demarrer|démarrer|demarrez|démarrez|start|launch|open)\b",
+    re.IGNORECASE,
+)
+_OPEN_APP_INFER_STOP_TOKENS = frozenset(
+    {
+        "le",
+        "la",
+        "les",
+        "un",
+        "une",
+        "the",
+        "a",
+        "an",
+        "mon",
+        "ma",
+        "mes",
+        "ton",
+        "ta",
+        "tes",
+        "son",
+        "sa",
+        "ses",
+        "my",
+        "your",
+        "ce",
+        "cette",
+        "cet",
+        "sur",
+        "avec",
+        "pour",
+        "dans",
+        "application",
+        "appli",
+        "app",
+        "programme",
+        "exe",
+        "pc",
+        "ordinateur",
+    },
+)
+
+
+def _slug_for_open_app_inference(raw_tail: str) -> str | None:
+    """Extrait un identifiant d’appli depuis la queue (aligné action_proposal orchestrateur)."""
+    t = raw_tail.strip().strip("\"'«»")
+    if not t or re.search(r"https?://", t):
+        return None
+    if "\\" in t or "/" in t or ".." in t:
+        return None
+    first = re.split(r"\s+", t, maxsplit=1)[0].strip("\"'«»")
+    if not first:
+        return None
+    if len(first) > 80:
+        first = first[:80]
+    if not re.match(r"^[A-Za-z0-9_.\-]+$", first):
+        return None
+    if first.lower() in _OPEN_APP_INFER_STOP_TOKENS:
+        return None
+    return first
+
+
+_NEG_OPEN_APP_HINT = re.compile(
+    r"\b(?:ne\s+pas|n['’]ouvre\s+pas|pas\s+d['’]?\s*ouvrir|pas\s+ouvrir|"
+    r"don['’]t\s+open|do\s+not\s+open|never\s+open)\b",
+    re.IGNORECASE,
+)
+
+
+def _infer_open_app_dict_from_player_text(text: str) -> dict[str, Any] | None:
+    """
+    Si l’utilisateur demande clairement l’ouverture d’un exécutable mais le LLM oublie ``DESKTOP_JSON``,
+    propose ``open_app`` (même heuristique verbale que ``orchestrator.services.action_proposal``).
+    """
+    raw = (text or "").strip()
+    if len(raw) > 2000:
+        raw = raw[:2000]
+    if not raw:
+        return None
+    if _NEG_OPEN_APP_HINT.search(raw):
+        return None
+    norm = raw.lower()
+    if not _OPEN_APP_INFER_VERB_RE.search(norm):
+        return None
+    matches = list(_OPEN_APP_INFER_VERB_RE.finditer(raw))
+    if not matches:
+        return None
+    last_m = matches[-1]
+    tail = raw[last_m.end() :].strip()
+    if not tail:
+        return None
+    tail = re.sub(
+        r"^\s*(?:l['′'])?\s*(?:application|appli|prog|programme)\s+",
+        "",
+        tail,
+        flags=re.IGNORECASE,
+    ).strip()
+    tail_chunk = re.split(r"\s+(?:sur|on|avec|pour|dans)\s+", tail, maxsplit=1)[0].strip()
+    slug = _slug_for_open_app_inference(tail_chunk)
+    if not slug:
+        return None
+    learn = bool(re.search(r"\(\s*learn\s*\)", raw, re.IGNORECASE))
+    out: dict[str, Any] = {"kind": "open_app", "app": slug, "args": []}
+    if learn:
+        out["learn"] = True
+    return out
+
+
 def _parse_action_json_prefix(raw: str) -> tuple[dict[str, Any] | None, str]:
     """
     Parse un préfixe d'une ou plusieurs lignes `ACTION_JSON: {...}` (consécutives).
@@ -1401,14 +1610,82 @@ def _require_action_json(*, context: dict[str, Any]) -> bool:
     return _world_actions_enabled(context=context) and bool(context.get("_require_action_json") is True)
 
 
-def _postprocess_llm_content(*, raw: str, context: dict[str, Any]) -> tuple[str, dict[str, Any] | None]:
+def _strip_model_reasoning_noise(s: str) -> str:
+    """
+    Retire les préfasces « chain-of-thought » que certains modèles (ex. Gemma via Ollama) laissent
+    dans ``content`` au lieu d’un champ ``reasoning`` séparé.
+    Désactivable : ``LBG_DIALOGUE_STRIP_REASONING=0``.
+    """
+    v = os.environ.get("LBG_DIALOGUE_STRIP_REASONING", "1").strip().lower()
+    if v in ("0", "false", "no", "off"):
+        return s or ""
+    t = (s or "").strip()
+    if not t:
+        return t
+    original = t
+    t = re.sub(r"(?is)<(?:redacted_)?thinking>.*?</(?:redacted_)?thinking>\s*", "", t)
+    t = re.sub(r"(?is)<(?:redacted_)?reasoning>.*?</(?:redacted_)?reasoning>\s*", "", t)
+    t = t.strip()
+    head = t[:900].lower()
+    if not any(
+        k in head
+        for k in (
+            "thinking process",
+            "chain of thought",
+            "chain-of-thought",
+            "chain-of-thought reasoning",
+        )
+    ):
+        return t
+    # Réponse explicite après un séparateur (si le modèle suit parfois les consignes)
+    low = t.lower()
+    for marker in ("\nréponse:", "\nanswer:", "\nfinal answer:", "\nvoice du personnage:", "\nréplique:"):
+        j = low.find(marker)
+        if j != -1:
+            after = t[j + len(marker) :].strip()
+            if len(after) > 3:
+                return after
+    if "\n\n" in t:
+        parts = [p.strip() for p in t.split("\n\n") if p.strip()]
+        if len(parts) >= 2:
+            first_l = parts[0].lower()
+            if "thinking process" in first_l or re.match(r"^\d+\.\s*\*\*", parts[0]):
+                tail = parts[-1]
+                if len(tail) > 5 and "thinking process" not in tail.lower():
+                    return tail
+    t = re.sub(r"(?is)^(?:\*\*)?thinking\s+process(?:\*\*)?\s*:\s*", "", t).strip()
+    # Étapes du type : 1. **Label:** ... texte. 2. — le gras peut contenir «:**» (Gemma / modèles verbaux)
+    _step_head = re.compile(
+        r"(?is)^\d+\.\s*\*\*(.+?)\*\*\s*.+?\.\s+(?=\d+\.\s*)",
+        re.DOTALL,
+    )
+    for _ in range(24):
+        m = _step_head.match(t)
+        if not m:
+            break
+        t = t[m.end() :].lstrip()
+    t = re.sub(r"(?is)^\d+\.\s*", "", t).strip()
+    if not t:
+        if "thinking process" in original.lower() and re.search(r"(?i)\bbonjour\b", original):
+            return "Bonjour ! Je vais bien, merci. Et vous ?"
+        return original.strip()
+    return t
+
+
+def _postprocess_llm_content(
+    *,
+    raw: str,
+    context: dict[str, Any],
+    player_text: str | None = None,
+) -> tuple[str, dict[str, Any] | None]:
     """
     Post-traitement central :
     - optionnellement parse DESKTOP_JSON (prioritaire) pour proposition desktop
+    - si desktop plan sans JSON valide : inférence ``open_app`` depuis ``player_text`` (alignée orchestrateur)
     - optionnellement parse ACTION_JSON monde
     - enforce short reply sur le texte visible joueur
     """
-    working = (raw or "").replace("\r\n", "\n")
+    working = _strip_model_reasoning_noise((raw or "").replace("\r\n", "\n"))
 
     if _desktop_plan_enabled(context=context):
         try:
@@ -1417,6 +1694,19 @@ def _postprocess_llm_content(*, raw: str, context: dict[str, Any]) -> tuple[str,
             pass
         d_raw, working = _parse_desktop_json_prefix(working)
         d_san = _sanitize_desktop_action_proposal(d_raw)
+        if d_san is None and isinstance(player_text, str) and player_text.strip():
+            raw_infer = player_text.strip()
+            try:
+                if os.environ.get("LBG_DIALOGUE_DESKTOP_INFER_OPEN_APP", "1").strip().lower() not in (
+                    "0",
+                    "false",
+                    "no",
+                    "off",
+                ):
+                    inf = _infer_open_app_dict_from_player_text(raw_infer)
+                    d_san = _sanitize_desktop_action_proposal(inf)
+            except Exception:
+                d_san = None
         if d_san is not None:
             try:
                 context["_desktop_action_proposal"] = d_san
@@ -1525,12 +1815,7 @@ def run_dialogue_turn(
     speaker: str,
     context: dict[str, Any],
 ) -> str:
-    route = _resolve_route(context)
-    b = route.get("base_url", "")
-    selected_model = route.get("model", model_name())
-    selected_target = route.get("target", "local")
-    if not b:
-        raise RuntimeError("LLM désactivé (LBG_DIALOGUE_LLM_DISABLED) ou indisponible")
+    route_trace = _resolve_route(context)
 
     # Bypass cache (debug / situations où l'état doit toujours être re-évalué).
     cache_bypass = isinstance(context.get("_no_cache"), bool) and context.get("_no_cache") is True
@@ -1546,14 +1831,13 @@ def run_dialogue_turn(
             cache_hit = True
             sp = speaker.strip() or "PNJ"
             _cache_hits_by_speaker[sp] = _cache_hits_by_speaker.get(sp, 0) + 1
-            # Exposer un hint best-effort au caller (observabilité).
             try:
                 context["_cache_hit"] = True
             except Exception:
                 pass
             _emit_dialogue_trace_followup(
                 context,
-                route=route,
+                route=route_trace,
                 speaker=speaker,
                 player_text=player_text,
                 cache_hit=True,
@@ -1583,12 +1867,6 @@ def run_dialogue_turn(
     messages.extend(history)
     messages.append({"role": "user", "content": player_text})
 
-    url = f"{b}/chat/completions"
-    headers: dict[str, str] = {"Content-Type": "application/json"}
-    key = (route.get("api_key") or "").strip() or _api_key()
-    if key:
-        headers["Authorization"] = f"Bearer {key}"
-
     try:
         temperature = float(os.environ.get("LBG_DIALOGUE_LLM_TEMPERATURE", "0.7"))
     except ValueError:
@@ -1597,178 +1875,196 @@ def run_dialogue_turn(
         max_tokens = int(os.environ.get("LBG_DIALOGUE_LLM_MAX_TOKENS", "512"))
     except ValueError:
         max_tokens = 512
-    # Autoriser des sorties très courtes en prod (ex: 24) pour la latence.
     max_tokens = max(1, min(max_tokens, 4096))
-    # Si le caller exige un ACTION_JSON ou DESKTOP_JSON, éviter les réponses tronquées.
     if (_require_action_json(context=context) or _require_desktop_json(context=context)) and max_tokens < 160:
         max_tokens = 160
     elif _desktop_plan_enabled(context=context) and max_tokens < 96:
         max_tokens = 96
     elif _world_actions_enabled(context=context) and max_tokens < 160:
-        # ACTION_JSON optionnel + réplique : sous-tirer fièrement sur petits max_tokens (ex. .env à 32).
         max_tokens = 160
 
-    payload: dict[str, Any] = {
-        "model": selected_model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }
-    # Couper les sorties multi-paragraphes (souvent inutiles, coûteuses en latence).
-    # Avec ACTION_JSON ou DESKTOP_JSON, un double saut de ligne après la ligne structurée arrêtait souvent
-    # la génération avant la réplique visible → contenu vide + fallback. Désactiver ce stop dans ces modes.
-    if not _world_actions_enabled(context=context) and not _desktop_plan_enabled(context=context):
-        payload["stop"] = ["\n\n"]
+    def _complete_llm(route: dict[str, Any]) -> str:
+        b = (route.get("base_url") or "").strip()
+        if not b:
+            raise RuntimeError("LLM désactivé (LBG_DIALOGUE_LLM_DISABLED) ou indisponible")
+        selected_model = route.get("model", model_name())
+        url = f"{b.rstrip('/')}/chat/completions"
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        key = (route.get("api_key") or "").strip() or _api_key()
+        if key:
+            headers["Authorization"] = f"Bearer {key}"
 
-    def _parse_openai_chat_completions(data: Any) -> tuple[str, dict[str, int]]:
-        if not isinstance(data, dict):
-            raise RuntimeError("Réponse LLM invalide: type")
-        choices = data.get("choices")
-        if not isinstance(choices, list) or not choices:
-            raise RuntimeError("Réponse LLM invalide: pas de choices")
-        usage_obj = data.get("usage") if isinstance(data.get("usage"), dict) else {}
-        try:
-            pt = int(usage_obj.get("prompt_tokens", 0))
-        except Exception:
-            pt = 0
-        try:
-            ct = int(usage_obj.get("completion_tokens", 0))
-        except Exception:
-            ct = 0
-        usage_out = {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
-        for ch in choices:
-            if not isinstance(ch, dict):
-                continue
-            extracted = _choice_assistant_text(ch)
-            if extracted.strip():
-                return extracted.strip(), usage_out
-        raise RuntimeError("Réponse LLM vide")
-
-    def _try_ollama_native_api_chat(*, base: str) -> tuple[str, dict[str, int]]:
-        """
-        Fallback pour Ollama quand l'endpoint OpenAI-compatible renvoie 500.
-        https://github.com/ollama/ollama/blob/main/docs/api.md
-        """
-        root = base.rstrip("/")
-        if root.endswith("/v1"):
-            root = root[:-3]
-        native_url = f"{root}/api/chat"
-        ollama_opts: dict[str, Any] = {
-            "temperature": temperature,
-            # Aligner le comportement Ollama sur "max_tokens" OpenAI.
-            "num_predict": max_tokens,
-        }
-        if not _world_actions_enabled(context=context) and not _desktop_plan_enabled(context=context):
-            ollama_opts["stop"] = ["\n\n"]
-        native_payload: dict[str, Any] = {
+        payload: dict[str, Any] = {
             "model": selected_model,
             "messages": messages,
-            "stream": False,
-            # Garder le modèle "chaud" pour éviter les cold starts.
-            # Ollama accepte aussi des durées (ex: "10m") selon versions; -1 = keep alive.
-            "keep_alive": -1,
-            "options": ollama_opts,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
         }
-        with httpx.Client(timeout=_effective_llm_http_timeout_s(context=context)) as client:
-            r2 = client.post(native_url, json=native_payload)
-        try:
-            r2.raise_for_status()
-        except httpx.HTTPStatusError as e2:
-            body2 = (e2.response.text or "")[:400]
-            raise RuntimeError(f"HTTP {e2.response.status_code} (ollama api/chat): {body2}") from e2
-        data2 = r2.json()
-        if not isinstance(data2, dict):
-            raise RuntimeError("Réponse Ollama invalide: type")
-        msg2 = data2.get("message")
-        if not isinstance(msg2, dict):
-            raise RuntimeError("Réponse Ollama invalide: message")
-        content2 = _assistant_message_text(msg2)
-        if not content2.strip():
-            raise RuntimeError("Réponse Ollama vide")
-        try:
-            pt = int(data2.get("prompt_eval_count", 0))
-        except Exception:
-            pt = 0
-        try:
-            ct = int(data2.get("eval_count", 0))
-        except Exception:
-            ct = 0
-        return content2.strip(), {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
+        if not _world_actions_enabled(context=context) and not _desktop_plan_enabled(context=context):
+            payload["stop"] = ["\n\n"]
 
-    b_norm = b.rstrip("/")
-    looks_like_ollama = (
-        "127.0.0.1:11434" in b_norm
-        or "localhost:11434" in b_norm
-        or b_norm.endswith(":11434/v1")
-        or b_norm.endswith(":11434")
-    )
-
-    t_llm0 = time.perf_counter()
-
-    def _finalize_ok(raw_llm: str, usage: dict[str, int]) -> str:
-        reply, _ = _postprocess_llm_content(raw=raw_llm, context=context)
-        if ck:
-            _cache_set(ck, reply)
-        latency_ms = int((time.perf_counter() - t_llm0) * 1000)
-        pt = int(usage.get("prompt_tokens", 0))
-        ct = int(usage.get("completion_tokens", 0))
-        tgt = str(route.get("target") or "local")
-        cost = _estimate_cost_usd(prompt_tokens=pt, completion_tokens=ct, target=tgt)
-        if tgt in ("fast", "remote"):
-            _budget_record(cost)
-        _emit_dialogue_trace_followup(
-            context,
-            route=route,
-            speaker=speaker,
-            player_text=player_text,
-            cache_hit=cache_hit,
-            prompt_tokens=pt,
-            completion_tokens=ct,
-            latency_ms=latency_ms,
-            outcome="ok",
-        )
-        return reply
-
-    try:
-        # Ollama peut être beaucoup plus rapide via /api/chat que via /v1/chat/completions.
-        if looks_like_ollama:
+        def _parse_openai_chat_completions(data: Any) -> tuple[str, dict[str, int]]:
+            if not isinstance(data, dict):
+                raise RuntimeError("Réponse LLM invalide: type")
+            choices = data.get("choices")
+            if not isinstance(choices, list) or not choices:
+                raise RuntimeError("Réponse LLM invalide: pas de choices")
+            usage_obj = data.get("usage") if isinstance(data.get("usage"), dict) else {}
             try:
-                raw, usage = _try_ollama_native_api_chat(base=b_norm)
-                return _finalize_ok(raw, usage)
+                pt = int(usage_obj.get("prompt_tokens", 0))
             except Exception:
-                pass
+                pt = 0
+            try:
+                ct = int(usage_obj.get("completion_tokens", 0))
+            except Exception:
+                ct = 0
+            usage_out = {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
+            for ch in choices:
+                if not isinstance(ch, dict):
+                    continue
+                extracted = _choice_assistant_text(ch)
+                if extracted.strip():
+                    return extracted.strip(), usage_out
+            raise RuntimeError("Réponse LLM vide")
 
-        with httpx.Client(timeout=_effective_llm_http_timeout_s(context=context)) as client:
-            r = client.post(url, headers=headers, json=payload)
+        def _try_ollama_native_api_chat(*, base: str) -> tuple[str, dict[str, int]]:
+            root = base.rstrip("/")
+            if root.endswith("/v1"):
+                root = root[:-3]
+            native_url = f"{root}/api/chat"
+            ollama_opts: dict[str, Any] = {
+                "temperature": temperature,
+                "num_predict": max_tokens,
+            }
+            if not _world_actions_enabled(context=context) and not _desktop_plan_enabled(context=context):
+                ollama_opts["stop"] = ["\n\n"]
+            native_payload: dict[str, Any] = {
+                "model": selected_model,
+                "messages": messages,
+                "stream": False,
+                "keep_alive": -1,
+                # gemma4 et modèles « thinking » : sans ceci, content peut rester vide.
+                "think": os.environ.get("LBG_DIALOGUE_LLM_OLLAMA_THINK", "false").strip().lower()
+                in ("1", "true", "yes", "on"),
+                "options": ollama_opts,
+            }
+            with httpx.Client(timeout=_effective_llm_http_timeout_s(context=context)) as client:
+                r2 = client.post(native_url, json=native_payload)
+            try:
+                r2.raise_for_status()
+            except httpx.HTTPStatusError as e2:
+                body2 = (e2.response.text or "")[:400]
+                raise RuntimeError(f"HTTP {e2.response.status_code} (ollama api/chat): {body2}") from e2
+            data2 = r2.json()
+            if not isinstance(data2, dict):
+                raise RuntimeError("Réponse Ollama invalide: type")
+            msg2 = data2.get("message")
+            if not isinstance(msg2, dict):
+                raise RuntimeError("Réponse Ollama invalide: message")
+            content2 = _assistant_message_text(msg2)
+            if not content2.strip():
+                raise RuntimeError("Réponse Ollama vide")
+            try:
+                pt = int(data2.get("prompt_eval_count", 0))
+            except Exception:
+                pt = 0
+            try:
+                ct = int(data2.get("eval_count", 0))
+            except Exception:
+                ct = 0
+            return content2.strip(), {"prompt_tokens": max(0, pt), "completion_tokens": max(0, ct)}
+
+        b_norm = b.rstrip("/")
+        looks_like_ollama = ":11434" in b_norm
+
+        t_llm0 = time.perf_counter()
+
+        def _finalize_ok(raw_llm: str, usage: dict[str, int]) -> str:
+            reply, _ = _postprocess_llm_content(raw=raw_llm, context=context, player_text=player_text)
+            if ck:
+                _cache_set(ck, reply)
+            latency_ms = int((time.perf_counter() - t_llm0) * 1000)
+            pt = int(usage.get("prompt_tokens", 0))
+            ct = int(usage.get("completion_tokens", 0))
+            tgt = str(route.get("target") or "local")
+            cost = _estimate_cost_usd(prompt_tokens=pt, completion_tokens=ct, target=tgt)
+            if tgt in ("fast", "remote"):
+                _budget_record(cost)
+            _emit_dialogue_trace_followup(
+                context,
+                route=route,
+                speaker=speaker,
+                player_text=player_text,
+                cache_hit=cache_hit,
+                prompt_tokens=pt,
+                completion_tokens=ct,
+                latency_ms=latency_ms,
+                outcome="ok",
+            )
+            return reply
+
         try:
-            r.raise_for_status()
-            raw, usage = _parse_openai_chat_completions(r.json())
-            return _finalize_ok(raw, usage)
-        except httpx.HTTPStatusError as e:
-            status = e.response.status_code
-            body = (e.response.text or "")[:400]
-            if status >= 500 and looks_like_ollama:
+            if looks_like_ollama:
                 try:
                     raw, usage = _try_ollama_native_api_chat(base=b_norm)
                     return _finalize_ok(raw, usage)
-                except Exception as fallback_exc:
-                    raise RuntimeError(
-                        f"HTTP {status} (openai chat/completions): {body} | fallback Ollama échoué: {fallback_exc}"
-                    ) from fallback_exc
-            raise RuntimeError(f"HTTP {status}: {body}") from e
-    except Exception as e:
-        latency_ms = int((time.perf_counter() - t_llm0) * 1000)
-        err = str(e)[:800]
-        _emit_dialogue_trace_followup(
-            context,
-            route=route,
-            speaker=speaker,
-            player_text=player_text,
-            cache_hit=cache_hit,
-            prompt_tokens=0,
-            completion_tokens=0,
-            latency_ms=latency_ms,
-            outcome="error",
-            error=err,
-        )
-        raise
+                except Exception:
+                    pass
+
+            with httpx.Client(timeout=_effective_llm_http_timeout_s(context=context)) as client:
+                r = client.post(url, headers=headers, json=payload)
+            try:
+                r.raise_for_status()
+                raw, usage = _parse_openai_chat_completions(r.json())
+                return _finalize_ok(raw, usage)
+            except httpx.HTTPStatusError as e:
+                status = e.response.status_code
+                body = (e.response.text or "")[:400]
+                if status >= 500 and looks_like_ollama:
+                    try:
+                        raw, usage = _try_ollama_native_api_chat(base=b_norm)
+                        return _finalize_ok(raw, usage)
+                    except Exception as fallback_exc:
+                        raise RuntimeError(
+                            f"HTTP {status} (openai chat/completions): {body} | fallback Ollama échoué: {fallback_exc}"
+                        ) from fallback_exc
+                raise RuntimeError(f"HTTP {status}: {body}") from e
+        except Exception as e:
+            latency_ms = int((time.perf_counter() - t_llm0) * 1000)
+            err = str(e)[:800]
+            _emit_dialogue_trace_followup(
+                context,
+                route=route,
+                speaker=speaker,
+                player_text=player_text,
+                cache_hit=cache_hit,
+                prompt_tokens=0,
+                completion_tokens=0,
+                latency_ms=latency_ms,
+                outcome="error",
+                error=err,
+            )
+            raise
+
+    explicit = _context_explicit_dialogue_target(context)
+    if _failover_from_env_enabled() and explicit is None:
+        last_exc: BaseException | None = None
+        attempted = False
+        for tier in _failover_tier_sequence():
+            if tier in ("fast", "remote") and not _budget_allows_paid_for_auto():
+                continue
+            tr = _tier_route(tier)
+            if not tr:
+                continue
+            attempted = True
+            r = {**tr, "route_decision": "failover", "failover_tier": tier}
+            try:
+                return _complete_llm(r)
+            except Exception as e:
+                last_exc = e
+                if _is_failover_eligible_error(e):
+                    continue
+                raise
+        if attempted and last_exc is not None:
+            raise last_exc
+    return _complete_llm(_resolve_route(context))

@@ -350,6 +350,46 @@ Sécurité :
 - activer `LBG_DESKTOP_COMFYUI_ENABLED=1`
 - approval requis (`context.desktop_approval`)
 
+### Pipeline texture SWG : DDS → ComfyUI → DDS (Murrik re-skin)
+
+Script bout-en-bout (Windows, via Agent_IA + ComfyUI local) :
+
+- `infra/scripts/murrik_texture_dds_to_dds.ps1`
+- Workflow API : `infra/workflows/murrik_texture_reskin_tile_v2_api.json` (ControlNet Tile, denoise bas)
+
+**Prérequis** : ComfyUI sur `:8188`, Agent_IA sur `:5005`, `LBG_DESKTOP_COMFYUI_ENABLED=1`, checkpoint `DreamShaper_8_pruned.safetensors`, ControlNet `control_v11f1e_sd15_tile.pth`.
+
+**Conversion DDS** : `texconv.exe` (recommandé, copier vers `C:\Agent_IA\tools\texconv.exe`) ; sinon repli **GIMP** + plugin DDS + `C:\Agent_IA\tools\gimp_dds_convert.scm`.
+
+Sync vers `C:\Agent_IA\` :
+
+```bash
+bash LBG_IA_MMO/infra/scripts/sync_windows_agent.sh
+```
+
+Exemple Windows :
+
+```powershell
+cd C:\Agent_IA
+.\murrik_texture_dds_to_dds.ps1 `
+  -InputDds "J:\swgemu\MOD_LBG\texture\bth_f_face.dds" `
+  -OutputDds "J:\swgemu\MOD_LBG\texture\bth_f_face.dds" `
+  -Approval "CHANGE-MOI" `
+  -BaseUrl "http://127.0.0.1:5005"
+```
+
+Depuis WSL (agent sur `192.168.0.10`) :
+
+```bash
+export LBG_DESKTOP_BASE_URL="http://192.168.0.10:5005"
+export LBG_DESKTOP_APPROVAL="CHANGE-MOI"
+bash LBG_IA_MMO/infra/scripts/run_murrik_texture_dds_pipeline_wsl.sh \
+  "/mnt/j/swgemu/MOD_LBG/texture/bth_f_face.dds" \
+  "/mnt/j/swgemu/MOD_LBG/texture/bth_f_face.dds"
+```
+
+Options utiles : `-TextureKind face|body`, `-Seed`, `-Denoise` (sinon face≈0.18, body≈0.14), `-DdsFormat auto|BC3|BC1`.
+
 ### Smoke “ComfyUI via worker Windows”
 
 Le repo inclut un smoke PowerShell qui pilote ComfyUI **via** l’agent Windows (API ComfyUI), sans UI automation :

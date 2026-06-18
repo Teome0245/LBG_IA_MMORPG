@@ -20,8 +20,17 @@ class ActionPolicyResult(BaseModel):
     constraints: list[str] = Field(default_factory=list)
 
 
-_DEVOPS_SAFE_READ_KINDS = {"http_get", "systemd_is_active", "selfcheck"}
-_DEVOPS_APPROVAL_KINDS = {"read_log_tail", "systemd_restart"}
+_DEVOPS_SAFE_READ_KINDS = {
+    "http_get",
+    "systemd_is_active",
+    "selfcheck",
+    "vm_memory_probe",
+    "proxmox_status",
+    "infra_watchdog",
+    "remediation_plan",
+    "remediation_validate",
+}
+_DEVOPS_APPROVAL_KINDS = {"read_log_tail", "systemd_restart", "ssh_run", "remediation_apply"}
 _DESKTOP_KINDS = {
     "open_url",
     "search_web_open",

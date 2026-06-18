@@ -1,3 +1,18 @@
-mon objectif premier est d'avoir une IA incarné qui puisse interagir avec mon PC (mon infra en général) a qui je puisse dire ouvre notepad et commence à écrire ce que je dis, ou cherche sur internet le site de "machin" ou encore regarde si j'ai un mail de "intel" et lis le moi. avec en plus une partie de cette IA au cœur de mon MMO pour qu'elle puisse "apprendre" dans un contexte simulé. et enfin qu'elle puisse modifier améliorer ce MMO et pourquoi pas elle même. et quand je vois les avancé de l'IA de ces derniers jours, semaines, je me rend compte que plusieurs outils arrive presque à ce que je vise. on essaye de produire ça ?
+mon objectif premier est d'avoir une IA incarné qui puisse interagir avec mon PC (mon infra en général) 
+a qui je puisse dire ouvre notepad et commence à écrire ce que je dis, 
+ou cherche sur internet le site de "machin" ou encore regarde si j'ai un mail de "intel" et lis le moi. 
+avec en plus une partie de cette IA au cœur de mon MMO pour qu'elle puisse "apprendre" dans un contexte simulé. 
+et enfin qu'elle puisse modifier améliorer ce MMO et pourquoi pas elle même. 
+et quand je vois les avancé de l'IA de ces derniers jours, semaines, je me rend compte que plusieurs outils 
+arrive presque à ce que je vise. on essaye de produire ça ?
 
 une IA curieuse.
+
+on va ce concentré sur la partie IA conversationnel, avec capacité d'action sur sont environnement direct, (ex : mon pc, mon infra)
+une inface de convesation simplifier (exemple un chat bot)
+créer des "contrainte" pour rendre cette IA curieuse et "proactive" qu'elle face preuvent d'initiative en me proposant 
+des vois d'amelioration, des ajouts, des capacités. 
+que les réponses LLM classique (je suis un model conversationnel je ne peux rien faire (c'est un examples))disparaisse 
+au benefice d'action réaliser pas des agents qui sont ces main sur sur son environnement.
+
+tu crois que l'on peut arriver à faire dans un premier temp ? apres on connectera ça au MMO.

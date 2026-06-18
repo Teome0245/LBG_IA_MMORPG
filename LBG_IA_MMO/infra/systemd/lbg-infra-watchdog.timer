@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer — watchdog infra LAN (Proxmox + mémoire, core 140)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

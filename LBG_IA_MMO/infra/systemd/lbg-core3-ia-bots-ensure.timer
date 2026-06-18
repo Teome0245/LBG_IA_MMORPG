@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer — vérifie Lia/Nix en ligne toutes les 5 min (Prime)
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

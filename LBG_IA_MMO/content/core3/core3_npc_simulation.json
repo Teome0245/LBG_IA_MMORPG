@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "zone": "tatooine",
+  "levels": {
+    "active": {
+      "tick_ms": 2000,
+      "description": "PNJ pilotes proches joueurs — spawn, pathing, dialogues",
+      "max_simultaneous": 12
+    },
+    "semi_active": {
+      "tick_sec": 20,
+      "description": "Meme zone — routines simplifiees sans pathing lourd",
+      "max_simultaneous": 30
+    },
+    "passive": {
+      "tick_sec": 900,
+      "description": "Hors zone — simulation statistique (economie, vieillissement)",
+      "population_virtual": 200
+    }
+  },
+  "passive_rules": {
+    "birth_rate_per_tick": 0.002,
+    "death_rate_per_tick": 0.001,
+    "job_change_rate": 0.01
+  }
+}

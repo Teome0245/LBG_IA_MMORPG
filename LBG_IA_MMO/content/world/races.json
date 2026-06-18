@@ -2,7 +2,21 @@
   "schema_version": 1,
   "_meta": {
     "source": "Boite à idées (RAces_*) — sous-ensemble jouable pour le pipeline MMO",
-    "note": "Étendre progressivement sans importer 132 races d’un coup"
+    "note": "Étendre progressivement sans importer 132 races d’un coup",
+    "core3_height_reference": "LBG_IA_MMO/content/core3/core3_species_size_matrix.json",
+    "core3_species_slot_map": "LBG_IA_MMO/content/core3/core3_species_slot_map.json",
+    "core3_species_silhouette": {
+      "human": { "tier": "medium", "race_id": "race:fel_rani" },
+      "rodian": { "tier": "xs", "race_id": "race:pykrel" },
+      "trandoshan": { "tier": "large", "race_id": "race:plimp" },
+      "moncal": { "tier": "medium_large", "race_id": "race:mechari" },
+      "wookiee": { "tier": "xl", "race_id": "race:varkoon" },
+      "bothan": { "tier": "small", "race_id": "race:murrik" },
+      "twilek": { "tier": "m_flex", "race_id": "race:fae_lume" },
+      "zabrak": { "tier": "medium", "race_id": "race:kmiri" },
+      "sullustan": { "tier": "s_m", "race_id": "race:tinkling" },
+      "ithorian": { "tier": "large", "race_id": "race:mogrul" }
+    }
   },
   "races": [
     {
@@ -200,6 +214,76 @@
       "weaknesses": ["vents_de_tempete"],
       "lore_one_liner": "Coursiers des îles flottantes et des passes étroites.",
       "mmo_role": "messager"
+    },
+    {
+      "id": "race:plimp",
+      "display_name": "Plimp",
+      "size_cm": { "min": 25, "max": 35 },
+      "body_type": "léger",
+      "biomes": ["marais", "riviere", "littoral"],
+      "planet": "Thalassia",
+      "faction_tags": ["nations_aquatiques"],
+      "morphology": "Petits amphibiens bondissants, peau humide et camouflage naturel.",
+      "abilities": ["saut", "nage", "camouflage"],
+      "weaknesses": ["secheresse"],
+      "lore_one_liner": "Éclaireurs amphibies, rapides dans les roseaux et les cours d’eau.",
+      "mmo_role": "eclaireur"
+    },
+    {
+      "id": "race:mogrul",
+      "display_name": "Mogrul",
+      "size_cm": { "min": 90, "max": 120 },
+      "body_type": "robuste",
+      "biomes": ["montagne", "mine"],
+      "planet": "Aetherion",
+      "faction_tags": ["independants"],
+      "morphology": "Humanoïdes trapus et robustes, mineurs infatigables.",
+      "abilities": ["force", "minage"],
+      "weaknesses": ["lenteur"],
+      "lore_one_liner": "Taillés pour l’effort, ils tiennent les galeries et les hauts-cols.",
+      "mmo_role": "artisan"
+    },
+    {
+      "id": "race:varkoon",
+      "display_name": "Varkoon",
+      "size_cm": { "min": 150, "max": 190 },
+      "body_type": "robuste",
+      "biomes": ["foret_froide", "toundra"],
+      "planet": "Arvandor",
+      "faction_tags": ["peuples_libres"],
+      "morphology": "Caninoïdes bipèdes en meutes, odorat exceptionnel et endurance marquée.",
+      "abilities": ["odorat", "endurance", "traque"],
+      "weaknesses": ["chaleur"],
+      "lore_one_liner": "Gardiens des pistes froides, chasseurs loyaux et tenaces.",
+      "mmo_role": "chasseur"
+    },
+    {
+      "id": "race:fel_rani",
+      "display_name": "Fel'Rani",
+      "size_cm": { "min": 140, "max": 180 },
+      "body_type": "agile",
+      "biomes": ["jungle", "foret_dense"],
+      "planet": "Arvandor",
+      "faction_tags": ["peuples_libres"],
+      "morphology": "Félins humanoïdes agiles et silencieux, vision nocturne affûtée.",
+      "abilities": ["furtivite", "agilite", "vision_nocturne"],
+      "weaknesses": ["faible_endurance"],
+      "lore_one_liner": "Prédateurs discrets, éclaireurs et pisteurs des sous-bois.",
+      "mmo_role": "assassin"
+    },
+    {
+      "id": "race:mechari",
+      "display_name": "Mechari",
+      "size_cm": { "min": 160, "max": 190 },
+      "body_type": "metallique",
+      "biomes": ["metropole", "usine"],
+      "planet": "Mecha_Prime",
+      "faction_tags": ["coalition_mecha"],
+      "morphology": "Synthétiques humanoïdes optimisés pour l'analyse, la précision et la maintenance.",
+      "abilities": ["analyse_tactique", "precision"],
+      "weaknesses": ["dependance_energie"],
+      "lore_one_liner": "Techniciens-soldats, efficaces là où la logique prime.",
+      "mmo_role": "technicien"
     }
   ]
 }

@@ -1,0 +1,19 @@
+[Unit]
+Description=LBG joueur IA headless — %i (Serveur Prime)
+Documentation=file:///opt/LBG_IA_MMO/docs/core3_ia_phase_g_ai_players_population.md
+After=network-online.target lbg-core3-prime.service lbg-core3-ia-sidecar.service
+Wants=network-online.target lbg-core3-prime.service
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/lbg-new-mmo-clean/MMOCoreORB/bin
+Environment=CORE3_IA_SIDECAR_URL=http://127.0.0.1:8791
+ExecStart=/bin/bash -lc 'while true; do /opt/LBG_IA_MMO/infra/scripts/run_core3_ia_player_vm.sh "%i" || true; sleep 60; done'
+Restart=always
+RestartSec=30
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

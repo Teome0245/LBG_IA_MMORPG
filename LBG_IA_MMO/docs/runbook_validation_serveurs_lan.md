@@ -5,7 +5,7 @@ Objectif : en **2–5 minutes**, vérifier que la stack **serveurs** est saine e
 Topologie LAN par défaut :
 
 - **core** : `192.168.0.140` (backend `:8000`, orchestrator `:8010`, agents `:8020/:8030/:8040`)
-- **mmo** : `192.168.0.245` (mmo_server `:8050`, WS `:7733`, HTTP interne WS `:8773`)
+- **mmo** : `192.168.0.245` (mmo_server `:8050`, WS `:7733`, HTTP interne WS `:8773` ; optionnellement **SWGEmu Core3** `core3` sur la même VM, voir `docs/core3_mmoorb_vm.md`)
 - **front** : `192.168.0.110` (Interface Unifiée Nginx `:8080`)
 
 ---

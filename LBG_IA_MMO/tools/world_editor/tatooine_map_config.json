@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "zone_id": "tatooine",
+  "image": "assets/tatooine_map.svg",
+  "bounds": {
+    "minX": -6500,
+    "maxX": 6500,
+    "minY": -6500,
+    "maxY": 6500
+  },
+  "north_up": true,
+  "notes": "Transform écran : sx = pad + (wx-minX)/(maxX-minX)*w ; sy = pad + (maxY-wy)/(maxY-minY)*h si north_up"
+}

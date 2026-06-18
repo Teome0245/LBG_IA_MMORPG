@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "location_id": "mos_eisley_cantina_bar",
+  "zone": "tatooine",
+  "label": "Cantina Mos Eisley — comptoir bar",
+  "description": "Interieur cantina, aile comptoir (cell 1082877). Pas le theatre scene — meme building, salle bar derriere le comptoir.",
+  "building_ref": "mos_eisley_cantina",
+  "building_cell": 1082877,
+  "building_cell_notes": "1082877 = cantina vanilla (bar). 1105851 = scene theatre. 1105853 = mezzanine (theater_manager).",
+  "world_anchor": {
+    "x": 3439,
+    "y": -4820,
+    "z": 6
+  },
+  "posts": [
+    {
+      "profession": "barman",
+      "role": "vendor",
+      "room_label": "Comptoir principal",
+      "spawn": {
+        "x": 7.26,
+        "y": 1.15,
+        "z": -0.89,
+        "heading": 30.2,
+        "cell": 1082877
+      },
+      "roster_id": "roster:mos_eisley_cantina_barman",
+      "pilot_primary": "npc:core3_barman_jax",
+      "status": "confirmed"
+    }
+  ],
+  "linked_shops": [
+    "shop:mos_cantina_bar"
+  ],
+  "linked_quests": [
+    "quest:mos_gather_bar_fruit",
+    "quest:mos_gather_bar_spice"
+  ]
+}

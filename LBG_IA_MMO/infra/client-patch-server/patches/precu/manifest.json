@@ -1,0 +1,11 @@
+{
+  "version": "precu-20260618",
+  "files": [
+    { "name": "SWGEmu.exe", "hash": "47436739d9adf27a7aca283f0f1b3e86" },
+    { "name": "swgemu.cfg", "hash": "8adadb1ef787992309a94ec005fc4f48" },
+    { "name": "swgemu_login.cfg", "hash": "b3f2f11263014a48ada7b0aef215695c" },
+    { "name": "swgemu_live.cfg", "hash": "148e90165d68b457842115f8c4d2b728" },
+    { "name": "swgemu_preload.cfg", "hash": "0afeddc346edfb136bf55315f002f45a" },
+    { "name": "user.cfg", "hash": "7c28a85593259c30e4f33939e6ebee6b" }
+  ]
+}

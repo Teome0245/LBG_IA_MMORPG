@@ -28,8 +28,11 @@ tests/test_health.py
 tests/test_lyra_regulator.py
 tests/test_metrics_endpoint.py
 tests/test_mmo_lyra_sync.py
+tests/test_pilot_action_proposal.py
 tests/test_pilot_aid.py
 tests/test_pilot_capabilities.py
+tests/test_pilot_lbg_ia_status.py
+tests/test_pilot_player_inventory.py
 tests/test_pilot_proxy_agent_healthz.py
 tests/test_pilot_reputation.py
 tests/test_pilot_route_commit.py
