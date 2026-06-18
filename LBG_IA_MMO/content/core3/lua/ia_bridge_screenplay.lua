@@ -2207,15 +2207,6 @@ function IaBridgeScreenPlay:resolveStableWorldCoords(cfg, x, z, y, cell, pilotId
 	if (cell == 0) then
 		return x, z, y, 0
 	end
-	if (self:isCantinaBarmanPilot(cfg)) then
-		local ox, oz, oy = self:resolveOutdoorPostFallback(cfg, cell)
-		if (ox ~= nil) then
-			if (pilotId ~= nil) then
-				self:setPilotOutdoorPost(pilotId, true)
-			end
-			return ox, oz, oy, 0
-		end
-	end
 	if (pilotId ~= nil and self:isPilotOnOutdoorPost(pilotId)) then
 		local ox, oz, oy = self:resolveOutdoorPostFallback(cfg, cell)
 		if (ox ~= nil) then
@@ -2242,7 +2233,10 @@ function IaBridgeScreenPlay:shouldUseOutdoorPost(pilotId, cfg, presence, cell)
 		return true
 	end
 	if (self:isCantinaBarmanPilot(cfg)) then
-		return true
+		if (not self:isInteriorCellLoadable(cell)) then
+			return self:resolveOutdoorPostFallback(cfg, cell) ~= nil
+		end
+		return false
 	end
 	-- Cycle de vie autonome : fallback exterieur si la cellule interieure n'est pas chargee
 	-- (pas de condition sur la presence d'un joueur).
@@ -5026,7 +5020,7 @@ function IaBridgeScreenPlay:ensureExactlyOneRosterOnDuty(rosterId, opts)
 			IaBridgeScreenPlay.rosterPresence[pilotId] = "off"
 		end
 	end
-	local winner = self:getRosterWinnerPilot(rosterId)
+	local winner = opts.winner_pilot_id or self:getRosterWinnerPilot(rosterId)
 	if (winner == nil) then
 		return
 	end
@@ -5035,6 +5029,12 @@ function IaBridgeScreenPlay:ensureExactlyOneRosterOnDuty(rosterId, opts)
 		return
 	end
 	local want = self:getRosterDesiredPresence(winner, cfg)
+	if (opts.force_post == true) then
+		want = "post"
+	end
+	if (opts.force_outdoor_post ~= true and opts.winner_pilot_id ~= nil) then
+		self:setPilotOutdoorPost(winner, false)
+	end
 	if (want == "off" or want == nil) then
 		if (self:resolvePilotMob(winner) ~= nil) then
 			self:despawnPilot(winner)
@@ -5045,6 +5045,31 @@ function IaBridgeScreenPlay:ensureExactlyOneRosterOnDuty(rosterId, opts)
 	self:purgeStalePilotRef(winner)
 	local pMob = self:resolvePilotMob(winner)
 	if (pMob ~= nil and self:isMobAlive(pMob)) then
+		local forceInterior = (opts.force_post == true and opts.force_outdoor_post ~= true)
+		if (forceInterior) then
+			local postCell = tonumber(cfg.spawn_cell) or 0
+			local ax, az, ay, acell = self:liaAnchor()
+			local liaCell = tonumber(acell) or 0
+			local parent = 0
+			pcall(function()
+				parent = SceneObject(pMob):getParentID()
+			end)
+			if (postCell ~= 0 and liaCell == postCell) then
+				local px, pz, py = self:resolvePostCoords(cfg)
+				if (parent ~= postCell or self:isPilotOnOutdoorPost(winner)) then
+					pcall(function()
+						CreatureObject(pMob):teleport(px, pz, py, postCell)
+					end)
+					self:setPilotOutdoorPost(winner, false)
+					ia_catalog_boot_log("ensure on duty " .. logLabel .. " " .. winner .. " want=" .. want .. " (teleport interior)")
+				end
+			elseif (self:isPilotOnOutdoorPost(winner) or (postCell ~= 0 and parent ~= postCell)) then
+				self:despawnPilot(winner)
+				pMob = nil
+			end
+		end
+	end
+	if (pMob ~= nil and self:isMobAlive(pMob)) then
 		self:syncRosterServiceForPresence(cfg, pMob, want)
 		IaBridgeScreenPlay.rosterPresence[winner] = want
 		return
@@ -5054,6 +5079,24 @@ function IaBridgeScreenPlay:ensureExactlyOneRosterOnDuty(rosterId, opts)
 	end
 	if (forceOutdoor) then
 		self:setPilotOutdoorPost(winner, true)
+	end
+	if (opts.force_post == true and opts.force_outdoor_post ~= true and self:isCantinaBarmanPilot(cfg)) then
+		local postCell = tonumber(cfg.spawn_cell) or 0
+		local ax, az, ay, acell = self:liaAnchor()
+		if (postCell ~= 0 and tonumber(acell) == postCell) then
+			pMob = self:spawnPilotInBuilding(winner, cfg, postCell)
+			if (pMob == nil) then
+				local px, pz, py = self:resolvePostCoords(cfg)
+				pMob = self:spawnPilotAt(winner, cfg, px, pz, py, postCell)
+			end
+			if (pMob ~= nil) then
+				self:setPilotOutdoorPost(winner, false)
+				self:syncRosterServiceForPresence(cfg, pMob, want)
+				ia_catalog_boot_log("ensure on duty " .. logLabel .. " " .. winner .. " want=" .. want .. " (interior)")
+				IaBridgeScreenPlay.rosterPresence[winner] = want
+				return
+			end
+		end
 	end
 	pMob = self:spawnRosterPilotAt(winner, cfg, want)
 	if (pMob ~= nil) then
@@ -5066,8 +5109,10 @@ end
 
 function IaBridgeScreenPlay:ensureCantinaBarmanOnDuty()
 	self:ensureExactlyOneRosterOnDuty("roster:mos_eisley_cantina_barman", {
-		force_outdoor_post = true,
+		force_outdoor_post = false,
 		log_label = "barman",
+		winner_pilot_id = "npc:core3_barman_jax",
+		force_post = true,
 	})
 end
 

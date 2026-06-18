@@ -33,6 +33,7 @@ from lbg_agents.desktop_targets import resolve_desktop_target
 from lbg_agents.opengame_executor import run_opengame_action
 from lbg_agents.core3_bridge import run_core3_bridge
 from lbg_agents.network_inventory import run_network_inventory
+from lbg_agents.world_director_capabilities import run_economy_regulate, run_world_direct
 
 
 def _dialogue_http_timeout() -> httpx.Timeout:
@@ -435,6 +436,14 @@ def _core3(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
     return run_core3_bridge(actor_id=actor_id, text=text, context=context)
 
 
+def _economy(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
+    return run_economy_regulate(actor_id=actor_id, text=text, context=context)
+
+
+def _chronicler(actor_id: str, text: str, context: dict[str, Any]) -> dict[str, Any]:
+    return run_world_direct(actor_id=actor_id, text=text, context=context)
+
+
 _HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
     "agent.dialogue": _dialogue,
     "agent.quests": _quests,
@@ -446,5 +455,7 @@ _HANDLERS: dict[str, Callable[..., dict[str, Any]]] = {
     "agent.opengame": _opengame,
     "agent.world": _world,
     "agent.core3": _core3,
+    "agent.economy": _economy,
+    "agent.chronicler": _chronicler,
     "agent.fallback": _fallback,
 }

@@ -392,6 +392,98 @@ capability_registry = InMemoryCapabilityRegistry(
             tags=["prototype", "sandbox", "assistant"],
         ),
         CapabilitySpec(
+            name="economy_regulate",
+            routed_to="agent.economy",
+            description="Économie macro Prime — signaux shops JSON, règles seuils, actions proposées (dry-run par défaut)",
+            mode="mmo_persona",
+            risk_level="medium",
+            action_context_key="economy_action",
+            input_schema=_object_schema(
+                {
+                    "text": {"type": "string"},
+                    "context": _object_schema(
+                        {
+                            "economy_action": _object_schema(
+                                {
+                                    "dry_run": {"type": "boolean"},
+                                    "stock_overrides": {"type": "object"},
+                                }
+                            ),
+                            "world_director_dry_run": {"type": "boolean"},
+                        }
+                    ),
+                },
+                required=["text"],
+            ),
+            output_schema=_object_schema(
+                {
+                    "result": {"type": "object"},
+                    "proposed_actions": {"type": "array"},
+                    "reply": {"type": "string"},
+                }
+            ),
+            preconditions=["Lecture core3_economy.json + economy_rules_v1.json sur l'orchestrateur."],
+            effects=["Propose offer_quest / adjust_price_json ; n'écrit pas le JSON économie sans job approuvé."],
+            errors=["configuration_error", "evaluation_error"],
+            constraints=[
+                CapabilityConstraint(
+                    name="dry_run_default",
+                    description="LBG_WORLD_DIRECTOR_DRY_RUN=1 par défaut — pas d'écriture fichier économie.",
+                ),
+                CapabilityConstraint(
+                    name="tatooine_scope",
+                    description="Signaux cantina / shops Prime uniquement (phase macro v1).",
+                ),
+            ],
+            tags=["mmo", "core3", "economy", "world_director"],
+        ),
+        CapabilitySpec(
+            name="world_direct",
+            routed_to="agent.chronicler",
+            description="Chroniqueur monde — objectifs faction, hints roster, enqueue npc_think sidecar (dry-run par défaut)",
+            mode="mmo_persona",
+            risk_level="medium",
+            action_context_key="world_direct_action",
+            input_schema=_object_schema(
+                {
+                    "text": {"type": "string"},
+                    "context": _object_schema(
+                        {
+                            "world_direct_action": _object_schema(
+                                {
+                                    "dry_run": {"type": "boolean"},
+                                    "stock_overrides": {"type": "object"},
+                                }
+                            ),
+                            "world_director_dry_run": {"type": "boolean"},
+                        }
+                    ),
+                },
+                required=["text"],
+            ),
+            output_schema=_object_schema(
+                {
+                    "result": {"type": "object"},
+                    "roster_hints": {"type": "array"},
+                    "reply": {"type": "string"},
+                }
+            ),
+            preconditions=["faction_goals.json + sidecar Prime pour enqueue réel."],
+            effects=["Peut enqueue npc_think borné sur le pilote primary du roster cible."],
+            errors=["sidecar_unreachable", "configuration_error"],
+            constraints=[
+                CapabilityConstraint(
+                    name="dry_run_default",
+                    description="Pas d'enqueue sidecar tant que dry_run=True.",
+                ),
+                CapabilityConstraint(
+                    name="bounded_enqueue",
+                    description="Enqueue uniquement npc_think avec prompt scène — pas de commandes shell.",
+                ),
+            ],
+            tags=["mmo", "core3", "chronicler", "world_director"],
+        ),
+        CapabilitySpec(
             name="unknown",
             routed_to="agent.fallback",
             description="Fallback handler",

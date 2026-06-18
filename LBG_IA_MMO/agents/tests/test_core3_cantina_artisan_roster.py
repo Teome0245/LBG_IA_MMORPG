@@ -28,6 +28,7 @@ def test_jax_in_cantina_roster_active():
     roster = _roster_by_id(cat, "roster:mos_eisley_cantina_barman")
     assert roster is not None
     assert roster.get("status") == "active"
+    assert roster.get("primary_pilot_id") == "npc:core3_barman_jax"
     slots = roster.get("slots") or []
     jax = next((s for s in slots if s.get("pilot_id") == "npc:core3_barman_jax"), None)
     assert jax is not None

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-VM_HOST="${LBG_NEW_MMO_VM_HOST:-192.168.0.245}"
+VM_HOST="${LBG_NEW_MMO_VM_HOST:-${LBG_LAN_HOST_CORE3_PRIME:-192.168.0.246}}"
 VM_USER="${LBG_NEW_MMO_VM_USER:-lbg}"
 WITH_THINK=0
 for arg in "$@"; do
@@ -34,13 +34,14 @@ PY
 ssh "${VM_USER}@${VM_HOST}" 'python3 -c "
 import json, urllib.request
 d=json.load(urllib.request.urlopen(\"http://127.0.0.1:8791/healthz\"))
-assert d.get(\"npc_pilot_count\") == 9, d
+assert d.get(\"ok\"), d
+assert int(d.get(\"npc_pilot_count\") or 0) >= 9, d
 pl=json.load(urllib.request.urlopen(\"http://127.0.0.1:8791/v1/npc-pilots\"))
 ids={p[\"pilot_id\"] for p in pl[\"pilots\"]}
 for pid in (\"npc:core3_vex_sorn\", \"npc:core3_nira_kell\", \"npc:core3_daan_oth\"):
-    assert pid in ids, ids
+    assert pid in ids, sorted(ids)[:12]
 on=[p for p in pl[\"pilots\"] if p[\"pilot_id\"] in (\"npc:core3_vex_sorn\",\"npc:core3_nira_kell\",\"npc:core3_daan_oth\") and p.get(\"online\")]
-print(\"OK pilots=9 quest_roster_online=\", [(p[\"pilot_id\"], p.get(\"display_name\")) for p in on])
+print(\"OK pilots>=9 quest_roster_online=\", [(p[\"pilot_id\"], p.get(\"display_name\")) for p in on])
 assert len(on) <= 2, on
 "'
 

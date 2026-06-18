@@ -50,6 +50,8 @@ PLANNER_ALLOWED_CAPABILITIES = frozenset(
         "devops_probe",
         "network_inventory",
         "core3_bot_action",
+        "economy_regulate",
+        "world_direct",
         "desktop_control",
         "prototype_game",
         "unknown",

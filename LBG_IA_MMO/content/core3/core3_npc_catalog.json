@@ -971,6 +971,7 @@
     },
     {
       "roster_id": "roster:mos_eisley_cantina_barman",
+      "primary_pilot_id": "npc:core3_barman_jax",
       "profile_id": "profile:cantina_barman_mos_v1",
       "status": "active",
       "service_policy": "exactly_one",
