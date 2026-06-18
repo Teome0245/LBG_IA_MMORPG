@@ -19,6 +19,8 @@ Accueillir des arbres **volumineux** ou **non Python** (moteurs C++, assets, clo
 
 3. **Submodule Git** : si l’équipe choisit un submodule à la place d’un clone ignoré, suivre `docs/migration_new_mmo_core3.md` §3 option C et **retirer** l’ignore correspondant pour ne versionner que le **pointeur** submodule.
 
+4. **Dépôt Git dédié `new_mmo`** (depuis juin 2026) : voir **`docs/new_mmo_git_versioning.md`** — tags `deploy/245-precu` et `deploy/246-prime`, script `pull_core3_from_vm.sh`.
+
 ## Règles
 
 - Ne **committez pas** de binaires `core3`, dumps SQL complets, ni builds entiers dans le tronc **`LBG_IA_MMO/`** sans revue explicite.

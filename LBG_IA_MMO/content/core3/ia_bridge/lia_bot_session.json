@@ -1,0 +1,28 @@
+{
+  "username": "Bot_IA",
+  "loginHost": "192.168.0.246",
+  "loginPort": 44553,
+  "clientVersion": "20050408-18:00",
+  "loginTimeout": 15,
+  "zoneTimeout": 120,
+  "logLevel": 3,
+  "waitAfterZone": 86400,
+  "stayConnected": true,
+  "botCharacterName": "Lia",
+  "botMoveQueue": "ia_bridge/bot_move.jsonl",
+  "botMoveTickMs": 450,
+  "characterOid": 281474993938298,
+  "actions": [
+    {
+      "action": "selectContext",
+      "galaxyId": 3,
+      "characterOid": 281474993938298
+    },
+    {
+      "action": "connectToZone"
+    },
+    {
+      "action": "zoneInCharacter"
+    }
+  ]
+}

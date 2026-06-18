@@ -1,0 +1,30 @@
+[Unit]
+Description=LBG Core3 IA sidecar (Serveur Prime / Tatooine)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/lbg-new-mmo-clean/MMOCoreORB/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=CORE3_IA_BRIDGE_CWD=/opt/lbg-new-mmo-clean/MMOCoreORB/bin
+# 0.0.0.0 : orchestrateur VM 140 → http://192.168.0.246:8791
+Environment=CORE3_IA_SIDECAR_HOST=0.0.0.0
+Environment=CORE3_IA_SIDECAR_PORT=8791
+Environment=CORE3_IA_ZONE=tatooine
+Environment=CORE3_IA_BOT_NAME=Bot_IA
+Environment=CORE3_IA_BOT_CHARACTER=Lia
+Environment=CORE3_IA_DIALOGUE_TARGET=auto
+Environment=CORE3_IA_NPC_PILOTS_JSON=/opt/LBG_IA_MMO/content/core3/core3_npc_pilots.json
+Environment=CORE3_IA_NPC_CATALOG_JSON=/opt/LBG_IA_MMO/content/core3/core3_npc_catalog.json
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+EnvironmentFile=-/etc/lbg-core3-ia.env
+ExecStart=/usr/bin/python3 /opt/LBG_IA_MMO/tools/core3_ia_sidecar/core3_ia_sidecar.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

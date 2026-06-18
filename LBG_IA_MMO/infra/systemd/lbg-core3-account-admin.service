@@ -1,0 +1,30 @@
+[Unit]
+Description=LBG Core3 account admin UI (port 8792, MariaDB sur 245)
+After=network-online.target mariadb.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/home/lbg/tools/core3_account_admin
+Environment=CORE3_DB_HOST=127.0.0.1
+Environment=CORE3_DB_USER=swgemu
+Environment=CORE3_DB_NAME=swgemu
+Environment=CORE3_PRIME_DB_HOST=192.168.0.246
+Environment=CORE3_PRIME_DB_USER=swgemu
+Environment=CORE3_PRIME_DB_NAME=swgemu
+Environment=CORE3_PRIME_DB_ENABLED=1
+Environment=CORE3_DB_SECRET=swgemus3cr37!
+Environment=CORE3_ADMIN_BIND=0.0.0.0:8792
+Environment=CORE3_PRECU_STATUS_HOST=127.0.0.1
+Environment=CORE3_PRECU_CLIENT_IP=192.168.0.245
+Environment=CORE3_PRIME_STATUS_HOST=192.168.0.246
+Environment=CORE3_PRIME_CLIENT_IP=192.168.0.246
+EnvironmentFile=-/etc/lbg-core3-account-admin.env
+ExecStart=/usr/bin/python3 /home/lbg/tools/core3_account_admin/core3_account_admin.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
