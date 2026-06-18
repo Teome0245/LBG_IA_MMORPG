@@ -32,7 +32,21 @@ tail -n 20 /opt/lbg-new-mmo-clean/MMOCoreORB/bin/ia_bridge/quest_state.jsonl
 tail -n 5 /opt/lbg-new-mmo-clean/MMOCoreORB/bin/ia_bridge/world_events.jsonl   # si rebuild C++ OK
 ```
 
-## 5. Documentation à jour
+## 5. PNJ cantina + artisan (Track E)
+
+- [ ] Logs boot : `ensure on duty barman npc:core3_barman_jax` (ou relief du triplon)
+- [ ] Logs boot : `ensure on duty artisan_trainer npc:core3_artisan_trainer_*`
+- [ ] IG cantina cell **1082877** : Jax (ou proxy outdoor) au comptoir
+- [ ] IG centre entrainement cell **1189639** : instructeur artisan `trainer_artisan`
+- [ ] `pytest agents/tests/test_core3_cantina_artisan_roster.py` OK
+
+Déployer Lua + catalogues :
+
+```bash
+bash infra/scripts/deploy_core3_ia_bridge_vm.sh --restart
+```
+
+## 6. Documentation à jour
 
 - [ ] [`content/core3/README.md`](../content/core3/README.md) — index catalogues
 - [ ] [`docs/core3_prime_runbook.md`](core3_prime_runbook.md) — opérations

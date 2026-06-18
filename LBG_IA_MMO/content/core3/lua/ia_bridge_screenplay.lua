@@ -36,6 +36,8 @@ local IA_BRIDGE_CANTINA_LIA_GUEST_X = 7.26
 local IA_BRIDGE_CANTINA_LIA_GUEST_Y = 0.35
 local IA_BRIDGE_CANTINA_LIA_GUEST_Z = 0.91
 -- Lost Heaven / Scrapaltai (ADR 0009) — ancre confirmée IG 2026-06-01 (Teome /way 4809 -802)
+-- Option A (2026-06-28) : redirect login ME → LH **désactivé** jusqu'au hub terrain déployé (lbg_lost_heaven_screenplay).
+-- Réactiver : passer IA_BRIDGE_LOST_HEAVEN_ENABLED à true après rebuild hub v9.
 local IA_BRIDGE_LOST_HEAVEN_ENABLED = false
 local IA_BRIDGE_LOST_HEAVEN_X = 4809
 local IA_BRIDGE_LOST_HEAVEN_Y = -802
@@ -1441,6 +1443,13 @@ function IaBridgeScreenPlay:isCantinaBarmanPilot(cfg)
 	return string.find(r, "cantina_barman", 1, true) ~= nil
 end
 
+function IaBridgeScreenPlay:isArtisanTrainerPilot(cfg)
+	if (cfg == nil) then
+		return false
+	end
+	return tostring(cfg.roster or "") == "roster:mos_trainer_artisan"
+end
+
 function IaBridgeScreenPlay:isBartenderPilot(cfg)
 	if (self:isCantinaBarmanPilot(cfg)) then
 		return true
@@ -2034,6 +2043,7 @@ end
 function IaBridgeScreenPlay:ensurePilots()
 	self:tickRosterLifecycle()
 	self:ensureCantinaBarmanOnDuty()
+	self:ensureArtisanTrainerOnDuty()
 	local ax, az, ay, acell = self:liaAnchor()
 	for pilotId, cfg in pairs(IA_BRIDGE_PILOTS) do
 		if (cfg.roster ~= nil) then
@@ -2324,7 +2334,7 @@ function IaBridgeScreenPlay:spawnRosterPilotAt(pilotId, cfg, presence)
 		heading = cfg.heading or 0
 	end
 	x, z, y, cell = self:resolveStableWorldCoords(cfg, x, z, y, cell, pilotId)
-	if (presence == "post" and cell ~= 0 and self:isInteriorCellLoadable(cell) and self:isBartenderPilot(cfg)) then
+	if (presence == "post" and cell ~= 0 and self:isInteriorCellLoadable(cell) and (self:isBartenderPilot(cfg) or self:isTrainerPilot(cfg))) then
 		local pMob = self:spawnPilotInBuilding(pilotId, cfg, cell)
 		if (pMob ~= nil) then
 			self:clearPilotBehaviors(pMob)
@@ -2432,6 +2442,8 @@ function IaBridgeScreenPlay:tickRosterLifecycle()
 			-- rien
 		elseif (self:isCantinaBarmanPilot(cfg)) then
 			-- Comptoir cantina : lifecycle dedie (ensureCantinaBarmanOnDuty).
+		elseif (self:isArtisanTrainerPilot(cfg)) then
+			-- Centre entrainement artisan : lifecycle dedie (ensureArtisanTrainerOnDuty).
 		else
 		self:purgeStalePilotRef(pilotId)
 		local want = self:getRosterDesiredPresence(pilotId, cfg)
@@ -4999,13 +5011,13 @@ end
 
 -- Postes interieurs : spawn permanent chaque tick (independant des joueurs IA).
 -- Si interieur indisponible (cellule videe), fallback exterieur pour barman/artisan.
--- Comptoir cantina : garantit le barman de service (proxy commoner outdoor).
-function IaBridgeScreenPlay:ensureCantinaBarmanOnDuty()
+function IaBridgeScreenPlay:ensureExactlyOneRosterOnDuty(rosterId, opts)
 	if (IA_BRIDGE_ROSTER_POLICIES == nil) then
 		return
 	end
-	local rosterId = "roster:mos_eisley_cantina_barman"
-	-- Despawn relais hors service.
+	opts = opts or {}
+	local forceOutdoor = opts.force_outdoor_post == true
+	local logLabel = tostring(opts.log_label or rosterId)
 	for pilotId, cfg in pairs(IA_BRIDGE_PILOTS) do
 		if (cfg.roster == rosterId and not self:pilotAllowedByRosterPolicy(pilotId, cfg)) then
 			if (self:resolvePilotMob(pilotId) ~= nil) then
@@ -5040,19 +5052,35 @@ function IaBridgeScreenPlay:ensureCantinaBarmanOnDuty()
 	if (pMob ~= nil) then
 		self:despawnPilot(winner)
 	end
-	self:setPilotOutdoorPost(winner, true)
+	if (forceOutdoor) then
+		self:setPilotOutdoorPost(winner, true)
+	end
 	pMob = self:spawnRosterPilotAt(winner, cfg, want)
 	if (pMob ~= nil) then
-		ia_catalog_boot_log("ensure barman on duty " .. winner .. " want=" .. want)
+		ia_catalog_boot_log("ensure on duty " .. logLabel .. " " .. winner .. " want=" .. want)
 		IaBridgeScreenPlay.rosterPresence[winner] = want
 	else
-		ia_catalog_boot_log("ensure barman FAILED " .. winner .. " want=" .. want)
+		ia_catalog_boot_log("ensure FAILED " .. logLabel .. " " .. winner .. " want=" .. want)
 	end
+end
+
+function IaBridgeScreenPlay:ensureCantinaBarmanOnDuty()
+	self:ensureExactlyOneRosterOnDuty("roster:mos_eisley_cantina_barman", {
+		force_outdoor_post = true,
+		log_label = "barman",
+	})
+end
+
+function IaBridgeScreenPlay:ensureArtisanTrainerOnDuty()
+	self:ensureExactlyOneRosterOnDuty("roster:mos_trainer_artisan", {
+		force_outdoor_post = false,
+		log_label = "artisan_trainer",
+	})
 end
 
 function IaBridgeScreenPlay:maintainInteriorRosterPosts()
 	for pilotId, cfg in pairs(IA_BRIDGE_PILOTS) do
-		if (cfg.roster ~= nil and not self:isCantinaBarmanPilot(cfg)) then
+		if (cfg.roster ~= nil and not self:isCantinaBarmanPilot(cfg) and not self:isArtisanTrainerPilot(cfg)) then
 			local cell = tonumber(cfg.spawn_cell) or 0
 			if (cell ~= 0) then
 				self:purgeStalePilotRef(pilotId)
@@ -5271,6 +5299,7 @@ function IaBridgeScreenPlay:tick()
 			self:containLiaInCantina()
 			self:tickRosterLifecycle()
 			self:ensureCantinaBarmanOnDuty()
+			self:ensureArtisanTrainerOnDuty()
 			self:maintainInteriorRosterPosts()
 			self:syncPilotsNearLia()
 			self:maybeSyncRelayCantina()

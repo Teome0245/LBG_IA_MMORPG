@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Any
 
 from lbg_agents.core3_players import Core3IaPlayer
+
+LIFECYCLE_PHASES = (
     "learning",
     "mastery_practice",
     "secondary_learning",

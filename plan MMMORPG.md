@@ -24,7 +24,7 @@
 |-------|--------|----------------|
 | **Lia** | Bot_IA | En ligne — autonomie / orchestrateur |
 | **Nix** | Bot_IA_2 | En ligne — scout |
-| **Mira** | Bot_IA_3 | En ligne — **téléport spawn Lost Heaven** (4809, -802) ; hub **pas encore construit** IG |
+| **Mira** | Bot_IA_3 | En ligne — spawn **ME** (redirect Lost Heaven **désactivé** juin 2026) |
 
 \### Lost Heaven / Scrapaltai (hub cible)
 
@@ -38,7 +38,8 @@
 1. Autonomie population (Lia + Nix + Mira) + timer `bots-ensure`  
 2. Valider PNJ cantina (Jax) + artisan trainer  
 3. Lost Heaven : rebuild ou désactiver redirect temporaire jusqu’au hub prêt  
-4. World Director phase B (économie) — voir `docs/plan_world_director_integration.md`
+4. World Director phase B (économie) — voir `docs/plan_world_director_integration.md`  
+5. Exécution parallèle multi-agents — voir `LBG_IA_MMO/docs/plan_parallel_next_steps.md`
 
 \### Décision stratégique — focus **Core3 Prime** + **client SWGEmu** (juin 2026)
 

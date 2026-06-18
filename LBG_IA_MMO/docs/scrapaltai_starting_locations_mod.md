@@ -20,7 +20,7 @@ Déployer après modification :
 bash infra/scripts/deploy_core3_ia_bridge_vm.sh --restart
 ```
 
-Test : créer un perso avec départ Mos Eisley → après tutorial / login Tatooine proche ME → message `[LBG] Bienvenue sur Scrapaltai...` + teleport désert.
+Test : créer un perso avec départ Mos Eisley → **reste proche ME** (redirect LH désactivé juin 2026). Pas de message Scrapaltai tant que `IA_BRIDGE_LOST_HEAVEN_ENABLED = false`.
 
 ---
 

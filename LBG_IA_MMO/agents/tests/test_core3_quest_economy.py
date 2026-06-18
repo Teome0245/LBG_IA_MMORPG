@@ -5,7 +5,16 @@ from __future__ import annotations
 from lbg_agents.core3_economy_loop import pick_economy_step
 from lbg_agents.core3_players import get_ai_player
 from lbg_agents.core3_profession_lifecycle import ProfessionLifecycleView, tick_player_lifecycle
-from lbg_agents.core3_quest_autonomy import GOAL_TO_QUEST, pick_quest_for_player
+from lbg_agents.core3_quest_autonomy import GOAL_TO_QUEST, pick_quest_for_player, template_by_id
+
+
+def test_lia_quest_maps_from_progression_goals():
+    lia = get_ai_player("lia")
+    qid = pick_quest_for_player(lia)
+    assert qid is not None
+    assert qid.startswith("quest:")
+    tpl = template_by_id(qid)
+    assert tpl is not None
 
 
 def test_goal_maps_to_quest_template():

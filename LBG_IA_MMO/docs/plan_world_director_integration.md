@@ -279,6 +279,8 @@ Secrets : `PROXMOX_HOST`, `PROXMOX_TOKEN` dans `lbg.env` (jamais versionnés).
 
 ## 11. Prochaine action (après validation du plan)
 
+**Plans parallèles détaillés (briefs agents)** : [`plan_parallel_next_steps.md`](plan_parallel_next_steps.md) — 7 tracks, matrice conflits, 2 vagues.
+
 **Ordre d'exécution recommandé** :
 
 1. **Phase 2.1** — script MCP Proxmox (`tools/mcp_proxmox_server/`)

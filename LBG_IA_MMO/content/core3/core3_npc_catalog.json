@@ -999,6 +999,7 @@
           "pilot_id": "npc:core3_barman_jax",
           "display_name": "Jax Moro",
           "shift_offset": 0,
+          "profile_id": "profile:cantina_barman_mos_v1",
           "lbg_npc_id": "npc:cantina_barman_mos",
           "binding": {
             "mode": "roster",
@@ -1936,6 +1937,7 @@
           "pilot_id": "npc:core3_artisan_trainer_a",
           "display_name": "Bix Torren",
           "shift_offset": 0,
+          "profile_id": "profile:trainer_artisan_mos_v1",
           "lbg_npc_id": "npc:trainer_artisan_mos",
           "binding": {
             "mode": "roster",

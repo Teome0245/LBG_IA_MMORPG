@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "stock_low_threshold": 15,
+  "stock_critical_threshold": 5,
+  "inflation_price_ratio": 2.5
+}

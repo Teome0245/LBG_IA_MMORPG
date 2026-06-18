@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "zone": "tatooine",
+  "factions": [
+    {
+      "faction_id": "mos_eisley_cantina",
+      "display_name": "Cantina Mos Eisley",
+      "goals": [
+        {
+          "goal_id": "stock_bar",
+          "priority": 1,
+          "condition": "shop_stock_below",
+          "shop_id": "shop:mos_cantina_bar",
+          "item_template": "object/tangible/food/foraged/foraged_fruit_s1.iff",
+          "threshold": 15,
+          "roster_id": "roster:mos_eisley_cantina_barman",
+          "scene_profile": "profile:cantina_barman_mos_v1",
+          "hint_action": "vendor_restock_or_gather"
+        }
+      ]
+    },
+    {
+      "faction_id": "mos_eisley_trade",
+      "display_name": "Commerce ME",
+      "goals": [
+        {
+          "goal_id": "scribe_supplies",
+          "priority": 2,
+          "condition": "shop_stock_below",
+          "shop_id": "shop:mos_scribe_supplies",
+          "item_template": "object/tangible/food/foraged/foraged_fruit_s1.iff",
+          "threshold": 8,
+          "roster_id": "roster:mos_eisley_scribe",
+          "scene_profile": "profile:scribe_mos_v1",
+          "hint_action": "vendor_restock"
+        }
+      ]
+    }
+  ]
+}
