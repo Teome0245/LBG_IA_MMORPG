@@ -31,10 +31,11 @@ local IA_BRIDGE_CANTINA_BAR_Z = -0.89
 -- Derriere le bar profond (2.8) : conversation bloquee par le comptoir ; ~1.15 = colles au bord client
 local IA_BRIDGE_CANTINA_BAR_Y = 1.15
 local IA_BRIDGE_CANTINA_BAR_HEADING = 30.2
--- Lia = joueur (pas PNJ comptoir) : devant le bar, face au comptoir (pas y=1.15 poste barman)
+-- Lia = joueur (pas PNJ comptoir) : cote client du comptoir, face au barman (y=1.15 cote serveur)
 local IA_BRIDGE_CANTINA_LIA_GUEST_X = 7.26
-local IA_BRIDGE_CANTINA_LIA_GUEST_Y = 0.35
-local IA_BRIDGE_CANTINA_LIA_GUEST_Z = 0.91
+local IA_BRIDGE_CANTINA_LIA_GUEST_Y = -0.22
+local IA_BRIDGE_CANTINA_LIA_GUEST_Z = 1.02
+local IA_BRIDGE_CANTINA_LIA_GUEST_HEADING = 210.0
 -- Lost Heaven / Scrapaltai (ADR 0009) — ancre confirmée IG 2026-06-01 (Teome /way 4809 -802)
 -- Option A (2026-06-28) : redirect login ME → LH **désactivé** jusqu'au hub terrain déployé (lbg_lost_heaven_screenplay).
 -- Réactiver : passer IA_BRIDGE_LOST_HEAVEN_ENABLED à true après rebuild hub v9.
@@ -749,6 +750,10 @@ local function ia_build_pilots_from_catalog(doc)
 									table.insert(cfg.roam_patrol, { px, pz, py, pc })
 								end
 							end
+							if (r.roster_id ~= nil and string.find(r.roster_id, "mos_pilot_", 1, true) ~= nil) then
+								cfg.outdoor_world = true
+								cfg.roam_contain_m = tonumber(b.leisure_contain_m) or 8
+							end
 							ia_attach_outdoor_fallback_to_cfg(cfg, b, r)
 							ia_ensure_outdoor_roam_patrol(cfg)
 							pilots[s.pilot_id] = cfg
@@ -1450,6 +1455,17 @@ function IaBridgeScreenPlay:isArtisanTrainerPilot(cfg)
 	return tostring(cfg.roster or "") == "roster:mos_trainer_artisan"
 end
 
+function IaBridgeScreenPlay:isOutdoorWorldRosterPilot(cfg)
+	if (cfg == nil) then
+		return false
+	end
+	if (cfg.outdoor_world == true) then
+		return true
+	end
+	local r = tostring(cfg.roster or "")
+	return string.find(r, "mos_pilot_", 1, true) ~= nil
+end
+
 function IaBridgeScreenPlay:isBartenderPilot(cfg)
 	if (self:isCantinaBarmanPilot(cfg)) then
 		return true
@@ -1977,9 +1993,30 @@ function IaBridgeScreenPlay:barmanEffectiveMobile(cfg, cell)
 	return cfg.mobile or "bartender"
 end
 
+function IaBridgeScreenPlay:releasePilotMobUnlessAtCell(pilotId, cell)
+	local pMob = self:resolvePilotMob(pilotId)
+	if (pMob == nil) then
+		return nil
+	end
+	local wantCell = tonumber(cell) or 0
+	local parent = 0
+	pcall(function()
+		parent = SceneObject(pMob):getParentID()
+	end)
+	if (wantCell ~= 0 and parent == wantCell and not self:isPilotOnOutdoorPost(pilotId)) then
+		return pMob
+	end
+	if (wantCell == 0 and parent == 0) then
+		return pMob
+	end
+	self:despawnPilot(pilotId)
+	return nil
+end
+
 function IaBridgeScreenPlay:spawnPilotAt(pilotId, cfg, x, z, y, cell)
-	if (self:resolvePilotMob(pilotId) ~= nil) then
-		return self:pilotMobTable()[pilotId]
+	local pMob = self:releasePilotMobUnlessAtCell(pilotId, cell)
+	if (pMob ~= nil) then
+		return pMob
 	end
 	if (cfg ~= nil and (cfg.post_offset_dx ~= nil or cfg.post_offset_dy ~= nil or cfg.post_offset_dz ~= nil)) then
 		x, z, y = self:resolvePostCoords(cfg)
@@ -2266,8 +2303,9 @@ function IaBridgeScreenPlay:spawnPilotInBuilding(pilotId, cfg, cell)
 	if (pBuilding == nil) then
 		return nil
 	end
-	if (self:resolvePilotMob(pilotId) ~= nil) then
-		return self:pilotMobTable()[pilotId]
+	local pMob = self:releasePilotMobUnlessAtCell(pilotId, cell)
+	if (pMob ~= nil) then
+		return pMob
 	end
 	local x, z, y = self:resolvePostCoords(cfg)
 	local pMob = nil
@@ -2309,6 +2347,9 @@ function IaBridgeScreenPlay:handleSkillForget(pPlayer, message)
 end
 
 function IaBridgeScreenPlay:spawnRosterPilotAt(pilotId, cfg, presence)
+	if (self:isOutdoorWorldRosterPilot(cfg) and presence == "cantina") then
+		presence = "post"
+	end
 	local x, z, y, cell, heading
 	if (presence == "cantina") then
 		x = cfg.cantina_x
@@ -2443,6 +2484,10 @@ function IaBridgeScreenPlay:tickRosterLifecycle()
 		local want = self:getRosterDesiredPresence(pilotId, cfg)
 		local life = self:getLifecyclePhase(cfg.shift_offset or 0)
 		local pMob = self:resolvePilotMob(pilotId)
+		if (pMob ~= nil and self:isOutdoorWorldRosterPilot(cfg)) then
+			self:repatriateOutdoorPilotIfInterior(pilotId, cfg, pMob)
+			pMob = self:resolvePilotMob(pilotId)
+		end
 		if (pMob ~= nil and not self:isMobAlive(pMob)) then
 			if (want == "post" and (tonumber(cfg.spawn_cell) or 0) ~= 0) then
 				self:setPilotOutdoorPost(pilotId, true)
@@ -2566,6 +2611,9 @@ function IaBridgeScreenPlay:assignRoamWalkPoint(pMob, cfg, advance)
 		AiAgent(pMob):stopWaiting()
 		AiAgent(pMob):setWait(0)
 		local pc = pt[4] or self:getPilotHomeCell(cfg) or 0
+		if (self:isOutdoorWorldRosterPilot(cfg) or self:getPilotHomeCell(cfg) == 0) then
+			pc = 0
+		end
 		AiAgent(pMob):setNextPosition(pt[1], pt[2], pt[3], pc)
 		local hx, hz, hy = self:getPilotLeisureCoords(cfg)
 		local hc = self:getPilotHomeCell(cfg) or 0
@@ -2797,7 +2845,7 @@ function IaBridgeScreenPlay:getPilotLeisureCoords(cfg)
 end
 
 function IaBridgeScreenPlay:resetPilotToHome(pilotId)
-	local cfg = IA_BRIDGE_PILOTS[pilotId]
+	local cfg = self:getPilotCfg(pilotId)
 	if (cfg == nil) then
 		return false
 	end
@@ -2809,7 +2857,14 @@ function IaBridgeScreenPlay:resetPilotToHome(pilotId)
 	local tx, tz, ty = cfg.x, cfg.z, cfg.y
 	if (cfg.roster ~= nil) then
 		local want = self:getRosterDesiredPresence(pilotId, cfg)
-		if (want == "leisure" or want == "rest_home") then
+		if (self:isOutdoorWorldRosterPilot(cfg)) then
+			if (want == "leisure" or want == "rest_home") then
+				tx, tz, ty = self:getPilotLeisureCoords(cfg)
+			else
+				tx, tz, ty = self:resolvePostCoords(cfg)
+			end
+			cell = 0
+		elseif (want == "leisure" or want == "rest_home") then
 			tx, tz, ty = self:getPilotLeisureCoords(cfg)
 			cell = self:getPilotHomeCell(cfg)
 		elseif (want == "cantina" and cfg.cantina_x ~= nil) then
@@ -2817,6 +2872,7 @@ function IaBridgeScreenPlay:resetPilotToHome(pilotId)
 			cell = self:rosterCantinaCell(cfg)
 		end
 	end
+	tx, tz, ty, cell = self:resolveStableWorldCoords(cfg, tx, tz, ty, cell, pilotId)
 	self:clearPilotBehaviors(pMob)
 	CreatureObject(pMob):teleport(tx, tz, ty, cell)
 	if (cfg.roster ~= nil) then
@@ -2831,8 +2887,27 @@ function IaBridgeScreenPlay:resetPilotToHome(pilotId)
 	return true
 end
 
+function IaBridgeScreenPlay:repatriateOutdoorPilotIfInterior(pilotId, cfg, pMob)
+	if (pMob == nil or cfg == nil) then
+		return false
+	end
+	local homeCell = self:getPilotHomeCell(cfg)
+	if (homeCell ~= 0 and not self:isOutdoorWorldRosterPilot(cfg)) then
+		return false
+	end
+	local parent = SceneObject(pMob):getParentID() or 0
+	if (parent == 0) then
+		return false
+	end
+	self:resetPilotToHome(pilotId)
+	return true
+end
+
 -- Rappel vers le poste d'origine (interieur ou exterieur).
 function IaBridgeScreenPlay:containPilotNearHome(pilotId, cfg)
+	if (cfg ~= nil and cfg.roster ~= nil) then
+		return
+	end
 	local radius = cfg.roam_contain_m
 	if (radius == nil or radius <= 0) then
 		return
@@ -2844,8 +2919,15 @@ function IaBridgeScreenPlay:containPilotNearHome(pilotId, cfg)
 	local homeCell = self:getPilotHomeCell(cfg)
 	local ms = SceneObject(pMob)
 	local parent = ms:getParentID() or 0
+	if (homeCell == 0 and parent ~= 0) then
+		self:repatriateOutdoorPilotIfInterior(pilotId, cfg, pMob)
+		return
+	end
 	if (homeCell ~= 0 and parent ~= homeCell) then
 		self:resetPilotToHome(pilotId)
+		return
+	end
+	if (parent ~= homeCell) then
 		return
 	end
 	local hx, hy
@@ -2857,7 +2939,7 @@ function IaBridgeScreenPlay:containPilotNearHome(pilotId, cfg)
 	local mx = ms:getPositionX()
 	local my = ms:getPositionY()
 	if (self:dist2d(mx, my, hx, hy) > radius) then
-		CreatureObject(pMob):teleport(hx, cfg.z, hy, homeCell)
+		CreatureObject(pMob):teleport(hx, cfg.z or cfg.home_z or 5, hy, homeCell)
 	end
 end
 
@@ -2865,14 +2947,12 @@ function IaBridgeScreenPlay:repatriateDriftedPilots()
 	if (os.time() % 20 > 3) then
 		return
 	end
-	for pilotId, cfg in pairs(IA_BRIDGE_PILOTS) do
-		if (cfg.roster == nil and cfg.roam_patrol ~= nil) then
-			local pMob = self:resolvePilotMob(pilotId)
-			if (pMob ~= nil) then
-				local parent = SceneObject(pMob):getParentID() or 0
-				if (parent ~= 0 and self:getPilotHomeCell(cfg) == 0) then
-					self:resetPilotToHome(pilotId)
-				end
+	for pilotId, cfg in pairs(self:catalogPilotTable()) do
+		local pMob = self:resolvePilotMob(pilotId)
+		if (pMob ~= nil) then
+			local parent = SceneObject(pMob):getParentID() or 0
+			if (parent ~= 0 and (self:getPilotHomeCell(cfg) == 0 or self:isOutdoorWorldRosterPilot(cfg))) then
+				self:resetPilotToHome(pilotId)
 			end
 		end
 	end
@@ -3710,6 +3790,38 @@ function IaBridgeScreenPlay:liaAtCantinaGuestPost(pLia)
 	return dist < IA_BRIDGE_CANTINA_LIA_NEAR_BAR_M
 end
 
+function IaBridgeScreenPlay:liaBehindCantinaBar(pLia)
+	if (pLia == nil) then
+		return false
+	end
+	if (self:sceneParentId(pLia) ~= IA_BRIDGE_CANTINA_CELL) then
+		return false
+	end
+	local scene = SceneObject(pLia)
+	if (scene == nil) then
+		return false
+	end
+	-- Cote serveur / derriere le comptoir (barman y ~ 1.15, staff y ~ 2.8)
+	return scene:getPositionY() > 0.75
+end
+
+function IaBridgeScreenPlay:teleportLiaToCantinaGuestPost(pLia)
+	if (pLia == nil) then
+		return
+	end
+	pcall(function()
+		CreatureObject(pLia):teleport(
+			IA_BRIDGE_CANTINA_LIA_GUEST_X,
+			IA_BRIDGE_CANTINA_LIA_GUEST_Z,
+			IA_BRIDGE_CANTINA_LIA_GUEST_Y,
+			IA_BRIDGE_CANTINA_CELL
+		)
+	end)
+	pcall(function()
+		CreatureObject(pLia):setDirection(IA_BRIDGE_CANTINA_LIA_GUEST_HEADING)
+	end)
+end
+
 function IaBridgeScreenPlay:handleHousingEnter(pPlayer, payload)
 	if (pPlayer == nil) then
 		return
@@ -3727,6 +3839,11 @@ function IaBridgeScreenPlay:handleHousingEnter(pPlayer, payload)
 		cell, x, z, y = self:resolveCantinaEnterCoords(pPlayer)
 	end
 	CreatureObject(pPlayer):teleport(x, z, y, cell)
+	if (self:eventActorName(pPlayer) == IA_BRIDGE_BOT and cell == IA_BRIDGE_CANTINA_CELL) then
+		pcall(function()
+			CreatureObject(pPlayer):setDirection(IA_BRIDGE_CANTINA_LIA_GUEST_HEADING)
+		end)
+	end
 	local name = self:eventActorName(pPlayer)
 	local tag = payload or "cantina_test"
 	if (payload == "training" or payload == "trainer" or payload == "artisan") then
@@ -5055,13 +5172,9 @@ function IaBridgeScreenPlay:ensureExactlyOneRosterOnDuty(rosterId, opts)
 				parent = SceneObject(pMob):getParentID()
 			end)
 			if (postCell ~= 0 and liaCell == postCell) then
-				local px, pz, py = self:resolvePostCoords(cfg)
 				if (parent ~= postCell or self:isPilotOnOutdoorPost(winner)) then
-					pcall(function()
-						CreatureObject(pMob):teleport(px, pz, py, postCell)
-					end)
-					self:setPilotOutdoorPost(winner, false)
-					ia_catalog_boot_log("ensure on duty " .. logLabel .. " " .. winner .. " want=" .. want .. " (teleport interior)")
+					self:despawnPilot(winner)
+					pMob = nil
 				end
 			elseif (self:isPilotOnOutdoorPost(winner) or (postCell ~= 0 and parent ~= postCell)) then
 				self:despawnPilot(winner)
@@ -5108,6 +5221,12 @@ function IaBridgeScreenPlay:ensureExactlyOneRosterOnDuty(rosterId, opts)
 end
 
 function IaBridgeScreenPlay:ensureCantinaBarmanOnDuty()
+	-- Un seul Jax : despawn reliefs + outdoor patron avant respawn bartender interieur
+	for pilotId, cfg in pairs(IA_BRIDGE_PILOTS) do
+		if (cfg.roster == "roster:mos_eisley_cantina_barman" and self:resolvePilotMob(pilotId) ~= nil) then
+			self:setPilotOutdoorPost(pilotId, false)
+		end
+	end
 	self:ensureExactlyOneRosterOnDuty("roster:mos_eisley_cantina_barman", {
 		force_outdoor_post = false,
 		log_label = "barman",
@@ -5204,10 +5323,9 @@ function IaBridgeScreenPlay:containLiaInCantina()
 	end
 	local liaCell = self:sceneParentId(pLia)
 	if (liaCell == IA_BRIDGE_CANTINA_CELL) then
-		if (self:liaAtCantinaGuestPost(pLia)) then
-			return
+		if (self:liaBehindCantinaBar(pLia) or not self:liaAtCantinaGuestPost(pLia)) then
+			self:teleportLiaToCantinaGuestPost(pLia)
 		end
-		self:handleHousingEnter(pLia, "contain_guest_side")
 	end
 end
 
@@ -5243,7 +5361,9 @@ function IaBridgeScreenPlay:maybeFollowRelayPlayers()
 		if (relayCell == IA_BRIDGE_CANTINA_CELL and liaCell ~= IA_BRIDGE_CANTINA_CELL) then
 			self:handleHousingEnter(pLia, "follow:" .. relayName)
 		elseif (relayCell == liaCell and relayCell == IA_BRIDGE_CANTINA_CELL) then
-			self:approachPlayer(pLia, relayName, IA_BRIDGE_APPROACH_RANGE_M + 3)
+			if (not self:liaBehindCantinaBar(pLia)) then
+				self:approachPlayer(pLia, relayName, IA_BRIDGE_APPROACH_RANGE_M + 3)
+			end
 		end
 	end
 end
