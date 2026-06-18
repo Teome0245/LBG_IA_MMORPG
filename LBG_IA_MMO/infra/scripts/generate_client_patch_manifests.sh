@@ -29,7 +29,6 @@ PRIME_FILES=(
   user.cfg
   lbgemu_client.cfg
   options.cfg
-  patch_lbg_00.tre
 )
 
 die() { echo "generate_client_patch_manifests: $*" >&2; exit 1; }
@@ -113,17 +112,9 @@ if [[ ! -f "${PRIME_GAME}/lbgemu_client.cfg" ]]; then
   fi
 fi
 
-# Prime : patch /lbgwe (World Editor) — regénérer si absent
-if [[ ! -f "${PATCH_ROOT}/patches/prime/patch_lbg_00.tre" ]]; then
-  echo "Génération patch_lbg_00.tre (première fois)..."
-  bash "${ROOT_DIR}/tools/client_patch/build_lbgwe_client_patch.sh"
-fi
-
-# Prime : branding (musique titre) — regénérer si absent
-if [[ ! -f "${PATCH_ROOT}/patches/prime/patch_lbg_01.tre" ]]; then
-  echo "Génération patch_lbg_01.tre (branding / musique login)..."
-  bash "${ROOT_DIR}/tools/client_patch/build_lbg_branding_patch.sh"
-fi
+# Prime : patch /lbgwe — désactivé du manifeste tant que le TRE provoque
+# « TreeFile corruption » côté client (voir docs/troubleshoot_lbgemu_launch.md).
+# Réactiver après validation : build_lbgwe_client_patch.sh + ENABLE_patch_lbg_00.cfg.snippet
 
 sync_channel precu "${PRECU_GAME}" "${PRECU_FILES[@]}"
 write_manifest precu "precu-$(date +%Y%m%d)" "${PRECU_FILES[@]}"

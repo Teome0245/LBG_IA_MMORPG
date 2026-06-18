@@ -7,7 +7,6 @@
     { "name": "swgemu_preload.cfg", "hash": "0afeddc346edfb136bf55315f002f45a" },
     { "name": "user.cfg", "hash": "fac6a7d9f311f01585a3a889bce43d09" },
     { "name": "lbgemu_client.cfg", "hash": "932a094c0fea9f950c0ca685ca476e11" },
-    { "name": "options.cfg", "hash": "eeba93e193df4681fdcd0c5568228d7d" },
-    { "name": "patch_lbg_00.tre", "hash": "8a8ef8bbc90985fdfc149551533699ca" }
+    { "name": "options.cfg", "hash": "eeba93e193df4681fdcd0c5568228d7d" }
   ]
 }
