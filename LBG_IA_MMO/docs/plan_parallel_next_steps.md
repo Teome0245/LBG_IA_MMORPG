@@ -54,9 +54,9 @@ flowchart TB
 | **B** | ✅ `economy_director.py` + `economy_rules_v1.json` + tests |
 | **D** | ✅ `world_chronicler.py` + `faction_goals.json` + tests |
 | **G** | ✅ [`runbook_ops_bots_watchdog.md`](runbook_ops_bots_watchdog.md) |
-| **A** | 🟡 test Lia quête ; validation IG 246 restante |
+| **A** | 🟡 Lia **online** cantina 1082877 (246) ; pytest quête OK ; `quest_state.jsonl` vide post-restart |
 | **C** | ✅ `infra_memory_remediation.py`, plan watchdog, `memory_remediation_plan`, [`runbook_infra_remediation.md`](runbook_infra_remediation.md) |
-| **E** | ✅ `ensureArtisanTrainerOnDuty`, Jax profile explicite, tests catalogue |
+| **E** | 🟡 déployé 246 — artisan **Kell Asa** online ; barman = **Torrik** (rotation roster, outdoor) |
 
 **Règle de fusion** : **E et F ne pas paralléliser** sur le même fichier Lua — soit **un agent Lua** pour E+F, soit E puis F en série.
 
