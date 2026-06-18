@@ -13,10 +13,15 @@ done
 
 export PYTHONPATH="${ROOT_DIR}/agents/src${PYTHONPATH:+:${PYTHONPATH}}"
 
-if [[ "${JSON_OUT}" == "1" ]]; then
-  exec python3 -m lbg_agents.infra_watchdog
+PY="${ROOT_DIR}/.venv/bin/python"
+if [[ ! -x "${PY}" ]]; then
+  PY="python3"
 fi
 
-python3 -m lbg_agents.infra_watchdog
+if [[ "${JSON_OUT}" == "1" ]]; then
+  exec "${PY}" -m lbg_agents.infra_watchdog
+fi
+
+"${PY}" -m lbg_agents.infra_watchdog
 rc=$?
 exit "${rc}"
