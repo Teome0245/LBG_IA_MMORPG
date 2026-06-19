@@ -1644,8 +1644,15 @@ end
 function IaBridgeScreenPlay:resolvePilotMob(pilotId)
 	local tbl = self:pilotMobTable()
 	local cached = tbl[pilotId]
-	if (self:isMobAlive(cached)) then
-		return cached
+	if (cached ~= nil) then
+		if (self:isMobAlive(cached)) then
+			return cached
+		end
+		local grace = readData("ia_bridge_pilot_grace:" .. pilotId) or 0
+		local tick = self:persistStore().tickCount or 0
+		if (grace > 0 and (tick - grace) < 60) then
+			return cached
+		end
 	end
 	local oid = readData(self:pilotOidKey(pilotId))
 	if (oid ~= nil and oid ~= 0) then
@@ -1656,7 +1663,6 @@ function IaBridgeScreenPlay:resolvePilotMob(pilotId)
 		end
 	end
 	tbl[pilotId] = nil
-	deleteData(self:pilotOidKey(pilotId))
 	return nil
 end
 
@@ -1680,7 +1686,63 @@ end
 function IaBridgeScreenPlay:registerPilotMob(pilotId, pMob)
 	local tbl = self:pilotMobTable()
 	tbl[pilotId] = pMob
-	writeData(self:pilotOidKey(pilotId), SceneObject(pMob):getObjectID())
+	local oid = SceneObject(pMob):getObjectID()
+	writeData(self:pilotOidKey(pilotId), oid)
+	writeData("ia_bridge_pilot_grace:" .. pilotId, self:persistStore().tickCount or 0)
+	self:rememberPilotOid(pilotId, oid)
+end
+
+function IaBridgeScreenPlay:pilotOidHistory()
+	local ps = self:persistStore()
+	if (ps.pilotOidHistory == nil) then
+		ps.pilotOidHistory = {}
+	end
+	return ps.pilotOidHistory
+end
+
+function IaBridgeScreenPlay:rememberPilotOid(pilotId, oid)
+	if (pilotId == nil or oid == nil or oid == 0) then
+		return
+	end
+	local hist = self:pilotOidHistory()
+	hist[pilotId] = hist[pilotId] or {}
+	for _, existing in ipairs(hist[pilotId]) do
+		if (existing == oid) then
+			return
+		end
+	end
+	table.insert(hist[pilotId], oid)
+end
+
+function IaBridgeScreenPlay:destroyExtraPilotMobs(pilotId, keepOid)
+	local hist = self:pilotOidHistory()
+	local list = hist[pilotId]
+	if (list == nil) then
+		return
+	end
+	local keepNum = tonumber(keepOid) or keepOid
+	local kept = false
+	for i = #list, 1, -1 do
+		local oid = list[i]
+		local oidNum = tonumber(oid) or oid
+		local pMob = getSceneObject(oid)
+		if (pMob ~= nil and self:isMobAlive(pMob)) then
+			if (keepNum ~= nil and oidNum == keepNum and not kept) then
+				kept = true
+			else
+				self:clearPilotMobMarks(pMob)
+				pcall(function()
+					SceneObject(pMob):destroyObjectFromWorld(true)
+				end)
+				table.remove(list, i)
+			end
+		else
+			table.remove(list, i)
+		end
+	end
+	if (keepNum ~= nil) then
+		hist[pilotId] = { keepNum }
+	end
 end
 
 function IaBridgeScreenPlay:stripIaNameMarkers(name)
@@ -2015,7 +2077,19 @@ function IaBridgeScreenPlay:pilotMobNearPost(pMob, cfg, radiusM)
 	if (scene == nil) then
 		return false
 	end
-	return self:dist2d(scene:getPositionX(), scene:getPositionY(), px, py) < radiusM
+	local sx = scene:getPositionX()
+	local sy = scene:getPositionY()
+	local sz = scene:getPositionZ()
+	if (self:dist2d(sx, sy, px, py) < radiusM) then
+		return true
+	end
+	if (self:dist2d(sx, sz, px, pz) < radiusM) then
+		return true
+	end
+	if (self:dist2d(sx, sy, px, pz) < radiusM) then
+		return true
+	end
+	return false
 end
 
 function IaBridgeScreenPlay:pilotMobInServiceCell(pMob, cfg)
@@ -2049,6 +2123,9 @@ function IaBridgeScreenPlay:releasePilotMobUnlessAtCell(pilotId, cell, cfg)
 	local useCfg = cfg
 	if (useCfg == nil) then
 		useCfg = self:getPilotCfg(pilotId)
+	end
+	if (useCfg ~= nil and self:pilotMobNearPost(pMob, useCfg, 6.0) and not self:isPilotOnOutdoorPost(pilotId)) then
+		return pMob
 	end
 	if (useCfg ~= nil and self:pilotMobInServiceCell(pMob, useCfg) and not self:isPilotOnOutdoorPost(pilotId)) then
 		return pMob
@@ -2172,7 +2249,11 @@ function IaBridgeScreenPlay:despawnPilot(pilotId)
 		end)
 	end
 	self:pilotMobTable()[pilotId] = nil
+	deleteData("ia_bridge_pilot_grace:" .. pilotId)
 	deleteData(self:pilotOidKey(pilotId))
+	if (pilotId == "npc:core3_barman_jax") then
+		self:persistStore().cantinaBarmanSpawnDone = false
+	end
 end
 
 function IaBridgeScreenPlay:clearPilotBehaviors(pMob)
@@ -5336,8 +5417,10 @@ function IaBridgeScreenPlay:purgeCantinaBarmanBootOnce()
 		return
 	end
 	_G.IA_BRIDGE_CANTINA_BARMAN_BOOT_PURGED = true
+	self:persistStore().cantinaBarmanSpawnDone = false
 	for pilotId, cfg in pairs(IA_BRIDGE_PILOTS) do
 		if (cfg.roster == "roster:mos_eisley_cantina_barman") then
+			self:destroyExtraPilotMobs(pilotId, nil)
 			if (self:resolvePilotMob(pilotId) ~= nil) then
 				self:despawnPilot(pilotId)
 			end
@@ -5347,18 +5430,156 @@ function IaBridgeScreenPlay:purgeCantinaBarmanBootOnce()
 	ia_catalog_boot_log("purge boot cantina barman (refs reset)")
 end
 
-function IaBridgeScreenPlay:ensureCantinaBarmanOnDuty()
-	for pilotId, cfg in pairs(IA_BRIDGE_PILOTS) do
-		if (cfg.roster == "roster:mos_eisley_cantina_barman" and self:resolvePilotMob(pilotId) ~= nil) then
-			self:setPilotOutdoorPost(pilotId, false)
+function IaBridgeScreenPlay:reattachPilotMobFromHistory(pilotId)
+	local hist = self:pilotOidHistory()[pilotId]
+	if (hist == nil) then
+		return nil
+	end
+	for _, oid in ipairs(hist) do
+		local pMob = getSceneObject(oid)
+		if (pMob ~= nil and self:isMobAlive(pMob)) then
+			self:registerPilotMob(pilotId, pMob)
+			return pMob
 		end
 	end
-	self:ensureExactlyOneRosterOnDuty("roster:mos_eisley_cantina_barman", {
-		force_outdoor_post = false,
-		log_label = "barman",
-		force_post = true,
-		winner_pilot_id = "npc:core3_barman_jax",
-	})
+	return nil
+end
+
+-- Detruit les clones orphelins (meme cellule) : refs perdues mais mob encore IG.
+function IaBridgeScreenPlay:purgeCantinaOrphanClones(keepOid)
+	local cell = tonumber(IA_BRIDGE_CANTINA_CELL) or 1082877
+	if (not self:isInteriorCellLoadable(cell)) then
+		return
+	end
+	local pCell = getSceneObject(cell)
+	if (pCell == nil) then
+		return
+	end
+	local keepNum = tonumber(keepOid) or keepOid
+	local canonical = keepNum
+	pcall(function()
+		local contents = SceneObject(pCell):getContainerObjects()
+		if (contents == nil) then
+			return
+		end
+		for i = 0, contents:size() - 1 do
+			local obj = contents:get(i)
+			if (obj == nil) then
+				-- rien
+			elseif (not SceneObject(obj):isCreatureObject()) then
+				-- rien
+			elseif (SceneObject(obj):isPlayerCreature()) then
+				-- rien
+			else
+				local oidNum = tonumber(SceneObject(obj):getObjectID()) or SceneObject(obj):getObjectID()
+				local pid = readStringData("ia_bridge_pilot_id:" .. tostring(oidNum)) or ""
+				local name = SceneObject(obj):getCustomObjectName() or ""
+				local isClone = (string.find(pid, "core3_barman", 1, true) ~= nil)
+					or (string.find(name, "Jax Moro", 1, true) ~= nil)
+				if (isClone) then
+					if (canonical ~= nil and oidNum == canonical) then
+						-- garder
+					elseif (canonical == nil and pid == "npc:core3_barman_jax") then
+						canonical = oidNum
+					else
+						self:clearPilotMobMarks(obj)
+						SceneObject(obj):destroyObjectFromWorld(true)
+					end
+				end
+			end
+		end
+	end)
+end
+
+function IaBridgeScreenPlay:ensureCantinaBarmanOnDuty()
+	local rosterId = "roster:mos_eisley_cantina_barman"
+	local winner = "npc:core3_barman_jax"
+	local cfg = self:getPilotCfg(winner)
+	if (cfg == nil) then
+		return
+	end
+	local ps = self:persistStore()
+	for pilotId, pc in pairs(IA_BRIDGE_PILOTS) do
+		if (pc.roster == rosterId and pilotId ~= winner) then
+			if (self:resolvePilotMob(pilotId) ~= nil) then
+				self:despawnPilot(pilotId)
+			end
+			self:destroyExtraPilotMobs(pilotId, nil)
+			IaBridgeScreenPlay.rosterPresence[pilotId] = "off"
+		end
+	end
+	local postCell = tonumber(cfg.spawn_cell) or 0
+	local tick = ps.tickCount or 0
+	local pMob = self:resolvePilotMob(winner)
+	if (pMob == nil) then
+		pMob = self:reattachPilotMobFromHistory(winner)
+	end
+	if (pMob == nil and ps.cantinaBarmanSpawnDone == true) then
+		local oid = readData(self:pilotOidKey(winner))
+		if (oid ~= nil and oid ~= 0) then
+			pMob = getSceneObject(oid)
+			if (pMob ~= nil) then
+				self:registerPilotMob(winner, pMob)
+			end
+		end
+		if (pMob == nil) then
+			return
+		end
+	end
+	local pMobValid = false
+	if (pMob ~= nil) then
+		pMobValid = self:isMobAlive(pMob)
+		if (not pMobValid) then
+			local ok = pcall(function()
+				return SceneObject(pMob):getObjectID()
+			end)
+			pMobValid = ok
+		end
+	end
+	if (pMobValid) then
+		self:setPilotOutdoorPost(winner, false)
+		if (not self:pilotMobNearPost(pMob, cfg, 6.0) and postCell ~= 0 and self:isInteriorCellLoadable(postCell)) then
+			local px, pz, py = self:resolvePostCoords(cfg)
+			pcall(function()
+				CreatureObject(pMob):teleport(px, pz, py, postCell)
+			end)
+		end
+		self:syncRosterServiceForPresence(cfg, pMob, "post")
+		IaBridgeScreenPlay.rosterPresence[winner] = "post"
+		local keepOid = tonumber(SceneObject(pMob):getObjectID()) or SceneObject(pMob):getObjectID()
+		self:destroyExtraPilotMobs(winner, keepOid)
+		if ((ps.tickCount or 0) % 30 == 0) then
+			self:purgeCantinaOrphanClones(keepOid)
+		end
+		return
+	end
+	if (postCell == 0 or not self:isInteriorCellLoadable(postCell)) then
+		return
+	end
+	if (ps.cantinaBarmanSpawnDone == true) then
+		return
+	end
+	local last = ps.cantinaBarmanLastSpawnTick or 0
+	if ((tick - last) < 5) then
+		return
+	end
+	self:setPilotOutdoorPost(winner, false)
+	pMob = self:spawnPilotInBuilding(winner, cfg, postCell)
+	if (pMob == nil) then
+		local px, pz, py = self:resolvePostCoords(cfg)
+		pMob = self:spawnPilotAt(winner, cfg, px, pz, py, postCell)
+	end
+	if (pMob ~= nil) then
+		ps.cantinaBarmanLastSpawnTick = tick
+		ps.cantinaBarmanSpawnDone = true
+		self:clearPilotBehaviors(pMob)
+		pcall(function()
+			AiAgent(pMob):addObjectFlag(AI_STATIC)
+		end)
+		self:syncRosterServiceForPresence(cfg, pMob, "post")
+		IaBridgeScreenPlay.rosterPresence[winner] = "post"
+		ia_catalog_boot_log("ensure on duty barman " .. winner .. " want=post (interior)")
+	end
 end
 
 function IaBridgeScreenPlay:ensureArtisanTrainerOnDuty()

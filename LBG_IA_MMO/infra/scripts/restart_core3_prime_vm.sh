@@ -2,7 +2,7 @@
 # Redémarre Serveur Prime (core3-clean) — systemd si installé, sinon nohup legacy.
 set -euo pipefail
 
-VM_HOST="${LBG_NEW_MMO_VM_HOST:-192.168.0.245}"
+VM_HOST="${LBG_NEW_MMO_VM_HOST:-${LBG_LAN_HOST_CORE3_PRIME:-192.168.0.246}}"
 VM_USER="${LBG_NEW_MMO_VM_USER:-lbg}"
 CLEAN_BIN="/opt/lbg-new-mmo-clean/MMOCoreORB/bin"
 BIN="core3-clean"
