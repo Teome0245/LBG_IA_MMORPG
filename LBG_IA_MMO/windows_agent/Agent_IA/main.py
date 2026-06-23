@@ -14,9 +14,12 @@ import uuid
 import urllib.request
 import urllib.error
 from urllib.parse import urlencode, urlparse, quote_plus
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None  # type: ignore
 from fastapi import FastAPI, HTTPException
 
 import executor
@@ -26,7 +29,20 @@ from pydantic import BaseModel, Field
 
 from mail_imap_preview import run_mail_imap_preview
 
-_LOCAL_TZ = ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))
+# Safe loading of timezone to avoid crashes on Windows if tzdata is missing
+_LOCAL_TZ = None
+if ZoneInfo is not None:
+    try:
+        _LOCAL_TZ = ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))
+    except Exception:
+        pass
+
+if _LOCAL_TZ is None:
+    try:
+        _LOCAL_TZ = datetime.now().astimezone().tzinfo or timezone.utc
+    except Exception:
+        _LOCAL_TZ = timezone.utc
+
 
 
 def _local_now_iso() -> str:

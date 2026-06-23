@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None  # type: ignore
+
 
 _DEFAULT_TZ = "Europe/Paris"
 
@@ -14,8 +18,17 @@ def local_timezone_name() -> str:
     return raw or _DEFAULT_TZ
 
 
-def local_tz() -> ZoneInfo:
-    return ZoneInfo(local_timezone_name())
+def local_tz():  # type: ignore
+    if ZoneInfo is not None:
+        try:
+            return ZoneInfo(local_timezone_name())
+        except Exception:
+            pass
+    try:
+        return datetime.now().astimezone().tzinfo or timezone.utc
+    except Exception:
+        return timezone.utc
+
 
 
 def local_now() -> datetime:

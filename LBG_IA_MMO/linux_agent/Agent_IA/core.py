@@ -6,11 +6,14 @@ import secrets
 import shutil
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
-from zoneinfo import ZoneInfo
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None  # type: ignore
 
 # -----------------------------------------------------------------------------
 # Config hot-reload (linux.env)
@@ -18,7 +21,19 @@ from zoneinfo import ZoneInfo
 
 CFG_CACHE: dict[str, object] = {"mtime": None, "vars": {}}
 
-_LOCAL_TZ = ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))
+_LOCAL_TZ = None
+if ZoneInfo is not None:
+    try:
+        _LOCAL_TZ = ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))
+    except Exception:
+        pass
+
+if _LOCAL_TZ is None:
+    try:
+        _LOCAL_TZ = datetime.now().astimezone().tzinfo or timezone.utc
+    except Exception:
+        _LOCAL_TZ = timezone.utc
+
 
 
 def local_now_iso() -> str:
