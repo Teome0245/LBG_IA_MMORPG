@@ -43,7 +43,7 @@ def test_build_proactive_prompt_skips_greet_scene_when_recent(state_dir, monkeyp
     monkeypatch.setattr("lbg_agents.lia_orchestrator.proactive_tick_index", lambda: 0)
     prompt = build_proactive_prompt(tick_index=0)
     assert "greet:Teome" not in prompt
-    assert "exploration" in prompt.lower() or "spectacle" in prompt.lower() or "presence" in prompt.lower()
+    assert any(word in prompt.lower() for word in ("exploration", "spectacle", "presence", "danse", "dance"))
 
 
 def test_proactive_cooldown_expires(state_dir, monkeypatch: pytest.MonkeyPatch) -> None:

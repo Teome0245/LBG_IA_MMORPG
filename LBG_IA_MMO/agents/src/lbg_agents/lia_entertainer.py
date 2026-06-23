@@ -60,12 +60,12 @@ def max_skill_tier() -> int:
     tiers = skill_tiers()
     if not tiers:
         return 0
-    return max(int(row.get("tier") or 0) for row in tiers)
+    return max(int(row.get("tier", 0)) for row in tiers)
 
 
 def dances_for_tier(tier: int) -> list[str]:
     for row in skill_tiers():
-        if int(row.get("tier") or -1) == tier:
+        if int(row.get("tier", -1)) == tier:
             raw = row.get("dances_unlocked")
             if isinstance(raw, list):
                 return [str(d) for d in raw if str(d).strip()]

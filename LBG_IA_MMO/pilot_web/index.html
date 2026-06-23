@@ -870,7 +870,7 @@
       <a href="#/">Accueil</a>
       <a href="#/chat">Chat & presets</a>
       <a href="#/assistant">Assistant Core</a>
-      <a href="#/jobs">Jobs autonomes</a>
+      <a href="#/jobs">Jobs autonomes <span id="jobs-nav-badge" class="jobs-badge jobs-badge--waiting_approval" style="display:none; margin-left:0.25rem;">!</span></a>
       <a href="#/ops">Ops & santé</a>
       <a href="#/pm">Chef de projet</a>
       <a href="#/lyra">Lyra (hors MMO)</a>
@@ -1363,6 +1363,22 @@
           <textarea id="jobs-objective" style="min-height:5rem;">vérifie l'état du backend puis cherche le site de Cursor AI</textarea>
           <label for="jobs-context">context (JSON) — optionnel</label>
           <textarea id="jobs-context" style="font-family: ui-monospace, monospace; font-size: 0.82rem;">{}</textarea>
+          <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+            <div style="flex: 1;">
+              <label for="jobs-model">Modèle Ollama (VM 110)</label>
+              <select id="jobs-model" style="width: 100%; border: 1px solid #d0d4da; border-radius: 6px; padding: 0.35rem; font-size: 0.85rem; background: white; margin-top: 0.2rem;">
+                <option value="">(Par défaut du serveur)</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label for="jobs-planner">Planificateur</label>
+              <select id="jobs-planner" style="width: 100%; border: 1px solid #d0d4da; border-radius: 6px; padding: 0.35rem; font-size: 0.85rem; background: white; margin-top: 0.2rem;">
+                <option value="">(Par défaut)</option>
+                <option value="deterministic">Déterministe</option>
+                <option value="llm">LLM (Ollama)</option>
+              </select>
+            </div>
+          </div>
           <label for="jobs-token" title="Pré-autorise le job et propage le jeton vers desktop_approval / devops_approval (ex. même valeur que LBG_DESKTOP_APPROVAL_TOKEN sur le worker Windows). LBG_JOBS_APPROVAL_TOKEN sur le core si défini.">
             Token d'approbation — optionnel (autonomie semi-auto)
           </label>
@@ -1401,6 +1417,7 @@
               <button type="button" id="btn-jobs-approve" style="margin:0;">Approuver & reprendre</button>
               <button type="button" id="btn-jobs-advance" style="margin:0;" title="Avancer d'une étape (utile si le runner de fond est off)">Avancer 1 étape</button>
               <button type="button" id="btn-jobs-cancel" class="assistant-btn-real" style="margin:0;">Annuler</button>
+              <button type="button" id="btn-jobs-clone" style="margin:0; background: #6366f1; color: white;">Cloner &amp; relancer</button>
             </p>
             <h3 style="margin:0.5rem 0 0.25rem 0; font-size:1rem;">Étapes</h3>
             <div id="jobs-detail-steps"></div>
@@ -2184,13 +2201,39 @@
           if (pmInfo.version != null) parts.push("v" + String(pmInfo.version));
           if (parts.length) pmSuffix = " <span class=\"muted\">(" + parts.map(escapeHtml).join(" · ") + ")</span>";
         }
+        let extraHtml = "";
+        if (j.infra_status) {
+          extraHtml += '<div style="margin-top: 0.8rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; line-height: 1.8;">' +
+            '<strong style="font-size:0.85rem;">Infra (VMs) :</strong> ' +
+            '<span class="jobs-badge jobs-badge--" style="background: ' + (j.infra_status.vm140 === "ok" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">VM 140 Core</span>' +
+            '<span class="jobs-badge jobs-badge--" style="background: ' + (j.infra_status.vm110 === "ok" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">VM 110 Ollama</span>' +
+            '<span class="jobs-badge jobs-badge--" style="background: ' + (j.infra_status.vm245 === "ok" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">VM 245 PreCU</span>' +
+            '<span class="jobs-badge jobs-badge--" style="background: ' + (j.infra_status.vm246 === "ok" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">VM 246 Prime</span>' +
+            '</div>';
+        }
+        if (j.game_status) {
+          extraHtml += '<div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; line-height: 1.8;">' +
+            '<strong style="font-size:0.85rem;">Mondes SWG :</strong> ' +
+            '<span class="jobs-badge jobs-badge--" style="background: ' + (j.game_status.precu_game === "ok" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">PreCU (44453)</span>' +
+            '<span class="jobs-badge jobs-badge--" style="background: ' + (j.game_status.prime_game === "ok" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">Prime (44553)</span>' +
+            '</div>';
+        }
+        if (j.bots_status) {
+          extraHtml += '<div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; line-height: 1.8;">' +
+            '<strong style="font-size:0.85rem;">Bots joueurs :</strong> ' +
+            '<span class="jobs-badge jobs-badge--" style="background: ' + (j.bots_status.lia === "online" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">Lia (' + j.bots_status.lia + ')</span>' +
+            '<span class="jobs-badge jobs-badge--" style="background: ' + (j.bots_status.nix === "online" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">Nix (' + j.bots_status.nix + ')</span>' +
+            '</div>';
+        }
+
         sum.innerHTML =
           "Backend: <span class=\"" + healthStateClass(j.backend) + "\">" + j.backend + "</span> · " +
           "Orchestrator: <span class=\"" + healthStateClass(orch) + "\">" + orch + "</span> · " +
           "Agent dialogue: <span class=\"" + healthStateClass(dlg) + "\">" + dlg + "</span>" + dlgSuffix + " · " +
           "Agent quests: <span class=\"" + healthStateClass(qst) + "\">" + qst + "</span>" + qstSuffix + " · " +
           "Agent combat: <span class=\"" + healthStateClass(cbt) + "\">" + cbt + "</span>" + cbtSuffix + " · " +
-          "Agent PM: <span class=\"" + healthStateClass(pm) + "\">" + pm + "</span>" + pmSuffix;
+          "Agent PM: <span class=\"" + healthStateClass(pm) + "\">" + pm + "</span>" + pmSuffix +
+          extraHtml;
 
         const b = base;
         const items = [];
@@ -4631,6 +4674,8 @@
     /* ===================== Jobs autonomes ("type Cowork") ===================== */
     let __jobsPoll = null;
     let __jobsSelectedId = null;
+    let __jobsSelectedJob = null;
+    let __jobsEventSource = null;
     let __jobsBound = false;
     let __jobsCatalogJsonCopy = null;
     let __jobsDevicesJsonCopy = null;
@@ -4704,9 +4749,16 @@
       } catch (e) { jobsHint("context JSON invalide : " + e.message, true); return; }
       const token = (document.getElementById("jobs-token") || {}).value || "";
       const autoStart = !!(document.getElementById("jobs-autostart") || {}).checked;
+      const modelEl = document.getElementById("jobs-model");
+      const model = modelEl ? modelEl.value : "";
+      const plannerEl = document.getElementById("jobs-planner");
+      const planner = plannerEl ? plannerEl.value : "";
+      
       jobsHint("Création…");
       const payload = { actor_id: jobsGetActor(), objective: objective, context: context, auto_start: autoStart };
       if (token.trim()) payload.approval_token = token.trim();
+      if (model) payload.model = model;
+      if (planner) payload.planner = planner;
       const out = await postJson(getBase() + "/v1/pilot/jobs", payload, 60000);
       if (out.status !== 200 || !out.json || out.json.ok === false) {
         jobsHint("Échec création : " + ((out.json && (out.json.error || out.json.detail)) || out.status), true);
@@ -4764,7 +4816,7 @@
       });
     }
 
-    async function jobsSelect(id) {
+    async function jobsSelect(id, skipEventSource) {
       if (!id) return;
       __jobsSelectedId = id;
       const out = await jobsGet(getBase() + "/v1/pilot/jobs/" + encodeURIComponent(id));
@@ -4778,6 +4830,22 @@
       document.querySelectorAll(".jobs-card").forEach(function (c) {
         c.classList.toggle("jobs-card--active", c.getAttribute("data-job-id") === id);
       });
+
+      if (!skipEventSource) {
+        if (__jobsEventSource) {
+          __jobsEventSource.close();
+          __jobsEventSource = null;
+        }
+        try {
+          __jobsEventSource = new EventSource(getBase() + "/v1/pilot/jobs/" + encodeURIComponent(id) + "/events");
+          __jobsEventSource.onmessage = function (e) {
+            jobsSelect(id, true).catch(function () {});
+            jobsListRefresh().catch(function () {});
+          };
+        } catch (err) {
+          console.error("SSE EventSource error:", err);
+        }
+      }
     }
 
     function jobsPickString(obj, keys) {
@@ -5131,6 +5199,7 @@
     }
 
     function jobsRenderDetail(job) {
+      __jobsSelectedJob = job;
       const empty = document.getElementById("jobs-detail-empty");
       const detail = document.getElementById("jobs-detail");
       if (!detail || !empty) return;
@@ -5174,6 +5243,29 @@
                 else snippet = jobsExtractStepReply(s);
                 if (snippet && snippet.length > 400) snippet = snippet.slice(0, 397) + "…";
               }
+              
+              let logHtml = "";
+              if (s.error || (s.result && (s.result.stdout || s.result.stderr || s.result.error || s.result.exception || s.result.reply))) {
+                let logText = "";
+                if (s.error) logText += "Error: " + s.error + "\n";
+                if (s.result) {
+                  if (s.result.error) logText += "Result Error: " + s.result.error + "\n";
+                  if (s.result.exception) logText += "Exception: " + s.result.exception + "\n";
+                  if (s.result.stdout) logText += "STDOUT:\n" + s.result.stdout + "\n";
+                  if (s.result.stderr) logText += "STDERR:\n" + s.result.stderr + "\n";
+                  if (s.result.reply) {
+                    logText += "Reply: " + (typeof s.result.reply === "object" ? JSON.stringify(s.result.reply, null, 2) : s.result.reply) + "\n";
+                  }
+                }
+                if (logText.trim()) {
+                  logHtml = '<details class="jobs-step-logs" style="margin-top: 0.4rem;">' +
+                            '<summary style="font-size: 0.76rem; cursor: pointer; color: #38bdf8; font-weight: 600;">Afficher les logs de l\'étape</summary>' +
+                            '<pre style="background: #1e293b; color: #f8fafc; padding: 0.5rem; border-radius: 4px; font-family: ui-monospace, monospace; font-size: 0.78rem; overflow-x: auto; margin-top: 0.25rem; white-space: pre-wrap; word-break: break-all; text-align: left;">' +
+                            escapeHtml(logText.trim()) +
+                            '</pre></details>';
+                }
+              }
+              
               return (
                 '<div class="jobs-step jobs-step--' + escapeHtml(String(s.status || "")) + '">' +
                 "<strong>#" + (i + 1) + "</strong> " + escapeHtml(s.summary || s.capability || "") +
@@ -5183,6 +5275,7 @@
                 (dec ? " · policy " + escapeHtml(dec) : "") +
                 (s.error ? ' · <span class="err">' + escapeHtml(s.error) + "</span>" : "") + "</div>" +
                 (snippet ? '<div class="jobs-step-snippet">' + escapeHtml(snippet) + "</div>" : "") +
+                logHtml +
                 "</div>"
               );
             }).join("")
@@ -5248,6 +5341,73 @@
       }
     }
 
+    function jobsClone() {
+      if (!__jobsSelectedJob) return;
+      const objEl = document.getElementById("jobs-objective");
+      const ctxEl = document.getElementById("jobs-context");
+      const modelEl = document.getElementById("jobs-model");
+      const plannerEl = document.getElementById("jobs-planner");
+      
+      if (objEl) objEl.value = __jobsSelectedJob.objective || "";
+      if (ctxEl) {
+        const cleanContext = {};
+        if (__jobsSelectedJob.base_context && typeof __jobsSelectedJob.base_context === "object") {
+          for (const k in __jobsSelectedJob.base_context) {
+            if (!k.startsWith("_")) {
+              cleanContext[k] = __jobsSelectedJob.base_context[k];
+            }
+          }
+        }
+        ctxEl.value = JSON.stringify(cleanContext, null, 2);
+      }
+      
+      if (__jobsSelectedJob.base_context) {
+        const model = __jobsSelectedJob.base_context._planner_model || "";
+        const planner = __jobsSelectedJob.base_context._planner || "";
+        if (modelEl) modelEl.value = model;
+        if (plannerEl) plannerEl.value = planner;
+      }
+      
+      jobsHint("Champs clonés depuis le job #" + __jobsSelectedJob.id.slice(0, 8));
+    }
+
+    async function jobsLoadModels() {
+      const select = document.getElementById("jobs-model");
+      if (!select) return;
+      const url = getBase() + "/v1/pilot/ollama/tags";
+      const out = await jobsGet(url);
+      
+      const currentVal = select.value;
+      select.innerHTML = '<option value="">(Par défaut du serveur)</option>';
+      
+      if (out.status === 200 && out.json && Array.isArray(out.json.models)) {
+        out.json.models.forEach(function (m) {
+          if (m && m.name) {
+            const opt = document.createElement("option");
+            opt.value = m.name;
+            opt.textContent = m.name;
+            select.appendChild(opt);
+          }
+        });
+      }
+      select.value = currentVal;
+    }
+
+    async function checkWaitingApprovalJobsGlobal() {
+      const badge = document.getElementById("jobs-nav-badge");
+      if (!badge) return;
+      const url = getBase() + "/v1/pilot/jobs";
+      const out = await jobsGet(url);
+      if (out.status === 200 && out.json && Array.isArray(out.json.jobs)) {
+        const hasWaiting = out.json.jobs.some(function (j) {
+          return j && j.status === "waiting_approval";
+        });
+        badge.style.display = hasWaiting ? "inline-block" : "none";
+      } else {
+        badge.style.display = "none";
+      }
+    }
+
     function jobsBindPage() {
       if (__jobsBound) return;
       __jobsBound = true;
@@ -5264,6 +5424,8 @@
       });
       const cancel = document.getElementById("btn-jobs-cancel");
       if (cancel) cancel.addEventListener("click", function () { jobsCancel().catch(function () {}); });
+      const clone = document.getElementById("btn-jobs-clone");
+      if (clone) clone.addEventListener("click", jobsClone);
       const copyDev = document.getElementById("btn-jobs-copy-devices");
       if (copyDev) copyDev.addEventListener("click", function () { jobsCopyDevicesJson().catch(function () {}); });
       const copyCat = document.getElementById("btn-jobs-copy-catalog");
@@ -5276,12 +5438,13 @@
       jobsPollStop();
       __jobsPoll = window.setInterval(function () {
         jobsListRefresh().catch(function () {});
-        if (__jobsSelectedId) jobsSelect(__jobsSelectedId).catch(function () {});
+        if (__jobsSelectedId) jobsSelect(__jobsSelectedId, true).catch(function () {});
       }, 2800);
     }
 
     function jobsPollStop() {
       if (__jobsPoll) { window.clearInterval(__jobsPoll); __jobsPoll = null; }
+      if (__jobsEventSource) { __jobsEventSource.close(); __jobsEventSource = null; }
     }
 
     function pilotApplyRoute() {
@@ -5307,6 +5470,7 @@
       if (de) de.hidden = r !== "desktop";
       if (r === "jobs") {
         try { jobsBindPage(); } catch (_) {}
+        try { jobsLoadModels(); } catch (_) {}
         try { jobsListRefresh(); } catch (_) {}
         try { jobsPollStart(); } catch (_) {}
       }
@@ -7617,6 +7781,10 @@
           }, 5000);
         }
       });
+    } catch (_) {}
+    try {
+      checkWaitingApprovalJobsGlobal().catch(function () {});
+      window.setInterval(checkWaitingApprovalJobsGlobal, 10000);
     } catch (_) {}
     pilotApplyRoute();
     refreshHealth();

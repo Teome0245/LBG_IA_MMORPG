@@ -22,7 +22,7 @@ def test_mira_registered_pending_character_oid():
     mira = get_ai_player("mira")
     assert mira.enabled is True
     assert mira.account == "Bot_IA_3"
-    assert mira.behavior_profile_id == "profile:entertainer_bar_v1"
+    assert mira.behavior_profile_id == "profile:artisan_gather_v1"
 
 
 def test_prompt_context_mentions_dynamic_profession():

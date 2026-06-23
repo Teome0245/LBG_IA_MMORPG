@@ -11,6 +11,7 @@ src/mmmorpg_server/__init__.py
 src/mmmorpg_server/__main__.py
 src/mmmorpg_server/config.py
 src/mmmorpg_server/game_state.py
+src/mmmorpg_server/ia_context_sanitize.py
 src/mmmorpg_server/internal_http.py
 src/mmmorpg_server/main.py
 src/mmmorpg_server/persistence.py
@@ -26,11 +27,17 @@ src/world_core/__init__.py
 src/world_core/planet.py
 src/world_core/time_manager.py
 tests/test_config.py
+tests/test_guard_patrol.py
+tests/test_ia_context_sanitize.py
 tests/test_internal_http.py
 tests/test_npc_conversation_pause.py
 tests/test_persistence.py
+tests/test_player_inventory.py
 tests/test_time_manager.py
 tests/test_village_tile_grid.py
+tests/test_ws_combat.py
 tests/test_ws_inbound.py
 tests/test_ws_integration.py
+tests/test_ws_quests.py
+tests/test_ws_trade.py
 tests/test_ws_world_commit.py

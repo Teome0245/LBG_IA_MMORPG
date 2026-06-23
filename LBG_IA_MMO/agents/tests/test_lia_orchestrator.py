@@ -101,6 +101,7 @@ def test_hear_player_dance_is_deterministic(monkeypatch):
 
 
 def test_hear_dance_with_style_hint(monkeypatch):
+    monkeypatch.setenv("LBG_CORE3_IA_SIDECAR_URL", "http://127.0.0.1:8791")
     captured: dict[str, str] = {}
 
     def handler(request: httpx.Request) -> httpx.Response:

@@ -493,6 +493,90 @@ def _plan_lia_mmo(objective: str, ctx: dict[str, object]) -> PlanResult | None:
     )
 
 
+def _plan_world_director_unified(objective: str, ctx: dict[str, object]) -> PlanResult | None:
+    """Plan World Director unifié : DevOps probe (SysOps) -> economy_regulate -> world_direct -> npc_dialogue (synthesis)."""
+    norm = (objective or "").strip().lower()
+    if not re.search(r"\b(world[-_]?director|world director|dirige le monde|cycle du monde|boucle du monde|directeur du monde|chronique du monde)\b", norm):
+        return None
+
+    steps: list[PlanStep] = []
+
+    # 1. SysOps (devops_probe selfcheck)
+    cap_ops = capability_registry.get("devops_probe")
+    if cap_ops is not None:
+        steps.append(
+            PlanStep(
+                capability=cap_ops.name,
+                routed_to=cap_ops.routed_to,
+                action_context_key="devops_action",
+                action={"kind": "selfcheck"},
+                context_patch=_force_dry_run({"devops_action": {"kind": "selfcheck"}}),
+                summary="Vérification DevOps globale de l'infrastructure (selfcheck)",
+                risk_level=cap_ops.risk_level,
+                text="Vérification de la santé des serveurs et VMs (selfcheck read-only)",
+            )
+        )
+
+    # 2. Économie (economy_regulate)
+    cap_eco = capability_registry.get("economy_regulate")
+    if cap_eco is not None:
+        steps.append(
+            PlanStep(
+                capability=cap_eco.name,
+                routed_to=cap_eco.routed_to,
+                action_context_key="economy_action",
+                action={"kind": "tick"},
+                context_patch=_force_dry_run({"economy_action": {"kind": "tick"}}),
+                summary="Régulation de l'économie macro du serveur",
+                risk_level=cap_eco.risk_level,
+                text="Ajustement de l'économie macro du monde (bazars, prix, stock ressources)",
+            )
+        )
+
+    # 3. Chroniqueur (world_direct)
+    cap_chr = capability_registry.get("world_direct")
+    if cap_chr is not None:
+        steps.append(
+            PlanStep(
+                capability=cap_chr.name,
+                routed_to=cap_chr.routed_to,
+                action_context_key="world_direct_action",
+                action={"kind": "tick"},
+                context_patch=_force_dry_run({"world_direct_action": {"kind": "tick"}}),
+                summary="Mise à jour des objectifs de faction et vie du monde",
+                risk_level=cap_chr.risk_level,
+                text="Mise à jour de la chronique et des objectifs de faction (vie du monde)",
+            )
+        )
+
+    # 4. Dialogue / Synthèse finale (npc_dialogue)
+    cap_dlg = capability_registry.get("npc_dialogue")
+    if cap_dlg is not None:
+        steps.append(
+            PlanStep(
+                capability=cap_dlg.name,
+                routed_to=cap_dlg.routed_to,
+                action_context_key=cap_dlg.action_context_key,
+                action={},
+                context_patch={"_job_synthesis": True},
+                summary="Synthèse finale du cycle World Director",
+                risk_level=cap_dlg.risk_level,
+                text=(
+                    f"{objective.strip()}\n\n"
+                    "Synthétise en français le bilan complet du cycle World Director : "
+                    "état de l'infrastructure (alertes DevOps), actions de régulation économique proposées, "
+                    "et nouveaux objectifs de faction / vie du monde enclenchés."
+                ),
+            )
+        )
+
+    return PlanResult(
+        steps=steps[:_MAX_STEPS],
+        source="deterministic",
+        reason="plan World Director unifié (SysOps + Économie + Chroniqueur)",
+    )
+
+
 def _note_step(text: str) -> PlanStep:
     cap = capability_registry.get("unknown")
     assert cap is not None
@@ -513,6 +597,9 @@ def plan_deterministic(objective: str, context: dict[str, object] | None = None)
     lia = _plan_lia_mmo(objective, ctx)
     if lia is not None:
         return lia
+    wd = _plan_world_director_unified(objective, ctx)
+    if wd is not None:
+        return wd
     mem = _plan_vm_memory_supervision(objective, ctx)
     if mem is not None:
         return mem
@@ -701,6 +788,7 @@ def _llm_user_content(
 
 def plan_llm(
     objective: str,
+    context: dict[str, Any] | None = None,
     *,
     error_log: list[dict[str, Any]] | None = None,
     memories: list[dict[str, Any]] | None = None,
@@ -713,9 +801,12 @@ def plan_llm(
     key = _llm_api_key()
     if key:
         headers["Authorization"] = f"Bearer {key}"
+    
+    selected_model = (context or {}).get("_planner_model") or _llm_model()
     body: dict[str, Any] = {
-        "model": _llm_model(),
+        "model": selected_model,
         "messages": [
+
             {"role": "system", "content": _LLM_SYSTEM_PROMPT},
             {"role": "user", "content": _llm_user_content(objective, error_log=error_log, memories=memories)[:4000]},
         ],
@@ -792,7 +883,8 @@ def plan_objective(
     if survey is not None:
         return survey
     if planner_llm_enabled(context):
-        llm = plan_llm(objective, error_log=error_log, memories=memories)
+        llm = plan_llm(objective, context=context, error_log=error_log, memories=memories)
         if llm is not None and llm.steps:
             return llm
     return plan_deterministic(objective, context)
+

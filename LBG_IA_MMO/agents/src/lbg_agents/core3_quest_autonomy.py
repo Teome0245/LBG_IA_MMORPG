@@ -171,6 +171,25 @@ def deterministic_quest_action(
                 )
                 out["reason"] = "quest_repair_travel"
                 return out
+        elif qtype == "gather":
+            target_count = int(tpl.get("target_count") or 1)
+            inv_count = int(snap.get("inventory_count") or 0)
+            if inv_count < target_count:
+                in_int = snap.get("in_interior")
+                in_interior = in_int in {True, 1, "1", "true", "True"}
+                if in_interior:
+                    out = enqueue(
+                        player,
+                        action="move_to",
+                        message="mos_eisley_outdoor",
+                        snapshot=snap,
+                        target_xyz=(3520.0, -4810.0, 5.0),
+                    )
+                    out["reason"] = "quest_gather_exit_interior"
+                    return out
+                out = enqueue(player, action="perform", message="forage", snapshot=snap)
+                out["reason"] = "quest_gather_forage"
+                return out
         out = enqueue(
             player,
             action="interact",

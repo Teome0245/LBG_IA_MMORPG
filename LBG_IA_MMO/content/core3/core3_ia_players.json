@@ -18,7 +18,7 @@
       "session_json": "ia_bridge/lia_bot_session.json",
       "env_file": ".env-core3client",
       "systemd_unit": "lbg-core3-ia-bot-client.service",
-      "capabilities": ["say", "perform", "interact", "approach_player", "move_to", "vendor_buy", "vendor_sell"],
+      "capabilities": ["say", "perform", "interact", "approach_player", "move_to", "vendor_buy", "vendor_sell", "forage", "craft_combine"],
       "enabled": true,
       "autonomy_enabled": true,
       "_note_account_admin": "1=gm LBG (animation terrain, pas god). Passer a 2=moderator ou 3=dev plus tard."

@@ -38,7 +38,8 @@ def test_core3_npc_think_ok(monkeypatch):
         )
 
     transport = httpx.MockTransport(handler)
-    monkeypatch.setattr(httpx, "Client", lambda *a, **k: httpx.Client(transport=transport, *a, **k))
+    real_client = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda *a, **k: real_client(transport=transport, *a, **k))
 
     out = run_core3_bridge(
         actor_id="p:1",

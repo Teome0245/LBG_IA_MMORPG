@@ -13,8 +13,11 @@ API du moteur de jobs autonome ("type Cowork", sous garde-fous).
 from __future__ import annotations
 
 from dataclasses import asdict
+import json
+import asyncio
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from services import jobs as svc_jobs
@@ -28,6 +31,9 @@ class CreateJobRequest(BaseModel):
     context: dict[str, object] = Field(default_factory=dict)
     approval_token: str | None = None
     auto_start: bool = True
+    model: str | None = None
+    planner: str | None = None
+
 
 
 class ApproveJobRequest(BaseModel):
@@ -95,8 +101,11 @@ def create_job(payload: CreateJobRequest) -> JobView:
         context=payload.context,
         approval_token=payload.approval_token,
         auto_start=payload.auto_start,
+        model=payload.model,
+        planner=payload.planner,
     )
     return _to_view(job)
+
 
 
 @router.get("/jobs", response_model=JobListResponse)
@@ -135,3 +144,42 @@ def advance_job(job_id: str) -> JobView:
     if job is None:
         raise HTTPException(status_code=404, detail="job introuvable")
     return _to_view(job)
+
+
+@router.get("/jobs/{job_id}/events")
+async def job_events_stream(job_id: str):
+    job = svc_jobs.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=404, detail="job introuvable")
+
+    queue = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+
+    def listener(j, evt):
+        if j.id == job_id:
+            loop.call_soon_threadsafe(queue.put_nowait, evt)
+
+    svc_jobs.register_listener(listener)
+
+    async def event_generator():
+        try:
+            # Envoie d'abord les événements existants
+            current_job = svc_jobs.get_job(job_id)
+            if current_job:
+                for evt in current_job.events:
+                    yield f"data: {json.dumps(evt, ensure_ascii=False)}\n\n"
+                if current_job.status in ("done", "failed", "cancelled"):
+                    return
+
+            # Envoie les nouveaux événements temps réel
+            while True:
+                evt = await queue.get()
+                yield f"data: {json.dumps(evt, ensure_ascii=False)}\n\n"
+                if evt.get("kind") in ("completed", "failed", "cancelled"):
+                    break
+        except asyncio.CancelledError:
+            pass
+        finally:
+            svc_jobs.unregister_listener(listener)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")

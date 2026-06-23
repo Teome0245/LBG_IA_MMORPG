@@ -34,6 +34,7 @@ services/brain.py
 services/experience_memory.py
 services/jobs.py
 services/lia_autonomy.py
+services/lia_jobs.py
 services/metrics.py
 services/planner.py
 services/proactive.py
@@ -48,6 +49,9 @@ tests/test_lia_incarnation_routes.py
 tests/test_llm_intent_classifier.py
 tests/test_metrics_endpoint.py
 tests/test_planner_file_logs.py
+tests/test_planner_lia.py
+tests/test_planner_memory.py
+tests/test_planner_proxmox.py
 tests/test_planner_synthesis.py
 tests/test_proactive.py
 tests/test_route.py
