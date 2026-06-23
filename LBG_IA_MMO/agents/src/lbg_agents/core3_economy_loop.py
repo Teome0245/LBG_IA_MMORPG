@@ -66,33 +66,56 @@ def pick_economy_step(
     lifecycle: ProfessionLifecycleView | None,
 ) -> str:
     snap = snapshot if isinstance(snapshot, dict) else {}
-    phase = lifecycle.phase if lifecycle else "learning"
+    phase = (lifecycle.phase if lifecycle else "learning").strip().lower()
     focus = (lifecycle.focus_profession if lifecycle else player.profession_current).strip().lower()
     inv_count = int(snap.get("inventory_count") or 0)
     inv_full = _snapshot_flag(snap, "inventory_full") or _snapshot_flag(snap, "inventory_near_full")
 
-    if phase == "decay":
-        return "vendor_sell" if inv_count > 0 else "trainer"
-
-    if phase == "transition":
-        return "vendor_buy"
-
+    # Si l'inventaire est plein, on doit toujours vendre en priorité
     if inv_full:
         return "vendor_sell"
 
-    if inv_count >= 2 and "craft_combine" in player.capabilities:
-        return "craft"
+    # Phase Decay : On vend si on a du stock, sinon on va voir le trainer
+    if phase == "decay":
+        return "vendor_sell" if inv_count > 0 else "trainer"
 
-    if focus in {"scout", "artisan"}:
-        return "forage"
-
-    if focus == "entertainer":
+    # Phase Transition : Achat marchand
+    if phase == "transition":
         return "vendor_buy"
 
-    if focus in {"vendor", "marksman", "brawler", "medic"}:
-        return "trainer"
+    is_artisan = focus in {"scout", "artisan"}
 
-    return "forage" if "forage" in player.capabilities else "trainer"
+    # Phase d'apprentissage (learning)
+    if phase == "learning":
+        if is_artisan:
+            # Pour l'artisan en phase d'apprentissage :
+            # 1. S'il a assez de ressources (inv_count >= 2), il craft
+            if inv_count >= 2 and "craft_combine" in player.capabilities:
+                return "craft"
+            # 2. S'il a un pack crafté (inv_count == 1), il visite le trainer
+            if inv_count == 1:
+                return "trainer"
+            # 3. S'il n'a rien (inv_count == 0), il va forer
+            return "forage"
+        else:
+            # Les métiers de combat/autres visitent directement le trainer
+            return "trainer"
+
+    # Phase de production / maîtrise (mastery_practice ou autre, ex: production)
+    # Les trainers doivent être totalement contournés pour se focaliser sur la boucle forage -> craft -> vente
+    if is_artisan:
+        if inv_count >= 2 and "craft_combine" in player.capabilities:
+            return "craft"
+        # Si on a 1 pack ou plus et qu'on est en mastery_practice, on le vend
+        if inv_count == 1:
+            return "vendor_sell"
+        return "forage"
+
+    # Fallback pour les non-artisans en mastery_practice
+    if focus == "entertainer":
+        return "vendor_buy"
+        
+    return "forage" if "forage" in player.capabilities else "vendor_sell"
 
 
 def economy_prompt_block(step: str) -> str:

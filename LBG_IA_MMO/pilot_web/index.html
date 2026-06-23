@@ -2223,7 +2223,19 @@
             '<strong style="font-size:0.85rem;">Bots joueurs :</strong> ' +
             '<span class="jobs-badge jobs-badge--" style="background: ' + (j.bots_status.lia === "online" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">Lia (' + j.bots_status.lia + ')</span>' +
             '<span class="jobs-badge jobs-badge--" style="background: ' + (j.bots_status.nix === "online" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">Nix (' + j.bots_status.nix + ')</span>' +
+            '<span class="jobs-badge jobs-badge--" style="background: ' + (j.bots_status.mira === "online" ? "#d1fae5; color: #065f46" : "#fee2e2; color: #991b1b") + ';">Mira (' + j.bots_status.mira + ')</span>' +
             '</div>';
+        }
+        if (j.economy_metrics || j.chronicler_metrics) {
+          extraHtml += '<div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; line-height: 1.8;">' +
+            '<strong style="font-size:0.85rem;">Monde (Météo/Éco) :</strong> ';
+          if (j.economy_metrics && !j.economy_metrics.error) {
+            extraHtml += '<span class="jobs-badge jobs-badge--" style="background: #e0f2fe; color: #0369a1;">Signaux Éco : ' + j.economy_metrics.signal_count + ' (Alertes: ' + j.economy_metrics.evaluation_count + ')</span>';
+          }
+          if (j.chronicler_metrics && !j.chronicler_metrics.error) {
+            extraHtml += '<span class="jobs-badge jobs-badge--" style="background: #faf5ff; color: #6b21a8;">Factions Chroniques : ' + j.chronicler_metrics.active_goal_count + ' buts actifs</span>';
+          }
+          extraHtml += '</div>';
         }
 
         sum.innerHTML =

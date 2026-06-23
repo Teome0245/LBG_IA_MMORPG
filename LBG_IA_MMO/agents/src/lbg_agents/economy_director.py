@@ -11,6 +11,36 @@ from typing import Any
 from lbg_agents.core3_economy_loop import load_economy_config
 
 
+def execute_sql_mcp_query(query: str, server_id: str = "precu") -> dict[str, Any]:
+    """Exécute une requête SQL en utilisant la validation et la config du package MCP SQL."""
+    try:
+        import sys
+        here = Path(__file__).resolve()
+        root_dir = here.parents[3]
+        tools_path = root_dir / "tools"
+        if str(tools_path) not in sys.path:
+            sys.path.insert(0, str(tools_path))
+        
+        from mcp_lbg_sql_server.server import _db_config, _validate_readonly
+        
+        ok, err = _validate_readonly(query)
+        if not ok:
+            return {"ok": False, "error": err}
+            
+        import pymysql
+        if pymysql is None:
+            return {"ok": False, "error": "pymysql non disponible"}
+            
+        cfg = _db_config(server_id)
+        with pymysql.connect(**cfg) as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                rows = cur.fetchall()
+                return {"ok": True, "rows": rows}
+    except Exception as e:
+        return {"ok": False, "error": f"Erreur SQL MCP : {e}"}
+
+
 def economy_rules_path() -> Path:
     raw = os.environ.get("LBG_ECONOMY_RULES_JSON", "").strip()
     if raw:
@@ -236,6 +266,19 @@ def run_economy_director_tick(
     signals = collect_shop_signals(economy, stock_overrides=stock_overrides)
     evaluations = evaluate_rules(signals)
     proposed = propose_actions(evaluations)
+    
+    # Validation / Test de connectivité à MariaDB via notre helper SQL sécurisé (Option B)
+    db_status = {"ok": False, "error": "Non testé"}
+    try:
+        # Exécuter une requête simple en lecture seule : SELECT 1 (ou SHOW TABLES)
+        res_db = execute_sql_mcp_query("SELECT 1 as alive", server_id="precu")
+        if res_db.get("ok"):
+            db_status = {"ok": True, "server": "192.168.0.245", "alive": True}
+        else:
+            db_status = {"ok": False, "error": res_db.get("error")}
+    except Exception as e:
+        db_status = {"ok": False, "error": str(e)}
+
     return {
         "ok": True,
         "agent": "economy_director",
@@ -245,4 +288,5 @@ def run_economy_director_tick(
         "evaluation_count": len(evaluations),
         "proposed_actions": proposed,
         "evaluations": evaluations[:20],
+        "database_status": db_status,
     }

@@ -1,0 +1,19 @@
+[Unit]
+Description=LBG_IA_MMO MariaDB SQL MCP Server (fastmcp SSE)
+After=network.target
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+WorkingDirectory=/opt/LBG_IA_MMO
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+EnvironmentFile=-/etc/lbg-core3-ia.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/fastmcp run /opt/LBG_IA_MMO/tools/mcp_lbg_sql_server/server.py --port 8092
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

@@ -87,6 +87,24 @@ def pick_quest_for_player(player: Core3IaPlayer) -> str | None:
 
 
 def _read_quest_events() -> list[dict[str, Any]]:
+    # 1. Tentative d'interrogation du sidecar via HTTP
+    try:
+        from lbg_agents.core3_player_autonomy import sidecar_base_url, _timeout
+        import httpx
+        base = sidecar_base_url()
+        if base:
+            with httpx.Client(timeout=_timeout()) as client:
+                resp = client.get(f"{base}/v1/quest-state")
+            if resp.status_code == 200:
+                payload = resp.json()
+                if isinstance(payload, dict) and "quest_states" in payload:
+                    states = payload["quest_states"]
+                    if isinstance(states, list):
+                        return states
+    except Exception:
+        pass
+
+    # 2. Fallback sur le fichier local
     path = quest_state_path()
     if not path.is_file():
         return []

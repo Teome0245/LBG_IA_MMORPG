@@ -440,9 +440,10 @@ async def pilot_aggregate_status() -> dict[str, object]:
         "precu_game": "ok" if check_port(precu_ip, 44453) else "offline",
         "prime_game": "ok" if check_port(prime_ip, 44553) else "offline",
     }
-    # Prober Lia / Nix status
+    # Prober Lia / Nix / Mira status
     lia_online = False
     nix_online = False
+    mira_online = False
     if mmo_state == "ok" and mmo_url_raw:
         try:
             mmo_base = mmo_url_raw.rstrip("/")
@@ -453,13 +454,42 @@ async def pilot_aggregate_status() -> dict[str, object]:
                 r_nix = await client.get(f"{mmo_base}/v1/player-snapshot?player=Nix")
                 if r_nix.status_code == 200:
                     nix_online = r_nix.json().get("online", False)
+                r_mira = await client.get(f"{mmo_base}/v1/player-snapshot?player=Mira")
+                if r_mira.status_code == 200:
+                    mira_online = r_mira.json().get("online", False)
         except Exception:
             pass
 
     res["bots_status"] = {
         "lia": "online" if lia_online else "offline",
         "nix": "online" if nix_online else "offline",
+        "mira": "online" if mira_online else "offline",
     }
+
+    # Métriques d'économie et objectifs du Chroniqueur de monde (Option C)
+    economy_metrics = {}
+    chronicler_metrics = {}
+    try:
+        from lbg_agents.economy_director import run_economy_director_tick
+        from lbg_agents.world_chronicler import run_chronicler_tick
+        eco_tick = run_economy_director_tick(dry_run=True)
+        chrono_tick = run_chronicler_tick(dry_run=True)
+        economy_metrics = {
+            "signal_count": eco_tick.get("signal_count", 0),
+            "evaluation_count": eco_tick.get("evaluation_count", 0),
+            "proposed_actions": eco_tick.get("proposed_actions", [])[:5],
+        }
+        chronicler_metrics = {
+            "active_goal_count": chrono_tick.get("active_goal_count", 0),
+            "active_goals": chrono_tick.get("active_goals", [])[:5],
+            "roster_hints_count": len(chrono_tick.get("roster_hints", [])),
+        }
+    except Exception as e:
+        economy_metrics = {"error": str(e)}
+        chronicler_metrics = {"error": str(e)}
+
+    res["economy_metrics"] = economy_metrics
+    res["chronicler_metrics"] = chronicler_metrics
 
     return res
 

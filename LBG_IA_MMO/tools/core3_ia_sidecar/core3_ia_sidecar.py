@@ -22,6 +22,7 @@ DEFAULT_SNAPSHOT = Path("ia_bridge/player_snapshot.json")
 DEFAULT_PLAYER_SNAPSHOTS = Path("ia_bridge/player_snapshots.json")
 DEFAULT_NPC_SNAPSHOTS = Path("ia_bridge/npc_snapshots.json")
 DEFAULT_EVENTS = Path("ia_bridge/events.jsonl")
+DEFAULT_QUEST_STATE = Path("ia_bridge/quest_state.jsonl")
 DEFAULT_BIND = ("127.0.0.1", 8791)
 ALLOWED_ACTIONS = frozenset({
     "say",
@@ -85,6 +86,33 @@ def player_snapshots_path() -> Path:
 def events_path() -> Path:
     raw = os.environ.get("CORE3_IA_EVENTS_PATH", "").strip()
     return Path(raw) if raw else DEFAULT_EVENTS
+
+
+def quest_state_path() -> Path:
+    raw = os.environ.get("CORE3_IA_QUEST_STATE_PATH", "").strip()
+    return Path(raw) if raw else DEFAULT_QUEST_STATE
+
+
+def load_quest_state() -> list[dict[str, Any]]:
+    path = quest_state_path()
+    if not path.is_file():
+        return []
+    out: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                    if isinstance(row, dict):
+                        out.append(row)
+                except json.JSONDecodeError:
+                    continue
+    except OSError:
+        return []
+    return out
 
 
 def online_players_log_path() -> Path:
@@ -1367,6 +1395,19 @@ class Handler(BaseHTTPRequestHandler):
             snap = load_npc_snapshot(npc_ref)
             code = 200 if snap.get("online") else 409
             self._json(code, {"ok": snap.get("online", False), "snapshot": snap})
+            return
+
+        if path == "/v1/quest-state":
+            states = load_quest_state()
+            self._json(
+                200,
+                {
+                    "ok": True,
+                    "quest_states": states,
+                    "count": len(states),
+                    "path": str(quest_state_path().resolve()),
+                },
+            )
             return
 
         self._json(404, {"error": "not_found"})
