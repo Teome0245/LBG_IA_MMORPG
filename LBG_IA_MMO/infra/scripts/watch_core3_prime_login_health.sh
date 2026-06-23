@@ -165,7 +165,7 @@ p.parent.mkdir(parents=True, exist_ok=True)
 p.write_text(json.dumps({
     'last_restart_ts': time.time(),
     'last_reason': '''${RECOVER_REASON:-unknown}''',
-}), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 "
 }
 

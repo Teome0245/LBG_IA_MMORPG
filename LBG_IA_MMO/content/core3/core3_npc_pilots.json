@@ -130,7 +130,7 @@
       "pilot_id": "npc:core3_videur",
       "lbg_npc_id": "npc:videur",
       "display_name": "[IA] Videur",
-      "mobile_template": "bouncer",
+      "mobile_template": "patron",
       "min_sublot": 3,
       "spawn": { "x": 28.5, "y": 63.8, "z": 2.12804, "heading": 310, "cell": 1105853 }
     }
