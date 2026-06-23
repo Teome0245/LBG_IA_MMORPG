@@ -27,7 +27,7 @@ elif [[ -n "${LBG_PROXMOX_HOSTS:-}" ]]; then
 elif [[ -n "${LBG_PROXMOX_HOST:-}" ]]; then
   HOSTS=("${LBG_PROXMOX_HOST}")
 else
-  HOSTS=(192.168.0.200)
+  HOSTS=(192.168.0.200 192.168.0.201)
 fi
 
 apply_host() {

@@ -34,7 +34,7 @@ EOF
 echo ""
 echo "Prérequis SSH Proxmox (une fois) — clé lbg@140 autorisée sur root@PVE :"
 echo "  PUB=\$(ssh ${VM_USER}@${VM_HOST} 'cat ~/.ssh/id_ed25519.pub')"
-echo "  ssh root@\${LBG_PROXMOX_SSH_HOST:-192.168.0.200} \"grep -qF \\\"\\\$PUB\\\" ~/.ssh/authorized_keys || echo \\\"\\\$PUB\\\" >> ~/.ssh/authorized_keys\""
+echo "  ssh root@\${LBG_PROXMOX_SSH_HOST:-192.168.0.201} \"grep -qF \\\"\\\$PUB\\\" ~/.ssh/authorized_keys || echo \\\"\\\$PUB\\\" >> ~/.ssh/authorized_keys\""
 
 echo ""
 echo "OK — jobs visibles sur http://192.168.0.110:8080/#/jobs (filtrer actor: system:storage_watchdog)"

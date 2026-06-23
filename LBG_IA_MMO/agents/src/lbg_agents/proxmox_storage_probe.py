@@ -9,7 +9,7 @@ from typing import Any
 
 
 def proxmox_ssh_host() -> str:
-    return os.environ.get("LBG_PROXMOX_SSH_HOST", "192.168.0.200").strip() or "192.168.0.200"
+    return os.environ.get("LBG_PROXMOX_SSH_HOST", "192.168.0.201").strip() or "192.168.0.201"
 
 
 def proxmox_ssh_user() -> str:

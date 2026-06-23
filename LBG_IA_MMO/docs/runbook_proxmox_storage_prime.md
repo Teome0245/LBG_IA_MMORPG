@@ -15,13 +15,15 @@ Incident documenté : **2026-06-22** — VM **Prime** (`246`) en `running (io-er
 
 Déclencheur fréquent sur Prime : **build Antigravity** (`cmake --build` sous `/opt/lbg-antigravity/lbg-mmo/build`, journal `/tmp/core3-antigravity-build.log` pouvant dépasser des centaines de Mo).
 
-## Architecture (nœud `192.168.0.200`)
+## Architecture (nœud `192.168.0.201`)
+
+Les VM **110** (front/ollama), **245** (precu/db) et **246** (mmo/prime) sont hébergées sur le second hyperviseur Proxmox à l'adresse **`192.168.0.201`**. La VM **140** (core-orchestrateur) reste hébergée sur le premier nœud **`192.168.0.200`**.
 
 | Élément | Détail |
 |---------|--------|
-| Hyperviseur | Proxmox VE, stockage VM `local-lvm` |
-| VM 246 Prime | disque `scsi0: local-lvm:vm-246-disk-0`, 80 Go thin, 12 Go RAM |
-| Pool partagé | Toutes les VM du nœud (100, 140, 246…) partagent `pve/data` |
+| Hyperviseurs | `192.168.0.200` (proxmox-1) et `192.168.0.201` (proxmox-2) |
+| VM 246 Prime | disque `scsi0: local-lvm:vm-246-disk-0`, 80 Go thin, 12 Go RAM (sur proxmox-2) |
+| Pool partagé | Les VM de chaque nœud partagent le pool `pve/data` de leur hyperviseur |
 | Sur-provisionnement | Somme des disques thin > taille physique du pool (normal en thin) |
 
 Le disque **guest** Ubuntu peut afficher 50 %+ libre (`df -h /`) alors que Proxmox est en **io-error** : c'est le pool **hyperviseur** qui est plein, pas seulement la partition vue dans la VM.
@@ -60,7 +62,7 @@ Supprime notamment :
 
 ### 3. Auto-extension du pool thin (Proxmox, une fois)
 
-Sur l'hôte Proxmox (`root@192.168.0.200`) :
+Sur l'hôte Proxmox (`root@192.168.0.201`) :
 
 ```bash
 # Étendre manuellement si du PFree existe sur le VG (ex. +16 Go)
@@ -100,7 +102,7 @@ Dans Proxmox : VM 246 → Options → **QEMU Guest Agent** = activé (déjà le 
 ### Étape A — Libérer le pool hyperviseur
 
 ```bash
-ssh root@192.168.0.200
+ssh root@192.168.0.201
 pvesm status
 lvs -o lv_name,data_percent pve/data
 # Si PFree > 0 sur le VG :
@@ -160,11 +162,11 @@ Installation :
 bash infra/scripts/install_storage_watchdog_job_vm.sh
 ```
 
-**Prérequis** : la clé SSH de `lbg@140` doit être autorisée sur `root@192.168.0.200` (sonde `lvs` / `qm status`) :
+**Prérequis** : la clé SSH de `lbg@140` doit être autorisée sur `root@192.168.0.201` (sonde `lvs` / `qm status`) :
 
 ```bash
 PUB=$(ssh lbg@192.168.0.140 'cat ~/.ssh/id_ed25519.pub')
-ssh root@192.168.0.200 "grep -qF \"$PUB\" ~/.ssh/authorized_keys || echo \"$PUB\" >> ~/.ssh/authorized_keys"
+ssh root@192.168.0.201 "grep -qF \"$PUB\" ~/.ssh/authorized_keys || echo \"$PUB\" >> ~/.ssh/authorized_keys"
 ```
 
 Test manuel :
