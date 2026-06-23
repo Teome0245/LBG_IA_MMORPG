@@ -14,7 +14,10 @@ Catalogues data-driven consommés par `lua/ia_bridge_screenplay.lua` au boot.
 | `core3_planet_rules.json` | 4 | Règles par zone (tatooine actif) |
 | `core3_npc_simulation.json` | 2 | 3 niveaux simulation PNJ |
 | `world_poi/tatooine.json` | 1 | POI monde staff (centre ME) — voir `docs/world_editor_plan.md` |
+| `core3_artisan_dispenser.json` | — | Hub artisan Mod+ (outils, stations) |
+| `core3_resource_samples.json` | — | Ressources craft hub artisan |
 | `lia_perform_catalog.json` | — | Gestes Lia (orchestrateur) |
+| `lua/lbg_artisan_hub_screenplay.lua` | — | Distributeur artisan |
 | `lua/ia_bridge_screenplay.lua` | — | Screenplay runtime Prime |
 
 ## Éditeur monde (planifié)

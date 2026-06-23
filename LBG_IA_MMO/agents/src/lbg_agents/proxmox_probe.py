@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from lbg_agents.proxmox_client import get_cluster_status, list_vms, match_lan_vms, proxmox_configured
+from lbg_agents.proxmox_client import get_cluster_status, list_vms, match_lan_vms, probe_all_proxmox_hosts, proxmox_configured
 
 
 def run_proxmox_status(
@@ -26,10 +26,20 @@ def run_proxmox_status(
         }
 
     cluster = get_cluster_status()
+    probes = probe_all_proxmox_hosts()
     lan = match_lan_vms()
     vms = list_vms(running_only=False)
 
     alerts: list[str] = []
+    for probe in probes:
+        if not probe.get("ok"):
+            alerts.append(f"proxmox {probe.get('host')}: {probe.get('error', 'probe failed')}")
+            continue
+        perms = probe.get("permissions") if isinstance(probe.get("permissions"), dict) else {}
+        if not perms.get("node_time"):
+            alerts.append(
+                f"proxmox {probe.get('host')}: heure API non lisible (token sans Sys.Audit sur /nodes/*/time)"
+            )
     for label, row in (lan.get("matched") or {}).items():
         if not isinstance(row, dict):
             continue
@@ -51,6 +61,16 @@ def run_proxmox_status(
     lines = [
         f"Proxmox {cluster.get('host')}: version {cluster.get('version')} ({cluster.get('vm_count')} VMs).",
     ]
+    for probe in probes:
+        if not isinstance(probe, dict) or not probe.get("ok"):
+            continue
+        host = probe.get("host")
+        nodes = ", ".join(probe.get("nodes") or []) or "?"
+        lines.append(f"  [{host}] PVE {probe.get('version')} nodes={nodes}")
+        time_blocks = probe.get("time") if isinstance(probe.get("time"), dict) else {}
+        for node, tb in time_blocks.items():
+            if isinstance(tb, dict) and tb.get("ok") and isinstance(tb.get("data"), dict):
+                lines.append(f"    time {node}: {tb['data']}")
     for label, row in sorted((lan.get("matched") or {}).items()):
         if not isinstance(row, dict):
             continue
@@ -70,6 +90,7 @@ def run_proxmox_status(
         "outcome": status_level,
         "agent": "proxmox_probe",
         "cluster": cluster,
+        "probes": probes,
         "lan_vms": lan,
         "vms": vms,
         "alerts": alerts,

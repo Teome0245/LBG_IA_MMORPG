@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "description": "Playbook danseur Lia — macros barre d'action, progression skills, commerce spectacle",
+  "macro_slots": {
+    "F1": { "perform": "dance", "label": "Danse (rotation auto)" },
+    "F2": { "perform": "dance:basic", "label": "Danse basique" },
+    "F3": { "perform": "dance:basic2", "label": "Danse basique 2" },
+    "F4": { "perform": "dance:formal", "label": "Danse formelle" },
+    "F5": { "perform": "dance:lyrical", "label": "Danse lente" },
+    "F6": { "perform": "dance:popular", "label": "Danse populaire" },
+    "F7": { "perform": "dance:exotic", "label": "Danse exotique" },
+    "F8": { "perform": "dance:theatrical", "label": "Danse théâtrale" },
+    "F9": { "perform": "greet", "label": "Salut" },
+    "F10": { "perform": "cheer", "label": "Applaudir" },
+    "F11": { "perform": "conduct", "label": "Diriger la scène" },
+    "F12": { "perform": "meditate", "label": "Pause / méditation" }
+  },
+  "skill_tiers": [
+    {
+      "tier": 0,
+      "label": "Novice",
+      "skills": ["social_entertainer_novice", "social_entertainer_dance_01"],
+      "dances_unlocked": ["basic", "basic2"]
+    },
+    {
+      "tier": 1,
+      "label": "Dancing II",
+      "skills": ["social_entertainer_dance_02"],
+      "dances_unlocked": ["formal", "formal2"]
+    },
+    {
+      "tier": 2,
+      "label": "Dancing III",
+      "skills": ["social_entertainer_dance_03"],
+      "dances_unlocked": ["lyrical", "lyrical2", "popular"]
+    },
+    {
+      "tier": 3,
+      "label": "Dancing IV",
+      "skills": ["social_entertainer_dance_04"],
+      "dances_unlocked": ["exotic", "exotic2", "rhythmic", "theatrical"]
+    },
+    {
+      "tier": 4,
+      "label": "Healing I",
+      "skills": ["social_entertainer_healing_01"],
+      "dances_unlocked": [],
+      "buff_command": "healmind"
+    },
+    {
+      "tier": 5,
+      "label": "Healing II",
+      "skills": ["social_entertainer_healing_02"],
+      "dances_unlocked": [],
+      "buff_command": "healdamage"
+    }
+  ],
+  "trainer": {
+    "pilot_id": "npc:core3_bige_coto",
+    "housing_enter": "training",
+    "cell": 1189634,
+    "approach_m": 4
+  },
+  "audience": {
+    "watch_radius_m": 14,
+    "tip_suggested_credits": 25,
+    "tip_spatial": "Si le spectacle vous plait, /tip Lia <montant> — merci !",
+    "buff_spatial": "Je vous offre un peu de réconfort pour la route."
+  },
+  "interactions": {
+    "accept_group": true,
+    "propose_group": true,
+    "accept_trade": true,
+    "tip_commerce": true
+  }
+}

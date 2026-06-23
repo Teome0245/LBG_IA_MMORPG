@@ -48,6 +48,11 @@ if [[ -f "${IA_SPAWN_TAG_LUA}" ]]; then
   scp -q "${IA_SPAWN_TAG_LUA}" \
     "${VM_USER}@${VM_HOST}:${CLEAN_BIN}/scripts/custom_scripts/screenplays/ia_spawn_tag.lua"
 fi
+LBG_ARTISAN_HUB_LUA="${ROOT_DIR}/content/core3/lua/lbg_artisan_hub_screenplay.lua"
+if [[ -f "${LBG_ARTISAN_HUB_LUA}" ]]; then
+  scp -q "${LBG_ARTISAN_HUB_LUA}" \
+    "${VM_USER}@${VM_HOST}:${CLEAN_BIN}/scripts/custom_scripts/screenplays/lbg_artisan_hub_screenplay.lua"
+fi
 for lua in "${TERRAIN_LIB}" "${WE_LUA}" "${WE_HOOKS_LUA}" "${LH_LUA}"; do
   if [[ -f "${lua}" ]]; then
     scp -q "${lua}" \
@@ -78,6 +83,12 @@ scp -q "${ROOT_DIR}/content/core3/core3_species_slot_map.json" \
   "${ROOT_DIR}/content/core3/core3_factions.json" \
   "${ROOT_DIR}/content/core3/core3_planet_rules.json" \
   "${ROOT_DIR}/content/core3/core3_npc_simulation.json" \
+  "${ROOT_DIR}/content/core3/lia_entertainer_playbook.json" \
+  "${ROOT_DIR}/content/core3/core3_artisan_dispenser.json" \
+  "${ROOT_DIR}/content/core3/core3_resource_samples.json" \
+  "${ROOT_DIR}/content/core3/lia_perform_catalog.json" \
+  "${ROOT_DIR}/content/core3/lia_orchestrator_persona.json" \
+  "${ROOT_DIR}/content/core3/core3_behavior_profiles.json" \
   "${VM_USER}@${VM_HOST}:/tmp/"
 
 scp -q "${ROOT_DIR}/tools/core3_ia_sidecar/core3_ia_sidecar.py" \
@@ -125,6 +136,14 @@ sudo cp /tmp/core3_economy.json /opt/LBG_IA_MMO/content/core3/core3_economy.json
 sudo cp /tmp/core3_factions.json /opt/LBG_IA_MMO/content/core3/core3_factions.json
 sudo cp /tmp/core3_planet_rules.json /opt/LBG_IA_MMO/content/core3/core3_planet_rules.json
 sudo cp /tmp/core3_npc_simulation.json /opt/LBG_IA_MMO/content/core3/core3_npc_simulation.json
+sudo cp /tmp/lia_entertainer_playbook.json /opt/LBG_IA_MMO/content/core3/lia_entertainer_playbook.json 2>/dev/null || true
+sudo cp /tmp/core3_artisan_dispenser.json /opt/LBG_IA_MMO/content/core3/core3_artisan_dispenser.json 2>/dev/null || true
+sudo cp /tmp/core3_resource_samples.json /opt/LBG_IA_MMO/content/core3/core3_resource_samples.json 2>/dev/null || true
+sudo cp /tmp/core3_resource_samples.json ${CLEAN_BIN}/ia_bridge/core3_resource_samples.json 2>/dev/null || true
+sudo cp /tmp/core3_artisan_dispenser.json ${CLEAN_BIN}/ia_bridge/core3_artisan_dispenser.json 2>/dev/null || true
+sudo cp /tmp/lia_perform_catalog.json /opt/LBG_IA_MMO/content/core3/lia_perform_catalog.json 2>/dev/null || true
+sudo cp /tmp/lia_orchestrator_persona.json /opt/LBG_IA_MMO/content/core3/lia_orchestrator_persona.json 2>/dev/null || true
+sudo cp /tmp/core3_behavior_profiles.json /opt/LBG_IA_MMO/content/core3/core3_behavior_profiles.json 2>/dev/null || true
 sudo cp /tmp/core3_*.json ${CLEAN_BIN}/ia_bridge/ 2>/dev/null || true
 sudo touch ${CLEAN_BIN}/ia_bridge/pending.jsonl
 sudo touch ${CLEAN_BIN}/ia_bridge/player_snapshot.json
@@ -145,9 +164,9 @@ if command -v mysql >/dev/null 2>&1; then
     DB_NAME=\$(grep -E '^Core3\\.DBName' "\$CFG" | sed 's/.*= *"\\(.*\\)".*/\\1/' | head -1)
   fi
   mysql -u"\$DB_USER" -p"\$DB_PASS" "\$DB_NAME" -N -e \
-    "SELECT CONCAT('account:', a.account_id, '=', a.admin_level) FROM accounts a WHERE a.admin_level >= 3;" 2>/dev/null | sudo tee ${CLEAN_BIN}/ia_bridge/lbg_account_admin.json.tmp >/dev/null || true
+    "SELECT CONCAT('account:', a.account_id, '=', a.admin_level) FROM accounts a WHERE a.admin_level >= 2;" 2>/dev/null | sudo tee ${CLEAN_BIN}/ia_bridge/lbg_account_admin.json.tmp >/dev/null || true
   mysql -u"\$DB_USER" -p"\$DB_PASS" "\$DB_NAME" -N -e \
-    "SELECT CONCAT('firstname:', LOWER(c.firstname), '=', a.admin_level) FROM characters c JOIN accounts a ON a.account_id=c.account_id WHERE a.admin_level >= 3;" 2>/dev/null | sudo tee -a ${CLEAN_BIN}/ia_bridge/lbg_account_admin.json.tmp >/dev/null || true
+    "SELECT CONCAT('firstname:', LOWER(c.firstname), '=', a.admin_level) FROM characters c JOIN accounts a ON a.account_id=c.account_id WHERE a.admin_level >= 2;" 2>/dev/null | sudo tee -a ${CLEAN_BIN}/ia_bridge/lbg_account_admin.json.tmp >/dev/null || true
   if [[ -s ${CLEAN_BIN}/ia_bridge/lbg_account_admin.json.tmp ]]; then
     sudo mv ${CLEAN_BIN}/ia_bridge/lbg_account_admin.json.tmp ${CLEAN_BIN}/ia_bridge/lbg_account_admin.json
   else

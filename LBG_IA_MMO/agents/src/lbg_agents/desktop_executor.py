@@ -16,7 +16,7 @@ import os
 import secrets
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from lbg_agents.local_time import local_now_iso
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote_plus, urlparse
@@ -252,7 +252,7 @@ def _audit_write(line: dict[str, Any]) -> None:
     Écrit une ligne JSON audit sur stdout et/ou fichier JSONL.
     """
     line = dict(line)
-    line["ts"] = datetime.now(timezone.utc).isoformat()
+    line["ts"] = local_now_iso()
     raw = json.dumps(line, ensure_ascii=False)
 
     if _truthy(os.environ.get("LBG_DESKTOP_AUDIT_STDOUT", "1")):

@@ -11,7 +11,7 @@
 | `game_days_per_real_day` | 4 |
 | Phases | 2 h réelles chacune : **work**, **rest**, **leisure** |
 
-`getLifecyclePhase(shift_offset)` dans `ia_bridge_screenplay.lua` (basé sur `os.time()` UTC).  
+`getLifecyclePhase(shift_offset)` dans `ia_bridge_screenplay.lua` (basé sur `os.time()` — heure locale système, `Europe/Paris` sur les VM).  
 Config : `content/core3/core3_planet_rules.json` → `game_time`.
 
 ## Triplon entertainer (`roster:mos_entertainer_trainer`)

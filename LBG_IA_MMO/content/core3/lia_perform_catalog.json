@@ -55,6 +55,17 @@
       "id": "conduct",
       "label": "Diriger / pointer (chef d'orchestre IG)",
       "anims": ["point", "point_forward", "wave"]
+    },
+    {
+      "id": "dance:formal",
+      "label": "Danse formelle (macro F4)",
+      "system_message": "[Lia] Danse formelle."
+    },
+    {
+      "id": "dance:exotic",
+      "label": "Danse exotique (macro F7)",
+      "system_message": "[Lia] Danse exotique."
     }
-  ]
+  ],
+  "dance_styles_note": "Tout id dance:<style> est géré par handlePlayerPerform avant ce catalogue — voir lia_entertainer_playbook.json"
 }

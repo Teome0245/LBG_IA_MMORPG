@@ -15,7 +15,7 @@ import secrets
 import shutil
 import sys
 import subprocess
-from datetime import datetime, timezone
+from lbg_agents.local_time import local_now_iso
 from pathlib import Path
 from typing import Any
 
@@ -112,7 +112,7 @@ def _target_dir(sandbox: Path, project_name: str) -> Path | None:
 
 def _audit_write(line: dict[str, Any]) -> None:
     line = dict(line)
-    line["ts"] = datetime.now(timezone.utc).isoformat()
+    line["ts"] = local_now_iso()
     raw = json.dumps(line, ensure_ascii=False)
 
     if _truthy(os.environ.get("LBG_OPENGAME_AUDIT_STDOUT", "1")):

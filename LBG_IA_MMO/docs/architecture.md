@@ -100,7 +100,7 @@ Variables régulateur :
 
 #### DevOps — exécution des remédiations (phase 3 produit)
 
-Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure des **`remediation_hints`** : indications **lisibles** pour un opérateur (relancer un service, vérifier une URL, consulter un log). **Règle projet** : ces hints ne déclenchent **aucune** action corrective **automatique** côté LLM ou agent sans revue humaine. L’exécution sur l’infra (ex. **`systemd_restart`** après approbation, quota, fenêtre UTC) reste **explicite** (outil DevOps, systemd, playbook) — typiquement un **humain** ou un **agent d’outillage contrôlé** (ex. Cursor sur poste de confiance avec les mêmes prérequis SSH que la doc `ops_vm_user.md`) applique le correctif. Ne pas brancher de boucle « LLM → restart production » sans garde-fous documentés et revus.
+Les réponses **`selfcheck`** (et textes d’audit associés) peuvent inclure des **`remediation_hints`** : indications **lisibles** pour un opérateur (relancer un service, vérifier une URL, consulter un log). **Règle projet** : ces hints ne déclenchent **aucune** action corrective **automatique** côté LLM ou agent sans revue humaine. L’exécution sur l’infra (ex. **`systemd_restart`** après approbation, quota, fenêtre locale) reste **explicite** (outil DevOps, systemd, playbook) — typiquement un **humain** ou un **agent d’outillage contrôlé** (ex. Cursor sur poste de confiance avec les mêmes prérequis SSH que la doc `ops_vm_user.md`) applique le correctif. Ne pas brancher de boucle « LLM → restart production » sans garde-fous documentés et revus.
 
 ### Agent hybride proactif (`hybrid_proactive_agent/`)
 

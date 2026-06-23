@@ -93,12 +93,26 @@ def run_infra_watchdog(
         if mem_block.get("outcome") == "forbidden":
             alerts.append("mem: sonde désactivée (SSH)")
 
+    from lbg_agents.proxmox_storage_probe import run_proxmox_storage_probe
+    from lbg_agents.infra_storage_remediation import build_storage_remediation_plan
+
+    storage_block = run_proxmox_storage_probe(actor_id=actor_id, text="infra watchdog")
+    storage_inner = storage_block.get("storage") if isinstance(storage_block.get("storage"), dict) else {}
+    sections.append("=== Stockage Proxmox ===\n" + str(storage_block.get("reply", "")))
+    if not storage_block.get("ok"):
+        alerts.append(f"storage: {storage_block.get('error', 'KO')}")
+    elif storage_inner.get("outcome") in {"warn", "critical"}:
+        alerts.append(f"storage:thin_pool:{storage_inner.get('outcome')}")
+    if str(storage_inner.get("vm246_status") or "").find("io-error") >= 0:
+        alerts.append("storage:vm246:io-error")
+
     if exclude_prime:
         sections.append("=== Prime 246 ===\nexclu (LBG_INFRA_WATCHDOG_EXCLUDE_PRIME=1 — rebuild en cours)")
 
     prox_out = _normalize_outcome(str(proxmox_block.get("outcome")))
     mem_out = _normalize_outcome(str(mem_block.get("worst_status") or mem_block.get("outcome")))
-    outcome = _worst(prox_out, mem_out)
+    stor_out = _normalize_outcome(str(storage_inner.get("outcome") or storage_block.get("outcome")))
+    outcome = _worst(prox_out, mem_out, stor_out)
 
     payload: dict[str, Any] = {
         "ok": True,
@@ -108,12 +122,19 @@ def run_infra_watchdog(
         "exclude_prime": exclude_prime,
         "proxmox": proxmox_block,
         "memory": mem_block,
+        "storage": storage_block,
         "alerts": alerts,
         "reply": "\n\n".join(sections),
     }
 
     if outcome in {"warn", "critical"}:
-        payload["remediation_plan"] = build_memory_remediation_plan(payload)
+        mem_plan = build_memory_remediation_plan(payload)
+        stor_plan = build_storage_remediation_plan(storage_payload=storage_inner)
+        payload["remediation_plan"] = mem_plan
+        payload["storage_remediation_plan"] = stor_plan
+        hints = list(mem_plan.get("hints") or []) + list(stor_plan.get("hints") or [])
+        if hints:
+            payload["remediation_hints"] = hints
 
     if persist:
         path = watchdog_state_path()

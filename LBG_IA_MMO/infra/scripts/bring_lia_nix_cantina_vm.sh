@@ -44,11 +44,10 @@ sudo systemctl restart lbg-core3-ia-bot-client.service
 sudo systemctl restart lbg-core3-ia-bot-client-nix.service
 sleep 28
 
-echo "[3/5] File cantina (Lia) + approche Teome si en ligne..."
+echo "[3/5] File cantina (Lia) cote client..."
 {
   printf '%s\n' 'housing_enter|Lia|tatooine|0|0|0|cantina'
-  printf '%s\n' 'approach_player|Lia|tatooine|0|0|0|Teome'
-  printf '%s\n' 'say|Lia|tatooine|0|0|0|Salut Teome — je suis au bar de la cantina.'
+  printf '%s\n' 'say|Lia|tatooine|0|0|0|Salut — je suis cote client du comptoir, prete a danser.'
 } | sudo tee -a "${BIN}/ia_bridge/pending.jsonl" >/dev/null
 sleep 8
 

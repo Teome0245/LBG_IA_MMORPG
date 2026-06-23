@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer — job Pilot stockage Proxmox (pool thin / Prime 246)
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

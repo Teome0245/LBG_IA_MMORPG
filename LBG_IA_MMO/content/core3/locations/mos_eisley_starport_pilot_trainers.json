@@ -3,16 +3,16 @@
   "location_id": "loc:mos_eisley_starport_pilot",
   "zone": "tatooine",
   "label": "Spaceport Mos Eisley — lounge instructeurs pilote",
-  "description": "3 rosters × triplon. Salon circulaire starport (~3555, -4800). Recon IG 2026-05-29.",
+  "description": "3 rosters × triplon. Salon starport exterieur (cell 0). Decale 2026-06-18 pour eviter chevauchement cantina / PNJ dans les murs.",
   "building_ref": "mos_eisley_starport_lounge",
-  "world_anchor": { "x": 3557, "y": -4802, "z": 5 },
+  "world_anchor": { "x": 3585, "y": -4775, "z": 5 },
   "starport_terminal_cell": 1106372,
   "posts": [
     {
       "role": "alliance_pilot",
       "profession_label": "Alliance Starfighter Pilot",
       "display_name_prefix": "[IA] Pilote Alliance",
-      "spawn": { "x": 3551, "y": -4800, "z": 5, "heading": 0, "cell": 0 },
+      "spawn": { "x": 3582, "y": -4772, "z": 5, "heading": 0, "cell": 0 },
       "mobile_template_suggested": "stranded_rebel_pilot",
       "mobile_template_alt": "kreezo",
       "conversation": "kreezo_convo",
@@ -24,7 +24,7 @@
       "role": "imperial_navy_pilot",
       "profession_label": "Imperial Navy Pilot",
       "display_name_prefix": "[IA] Pilote Impérial",
-      "spawn": { "x": 3551, "y": -4805, "z": 5, "heading": 0, "cell": 0 },
+      "spawn": { "x": 3582, "y": -4778, "z": 5, "heading": 0, "cell": 0 },
       "mobile_template_suggested": "imperial_pilot",
       "mobile_template_alt": "imperial_officer",
       "conversation": "TBD_imperial_space_trainer",
@@ -37,7 +37,7 @@
       "role": "freelance_pilot",
       "profession_label": "Freelance Pilot",
       "display_name_prefix": "[IA] Pilote indépendant",
-      "spawn": { "x": 3570, "y": -4801, "z": 5, "heading": 0, "cell": 0 },
+      "spawn": { "x": 3592, "y": -4770, "z": 5, "heading": 0, "cell": 0 },
       "mobile_template_suggested": "freelance_pilot",
       "conversation": "TBD_freelance_space_trainer",
       "conversation_phase": "3b_space_skills",
@@ -46,13 +46,13 @@
     }
   ],
   "homes_default": {
-    "description": "Repos triplon — cantine / bunks starport à définir",
-    "leisure_anchor": { "x": 3555, "y": -4802, "z": 5, "cell": 0 }
+    "description": "Repos triplon — plaza starport exterieur",
+    "leisure_anchor": { "x": 3585, "y": -4775, "z": 5, "cell": 0 }
   },
   "leisure_patrol_shared": [
-    { "x": 3551, "y": -4800, "z": 5 },
-    { "x": 3551, "y": -4805, "z": 5 },
-    { "x": 3570, "y": -4801, "z": 5 }
+    { "x": 3582, "y": -4772, "z": 5 },
+    { "x": 3582, "y": -4778, "z": 5 },
+    { "x": 3592, "y": -4770, "z": 5 }
   ],
-  "notes": "Cell 0 = salon world starport. Terminal vaisseaux / shipwright = cell 1106372 (autre aile). Pas le trainer_shipwright vanilla pour skills pilote."
+  "notes": "Cell 0 = plaza starport (exterieur). Anciennes coords 3551,-4800 chevauchaient la cantina — PNJ visibles dans les murs interieurs. Terminal vaisseaux = cell 1106372."
 }

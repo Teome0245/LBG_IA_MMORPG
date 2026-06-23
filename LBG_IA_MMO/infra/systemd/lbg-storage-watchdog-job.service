@@ -1,0 +1,25 @@
+[Unit]
+Description=LBG stockage Proxmox — job Pilot si pool thin en alerte
+After=network-online.target lbg-orchestrator.service
+Wants=lbg-orchestrator.service
+
+[Service]
+Type=oneshot
+User=lbg
+Group=lbg
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+Environment=LBG_STORAGE_WATCHDOG_JOBS_ENABLED=1
+Environment=LBG_ORCHESTRATOR_URL=http://127.0.0.1:8010
+Environment=LBG_STORAGE_WATCHDOG_STATE=/var/lib/lbg/storage_watchdog/state.json
+Environment=LBG_PROXMOX_SSH_HOST=192.168.0.200
+Environment=LBG_PROXMOX_SSH_IDENTITY=/home/lbg/.ssh/id_ed25519
+Environment=LBG_PROXMOX_THIN_WARN_PCT=85
+Environment=LBG_PROXMOX_THIN_CRIT_PCT=95
+# Jobs visibles : http://192.168.0.110:8080/#/jobs (actor system:storage_watchdog)
+Environment=LBG_STORAGE_WATCHDOG_ACTOR_ID=system:storage_watchdog
+Environment=LBG_JOBS_RUNNER_ENABLED=1
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python -m lbg_agents.spawn_infra_storage_watchdog_job
+
+[Install]
+WantedBy=multi-user.target

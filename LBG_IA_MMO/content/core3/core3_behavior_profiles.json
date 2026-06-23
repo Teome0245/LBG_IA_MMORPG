@@ -34,7 +34,7 @@
         },
         {
           "id": "entertainer_progress",
-          "orchestrator": "Tour entertainer — progression danseur. {status} Objectif long terme : devenir maitre danseur. Si tu es en cantina ou Mos Eisley : perform message=dance puis interact message='examine:entertainer'. Sinon move_to vers Mos Eisley. Pas de say sauf salut bref."
+          "orchestrator": "Tour entertainer — progression danseur. {status} Objectif : maitre danseur. En cantina : perform message=dance ou dance:formal. Sinon housing_enter message=training puis learn_entertainer message=trainer. interact examine:entertainer chez l'instructeur. invite_group:{first_online} si public present."
         },
         {
           "id": "presence",

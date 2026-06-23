@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "description": "Echantillons ressources craftables — hub artisan LBG (Mod+)",
+  "default_units": 10000,
+  "max_units": 30000,
+  "zone": "tatooine",
+  "families": [
+    {
+      "id": "metals",
+      "label": "Metaux",
+      "samples": [
+        { "id": "steel", "label": "Acier", "resource_type": "steel" },
+        { "id": "iron", "label": "Fer", "resource_type": "iron" },
+        { "id": "copper", "label": "Cuivre", "resource_type": "copper" },
+        { "id": "aluminum", "label": "Aluminium", "resource_type": "aluminum" },
+        { "id": "bronze", "label": "Bronze", "resource_type": "bronze" },
+        { "id": "titanium", "label": "Titane", "resource_type": "titanium" },
+        { "id": "durasteel", "label": "Duracier", "resource_type": "durasteel" }
+      ]
+    },
+    {
+      "id": "minerals",
+      "label": "Mineraux / minerais",
+      "samples": [
+        { "id": "extrusive_ore", "label": "Minerai extrusif", "resource_type": "extrusive_ore" },
+        { "id": "intrusive_ore", "label": "Minerai intrusif", "resource_type": "intrusive_ore" },
+        { "id": "carbonate_ore", "label": "Minerai carbonate", "resource_type": "carbonate_ore" },
+        { "id": "siliclastic_ore", "label": "Minerai siliclastique", "resource_type": "siliclastic_ore" }
+      ]
+    },
+    {
+      "id": "chemicals",
+      "label": "Chimie / petrochimie",
+      "samples": [
+        { "id": "polymer", "label": "Polymere", "resource_type": "petrochem_inert_polymer" },
+        { "id": "lubricating_oil", "label": "Huile lubrifiante", "resource_type": "petrochem_liquid_lubricating_oil" },
+        { "id": "fiberplastics", "label": "Fiberplast", "resource_type": "fiberplastics" },
+        { "id": "solid_fuel", "label": "Carburant solide", "resource_type": "solid_petrochem_fuel" }
+      ]
+    },
+    {
+      "id": "gases",
+      "label": "Gaz",
+      "samples": [
+        { "id": "reactive_gas", "label": "Gaz reactif", "resource_type": "gas_reactive" },
+        { "id": "inert_gas", "label": "Gaz inerte", "resource_type": "gas_inert" }
+      ]
+    },
+    {
+      "id": "flora",
+      "label": "Flore / bois",
+      "samples": [
+        { "id": "wood", "label": "Bois", "resource_type": "wood" },
+        { "id": "hard_wood", "label": "Bois dur", "resource_type": "hard_wood" },
+        { "id": "softwood", "label": "Bois tendre", "resource_type": "softwood" },
+        { "id": "wheat", "label": "Ble", "resource_type": "wheat" },
+        { "id": "corn", "label": "Mais", "resource_type": "corn" },
+        { "id": "rice", "label": "Riz", "resource_type": "rice" }
+      ]
+    },
+    {
+      "id": "water",
+      "label": "Eau / energie",
+      "samples": [
+        { "id": "water", "label": "Eau", "resource_type": "water" },
+        { "id": "water_vapor", "label": "Vapeur d eau", "resource_type": "water_vapor" }
+      ]
+    }
+  ],
+  "kits": [
+    {
+      "id": "mineral_pack",
+      "label": "Pack metaux (7 types)",
+      "sample_ids": ["steel", "iron", "copper", "aluminum", "bronze", "titanium", "durasteel"]
+    },
+    {
+      "id": "craft_essentials",
+      "label": "Pack craft essentiel",
+      "sample_ids": ["steel", "copper", "polymer", "fiberplastics", "reactive_gas", "wood", "water"]
+    }
+  ]
+}

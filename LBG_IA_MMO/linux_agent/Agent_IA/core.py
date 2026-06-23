@@ -6,16 +6,23 @@ import secrets
 import shutil
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
 
 # -----------------------------------------------------------------------------
 # Config hot-reload (linux.env)
 # -----------------------------------------------------------------------------
 
 CFG_CACHE: dict[str, object] = {"mtime": None, "vars": {}}
+
+_LOCAL_TZ = ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))
+
+
+def local_now_iso() -> str:
+    return datetime.now(_LOCAL_TZ).isoformat(timespec="seconds")
 
 
 def env_path() -> Path:
@@ -97,7 +104,7 @@ def linux_approval_ok(context: dict[str, Any] | None = None) -> bool:
 
 def audit_write(line: dict[str, Any]) -> None:
     line = dict(line)
-    line["ts"] = datetime.now(timezone.utc).isoformat()
+    line["ts"] = local_now_iso()
     raw = json.dumps(line, ensure_ascii=False)
 
     if truthy(get_cfg("LBG_LINUX_AUDIT_STDOUT") or "1"):

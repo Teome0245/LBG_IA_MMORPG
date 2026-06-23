@@ -63,14 +63,19 @@ Variables utiles :
 | Variable | Rôle |
 |----------|------|
 | `LBG_INFRA_WATCHDOG_ENABLED` | `1` par défaut |
-| `PROXMOX_HOST` / `PROXMOX_TOKEN` | Sonde cluster (read-only) |
+| `PROXMOX_HOST` / `PROXMOX_TOKEN` | Sonde cluster (read-only) ; `LBG_PROXMOX_HOSTS` pour multi-PVE |
+| `bash infra/scripts/probe_proxmox_lan.sh` | Audit API + SSH fuseau hyperviseur (sans toucher aux VM) |
+| `bash infra/scripts/check_proxmox_storage_lan.sh` | Pool thin `local-lvm` — prévention **io-error** VM 246 |
+| `lbg-storage-watchdog-job.timer` | VM 140 — crée jobs Pilot si pool ≥ 85 % ([`#/jobs`](http://192.168.0.110:8080/#/jobs)) |
+| `bash infra/scripts/install_storage_watchdog_job_vm.sh` | Installe le timer stockage → jobs |
+| `bash infra/scripts/prime_disk_hygiene_vm.sh` | Nettoyage build Antigravity sur Prime après compile |
 | `LBG_VM_MEMORY_EXCLUDE_PRIME` | `1` = ne pas alerter sur 246 |
 
-Installation timer (si unité présente dans repo) :
+Installation timers (VM core 140) :
 
 ```bash
-# À adapter selon unités infra/systemd/lbg-infra-watchdog.*
-sudo systemctl enable --now lbg-infra-watchdog.timer
+bash infra/scripts/install_infra_watchdog_vm.sh
+bash infra/scripts/install_storage_watchdog_job_vm.sh
 ```
 
 ## 3. Validation rapide
@@ -95,5 +100,6 @@ Voir [`scrapaltai_starting_locations_mod.md`](scrapaltai_starting_locations_mod.
 
 - `infra/systemd/lbg-core3-ia-bots-ensure.service`
 - `agents/src/lbg_agents/infra_watchdog.py`
+- [`runbook_proxmox_storage_prime.md`](runbook_proxmox_storage_prime.md) — pool LVM thin / io-error 246
 - [`runbook_infra_remediation.md`](runbook_infra_remediation.md) — Track C remediation RAM
 - [`plan_parallel_next_steps.md`](plan_parallel_next_steps.md) — Track G

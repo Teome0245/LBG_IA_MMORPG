@@ -35,7 +35,7 @@ Pour un métier qui doit rester disponible (auberge, instructeur, quête…) :
 | **Les deux autres** | En **repos** ou **loisir** (despawn ou hors zone / logement) |
 | **Pas de clone** | Tenues, âge, ton, objectifs différents dans `npc_registry.json` |
 
-Rotation type (à affiner en UTC ou en « temps jeu ») :
+Rotation type (à affiner en heure locale Paris ou en « temps jeu ») :
 
 ```text
 Jour jeu N (6 h réel) :
@@ -50,7 +50,7 @@ Les décalages garantissent qu’**un** triplon est en travail au bon créneau p
 
 | Niveau | Fichiers | Statut |
 |--------|----------|--------|
-| **C.4** | Roster Bige/Lyra (2 slots, UTC simple) | Fait (à migrer vers ce modèle) |
+| **C.4** | Roster Bige/Lyra (2 slots, heure locale) | Fait (à migrer vers ce modèle) |
 | **C.4b** | `game_time` dans catalogue + `getLifecyclePhase()` Lua — **terminé** (`docs/core3_ia_phase_c4b_game_time.md`) | OK |
 | **C.5** | Donneur de quête : triplon + `offer_quest` stub — **terminé** (`docs/core3_ia_phase_c5_quest_giver.md`) | OK |
 | **C.4 inn** | Triplon auberge Mos Eisley | Après C.5 ou en parallèle si pas de nouveau spawn vanilla |
@@ -77,7 +77,7 @@ Champs catalogue proposés (`schema_version` 3 ou extension v2) :
 
 ## Référence actuelle (Bige / Lyra)
 
-Roster **2 slots** + horaires UTC : solution intermédiaire (pas encore triplon ni cycle repos/loisir). Migration prévue vers **triplon entertainer** ou conservation en **duo** si le poste n’a pas besoin de 24h.
+Roster **2 slots** + horaires locaux (Europe/Paris) : solution intermédiaire (pas encore triplon ni cycle repos/loisir). Migration prévue vers **triplon entertainer** ou conservation en **duo** si le poste n’a pas besoin de 24h.
 
 ## Validation C.4 (smoke)
 
@@ -85,4 +85,4 @@ Roster **2 slots** + horaires UTC : solution intermédiaire (pas encore triplon 
 bash infra/scripts/smoke_core3_ia_phase_c4_entertainer_roster_lan.sh
 ```
 
-IG (Lia) : selon **heure UTC** — ex. 11h → Bige poste, Lyra absente ; 18–22h → Lyra poste, Bige cantina.
+IG (Lia) : selon **heure locale** (VM en `Europe/Paris`) — ex. 11h → Bige poste, Lyra absente ; 18–22h → Lyra poste, Bige cantina.

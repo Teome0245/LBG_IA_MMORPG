@@ -1,9 +1,6 @@
 {
   "mode": "auto",
   "presence": "cantina",
-  "cell": 1105853,
-  "x": 21.99,
-  "y": 64.05,
-  "z": 2.12804,
-  "note": "Session client SWG humain — ne pas teleporter Lia via le pont IA"
+  "cell": 1082877,
+  "note": "Session client SWG — mode auto : correction uniquement si Lia derriere le comptoir"
 }

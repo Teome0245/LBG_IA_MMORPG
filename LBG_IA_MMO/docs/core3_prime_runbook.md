@@ -16,6 +16,9 @@ Guide opérationnel unique : déploiement, validation, commandes `pending.jsonl`
 ```bash
 cd LBG_IA_MMO
 
+# Stockage Proxmox (éviter io-error sur 246) — avant gros build
+bash infra/scripts/check_proxmox_storage_lan.sh
+
 # Lua + JSON (sans rebuild C++)
 bash infra/scripts/deploy_core3_ia_bridge_vm.sh --restart
 
@@ -23,7 +26,12 @@ bash infra/scripts/deploy_core3_ia_bridge_vm.sh --restart
 bash infra/scripts/build_core3_antigravity_vm.sh --sync
 bash infra/scripts/install_core3_clean_after_vm_build.sh
 bash infra/scripts/restart_core3_prime_vm.sh
+
+# Après build : libérer artefacts sur Prime
+bash infra/scripts/prime_disk_hygiene_vm.sh
 ```
+
+Voir [`runbook_proxmox_storage_prime.md`](runbook_proxmox_storage_prime.md) si statut VM `io-error`.
 
 ## 2. Smoke automatisé
 

@@ -12,9 +12,10 @@ Actions supportées :
   ``LBG_DEVOPS_SYSTEMD_RESTART_ALLOWLIST`` (virgules ; **vide par défaut** → refus).
   Quotas : ``LBG_DEVOPS_SYSTEMD_RESTART_MAX_PER_WINDOW`` (défaut **8**) tentatives réelles
   max par fenêtre glissante ``LBG_DEVOPS_SYSTEMD_RESTART_WINDOW_S`` (défaut **3600** s).
-  Fenêtre UTC optionnelle : ``LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC=HH:MM-HH:MM`` —
-  si définie, les redémarrages **réels** ne sont autorisés que lorsque l’heure UTC courante
-  est dans cet intervalle (traverse minuit si ``HH:MM`` début > fin).
+  Fenêtre locale optionnelle : ``LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_LOCAL=HH:MM-HH:MM`` —
+  si définie, les redémarrages **réels** ne sont autorisés que lorsque l’heure locale
+  (``LBG_LOCAL_TIMEZONE``, défaut ``Europe/Paris``) est dans cet intervalle
+  (traverse minuit si ``HH:MM`` début > fin).
 - ``selfcheck`` : enchaîne **uniquement** des sondes dérivées de l’environnement (HTTP healthz
   autorisés, puis unités systemd autorisées), chacune soumise aux **mêmes** garde-fous
   (allowlist, dry-run, approbation). Réponse agrégée + ``remediation_hints`` (texte, **sans**
@@ -25,7 +26,7 @@ Actions supportées :
 HTTP ni lecture disque ; **aucun** ``systemctl`` ; les contrôles d’allowlist s’appliquent quand même.
 ``context.devops_dry_run: true`` force en plus le dry-run pour une requête (utile depuis ``/pilot/``).
 
-**Audit** : une ligne JSON par action, ``event: agents.devops.audit`` (champ ``ts`` UTC).
+**Audit** : une ligne JSON par action, ``event: agents.devops.audit`` (champ ``ts`` heure locale ISO).
 Par défaut **stdout** (journald) ; en complément (ou seul si stdout désactivé) : fichier JSONL
 via ``LBG_DEVOPS_AUDIT_LOG_PATH`` (append). ``LBG_DEVOPS_AUDIT_STDOUT=0`` désactive stdout.
 
@@ -45,11 +46,13 @@ import secrets
 import subprocess
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+
+from lbg_agents.local_time import local_now_iso, local_tz
 
 _audit_file_error_logged = False
 
@@ -116,7 +119,7 @@ def _restart_window_s() -> int:
     return max(60, min(s, 86400 * 7))
 
 
-def _minutes_since_midnight_utc(now: datetime) -> int:
+def _minutes_since_midnight(now: datetime) -> int:
     return now.hour * 60 + now.minute
 
 
@@ -130,26 +133,35 @@ def _parse_hhmm_to_minutes(s: str) -> int | None:
     return h * 60 + mi
 
 
+def _restart_maintenance_window_raw() -> str:
+    raw = os.environ.get("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_LOCAL", "").strip()
+    if raw:
+        return raw
+    return os.environ.get("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC", "").strip()
+
+
 def _restart_maintenance_allows(now: datetime | None = None) -> tuple[bool, str | None]:
-    raw = os.environ.get("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC", "").strip()
+    raw = _restart_maintenance_window_raw()
     if not raw:
         return True, None
     parts = raw.replace("–", "-").split("-", 1)
+    tz_name = local_tz().key
     if len(parts) != 2:
         return (
             False,
-            "LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC invalide (attendu HH:MM-HH:MM UTC)",
+            f"LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_LOCAL invalide (attendu HH:MM-HH:MM {tz_name})",
         )
     sm = _parse_hhmm_to_minutes(parts[0])
     em = _parse_hhmm_to_minutes(parts[1])
     if sm is None or em is None:
-        return False, "LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC : heures invalides"
-    dt = now or datetime.now(timezone.utc)
+        return False, "LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_LOCAL : heures invalides"
+    tz = local_tz()
+    dt = now or datetime.now(tz)
     if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=tz)
     else:
-        dt = dt.astimezone(timezone.utc)
-    cur = _minutes_since_midnight_utc(dt)
+        dt = dt.astimezone(tz)
+    cur = _minutes_since_midnight(dt)
     if sm <= em:
         ok = sm <= cur <= em
     else:
@@ -158,7 +170,7 @@ def _restart_maintenance_allows(now: datetime | None = None) -> tuple[bool, str 
         return True, None
     return (
         False,
-        "hors fenêtre de maintenance UTC (LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC)",
+        f"hors fenêtre de maintenance locale ({tz_name}, LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_LOCAL)",
     )
 
 
@@ -551,7 +563,7 @@ def _append_audit_to_file(line: str) -> None:
 
 
 def _emit_devops_audit_record(rec: dict[str, Any]) -> None:
-    rec = {**rec, "ts": datetime.now(timezone.utc).isoformat()}
+    rec = {**rec, "ts": local_now_iso()}
     line = json.dumps(rec, ensure_ascii=False) + "\n"
     if _audit_stdout_enabled():
         print(line[:-1], file=sys.stdout, flush=True)
@@ -1049,6 +1061,58 @@ def run_devops_action(
             "ok": True,
             "outcome": wd.get("outcome"),
             "reply": format_memory_plan_reply(plan),
+            "meta": {
+                "allowlist": True,
+                "sterile": True,
+                "dry_run": True,
+                "dry_run_source": dr_src,
+                "execution_gated": gated,
+            },
+        }
+
+    if kind == "proxmox_storage":
+        from lbg_agents.proxmox_storage_probe import run_proxmox_storage_probe
+
+        result = run_proxmox_storage_probe(actor_id=actor_id, text=text)
+        return {
+            "agent": "devops_executor",
+            "handler": "devops",
+            "actor_id": actor_id,
+            "request_text": text,
+            "devops_action": dict(action),
+            "result": result,
+            "ok": bool(result.get("ok")),
+            "outcome": result.get("outcome"),
+            "reply": result.get("reply"),
+            "meta": {
+                "allowlist": True,
+                "sterile": True,
+                "dry_run": dry_run,
+                "dry_run_source": dr_src,
+                "execution_gated": gated,
+            },
+        }
+
+    if kind == "storage_remediation_plan":
+        from lbg_agents.infra_storage_remediation import build_storage_remediation_plan, format_storage_plan_reply
+        from lbg_agents.proxmox_storage_probe import run_proxmox_storage_probe
+
+        prior = context.get("_storage_probe") if isinstance(context.get("_storage_probe"), dict) else None
+        if prior is None:
+            probe = run_proxmox_storage_probe(actor_id=actor_id, text=text)
+            prior = probe.get("storage") if isinstance(probe.get("storage"), dict) else {}
+        plan = build_storage_remediation_plan(storage_payload=prior)
+        return {
+            "agent": "devops_executor",
+            "handler": "devops",
+            "actor_id": actor_id,
+            "request_text": text,
+            "devops_action": dict(action),
+            "result": {"storage": prior, "remediation_plan": plan},
+            "ok": True,
+            "outcome": plan.get("outcome"),
+            "reply": format_storage_plan_reply(plan),
+            "remediation_hints": plan.get("hints") or [],
             "meta": {
                 "allowlist": True,
                 "sterile": True,

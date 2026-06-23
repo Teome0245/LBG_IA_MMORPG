@@ -33,12 +33,14 @@ scp -q \
   "${ROOT_DIR}/agents/src/lbg_agents/lia_connection.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/lia_autonomy.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/lia_perform.py" \
+  "${ROOT_DIR}/agents/src/lbg_agents/lia_entertainer.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/core3_players.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/core3_player_events.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/core3_player_autonomy.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/core3_bridge.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/dispatch.py" \
   "${ROOT_DIR}/content/core3/lia_perform_catalog.json" \
+  "${ROOT_DIR}/content/core3/lia_entertainer_playbook.json" \
   "${ROOT_DIR}/content/core3/core3_ia_players.json" \
   "${ROOT_DIR}/orchestrator/router/routes/lia_incarnation.py" \
   "${ROOT_DIR}/orchestrator/router/routes/core3_player_routes.py" \
@@ -64,11 +66,13 @@ scp -q \
   "${ROOT_DIR}/agents/src/lbg_agents/lia_connection.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/lia_autonomy.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/lia_perform.py" \
+  "${ROOT_DIR}/agents/src/lbg_agents/lia_entertainer.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/core3_players.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/core3_player_events.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/core3_player_autonomy.py" \
   "${ROOT_DIR}/agents/src/lbg_agents/core3_bridge.py" \
   "${ROOT_DIR}/content/core3/lia_perform_catalog.json" \
+  "${ROOT_DIR}/content/core3/lia_entertainer_playbook.json" \
   "${ROOT_DIR}/content/core3/core3_ia_players.json" \
   "${ROOT_DIR}/tools/core3_ia_sidecar/core3_ia_sidecar.py" \
   "${ROOT_DIR}/content/core3/lia_orchestrator_persona.json" \
@@ -88,11 +92,11 @@ install_core() {
 set -euo pipefail
 S=/tmp/lia_incarnation_deploy
 D=/opt/LBG_IA_MMO
-sudo cp "$S/lia_orchestrator.py" "$S/lia_connection.py" "$S/lia_autonomy.py" "$S/lia_perform.py" "$S/core3_players.py" "$S/core3_player_events.py" "$S/core3_player_autonomy.py" "$S/core3_bridge.py" "$S/dispatch.py" \
+sudo cp "$S/lia_orchestrator.py" "$S/lia_connection.py" "$S/lia_autonomy.py" "$S/lia_perform.py" "$S/lia_entertainer.py" "$S/core3_players.py" "$S/core3_player_events.py" "$S/core3_player_autonomy.py" "$S/core3_bridge.py" "$S/dispatch.py" \
   "$D/agents/src/lbg_agents/"
 sudo mkdir -p "$D/content/core3"
 sudo mkdir -p "$D/docs"
-sudo cp "$S/lia_perform_catalog.json" "$S/lia_orchestrator_persona.json" "$S/core3_ia_players.json" "$D/content/core3/" 2>/dev/null || sudo cp "$S/lia_perform_catalog.json" "$S/core3_ia_players.json" "$D/content/core3/"
+sudo cp "$S/lia_perform_catalog.json" "$S/lia_entertainer_playbook.json" "$S/lia_orchestrator_persona.json" "$S/core3_ia_players.json" "$D/content/core3/" 2>/dev/null || sudo cp "$S/lia_perform_catalog.json" "$S/core3_ia_players.json" "$D/content/core3/"
 sudo cp "$S/core3_ia_phase_g_ai_players_population.md" "$S/core3_ia_phase_h_social_perception.md" "$D/docs/"
 sudo cp "$S/lia_incarnation.py" "$D/orchestrator/router/routes/"
 sudo cp "$S/core3_player_routes.py" "$D/orchestrator/router/routes/"
@@ -114,11 +118,11 @@ set -euo pipefail
 S=/tmp/lia_incarnation_deploy
 D=/opt/LBG_IA_MMO
 BIN=/opt/lbg-new-mmo-clean/MMOCoreORB/bin
-sudo cp "$S/lia_orchestrator.py" "$S/lia_connection.py" "$S/lia_autonomy.py" "$S/lia_perform.py" "$S/core3_players.py" "$S/core3_player_events.py" "$S/core3_player_autonomy.py" "$S/core3_bridge.py" \
+sudo cp "$S/lia_orchestrator.py" "$S/lia_connection.py" "$S/lia_autonomy.py" "$S/lia_perform.py" "$S/lia_entertainer.py" "$S/core3_players.py" "$S/core3_player_events.py" "$S/core3_player_autonomy.py" "$S/core3_bridge.py" \
   "$D/agents/src/lbg_agents/"
 sudo mkdir -p "$D/content/core3"
 sudo mkdir -p "$D/docs"
-sudo cp "$S/lia_perform_catalog.json" "$S/core3_ia_players.json" "$D/content/core3/"
+sudo cp "$S/lia_perform_catalog.json" "$S/lia_entertainer_playbook.json" "$S/core3_ia_players.json" "$D/content/core3/"
 sudo cp "$S/core3_ia_phase_g_ai_players_population.md" "$S/core3_ia_phase_h_social_perception.md" "$D/docs/"
 sudo cp "$S/core3_ia_sidecar.py" "$D/tools/core3_ia_sidecar/"
 sudo chmod +x "$D/tools/core3_ia_sidecar/core3_ia_sidecar.py"

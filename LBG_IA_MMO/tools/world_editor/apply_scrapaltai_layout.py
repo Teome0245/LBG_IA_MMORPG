@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_LAYOUT = Path(__file__).resolve().parent / "layouts" / "scrapaltai_v7_default.json"
@@ -217,7 +219,7 @@ def export_layout_from_screenplay(screenplay_path: Path) -> dict:
             "lay_file": re.search(r'local LH_TERRAIN_LAY = "([^"]+)"', text).group(1),
         },
         "buildings": buildings,
-        "exported_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "exported_at": datetime.now(ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))).isoformat(timespec="seconds"),
     }
 
 

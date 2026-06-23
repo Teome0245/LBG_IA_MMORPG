@@ -226,6 +226,74 @@ def _plan_vm_memory_supervision(objective: str, ctx: dict[str, object]) -> PlanR
     )
 
 
+def _objective_is_proxmox_storage_supervision(normalized: str) -> bool:
+    return bool(
+        re.search(r"\b(proxmox|local-lvm|thin\s*pool|stockage|storage|disque)\b", normalized)
+        and re.search(
+            r"\b(prime|246|io-error|thin|local-lvm|surveill|supervis|sond|remediat|remédiation|alerte)\b",
+            normalized,
+        )
+    )
+
+
+def _plan_proxmox_storage_supervision(objective: str, ctx: dict[str, object]) -> PlanResult | None:
+    norm = (objective or "").strip().lower()
+    if not _objective_is_proxmox_storage_supervision(norm):
+        return None
+
+    cap = capability_registry.get("devops_probe")
+    if cap is None:
+        return None
+
+    steps: list[PlanStep] = [
+        PlanStep(
+            capability=cap.name,
+            routed_to=cap.routed_to,
+            action_context_key="devops_action",
+            action={"kind": "proxmox_storage"},
+            context_patch=_force_dry_run({"devops_action": {"kind": "proxmox_storage"}}),
+            summary="Sonde pool thin Proxmox local-lvm + statut VM 246.",
+            risk_level=cap.risk_level,
+            text="Supervision stockage Proxmox (SSH read-only)",
+        ),
+        PlanStep(
+            capability=cap.name,
+            routed_to=cap.routed_to,
+            action_context_key="devops_action",
+            action={"kind": "storage_remediation_plan"},
+            context_patch=_force_dry_run({"devops_action": {"kind": "storage_remediation_plan"}}),
+            summary="Plan remédiation : hygiene Prime, lvextend, redémarrage si io-error.",
+            risk_level=cap.risk_level,
+            text="Plan remédiation stockage (consultatif + actions SSH allowlistées)",
+        ),
+    ]
+
+    cap_dlg = capability_registry.get("npc_dialogue")
+    if cap_dlg is not None:
+        steps.append(
+            PlanStep(
+                capability=cap_dlg.name,
+                routed_to=cap_dlg.routed_to,
+                action_context_key=cap_dlg.action_context_key,
+                action={},
+                context_patch={"_job_synthesis": True},
+                summary="Synthèse Pilot : état pool, risque io-error, actions à approuver.",
+                risk_level=cap_dlg.risk_level,
+                text=(
+                    f"{objective.strip()}\n\n"
+                    "Résume en français : % pool thin, statut VM Prime, actions proposées "
+                    "(hygiène build, lvextend, restart). Indique si un apply SSH est en attente d'approbation."
+                ),
+            )
+        )
+
+    return PlanResult(
+        steps=steps[:_MAX_STEPS],
+        source="deterministic",
+        reason="plan supervision stockage Proxmox / Prime (sonde + remédiation)",
+    )
+
+
 def _objective_is_proxmox_supervision(normalized: str) -> bool:
     return bool(
         re.search(r"\b(proxmox|hyperviseur|hypervisor|pve)\b", normalized)
@@ -448,6 +516,9 @@ def plan_deterministic(objective: str, context: dict[str, object] | None = None)
     mem = _plan_vm_memory_supervision(objective, ctx)
     if mem is not None:
         return mem
+    stor = _plan_proxmox_storage_supervision(objective, ctx)
+    if stor is not None:
+        return stor
     prox = _plan_proxmox_supervision(objective, ctx)
     if prox is not None:
         return prox
@@ -711,6 +782,9 @@ def plan_objective(
     mem = _plan_vm_memory_supervision(objective, ctx)
     if mem is not None:
         return mem
+    stor = _plan_proxmox_storage_supervision(objective, ctx)
+    if stor is not None:
+        return stor
     prox = _plan_proxmox_supervision(objective, ctx)
     if prox is not None:
         return prox

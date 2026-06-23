@@ -22,11 +22,36 @@ def proxmox_configured() -> bool:
 
 
 def proxmox_host() -> str:
-    return (
+    hosts = proxmox_hosts()
+    return hosts[0] if hosts else _DEFAULT_HOST
+
+
+def proxmox_hosts() -> list[str]:
+    """Liste des hyperviseurs Proxmox (multi-PVE)."""
+    raw = (
+        os.environ.get("LBG_PROXMOX_HOSTS")
+        or os.environ.get("LBG_PROXMOX_SSH_HOSTS")
+        or ""
+    ).strip()
+    if raw:
+        out: list[str] = []
+        for part in raw.split(","):
+            h = part.strip()
+            if not h:
+                continue
+            h = h.removeprefix("https://").removeprefix("http://")
+            h = h.split(":", 1)[0]
+            if h and h not in out:
+                out.append(h)
+        if out:
+            return out
+    single = (
         os.environ.get("LBG_PROXMOX_HOST")
         or os.environ.get("PROXMOX_HOST")
         or _DEFAULT_HOST
     ).strip() or _DEFAULT_HOST
+    single = single.removeprefix("https://").removeprefix("http://").split(":", 1)[0]
+    return [single]
 
 
 def proxmox_port() -> int:
@@ -45,11 +70,15 @@ def proxmox_verify_ssl() -> bool:
     return _truthy(os.environ.get("LBG_PROXMOX_VERIFY_SSL", os.environ.get("PROXMOX_VERIFY_SSL", "0")))
 
 
+def _base_url_for(host: str | None = None) -> str:
+    h = (host or proxmox_host()).strip()
+    if h.startswith("http://") or h.startswith("https://"):
+        return h.rstrip("/")
+    return f"https://{h}:{proxmox_port()}"
+
+
 def _base_url() -> str:
-    host = proxmox_host()
-    if host.startswith("http://") or host.startswith("https://"):
-        return host.rstrip("/")
-    return f"https://{host}:{proxmox_port()}"
+    return _base_url_for(proxmox_host())
 
 
 def _headers() -> dict[str, str]:
@@ -59,9 +88,15 @@ def _headers() -> dict[str, str]:
     return {"Authorization": f"PVEAPIToken={token}"}
 
 
-def _request(method: str, path: str, *, timeout_s: float = 20.0) -> dict[str, Any]:
+def _request(
+    method: str,
+    path: str,
+    *,
+    host: str | None = None,
+    timeout_s: float = 20.0,
+) -> dict[str, Any]:
     path = path if path.startswith("/") else f"/{path}"
-    url = f"{_base_url()}{path}"
+    url = f"{_base_url_for(host)}{path}"
     with httpx.Client(verify=proxmox_verify_ssl(), timeout=timeout_s) as client:
         resp = client.request(method, url, headers=_headers())
     try:
@@ -70,10 +105,59 @@ def _request(method: str, path: str, *, timeout_s: float = 20.0) -> dict[str, An
         payload = {}
     if resp.status_code >= 400:
         err = payload.get("errors") if isinstance(payload, dict) else None
-        raise RuntimeError(f"Proxmox HTTP {resp.status_code}: {err or resp.text[:300]}")
+        msg = payload.get("message") if isinstance(payload, dict) else None
+        detail = err or msg or resp.text[:300]
+        raise RuntimeError(f"Proxmox HTTP {resp.status_code}: {detail}")
     if isinstance(payload, dict) and "data" in payload:
         return {"ok": True, "data": payload["data"]}
     return {"ok": True, "data": payload}
+
+
+def _safe_request(method: str, path: str, *, host: str | None = None) -> dict[str, Any]:
+    try:
+        return _request(method, path, host=host)
+    except (httpx.HTTPError, RuntimeError, ValueError) as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def probe_proxmox_host(host: str) -> dict[str, Any]:
+    """Sonde read-only d'un hyperviseur (version, nœuds, heure si autorisé)."""
+    if not proxmox_configured():
+        return {"ok": False, "host": host, "error": "proxmox_not_configured"}
+    version = _safe_request("GET", "/api2/json/version", host=host)
+    nodes = _safe_request("GET", "/api2/json/nodes", host=host)
+    resources = _safe_request("GET", "/api2/json/cluster/resources?type=vm", host=host)
+    node_names: list[str] = []
+    if nodes.get("ok"):
+        for row in nodes.get("data") or []:
+            if isinstance(row, dict) and row.get("node"):
+                node_names.append(str(row["node"]))
+    time_blocks: dict[str, Any] = {}
+    for node in node_names[:4]:
+        time_blocks[node] = _safe_request("GET", f"/api2/json/nodes/{quote(node)}/time", host=host)
+    vdata = version.get("data") if isinstance(version.get("data"), dict) else {}
+    rlist = resources.get("data") if isinstance(resources.get("data"), list) else []
+    return {
+        "ok": True,
+        "host": host,
+        "version": vdata.get("version"),
+        "release": vdata.get("release"),
+        "nodes": node_names,
+        "vm_count": len(rlist) if isinstance(rlist, list) else None,
+        "time": time_blocks,
+        "permissions": {
+            "version": version.get("ok", False),
+            "nodes": nodes.get("ok", False),
+            "cluster_vms": resources.get("ok", False),
+            "node_time": any(
+                isinstance(v, dict) and v.get("ok") for v in time_blocks.values()
+            ),
+        },
+    }
+
+
+def probe_all_proxmox_hosts() -> list[dict[str, Any]]:
+    return [probe_proxmox_host(host) for host in proxmox_hosts()]
 
 
 def get_cluster_status() -> dict[str, Any]:

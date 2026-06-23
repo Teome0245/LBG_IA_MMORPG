@@ -1,8 +1,11 @@
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from types import SimpleNamespace
+from zoneinfo import ZoneInfo
 
 import pytest
+
+PARIS = ZoneInfo("Europe/Paris")
 
 from lbg_agents.devops_executor import default_action_from_text, is_devops_dry_run, run_devops_action
 from lbg_agents.dispatch import invoke_after_route
@@ -634,29 +637,38 @@ def test_systemd_restart_mock_subprocess_ok(
 
 
 def test_restart_maintenance_allows_inside_window(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC", "10:00-12:00")
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_LOCAL", "10:00-12:00")
     from lbg_agents.devops_executor import _restart_maintenance_allows
 
-    ok, _ = _restart_maintenance_allows(datetime(2026, 1, 1, 11, 30, tzinfo=timezone.utc))
+    ok, _ = _restart_maintenance_allows(datetime(2026, 1, 1, 11, 30, tzinfo=PARIS))
     assert ok is True
 
 
 def test_restart_maintenance_denies_outside_window(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC", "10:00-12:00")
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_LOCAL", "10:00-12:00")
     from lbg_agents.devops_executor import _restart_maintenance_allows
 
-    ok, err = _restart_maintenance_allows(datetime(2026, 1, 1, 15, 0, tzinfo=timezone.utc))
+    ok, err = _restart_maintenance_allows(datetime(2026, 1, 1, 15, 0, tzinfo=PARIS))
     assert ok is False
     assert err and "maintenance" in err.lower()
 
 
-def test_restart_maintenance_overnight_window(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC", "22:00-06:00")
+def test_restart_maintenance_legacy_utc_env_alias(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_LOCAL", raising=False)
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_UTC", "10:00-12:00")
     from lbg_agents.devops_executor import _restart_maintenance_allows
 
-    assert _restart_maintenance_allows(datetime(2026, 1, 1, 23, 0, tzinfo=timezone.utc))[0] is True
-    assert _restart_maintenance_allows(datetime(2026, 1, 1, 5, 0, tzinfo=timezone.utc))[0] is True
-    assert _restart_maintenance_allows(datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc))[0] is False
+    ok, _ = _restart_maintenance_allows(datetime(2026, 1, 1, 11, 0, tzinfo=PARIS))
+    assert ok is True
+
+
+def test_restart_maintenance_overnight_window(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LBG_DEVOPS_SYSTEMD_RESTART_MAINTENANCE_LOCAL", "22:00-06:00")
+    from lbg_agents.devops_executor import _restart_maintenance_allows
+
+    assert _restart_maintenance_allows(datetime(2026, 1, 1, 23, 0, tzinfo=PARIS))[0] is True
+    assert _restart_maintenance_allows(datetime(2026, 1, 1, 5, 0, tzinfo=PARIS))[0] is True
+    assert _restart_maintenance_allows(datetime(2026, 1, 1, 12, 0, tzinfo=PARIS))[0] is False
 
 
 def test_systemd_restart_quota_blocks_after_max(

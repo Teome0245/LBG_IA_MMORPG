@@ -735,19 +735,19 @@
         "mode": "spawn",
         "mobile_template": "commoner_old",
         "spawn": {
-          "x": 3510,
-          "y": -4795,
+          "x": 3498,
+          "y": -4788,
           "z": 5,
           "heading": 90
         },
         "follow_lia": {
           "enabled": false,
-          "mode": "walk_patrol",
-          "roam_contain_m": 22
+          "mode": "linger",
+          "roam_contain_m": 8
         }
       },
       "c1_validated": "2026-05-23",
-      "notes": "PNJ reference C.1 — patrouille courte walk_patrol (navmesh, anti-murs)"
+      "notes": "PNJ reference C.1 — poste fixe exterieur (anti-murs arches cantina)"
     },
     {
       "pilot_id": "npc:core3_guard",
@@ -758,19 +758,19 @@
         "mode": "spawn",
         "mobile_template": "mos_espa_police_officer",
         "spawn": {
-          "x": 3540,
-          "y": -4810,
+          "x": 3568,
+          "y": -4818,
           "z": 5,
           "heading": 180
         },
         "follow_lia": {
           "enabled": false,
-          "mode": "walk_patrol",
-          "roam_contain_m": 22
+          "mode": "linger",
+          "roam_contain_m": 8
         }
       },
       "c1_validated": "2026-05-23",
-      "notes": "PNJ reference C.1 — ronde locale walk_patrol Mos Eisley (anti-murs)"
+      "notes": "PNJ reference C.1 — poste fixe exterieur (anti-murs transition cantina)"
     },
     {
       "pilot_id": "npc:core3_kisreudi",
@@ -2069,8 +2069,8 @@
       "service_policy": "exactly_one",
       "lifecycle": "game_time_triplet",
       "service_post": {
-        "x": 3551,
-        "y": -4800,
+        "x": 3582,
+        "y": -4772,
         "z": 5,
         "heading": 90
       },
@@ -2085,31 +2085,31 @@
             "mode": "roster",
             "mobile_template": "stranded_rebel_pilot",
             "post": {
-              "x": 3551,
-              "y": -4800,
+              "x": 3582,
+              "y": -4772,
               "z": 5,
               "heading": 90
             },
             "home": {
-              "x": 3555,
-              "y": -4802,
+              "x": 3585,
+              "y": -4775,
               "z": 5,
               "cell": 0
             },
             "leisure_patrol": [
               {
-                "x": 3551,
-                "y": -4800,
+                "x": 3582,
+                "y": -4772,
                 "z": 5
               },
               {
-                "x": 3551,
-                "y": -4805,
+                "x": 3582,
+                "y": -4778,
                 "z": 5
               },
               {
-                "x": 3570,
-                "y": -4801,
+                "x": 3592,
+                "y": -4770,
                 "z": 5
               }
             ]
@@ -2124,31 +2124,31 @@
             "mode": "roster",
             "mobile_template": "stranded_rebel_pilot",
             "post": {
-              "x": 3551,
-              "y": -4800,
+              "x": 3582,
+              "y": -4772,
               "z": 5,
               "heading": 90
             },
             "home": {
-              "x": 3555,
-              "y": -4802,
+              "x": 3585,
+              "y": -4775,
               "z": 5,
               "cell": 0
             },
             "leisure_patrol": [
               {
-                "x": 3551,
-                "y": -4800,
+                "x": 3582,
+                "y": -4772,
                 "z": 5
               },
               {
-                "x": 3551,
-                "y": -4805,
+                "x": 3582,
+                "y": -4778,
                 "z": 5
               },
               {
-                "x": 3570,
-                "y": -4801,
+                "x": 3592,
+                "y": -4770,
                 "z": 5
               }
             ]
@@ -2164,31 +2164,31 @@
             "mode": "roster",
             "mobile_template": "stranded_rebel_pilot",
             "post": {
-              "x": 3551,
-              "y": -4800,
+              "x": 3582,
+              "y": -4772,
               "z": 5,
               "heading": 90
             },
             "home": {
-              "x": 3555,
-              "y": -4802,
+              "x": 3585,
+              "y": -4775,
               "z": 5,
               "cell": 0
             },
             "leisure_patrol": [
               {
-                "x": 3551,
-                "y": -4800,
+                "x": 3582,
+                "y": -4772,
                 "z": 5
               },
               {
-                "x": 3551,
-                "y": -4805,
+                "x": 3582,
+                "y": -4778,
                 "z": 5
               },
               {
-                "x": 3570,
-                "y": -4801,
+                "x": 3592,
+                "y": -4770,
                 "z": 5
               }
             ]
@@ -2204,8 +2204,8 @@
       "service_policy": "exactly_one",
       "lifecycle": "game_time_triplet",
       "service_post": {
-        "x": 3551,
-        "y": -4805,
+        "x": 3582,
+        "y": -4778,
         "z": 5,
         "heading": 90
       },
@@ -2220,31 +2220,31 @@
             "mode": "roster",
             "mobile_template": "imperial_colonel",
             "post": {
-              "x": 3551,
-              "y": -4805,
+              "x": 3582,
+              "y": -4778,
               "z": 5,
               "heading": 90
             },
             "home": {
-              "x": 3555,
-              "y": -4802,
+              "x": 3585,
+              "y": -4775,
               "z": 5,
               "cell": 0
             },
             "leisure_patrol": [
               {
-                "x": 3551,
-                "y": -4800,
+                "x": 3582,
+                "y": -4772,
                 "z": 5
               },
               {
-                "x": 3551,
-                "y": -4805,
+                "x": 3582,
+                "y": -4778,
                 "z": 5
               },
               {
-                "x": 3570,
-                "y": -4801,
+                "x": 3592,
+                "y": -4770,
                 "z": 5
               }
             ]
@@ -2259,31 +2259,31 @@
             "mode": "roster",
             "mobile_template": "imperial_colonel",
             "post": {
-              "x": 3551,
-              "y": -4805,
+              "x": 3582,
+              "y": -4778,
               "z": 5,
               "heading": 90
             },
             "home": {
-              "x": 3555,
-              "y": -4802,
+              "x": 3585,
+              "y": -4775,
               "z": 5,
               "cell": 0
             },
             "leisure_patrol": [
               {
-                "x": 3551,
-                "y": -4800,
+                "x": 3582,
+                "y": -4772,
                 "z": 5
               },
               {
-                "x": 3551,
-                "y": -4805,
+                "x": 3582,
+                "y": -4778,
                 "z": 5
               },
               {
-                "x": 3570,
-                "y": -4801,
+                "x": 3592,
+                "y": -4770,
                 "z": 5
               }
             ]
@@ -2299,31 +2299,31 @@
             "mode": "roster",
             "mobile_template": "imperial_colonel",
             "post": {
-              "x": 3551,
-              "y": -4805,
+              "x": 3582,
+              "y": -4778,
               "z": 5,
               "heading": 90
             },
             "home": {
-              "x": 3555,
-              "y": -4802,
+              "x": 3585,
+              "y": -4775,
               "z": 5,
               "cell": 0
             },
             "leisure_patrol": [
               {
-                "x": 3551,
-                "y": -4800,
+                "x": 3582,
+                "y": -4772,
                 "z": 5
               },
               {
-                "x": 3551,
-                "y": -4805,
+                "x": 3582,
+                "y": -4778,
                 "z": 5
               },
               {
-                "x": 3570,
-                "y": -4801,
+                "x": 3592,
+                "y": -4770,
                 "z": 5
               }
             ]
@@ -2339,8 +2339,8 @@
       "service_policy": "exactly_one",
       "lifecycle": "game_time_triplet",
       "service_post": {
-        "x": 3570,
-        "y": -4801,
+        "x": 3592,
+        "y": -4770,
         "z": 5,
         "heading": 90
       },
@@ -2355,31 +2355,31 @@
             "mode": "roster",
             "mobile_template": "freelance_pilot",
             "post": {
-              "x": 3570,
-              "y": -4801,
+              "x": 3592,
+              "y": -4770,
               "z": 5,
               "heading": 90
             },
             "home": {
-              "x": 3555,
-              "y": -4802,
+              "x": 3585,
+              "y": -4775,
               "z": 5,
               "cell": 0
             },
             "leisure_patrol": [
               {
-                "x": 3551,
-                "y": -4800,
+                "x": 3582,
+                "y": -4772,
                 "z": 5
               },
               {
-                "x": 3551,
-                "y": -4805,
+                "x": 3582,
+                "y": -4778,
                 "z": 5
               },
               {
-                "x": 3570,
-                "y": -4801,
+                "x": 3592,
+                "y": -4770,
                 "z": 5
               }
             ]
@@ -2394,31 +2394,31 @@
             "mode": "roster",
             "mobile_template": "freelance_pilot",
             "post": {
-              "x": 3570,
-              "y": -4801,
+              "x": 3592,
+              "y": -4770,
               "z": 5,
               "heading": 90
             },
             "home": {
-              "x": 3555,
-              "y": -4802,
+              "x": 3585,
+              "y": -4775,
               "z": 5,
               "cell": 0
             },
             "leisure_patrol": [
               {
-                "x": 3551,
-                "y": -4800,
+                "x": 3582,
+                "y": -4772,
                 "z": 5
               },
               {
-                "x": 3551,
-                "y": -4805,
+                "x": 3582,
+                "y": -4778,
                 "z": 5
               },
               {
-                "x": 3570,
-                "y": -4801,
+                "x": 3592,
+                "y": -4770,
                 "z": 5
               }
             ]
@@ -2434,31 +2434,31 @@
             "mode": "roster",
             "mobile_template": "freelance_pilot",
             "post": {
-              "x": 3570,
-              "y": -4801,
+              "x": 3592,
+              "y": -4770,
               "z": 5,
               "heading": 90
             },
             "home": {
-              "x": 3555,
-              "y": -4802,
+              "x": 3585,
+              "y": -4775,
               "z": 5,
               "cell": 0
             },
             "leisure_patrol": [
               {
-                "x": 3551,
-                "y": -4800,
+                "x": 3582,
+                "y": -4772,
                 "z": 5
               },
               {
-                "x": 3551,
-                "y": -4805,
+                "x": 3582,
+                "y": -4778,
                 "z": 5
               },
               {
-                "x": 3570,
-                "y": -4801,
+                "x": 3592,
+                "y": -4770,
                 "z": 5
               }
             ]

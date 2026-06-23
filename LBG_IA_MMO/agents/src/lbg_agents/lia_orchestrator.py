@@ -111,9 +111,15 @@ def lia_system_prompt() -> str:
         perform_hint = perform_catalog_hint()
     except Exception:
         perform_hint = "perform : message = id (dance, greet, search, forage, …)."
+    try:
+        from lbg_agents.lia_entertainer import macro_hint_for_prompt
+
+        entertainer_hint = macro_hint_for_prompt()
+    except Exception:
+        entertainer_hint = ""
     return (
-        f"{identity} {proactivity} {actions} {perform_hint} "
-        "interact : message = kind:target, kind parmi greet, offer_trade, invite_group, request_duel, examine, assist. "
+        f"{identity} {proactivity} {actions} {perform_hint} {entertainer_hint} "
+        "interact : message = kind:target, kind parmi greet, offer_trade, accept_trade, invite_group, accept_group, request_duel, examine, assist. "
         "Règle : noop est rare — préfère interact, perform, approach_player, say ou animate. "
         "Réponds UNIQUEMENT en JSON : "
         '{"action":"say|move_to|animate|perform|interact|approach_player|switch_zone|noop",'
@@ -358,7 +364,7 @@ def deterministic_proactive_action(*, snapshot: dict[str, Any] | None = None) ->
     scene = scene_at_index(profile_id, scene_idx)
     sid = str(scene.get("id") or "").strip()
 
-    dance_scenes = {"cantina_dance", "spectacle", "entertainer_progress", "welcome"}
+    dance_scenes = {"cantina_dance", "spectacle", "welcome"}
     if sid in dance_scenes:
         if in_cantina:
             out = _post_sidecar_enqueue(action="perform", message="dance", snapshot=snap)
@@ -369,6 +375,35 @@ def deterministic_proactive_action(*, snapshot: dict[str, Any] | None = None) ->
         out["reason"] = f"proactive_scene_{sid}_to_cantina"
         out["incarnation"] = True
         return out
+
+    if sid == "entertainer_progress":
+        from lbg_agents.lia_entertainer import suggest_entertainer_action
+
+        phase = str(life_ctx.get("phase") or "learning")
+        try:
+            mastery = float(life_ctx.get("primary_mastery_pct") or 0)
+        except (TypeError, ValueError):
+            mastery = 0.0
+        try:
+            current_tier = int(snap.get("entertainer_tier") or 0)
+        except (TypeError, ValueError):
+            current_tier = 0
+        act = suggest_entertainer_action(
+            lifecycle_phase=phase,
+            mastery_pct=mastery,
+            in_cantina=in_cantina,
+            in_training=in_training,
+            current_tier=current_tier,
+        )
+        if act:
+            out = _post_sidecar_enqueue(
+                action=str(act["action"]),
+                message=str(act.get("message") or ""),
+                snapshot=snap,
+            )
+            out["reason"] = "proactive_entertainer_progress"
+            out["incarnation"] = True
+            return out
 
     if sid == "artisan_secondary":
         if in_training:

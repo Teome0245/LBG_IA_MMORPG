@@ -1,0 +1,198 @@
+{
+  "schema_version": 1,
+  "description": "Hub artisan LBG — distributeur Mod+ (outils, stations, survey, bazaar)",
+  "min_admin_level": 2,
+  "hub": {
+    "zone": "tatooine",
+    "cell": 1189639,
+    "entry": { "x": -12.5, "y": -6.2, "z": 1.13 },
+    "terminal": {
+      "template": "object/tangible/terminal/terminal_bank.iff",
+      "x": -10.8,
+      "y": -5.0,
+      "z": 1.13,
+      "heading": 90
+    },
+    "bazaar_terminal": {
+      "template": "object/tangible/terminal/terminal_bazaar.iff",
+      "x": -12.2,
+      "y": -3.5,
+      "z": 1.13,
+      "heading": 180
+    },
+    "stations": [
+      {
+        "template": "object/tangible/crafting/station/weapon_station.iff",
+        "x": -8.5,
+        "y": -7.5,
+        "z": 1.13,
+        "heading": 0
+      },
+      {
+        "template": "object/tangible/crafting/station/structure_station.iff",
+        "x": -8.5,
+        "y": -4.0,
+        "z": 1.13,
+        "heading": 180
+      },
+      {
+        "template": "object/tangible/crafting/station/clothing_station.iff",
+        "x": -6.0,
+        "y": -5.8,
+        "z": 1.13,
+        "heading": 270
+      },
+      {
+        "template": "object/tangible/crafting/station/food_station.iff",
+        "x": -6.0,
+        "y": -3.2,
+        "z": 1.13,
+        "heading": 270
+      }
+    ]
+  },
+  "categories": [
+    {
+      "id": "crafting_tools",
+      "label": "Outils de craft",
+      "items": [
+        {
+          "id": "clothing_tool",
+          "label": "Outil vetements / armures",
+          "template": "object/tangible/crafting/station/clothing_tool.iff",
+          "qty": 1
+        },
+        {
+          "id": "food_tool",
+          "label": "Outil nourriture / chimie",
+          "template": "object/tangible/crafting/station/food_tool.iff",
+          "qty": 1
+        },
+        {
+          "id": "generic_tool",
+          "label": "Outil generique",
+          "template": "object/tangible/crafting/station/generic_tool.iff",
+          "qty": 1
+        },
+        {
+          "id": "structure_tool",
+          "label": "Outil structures / meubles",
+          "template": "object/tangible/crafting/station/structure_tool.iff",
+          "qty": 1
+        },
+        {
+          "id": "weapon_tool",
+          "label": "Outil armes / droides",
+          "template": "object/tangible/crafting/station/weapon_tool.iff",
+          "qty": 1
+        },
+        {
+          "id": "space_tool",
+          "label": "Outil vaisseaux",
+          "template": "object/tangible/crafting/station/space_tool.iff",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "id": "survey_tools",
+      "label": "Outils de prospection",
+      "items": [
+        {
+          "id": "survey_gas",
+          "label": "Prospection gaz",
+          "template": "object/tangible/survey_tool/survey_tool_gas.iff",
+          "qty": 1
+        },
+        {
+          "id": "survey_chemical",
+          "label": "Prospection chimique",
+          "template": "object/tangible/survey_tool/survey_tool_liquid.iff",
+          "qty": 1
+        },
+        {
+          "id": "survey_flora",
+          "label": "Prospection flore",
+          "template": "object/tangible/survey_tool/survey_tool_lumber.iff",
+          "qty": 1
+        },
+        {
+          "id": "survey_mineral",
+          "label": "Prospection minerai",
+          "template": "object/tangible/survey_tool/survey_tool_mineral.iff",
+          "qty": 1
+        },
+        {
+          "id": "survey_moisture",
+          "label": "Prospection humidite",
+          "template": "object/tangible/survey_tool/survey_tool_moisture.iff",
+          "qty": 1
+        },
+        {
+          "id": "survey_solar",
+          "label": "Prospection solaire",
+          "template": "object/tangible/survey_tool/survey_tool_solar.iff",
+          "qty": 1
+        },
+        {
+          "id": "survey_wind",
+          "label": "Prospection vent",
+          "template": "object/tangible/survey_tool/survey_tool_wind.iff",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "id": "portable_stations",
+      "label": "Stations portables",
+      "items": [
+        {
+          "id": "station_clothing",
+          "label": "Station vetements",
+          "template": "object/tangible/crafting/station/clothing_station.iff",
+          "qty": 1
+        },
+        {
+          "id": "station_food",
+          "label": "Station nourriture",
+          "template": "object/tangible/crafting/station/food_station.iff",
+          "qty": 1
+        },
+        {
+          "id": "station_structure",
+          "label": "Station structures",
+          "template": "object/tangible/crafting/station/structure_station.iff",
+          "qty": 1
+        },
+        {
+          "id": "station_weapon",
+          "label": "Station armes",
+          "template": "object/tangible/crafting/station/weapon_station.iff",
+          "qty": 1
+        },
+        {
+          "id": "station_space",
+          "label": "Station vaisseaux",
+          "template": "object/tangible/crafting/station/space_station.iff",
+          "qty": 1
+        }
+      ]
+    }
+  ],
+  "kits": [
+    {
+      "id": "workshop_starter",
+      "label": "Kit atelier complet (outils + prospection)",
+      "item_ids": [
+        "crafting_tools.clothing_tool",
+        "crafting_tools.food_tool",
+        "crafting_tools.generic_tool",
+        "crafting_tools.structure_tool",
+        "crafting_tools.weapon_tool",
+        "survey_tools.survey_mineral",
+        "survey_tools.survey_chemical",
+        "survey_tools.survey_flora"
+      ]
+    }
+  ]
+}

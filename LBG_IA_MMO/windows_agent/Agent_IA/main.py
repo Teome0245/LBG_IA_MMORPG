@@ -14,8 +14,9 @@ import uuid
 import urllib.request
 import urllib.error
 from urllib.parse import urlencode, urlparse, quote_plus
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from fastapi import FastAPI, HTTPException
 
 import executor
@@ -24,6 +25,16 @@ from models import ActionRequest, InstallRequest
 from pydantic import BaseModel, Field
 
 from mail_imap_preview import run_mail_imap_preview
+
+_LOCAL_TZ = ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))
+
+
+def _local_now_iso() -> str:
+    return datetime.now(_LOCAL_TZ).isoformat(timespec="seconds")
+
+
+def _local_now_compact() -> str:
+    return datetime.now(_LOCAL_TZ).strftime("%Y%m%dT%H%M%S")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("Agent_IA")
@@ -320,7 +331,7 @@ def _path_is_allowed(path_str: str) -> bool:
 
 def _audit_write(line: dict) -> None:
     line = dict(line)
-    line["ts"] = datetime.now(timezone.utc).isoformat()
+    line["ts"] = _local_now_iso()
     raw = json.dumps(line, ensure_ascii=False)
     if _truthy(_get_desktop_cfg("LBG_DESKTOP_AUDIT_STDOUT") or "1"):
         print(raw)
@@ -672,7 +683,7 @@ def _handle_computer_use_action(
             sdir = _screenshot_dir()
             sdir.mkdir(parents=True, exist_ok=True)
             ext = "png" if mime == "image/png" else "jpg"
-            fn = f"shot_{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}_{uuid.uuid4().hex[:8]}.{ext}"
+            fn = f"shot_{_local_now_compact()}_{uuid.uuid4().hex[:8]}.{ext}"
             p = (sdir / fn)
             p.write_bytes(data)
             out["path"] = str(p)

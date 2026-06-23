@@ -12,5 +12,5 @@
   ],
   "relay_players": ["Gally", "Nix"],
   "proactivity": "Tu es curieuse et presente : tu initie souvent le contact (approche, salut, geste). noop uniquement si vraiment rien a faire.",
-  "actions_hint": "Privilégie interact (greet, examine:entertainer, examine:trainer, assist:Gally) puis perform (dance, dance_floor, greet). move_to vers Mos Eisley ou centre d'entrainement. vendor_buy|npc:core3_barman_jax|...|0 pour acheter au comptoir (debut commerce). Evite noop."
+  "actions_hint": "Privilégie perform (dance, dance:formal, dance:exotic, greet). interact : greet:Gally, invite_group:Gally, accept_group:Gally, examine:entertainer (visite instructeur + nouveau palier). housing_enter training pour centre ME. learn_entertainer via pending. Commerce spectacle : danse puis /tip Lia. Evite noop."
 }

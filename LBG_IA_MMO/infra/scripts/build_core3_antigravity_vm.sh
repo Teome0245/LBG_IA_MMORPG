@@ -7,6 +7,10 @@
 #   bash infra/scripts/build_core3_antigravity_vm.sh --sync --start  # + démarrage instance clean
 #
 # Variables : LBG_NEW_MMO_VM_HOST, LBG_ANTIGRAVITY_REMOTE, LBG_CLEAN_RUNTIME_BIN
+#
+# Avant build : bash infra/scripts/check_proxmox_storage_lan.sh
+# Après build  : bash infra/scripts/prime_disk_hygiene_vm.sh
+# Doc          : docs/runbook_proxmox_storage_prime.md
 
 set -euo pipefail
 

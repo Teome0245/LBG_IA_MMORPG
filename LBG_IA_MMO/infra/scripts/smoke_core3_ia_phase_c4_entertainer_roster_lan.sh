@@ -27,9 +27,9 @@ pl=json.load(urllib.request.urlopen(\"http://127.0.0.1:8791/v1/npc-pilots\"))
 ids=[p.get(\"pilot_id\") for p in pl.get(\"pilots\") or []]
 for pid in (\"npc:core3_bige_coto\", \"npc:core3_lyra_velo\"):
     assert pid in ids, ids
-h=int(__import__(\"datetime\").datetime.utcnow().strftime(\"%H\"))
+h=int(__import__(\"datetime\").datetime.now(__import__(\"zoneinfo\").ZoneInfo(\"Europe/Paris\")).strftime(\"%H\"))
 on=[p for p in pl[\"pilots\"] if p.get(\"online\")]
-print(\"OK pilots=5 utc_hour=\", h, \"online=\", [(p[\"pilot_id\"], p.get(\"online\")) for p in on if p[\"pilot_id\"].startswith(\"npc:core3_\")])
+print(\"OK pilots=5 local_hour=\", h, \"online=\", [(p[\"pilot_id\"], p.get(\"online\")) for p in on if p[\"pilot_id\"].startswith(\"npc:core3_\")])
 "'
 
 echo "=== Smoke C.4 OK ==="

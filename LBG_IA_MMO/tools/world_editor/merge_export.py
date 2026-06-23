@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 
 def load_session(path: Path) -> dict:
@@ -221,7 +223,7 @@ def main() -> int:
         "zone_id": "tatooine",
         "display_zone": "Scrapaltai",
         "hub_location_id": "loc:lost_heaven_hub",
-        "exported_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "exported_at": datetime.now(ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))).isoformat(timespec="seconds"),
         "exported_by": sess.get("actor") or "agent",
         "pois": pois_export,
         "npc_slots": npc_export,

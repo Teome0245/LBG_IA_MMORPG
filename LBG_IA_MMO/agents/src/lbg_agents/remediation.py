@@ -142,6 +142,31 @@ def run_remediation(
                 "remediation_hints": plan.get("hints") or [],
                 "meta": {"read_only": True, "source": "infra_memory"},
             }
+        if action.get("source") == "storage" or action.get("step") == "plan_storage":
+            from lbg_agents.infra_storage_remediation import (
+                build_storage_remediation_plan,
+                format_storage_plan_reply,
+            )
+            from lbg_agents.proxmox_storage_probe import run_proxmox_storage_probe
+
+            prior = context.get("_storage_probe") if isinstance(context.get("_storage_probe"), dict) else None
+            if prior is None:
+                probe = run_proxmox_storage_probe(actor_id=actor_id, text=text)
+                prior = probe.get("storage") if isinstance(probe.get("storage"), dict) else {}
+            plan = build_storage_remediation_plan(storage_payload=prior)
+            return {
+                "agent": "remediation",
+                "handler": "devops",
+                "actor_id": actor_id,
+                "request_text": text,
+                "remediation_action": action,
+                "storage_probe": prior,
+                "result": plan,
+                "ok": True,
+                "reply": format_storage_plan_reply(plan),
+                "remediation_hints": plan.get("hints") or [],
+                "meta": {"read_only": True, "source": "proxmox_storage"},
+            }
         sc_ctx = {**context, "devops_action": {"kind": "selfcheck"}}
         sc_ctx.setdefault("devops_dry_run", context.get("devops_dry_run", True))
         sc = run_devops_action(actor_id=actor_id, text=text, action={"kind": "selfcheck"}, context=sc_ctx)

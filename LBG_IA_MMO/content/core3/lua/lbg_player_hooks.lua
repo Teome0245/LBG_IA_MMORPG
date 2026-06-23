@@ -10,6 +10,11 @@ function PlayerTriggers:playerLoggedIn(pPlayer)
 			LbgWorldEditorScreenPlay:onPlayerLoggedIn(pPlayer)
 		end)
 	end
+	if (LbgArtisanHubScreenPlay ~= nil and LbgArtisanHubScreenPlay.onPlayerLoggedIn ~= nil) then
+		pcall(function()
+			LbgArtisanHubScreenPlay:onPlayerLoggedIn(pPlayer)
+		end)
+	end
 	if (IaBridgeScreenPlay ~= nil and IaBridgeScreenPlay.onPlayerLoggedIn ~= nil) then
 		pcall(function()
 			IaBridgeScreenPlay:onPlayerLoggedIn(pPlayer)

@@ -10,7 +10,7 @@ local IA_BRIDGE_INV_SOFT_MAX = 50
 local IA_BRIDGE_INV_HARD_MAX = 58
 local IA_BRIDGE_FORAGE_KEEP_EACH = 2
 -- Relais chat (joueurs en ligne, pas d'exception perso hardcodee)
-local IA_BRIDGE_CHAT_RELAY = { }
+local IA_BRIDGE_CHAT_RELAY = { "Gally", "Teome" }
 local IA_BRIDGE_CHAT_RANGE_M = 64
 local IA_BRIDGE_APPROACH_RANGE_M = 12
 -- Mouvement joueurs IA : teleport | walk (serveur) | client (core3client DataTransform).
@@ -31,10 +31,11 @@ local IA_BRIDGE_CANTINA_BAR_Z = -0.89
 -- Derriere le bar profond (2.8) : conversation bloquee par le comptoir ; ~1.15 = colles au bord client
 local IA_BRIDGE_CANTINA_BAR_Y = 1.15
 local IA_BRIDGE_CANTINA_BAR_HEADING = 30.2
--- Lia = joueur (pas PNJ comptoir) : cote client du comptoir, face au barman (y=1.15 cote serveur)
+-- Lia = joueuse (cote client) : danse / jeu face au comptoir, pas derriere Jax (y > ~0.45)
+local IA_BRIDGE_CANTINA_CLIENT_Y_MAX = 0.45
 local IA_BRIDGE_CANTINA_LIA_GUEST_X = 7.26
-local IA_BRIDGE_CANTINA_LIA_GUEST_Y = -0.22
-local IA_BRIDGE_CANTINA_LIA_GUEST_Z = 1.02
+local IA_BRIDGE_CANTINA_LIA_GUEST_Y = -0.35
+local IA_BRIDGE_CANTINA_LIA_GUEST_Z = IA_BRIDGE_CANTINA_BAR_Z
 local IA_BRIDGE_CANTINA_LIA_GUEST_HEADING = 210.0
 -- Lost Heaven / Scrapaltai (ADR 0009) — ancre confirmée IG 2026-06-01 (Teome /way 4809 -802)
 -- Option A (2026-06-28) : redirect login ME → LH **désactivé** jusqu'au hub terrain déployé (lbg_lost_heaven_screenplay).
@@ -60,6 +61,13 @@ local IA_BRIDGE_DANCE_ROTATION = {
 	"popular", "popular2", "rhythmic", "exotic", "exotic2",
 }
 local IA_BRIDGE_DANCE_COMPACT = { "basic", "basic2", "formal", "formal2", "lyrical", "lyrical2" }
+-- Paliers cumulatifs (aligne lia_entertainer_playbook.json skill_tiers.dances_unlocked)
+local IA_BRIDGE_DANCE_BY_TIER = {
+	[0] = { "basic", "basic2" },
+	[1] = { "formal", "formal2" },
+	[2] = { "lyrical", "lyrical2", "popular", "popular2" },
+	[3] = { "exotic", "exotic2", "rhythmic", "theatrical" },
+}
 local IA_BRIDGE_DANCE_FLOURISH_INTERVAL_MS = 3200
 local IA_BRIDGE_DANCE_FLOURISH_MAX_ROUNDS = 12
 -- Incrémenter pour forcer re-application mesh + scale sur PNJ déjà spawnés (sans rebuild).
@@ -108,7 +116,7 @@ local IA_BRIDGE_TICK_COUNT = 0
 
 -- JSON minimal (pas de dépendance dkjson/cjson dans Core3 Lua).
 -- Supporte: object/array/string/number/true/false/null.
-local function ia_json_decode(str)
+function ia_json_decode(str)
 	if (str == nil) then
 		return nil, "nil input"
 	end
@@ -3510,9 +3518,13 @@ function IaBridgeScreenPlay:publishAiPlayerSnapshots()
 				self:pruneAiPlayerInventory(pPlayer, { notify = false })
 				invCount, invNear, invFull = self:inventorySnapshotFields(pPlayer)
 			end
+			local entertainerTier = 0
+			if (self:isAiBridgePlayer(pPlayer)) then
+				entertainerTier = self:getEntertainerSkillTier(pPlayer)
+			end
 			n = n + 1
 			chunks[n] = string.format(
-				'"%s":{"online":true,"player":"%s","firstname":"%s","surname":"%s","zone":"%s","x":%.2f,"y":%.2f,"z":%.2f,"parent_id":%d,"in_interior":%s,"hp":%d,"action":%d,"mind":%d,"inventory_count":%d,"inventory_near_full":%s,"inventory_full":%s,"ts":%d}',
+				'"%s":{"online":true,"player":"%s","firstname":"%s","surname":"%s","zone":"%s","x":%.2f,"y":%.2f,"z":%.2f,"parent_id":%d,"in_interior":%s,"hp":%d,"action":%d,"mind":%d,"inventory_count":%d,"inventory_near_full":%s,"inventory_full":%s,"entertainer_tier":%d,"ts":%d}',
 				self:jsonEscape(name),
 				self:jsonEscape(firstname),
 				self:jsonEscape(firstname),
@@ -3529,6 +3541,7 @@ function IaBridgeScreenPlay:publishAiPlayerSnapshots()
 				invCount,
 				invNear and "true" or "false",
 				invFull and "true" or "false",
+				entertainerTier,
 				ts
 			)
 		else
@@ -3969,24 +3982,63 @@ function IaBridgeScreenPlay:liaBehindCantinaBar(pLia)
 		return false
 	end
 	-- Cote serveur / derriere le comptoir (barman y ~ 1.15, staff y ~ 2.8)
-	return scene:getPositionY() > 0.75
+	return scene:getPositionY() > IA_BRIDGE_CANTINA_CLIENT_Y_MAX
 end
 
-function IaBridgeScreenPlay:teleportLiaToCantinaGuestPost(pLia)
+function IaBridgeScreenPlay:liaOnCantinaClientSide(pLia)
+	if (pLia == nil) then
+		return false
+	end
+	if (self:sceneParentId(pLia) ~= IA_BRIDGE_CANTINA_CELL) then
+		return false
+	end
+	local scene = SceneObject(pLia)
+	if (scene == nil) then
+		return false
+	end
+	return scene:getPositionY() <= IA_BRIDGE_CANTINA_CLIENT_Y_MAX
+end
+
+function IaBridgeScreenPlay:clampLiaCantinaClientY(y)
+	y = tonumber(y) or 0
+	if (y > IA_BRIDGE_CANTINA_CLIENT_Y_MAX) then
+		return IA_BRIDGE_CANTINA_LIA_GUEST_Y
+	end
+	return y
+end
+
+-- Poste danse cote client : pres du relay (Gally/Teome) s'il est en salle, sinon ancre guest.
+function IaBridgeScreenPlay:placeLiaInCantinaClientSide(pLia, pRelay)
 	if (pLia == nil) then
 		return
 	end
+	local x = IA_BRIDGE_CANTINA_LIA_GUEST_X
+	local z = IA_BRIDGE_CANTINA_LIA_GUEST_Z
+	local y = IA_BRIDGE_CANTINA_LIA_GUEST_Y
+	if (pRelay ~= nil and self:sceneParentId(pRelay) == IA_BRIDGE_CANTINA_CELL) then
+		local rs = SceneObject(pRelay)
+		if (rs ~= nil) then
+			local ry = rs:getPositionY()
+			if (ry <= IA_BRIDGE_CANTINA_CLIENT_Y_MAX) then
+				x = rs:getPositionX() + 1.6
+				y = ry
+				z = rs:getPositionZ()
+				if (x > 9.5) then
+					x = rs:getPositionX() - 1.6
+				end
+			end
+		end
+	end
 	pcall(function()
-		CreatureObject(pLia):teleport(
-			IA_BRIDGE_CANTINA_LIA_GUEST_X,
-			IA_BRIDGE_CANTINA_LIA_GUEST_Z,
-			IA_BRIDGE_CANTINA_LIA_GUEST_Y,
-			IA_BRIDGE_CANTINA_CELL
-		)
+		CreatureObject(pLia):teleport(x, z, y, IA_BRIDGE_CANTINA_CELL)
 	end)
 	pcall(function()
 		CreatureObject(pLia):setDirection(IA_BRIDGE_CANTINA_LIA_GUEST_HEADING)
 	end)
+end
+
+function IaBridgeScreenPlay:teleportLiaToCantinaGuestPost(pLia)
+	self:placeLiaInCantinaClientSide(pLia, nil)
 end
 
 function IaBridgeScreenPlay:handleHousingEnter(pPlayer, payload)
@@ -4000,6 +4052,26 @@ function IaBridgeScreenPlay:handleHousingEnter(pPlayer, payload)
 		x = -14.276340484619
 		z = 1.133056640625
 		y = -8.6046371459961
+	elseif (payload == "artisan_hub" or payload == "artisan_dispenser" or payload == "dispenser") then
+		cell = IA_BRIDGE_TRAINING_CELL
+		x = -12.5
+		z = 1.13
+		y = -6.2
+		if (LbgArtisanHubScreenPlay ~= nil and LbgArtisanHubScreenPlay.hubCell ~= nil) then
+			cell = LbgArtisanHubScreenPlay:hubCell()
+			local ent = nil
+			pcall(function()
+				local doc = LbgArtisanHubScreenPlay:loadCatalog()
+				if (doc.hub ~= nil and doc.hub.entry ~= nil) then
+					ent = doc.hub.entry
+				end
+			end)
+			if (ent ~= nil) then
+				x = ent.x
+				z = ent.z
+				y = ent.y
+			end
+		end
 	elseif (payload == "cantina" or payload == nil or payload == "") then
 		cell, x, z, y = self:resolveCantinaEnterCoords(pPlayer)
 	else
@@ -4007,15 +4079,24 @@ function IaBridgeScreenPlay:handleHousingEnter(pPlayer, payload)
 	end
 	CreatureObject(pPlayer):teleport(x, z, y, cell)
 	if (self:eventActorName(pPlayer) == IA_BRIDGE_BOT and cell == IA_BRIDGE_CANTINA_CELL) then
-		pcall(function()
-			CreatureObject(pPlayer):setDirection(IA_BRIDGE_CANTINA_LIA_GUEST_HEADING)
-		end)
+		local pRelay = nil
+		for i = 1, #IA_BRIDGE_CHAT_RELAY do
+			pRelay = getPlayerByName(IA_BRIDGE_CHAT_RELAY[i])
+			if (pRelay ~= nil and self:sceneParentId(pRelay) == IA_BRIDGE_CANTINA_CELL) then
+				break
+			end
+			pRelay = nil
+		end
+		self:placeLiaInCantinaClientSide(pPlayer, pRelay)
 	end
 	local name = self:eventActorName(pPlayer)
 	local tag = payload or "cantina_test"
 	if (payload == "training" or payload == "trainer" or payload == "artisan") then
 		setQuestStatus("ia_bridge:housing:" .. name, "training_center")
 		CreatureObject(pPlayer):sendSystemMessage("[Housing] Entree centre entrainement Mos Eisley.")
+	elseif (payload == "artisan_hub" or payload == "artisan_dispenser" or payload == "dispenser") then
+		setQuestStatus("ia_bridge:housing:" .. name, "artisan_hub")
+		CreatureObject(pPlayer):sendSystemMessage("[Housing] Hub artisan — distributeur Mod+ (lbg_artisan help).")
 	else
 		setQuestStatus("ia_bridge:housing:" .. name, "cantina_test")
 		CreatureObject(pPlayer):sendSystemMessage("[Housing] Entree lot test (cantina Mos Eisley).")
@@ -4341,6 +4422,13 @@ function IaBridgeScreenPlay:approachPlayer(pPlayer, targetFirstname, withinM)
 	end
 	local sx, sy = scene:getPositionX(), scene:getPositionY()
 	local tx, ty = ts:getPositionX(), ts:getPositionY()
+	if (self:eventActorName(pPlayer) == IA_BRIDGE_BOT and myCell == IA_BRIDGE_CANTINA_CELL) then
+		ty = self:clampLiaCantinaClientY(ty)
+		if (self:liaBehindCantinaBar(pPlayer)) then
+			self:placeLiaInCantinaClientSide(pPlayer, pTarget)
+			return true
+		end
+	end
 	local dist = self:dist2d(sx, sy, tx, ty)
 	withinM = withinM or IA_BRIDGE_APPROACH_RANGE_M
 	if (dist <= withinM) then
@@ -4350,6 +4438,9 @@ function IaBridgeScreenPlay:approachPlayer(pPlayer, targetFirstname, withinM)
 	local step = dist - withinM
 	local nx = sx + (tx - sx) * (step / dist)
 	local ny = sy + (ty - sy) * (step / dist)
+	if (self:eventActorName(pPlayer) == IA_BRIDGE_BOT and myCell == IA_BRIDGE_CANTINA_CELL) then
+		ny = self:clampLiaCantinaClientY(ny)
+	end
 	if (self:isAiBridgePlayer(pPlayer) and self:getMovementMode() == "client") then
 		self:queueClientMove(pPlayer, nx, ny, scene:getPositionZ(), 2)
 		printf(
@@ -4490,6 +4581,7 @@ function IaBridgeScreenPlay:onDanceStarted(pPlayer, danceName)
 	if (CreatureObject(pPlayer):isDancing()) then
 		self:scheduleDanceFlourishes(pPlayer, 0)
 		self:notifyRelayLiaVisible(pPlayer)
+		createEvent(12000, "IaBridgeScreenPlay", "entertainerAudienceEvent", pPlayer, "")
 	end
 end
 
@@ -4569,16 +4661,51 @@ function IaBridgeScreenPlay:canStartDance(pPlayer, danceName)
 	if (pPlayer == nil or danceName == nil or danceName == "") then
 		return false
 	end
+	local tier = self:getEntertainerSkillTier(pPlayer)
+	local unlocked = self:dancesUnlockedForTier(tier)
+	for i = 1, #unlocked do
+		if (unlocked[i] == danceName) then
+			return true
+		end
+	end
 	local pGhost = CreatureObject(pPlayer):getPlayerObject()
 	if (pGhost == nil) then
-		-- Bots headless: parfois pas de ghost exploitable, on tente quand même.
-		return true
+		return tier >= 0
 	end
 	local ok = false
 	pcall(function()
 		ok = PlayerObject(pGhost):hasAbility("startDance+" .. tostring(danceName))
 	end)
 	return ok
+end
+
+function IaBridgeScreenPlay:danceRotationKey(pPlayer)
+	return "ia_bridge_dance_idx:" .. tostring(self:eventActorName(pPlayer))
+end
+
+function IaBridgeScreenPlay:dancesUnlockedForTier(tier)
+	local out = {}
+	local seen = {}
+	tier = tonumber(tier) or 0
+	if (tier > 3) then
+		tier = 3
+	end
+	for t = 0, tier do
+		local row = IA_BRIDGE_DANCE_BY_TIER[t]
+		if (row ~= nil) then
+			for i = 1, #row do
+				local name = row[i]
+				if (not seen[name]) then
+					seen[name] = true
+					table.insert(out, name)
+				end
+			end
+		end
+	end
+	if (#out == 0) then
+		return { "basic" }
+	end
+	return out
 end
 
 function IaBridgeScreenPlay:parseDanceStyleHint(text)
@@ -4609,13 +4736,443 @@ function IaBridgeScreenPlay:awardEntertainerDanceSkills(pPlayer)
 	if (awardSkill == nil or pPlayer == nil) then
 		return
 	end
+	local tier = self:getEntertainerSkillTier(pPlayer)
+	if (tier <= 0) then
+		self:awardEntertainerTierSkills(pPlayer, 0)
+		return
+	end
+	for t = 0, tier do
+		self:awardEntertainerTierSkills(pPlayer, t)
+	end
+end
+
+-- Tiers alignes sur content/core3/lia_entertainer_playbook.json
+local IA_BRIDGE_ENTERTAINER_SKILL_TIERS = {
+	{ "social_entertainer_novice", "social_entertainer_dance_01" },
+	{ "social_entertainer_dance_02" },
+	{ "social_entertainer_dance_03" },
+	{ "social_entertainer_dance_04" },
+	{ "social_entertainer_healing_01" },
+	{ "social_entertainer_healing_02" },
+}
+
+function IaBridgeScreenPlay:entertainerTierKey(pPlayer)
+	return "ia_bridge_entertainer_tier:" .. tostring(self:eventActorName(pPlayer))
+end
+
+function IaBridgeScreenPlay:getEntertainerSkillTier(pPlayer)
+	local t = readData(self:entertainerTierKey(pPlayer))
+	return tonumber(t) or 0
+end
+
+function IaBridgeScreenPlay:setEntertainerSkillTier(pPlayer, tier)
+	writeData(self:entertainerTierKey(pPlayer), tonumber(tier) or 0)
+end
+
+function IaBridgeScreenPlay:awardEntertainerTierSkills(pPlayer, tier)
+	if (awardSkill == nil or pPlayer == nil or tier == nil) then
+		return false
+	end
+	local idx = (tonumber(tier) or 0) + 1
+	local row = IA_BRIDGE_ENTERTAINER_SKILL_TIERS[idx]
+	if (row == nil) then
+		return false
+	end
+	local ok = false
+	for i = 1, #row do
+		pcall(function()
+			awardSkill(pPlayer, row[i])
+			ok = true
+		end)
+	end
+	return ok
+end
+
+function IaBridgeScreenPlay:learnNextEntertainerTier(pPlayer)
+	if (pPlayer == nil) then
+		return false
+	end
+	local cur = self:getEntertainerSkillTier(pPlayer)
+	if (cur >= #IA_BRIDGE_ENTERTAINER_SKILL_TIERS) then
+		pcall(function()
+			CreatureObject(pPlayer):sendSystemMessage("[Lia] Entertainer — palier max atteint pour l'instant.")
+		end)
+		return false
+	end
+	if (not self:awardEntertainerTierSkills(pPlayer, cur)) then
+		return false
+	end
+	self:setEntertainerSkillTier(pPlayer, cur + 1)
+	local unlocked = self:dancesUnlockedForTier(cur + 1)
+	local danceHint = ""
+	if (#unlocked > 0) then
+		danceHint = " Danses : " .. table.concat(unlocked, ", ") .. "."
+	end
 	pcall(function()
-		awardSkill(pPlayer, "social_entertainer_novice")
-		awardSkill(pPlayer, "social_entertainer_dance_01")
-		awardSkill(pPlayer, "social_entertainer_dance_02")
-		awardSkill(pPlayer, "social_entertainer_dance_03")
-		awardSkill(pPlayer, "social_entertainer_dance_04")
+		CreatureObject(pPlayer):sendSystemMessage(
+			"[Lia] Nouveau palier entertainer (" .. tostring(cur + 1) .. "/" .. tostring(#IA_BRIDGE_ENTERTAINER_SKILL_TIERS) .. ")." .. danceHint
+		)
 	end)
+	ia_catalog_boot_log("entertainer tier " .. self:eventActorName(pPlayer) .. " -> " .. tostring(cur + 1))
+	return true
+end
+
+function IaBridgeScreenPlay:visitEntertainerTrainer(pPlayer)
+	if (pPlayer == nil) then
+		return
+	end
+	self:handleHousingEnter(pPlayer, "training")
+	local trainerId = "npc:core3_bige_coto"
+	local pMob = self:resolvePilotMob(trainerId)
+	if (pMob ~= nil) then
+		local oid = SceneObject(pMob):getObjectID()
+		pcall(function()
+			CreatureObject(pPlayer):enqueueCommand(getHashCode("converse"), oid, 0, "")
+		end)
+	end
+	self:learnNextEntertainerTier(pPlayer)
+end
+
+function IaBridgeScreenPlay:playersWatchingEntertainer(pEntertainer, radiusM)
+	local out = {}
+	if (pEntertainer == nil) then
+		return out
+	end
+	radiusM = tonumber(radiusM) or 14
+	local es = SceneObject(pEntertainer)
+	local ex, ey = es:getPositionX(), es:getPositionY()
+	local eCell = self:sceneParentId(pEntertainer)
+	for i = 1, #IA_BRIDGE_CHAT_RELAY do
+		local name = IA_BRIDGE_CHAT_RELAY[i]
+		local pOther = getPlayerByName(name)
+		if (pOther ~= nil and pOther ~= pEntertainer) then
+			if (self:sceneParentId(pOther) == eCell) then
+				local os = SceneObject(pOther)
+				if (self:dist2d(ex, ey, os:getPositionX(), os:getPositionY()) <= radiusM) then
+					table.insert(out, { name = name, mob = pOther })
+				end
+			end
+		end
+	end
+	return out
+end
+
+function IaBridgeScreenPlay:tickEntertainerAudience(pEntertainer)
+	if (pEntertainer == nil) then
+		return
+	end
+	if (not CreatureObject(pEntertainer):isDancing()) then
+		return
+	end
+	local watchers = self:playersWatchingEntertainer(pEntertainer, 14)
+	if (#watchers == 0) then
+		return
+	end
+	pcall(function()
+		spatialChat(pEntertainer, "Si le spectacle vous plait, /tip Lia 25 — merci !")
+	end)
+	for i = 1, #watchers do
+		local w = watchers[i]
+		pcall(function()
+			CreatureObject(w.mob):sendSystemMessage(
+				"[Lia] Merci de regarder ! /tip Lia <montant> ou /watch pour le spectacle."
+			)
+		end)
+		if (self:getEntertainerSkillTier(pEntertainer) >= 5) then
+			pcall(function()
+				self:tryEnqueueCommand(pEntertainer, "healdamage", "")
+			end)
+		elseif (self:getEntertainerSkillTier(pEntertainer) >= 4) then
+			pcall(function()
+				self:tryEnqueueCommand(pEntertainer, "healmind", "")
+			end)
+		end
+	end
+	createEvent(18000, "IaBridgeScreenPlay", "entertainerAudienceEvent", pEntertainer, "")
+end
+
+function IaBridgeScreenPlay:entertainerAudienceEvent(pEntertainer)
+	self:tickEntertainerAudience(pEntertainer)
+end
+
+function IaBridgeScreenPlay:tryInviteToGroup(pPlayer, targetName)
+	if (pPlayer == nil or targetName == nil or targetName == "") then
+		return false
+	end
+	local pTarget = getPlayerByName(targetName)
+	if (pTarget == nil) then
+		return false
+	end
+	if (type(iaInviteToGroup) == "function") then
+		local ok = false
+		pcall(function()
+			ok = iaInviteToGroup(pPlayer, pTarget)
+		end)
+		if (ok) then
+			return true
+		end
+	end
+	local ok = false
+	pcall(function()
+		local oid = SceneObject(pTarget):getObjectID()
+		CreatureObject(pPlayer):enqueueCommand(getHashCode("invite"), oid, 0, targetName)
+		ok = true
+	end)
+	if (not ok) then
+		ok = self:tryEnqueueCommand(pPlayer, "invite", targetName)
+	end
+	return ok
+end
+
+function IaBridgeScreenPlay:tryJoinPendingGroup(pPlayer)
+	if (pPlayer == nil) then
+		return false
+	end
+	if (type(iaJoinGroup) == "function") then
+		local ok = false
+		pcall(function()
+			ok = iaJoinGroup(pPlayer)
+		end)
+		if (ok) then
+			return true
+		end
+	end
+	return self:tryEnqueueCommand(pPlayer, "join", "")
+end
+
+function IaBridgeScreenPlay:tryBeginTradeWith(pPlayer, pTarget)
+	if (pPlayer == nil or pTarget == nil) then
+		return false
+	end
+	if (type(iaBeginTrade) == "function") then
+		local ok = false
+		pcall(function()
+			ok = iaBeginTrade(pPlayer, pTarget)
+		end)
+		return ok
+	end
+	return false
+end
+
+function IaBridgeScreenPlay:getTradeTargetOID(pCreature)
+	if (pCreature == nil) then
+		return 0
+	end
+	if (type(iaGetTradeTargetOID) == "function") then
+		local oid = 0
+		pcall(function()
+			oid = tonumber(iaGetTradeTargetOID(pCreature)) or 0
+		end)
+		return oid
+	end
+	return 0
+end
+
+function IaBridgeScreenPlay:hasActiveTradeSession(pCreature)
+	if (pCreature == nil or type(iaHasActiveTrade) ~= "function") then
+		return false
+	end
+	local active = false
+	pcall(function()
+		active = iaHasActiveTrade(pCreature) == true
+	end)
+	return active
+end
+
+function IaBridgeScreenPlay:tradePartnerCredits(pCreature)
+	if (pCreature == nil or type(iaGetTradePartnerMoney) ~= "function") then
+		return 0
+	end
+	local credits = 0
+	pcall(function()
+		credits = tonumber(iaGetTradePartnerMoney(pCreature)) or 0
+	end)
+	return credits
+end
+
+function IaBridgeScreenPlay:tradePartnerItemCount(pCreature)
+	if (pCreature == nil or type(iaGetTradePartnerItemCount) ~= "function") then
+		return 0
+	end
+	local count = 0
+	pcall(function()
+		count = tonumber(iaGetTradePartnerItemCount(pCreature)) or 0
+	end)
+	return count
+end
+
+function IaBridgeScreenPlay:tradePartnerHasVerified(pCreature)
+	if (pCreature == nil or type(iaTradePartnerVerified) ~= "function") then
+		return false
+	end
+	local verified = false
+	pcall(function()
+		verified = iaTradePartnerVerified(pCreature) == true
+	end)
+	return verified
+end
+
+function IaBridgeScreenPlay:tradeSelfHasVerified(pCreature)
+	if (pCreature == nil or type(iaHasVerifiedTrade) ~= "function") then
+		return false
+	end
+	local verified = false
+	pcall(function()
+		verified = iaHasVerifiedTrade(pCreature) == true
+	end)
+	return verified
+end
+
+function IaBridgeScreenPlay:tryVerifyTrade(pCreature)
+	if (pCreature == nil or type(iaVerifyTrade) ~= "function") then
+		return false, false
+	end
+	local ok = false
+	local completed = false
+	pcall(function()
+		local v1, v2 = iaVerifyTrade(pCreature)
+		ok = (v1 == true)
+		completed = (v2 == true)
+	end)
+	return ok, completed
+end
+
+function IaBridgeScreenPlay:findTradePartnerPlayer(pBot)
+	if (pBot == nil) then
+		return nil, nil
+	end
+	local botOid = 0
+	pcall(function()
+		botOid = SceneObject(pBot):getObjectID()
+	end)
+	if (botOid == 0) then
+		return nil, nil
+	end
+	for i = 1, #IA_BRIDGE_CHAT_RELAY do
+		local name = IA_BRIDGE_CHAT_RELAY[i]
+		local pOther = getPlayerByName(name)
+		if (pOther ~= nil and pOther ~= pBot) then
+			if (self:getTradeTargetOID(pOther) == botOid or self:getTradeTargetOID(pBot) == SceneObject(pOther):getObjectID()) then
+				return name, pOther
+			end
+		end
+	end
+	return nil, nil
+end
+
+function IaBridgeScreenPlay:onTradeTipCompleted(pBot, partnerName, pPartner, credits)
+	if (pBot == nil) then
+		return
+	end
+	credits = tonumber(credits) or 0
+	local thanks = "Merci pour le pourboire"
+	if (credits > 0) then
+		thanks = thanks .. " (" .. tostring(credits) .. " cr) !"
+	else
+		thanks = thanks .. " !"
+	end
+	pcall(function()
+		spatialChat(pBot, thanks)
+	end)
+	if (pPartner ~= nil) then
+		self:sendInteractionNotice(pPartner, "[Lia] " .. thanks)
+	end
+	printf("IaBridge: trade tip complete %s <- %s credits=%s\n",
+		self:eventActorName(pBot), tostring(partnerName), tostring(credits))
+	if (pPartner ~= nil and self:getEntertainerSkillTier(pBot) >= 4) then
+		pcall(function()
+			if (self:getEntertainerSkillTier(pBot) >= 5) then
+				self:tryEnqueueCommand(pBot, "healdamage", "")
+			else
+				self:tryEnqueueCommand(pBot, "healmind", "")
+			end
+		end)
+	end
+end
+
+-- Tip via fenetre /trade : verify auto quand le relay met des credits (sans objets).
+function IaBridgeScreenPlay:tryAutoCompleteTradeTip(pBot)
+	if (pBot == nil or not self:hasActiveTradeSession(pBot)) then
+		return false
+	end
+	local partnerName, pPartner = self:findTradePartnerPlayer(pBot)
+	if (pPartner == nil) then
+		return false
+	end
+	local partnerCredits = self:tradePartnerCredits(pBot)
+	local partnerItems = self:tradePartnerItemCount(pBot)
+	if (partnerCredits <= 0 and not self:tradePartnerHasVerified(pBot)) then
+		return false
+	end
+	if (partnerItems > 0) then
+		return false
+	end
+	if (self:tradeSelfHasVerified(pBot)) then
+		return false
+	end
+	local verified, completed = self:tryVerifyTrade(pBot)
+	if (not verified) then
+		return false
+	end
+	if (completed) then
+		self:onTradeTipCompleted(pBot, partnerName, pPartner, partnerCredits)
+	end
+	return true
+end
+
+function IaBridgeScreenPlay:findPlayerRequestingTrade(pBot)
+	if (pBot == nil) then
+		return nil, nil
+	end
+	local botOid = 0
+	pcall(function()
+		botOid = SceneObject(pBot):getObjectID()
+	end)
+	if (botOid == 0) then
+		return nil, nil
+	end
+	for i = 1, #IA_BRIDGE_CHAT_RELAY do
+		local name = IA_BRIDGE_CHAT_RELAY[i]
+		local pOther = getPlayerByName(name)
+		if (pOther ~= nil and pOther ~= pBot) then
+			if (self:getTradeTargetOID(pOther) == botOid) then
+				return name, pOther
+			end
+		end
+	end
+	return nil, nil
+end
+
+function IaBridgeScreenPlay:tickAiPlayersSocialInbox()
+	for i = 1, #IA_BRIDGE_AI_PLAYERS do
+		local pAi = self:resolvePlayer(IA_BRIDGE_AI_PLAYERS[i])
+		if (pAi ~= nil) then
+			self:tickAiPlayerSocialInbox(pAi)
+		end
+	end
+end
+
+function IaBridgeScreenPlay:tickAiPlayerSocialInbox(pPlayer)
+	if (pPlayer == nil or not self:isAiBridgePlayer(pPlayer)) then
+		return
+	end
+	if (not self:tryJoinPendingGroup(pPlayer)) then
+		-- pas d'invite groupe en attente
+	else
+		local actorName = self:eventActorName(pPlayer)
+		pcall(function()
+			spatialChat(pPlayer, "Merci pour l'invitation — j'arrive en groupe.")
+		end)
+		printf("IaBridge: %s a rejoint un groupe\n", actorName)
+	end
+	local reqName, pRequester = self:findPlayerRequestingTrade(pPlayer)
+	if (pRequester ~= nil) then
+		if (self:tryBeginTradeWith(pPlayer, pRequester)) then
+			self:sendInteractionNotice(pRequester, "Lia ouvre la fenetre d'echange.")
+			printf("IaBridge: trade accepte %s <-> %s\n", self:eventActorName(pPlayer), tostring(reqName))
+		end
+	end
+	self:tryAutoCompleteTradeTip(pPlayer)
 end
 
 function IaBridgeScreenPlay:pickDanceName(pPlayer, requestedStyle)
@@ -4625,21 +5182,35 @@ function IaBridgeScreenPlay:pickDanceName(pPlayer, requestedStyle)
 		end
 	end
 	local tight = self:isTightSpace(pPlayer)
-	local pool = IA_BRIDGE_DANCE_ROTATION
+	local tier = self:getEntertainerSkillTier(pPlayer)
+	local pool = self:dancesUnlockedForTier(tier)
 	if (tight) then
-		pool = IA_BRIDGE_DANCE_COMPACT
+		local compact = {}
+		for i = 1, #pool do
+			for j = 1, #IA_BRIDGE_DANCE_COMPACT do
+				if (pool[i] == IA_BRIDGE_DANCE_COMPACT[j]) then
+					table.insert(compact, pool[i])
+				end
+			end
+		end
+		if (#compact > 0) then
+			pool = compact
+		end
 	end
-	IA_BRIDGE_LAST_DANCE_IDX = (IA_BRIDGE_LAST_DANCE_IDX or 0) + 1
-	local start = (IA_BRIDGE_LAST_DANCE_IDX % #pool) + 1
+	local idxKey = self:danceRotationKey(pPlayer)
+	local lastIdx = tonumber(readData(idxKey)) or 0
+	lastIdx = lastIdx + 1
+	writeData(idxKey, lastIdx)
+	local start = ((lastIdx - 1) % #pool) + 1
 	for i = 0, #pool - 1 do
 		local name = pool[((start + i - 1) % #pool) + 1]
 		if (self:canStartDance(pPlayer, name)) then
 			return name
 		end
 	end
-	for j = 1, #IA_BRIDGE_DANCE_COMPACT do
-		if (self:canStartDance(pPlayer, IA_BRIDGE_DANCE_COMPACT[j])) then
-			return IA_BRIDGE_DANCE_COMPACT[j]
+	for j = 1, #pool do
+		if (self:canStartDance(pPlayer, pool[j])) then
+			return pool[j]
 		end
 	end
 	return "basic"
@@ -4918,6 +5489,12 @@ function IaBridgeScreenPlay:handlePlayerPerform(pPlayer, performId)
 		return
 	end
 	local id = string.lower(string.gsub(performId, "^%s*(.-)%s*$", "%1"))
+	if (id == "dance" or id == "dance_floor" or string.find(id, "^dance:", 1) == 1) then
+		local style = self:parseDanceStyleHint(id)
+		self:tryStartDanceSmart(pPlayer, style)
+		printf("IaBridge: perform %s -> %s\n", self:eventActorName(pPlayer), id)
+		return
+	end
 	local cfg = IA_BRIDGE_LIA_PERFORM[id]
 	if (cfg == nil) then
 		self:performPlayAnim(pPlayer, performId)
@@ -4926,10 +5503,7 @@ function IaBridgeScreenPlay:handlePlayerPerform(pPlayer, performId)
 	end
 	-- Feedback visible pour les joueurs proches (les bots headless n'affichent pas toujours les systemMessage).
 	local actorName = self:eventActorName(pPlayer)
-	if (id == "dance" or id == "dance_floor" or string.find(id, "^dance:", 1) == 1) then
-		local style = self:parseDanceStyleHint(id)
-		self:tryStartDanceSmart(pPlayer, style)
-	elseif (id == "forage") then
+	if (id == "forage") then
 		pcall(function()
 			spatialChat(pPlayer, "*fouille*")
 		end)
@@ -5012,20 +5586,51 @@ function IaBridgeScreenPlay:handlePlayerInteract(pPlayer, message)
 		self:sendInteractionNotice(pTarget, "Lia te salue et ouvre le contact.")
 	elseif (kind == "offer_trade" or kind == "trade") then
 		self:handlePlayerPerform(pPlayer, "conduct")
-		self:playerSay(pPlayer, targetName .. ", je peux ouvrir un échange IA quand le module commerce sera branché.")
-		self:sendInteractionNotice(pTarget, "Demande d'échange IA (stub sûr, pas de transfert d'objet).")
+		if (self:tryBeginTradeWith(pPlayer, pTarget)) then
+			self:playerSay(pPlayer, targetName .. ", fenetre d'echange ouverte — merci.")
+			self:sendInteractionNotice(pTarget, "Lia t'a propose un echange (fenetre /trade).")
+		else
+			self:playerSay(pPlayer, targetName .. ", approche-toi puis /trade Lia si besoin.")
+			self:sendInteractionNotice(pTarget, "Lia est disponible pour un echange (approche + /trade).")
+		end
+	elseif (kind == "accept_trade") then
+		if (self:tryBeginTradeWith(pPlayer, pTarget)) then
+			self:playerSay(pPlayer, "Echange accepte — merci " .. targetName .. ".")
+			self:sendInteractionNotice(pTarget, "Lia a accepte l'echange.")
+		else
+			self:playerSay(pPlayer, "J'accepte l'echange — utilise /trade Lia en jeu.")
+			self:sendInteractionNotice(pTarget, "Lia accepte l'echange (relance /trade si besoin).")
+		end
 	elseif (kind == "invite_group" or kind == "group") then
-		self:handlePlayerPerform(pPlayer, "greet")
-		self:playerSay(pPlayer, targetName .. ", veux-tu me grouper pour explorer ensemble ?")
-		self:sendInteractionNotice(pTarget, "Lia souhaite te rejoindre en groupe (stub).")
+		if (self:tryInviteToGroup(pPlayer, targetName)) then
+			self:playerSay(pPlayer, targetName .. ", invitation de groupe envoyee.")
+			self:sendInteractionNotice(pTarget, "Lia t'invite dans son groupe.")
+		else
+			self:handlePlayerPerform(pPlayer, "greet")
+			self:playerSay(pPlayer, targetName .. ", veux-tu me grouper ? (invite manuelle si besoin)")
+			self:sendInteractionNotice(pTarget, "Lia souhaite un groupe — /invite Lia ou accepte son invitation.")
+		end
+	elif (kind == "accept_group") then
+		if (self:tryJoinPendingGroup(pPlayer)) then
+			self:playerSay(pPlayer, "Merci " .. targetName .. " — groupe rejoint.")
+			self:sendInteractionNotice(pTarget, "Lia a rejoint le groupe.")
+		else
+			self:playerSay(pPlayer, "Merci " .. targetName .. " — /invite Lia si besoin.")
+			self:sendInteractionNotice(pTarget, "Lia accepte le groupe (reinvite si besoin).")
+		end
 	elseif (kind == "request_duel" or kind == "duel") then
 		self:handlePlayerPerform(pPlayer, "cheer")
 		self:playerSay(pPlayer, targetName .. ", duel d'entraînement demandé — sans engagement automatique.")
 		self:sendInteractionNotice(pTarget, "Lia propose un duel roleplay (stub, aucun combat lancé).")
 	elseif (kind == "examine" or kind == "inspect") then
-		self:handlePlayerPerform(pPlayer, "think")
-		self:playerSay(pPlayer, "Scan de " .. targetName .. " terminé : présence confirmée près de Lia.")
-		self:sendInteractionNotice(pTarget, "Lia t'examine et synchronise son contexte.")
+		if (targetName == "entertainer" or targetName == "trainer") then
+			self:visitEntertainerTrainer(pPlayer)
+			self:playerSay(pPlayer, "Visite instructeur entertainer — nouveau palier si disponible.")
+		else
+			self:handlePlayerPerform(pPlayer, "think")
+			self:playerSay(pPlayer, "Scan de " .. targetName .. " termine : presence confirmee pres de Lia.")
+			self:sendInteractionNotice(pTarget, "Lia t'examine et synchronise son contexte.")
+		end
 	elseif (kind == "assist" or kind == "help") then
 		self:handlePlayerPerform(pPlayer, "conduct")
 		local suffix = ""
@@ -5653,10 +6258,17 @@ function IaBridgeScreenPlay:relayCantinaArrived(pLia, relayName)
 	if (pLia == nil) then
 		return
 	end
+	local pRelay = nil
+	if (relayName ~= nil and relayName ~= "") then
+		pRelay = getPlayerByName(relayName)
+	end
+	if (self:liaBehindCantinaBar(pLia) or not self:liaOnCantinaClientSide(pLia)) then
+		self:placeLiaInCantinaClientSide(pLia, pRelay)
+	end
 	self:notifyRelayLiaVisible(pLia)
 end
 
--- Ajuste la position de Lia si elle est deja en cantina (pas de repatriement force).
+-- Corrige uniquement si Lia est derriere le comptoir (joueuse libre cote client sinon).
 function IaBridgeScreenPlay:containLiaInCantina()
 	if (self:isLiaManualSession()) then
 		return
@@ -5669,10 +6281,16 @@ function IaBridgeScreenPlay:containLiaInCantina()
 		return
 	end
 	local liaCell = self:sceneParentId(pLia)
-	if (liaCell == IA_BRIDGE_CANTINA_CELL) then
-		if (self:liaBehindCantinaBar(pLia) or not self:liaAtCantinaGuestPost(pLia)) then
-			self:teleportLiaToCantinaGuestPost(pLia)
+	if (liaCell == IA_BRIDGE_CANTINA_CELL and self:liaBehindCantinaBar(pLia)) then
+		local pRelay = nil
+		for i = 1, #IA_BRIDGE_CHAT_RELAY do
+			pRelay = getPlayerByName(IA_BRIDGE_CHAT_RELAY[i])
+			if (pRelay ~= nil and self:sceneParentId(pRelay) == IA_BRIDGE_CANTINA_CELL) then
+				break
+			end
+			pRelay = nil
 		end
+		self:placeLiaInCantinaClientSide(pLia, pRelay)
 	end
 end
 
@@ -5708,7 +6326,11 @@ function IaBridgeScreenPlay:maybeFollowRelayPlayers()
 		if (relayCell == IA_BRIDGE_CANTINA_CELL and liaCell ~= IA_BRIDGE_CANTINA_CELL) then
 			self:handleHousingEnter(pLia, "follow:" .. relayName)
 		elseif (relayCell == liaCell and relayCell == IA_BRIDGE_CANTINA_CELL) then
-			if (not self:liaBehindCantinaBar(pLia)) then
+			if (self:liaBehindCantinaBar(pLia)) then
+				self:placeLiaInCantinaClientSide(pLia, pRelay)
+			elseif (not self:liaOnCantinaClientSide(pLia)) then
+				self:placeLiaInCantinaClientSide(pLia, pRelay)
+			else
 				self:approachPlayer(pLia, relayName, IA_BRIDGE_APPROACH_RANGE_M + 3)
 			end
 		end
@@ -5816,6 +6438,7 @@ function IaBridgeScreenPlay:tick()
 			self:syncPilotsNearLia()
 			self:maybeSyncRelayCantina()
 			self:maybeFollowRelayPlayers()
+			self:tickAiPlayersSocialInbox()
 			self:repatriateDriftedPilots()
 			if (IA_BRIDGE_TICK_COUNT % 30 == 0) then
 				self:ensurePilotBodiesApplied()
@@ -5998,6 +6621,20 @@ function IaBridgeScreenPlay:tick()
 		self:handleCraftCombine(pPlayer, message)
 	elseif (action == "skill_forget") then
 		self:handleSkillForget(pPlayer, message)
+	elseif (action == "learn_entertainer") then
+		if (message == "trainer" or message == nil or message == "") then
+			self:visitEntertainerTrainer(pPlayer)
+		else
+			self:learnNextEntertainerTier(pPlayer)
+		end
+	elseif (action == "dispense") then
+		if (LbgArtisanHubScreenPlay ~= nil) then
+			LbgArtisanHubScreenPlay:handlePendingDispense(pPlayer, message)
+		else
+			CreatureObject(pPlayer):sendSystemMessage("[Artisan] Hub indisponible (screenplay).")
+		end
+	elseif (action == "entertainer_buff") then
+		self:tickEntertainerAudience(pPlayer)
 	elseif (action == "housing_enter") then
 		self:handleHousingEnter(pPlayer, message)
 	elseif (action == "reset_pilot") then
