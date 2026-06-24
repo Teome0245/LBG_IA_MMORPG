@@ -97,7 +97,9 @@ zone_up() {
 
 count_stream_errors() {
   [[ -f "${CORE3_LOG}" ]] || { echo 0; return; }
-  tail -n 2500 "${CORE3_LOG}" 2>/dev/null | grep -c 'StreamIndexOutOfBoundsException' || echo 0
+  local count
+  count="$(tail -n 2500 "${CORE3_LOG}" 2>/dev/null | grep -c 'StreamIndexOutOfBoundsException' || true)"
+  echo "${count:-0}"
 }
 
 recent_headless_login_timeout() {

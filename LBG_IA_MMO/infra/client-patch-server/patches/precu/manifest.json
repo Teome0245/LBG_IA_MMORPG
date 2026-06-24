@@ -1,5 +1,5 @@
 {
-  "version": "precu-20260618",
+  "version": "precu-20260624",
   "files": [
     { "name": "SWGEmu.exe", "hash": "47436739d9adf27a7aca283f0f1b3e86" },
     { "name": "swgemu.cfg", "hash": "8adadb1ef787992309a94ec005fc4f48" },
