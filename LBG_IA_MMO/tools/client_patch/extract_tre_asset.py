@@ -25,11 +25,10 @@ def _read_eert_index(path: Path) -> tuple[list[dict], bytes]:
     if name_comp == 2:
         name_block = zlib.decompress(name_block)
 
-    names = name_block.split(b"\x00")
     entries: list[dict] = []
     for i in range(count):
         checksum, usize, foff, ctype, csize, name_off = struct.unpack_from("<IIIIII", rec_block, i * 24)
-        name = names[name_off].decode("ascii", "replace") if name_off < len(names) else ""
+        name = name_block[name_off:].split(b"\x00")[0].decode("ascii", "replace")
         entries.append(
             {
                 "name": name,
