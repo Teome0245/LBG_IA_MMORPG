@@ -268,6 +268,33 @@ def _tier_route(tier: str) -> dict[str, str] | None:
         if not (base and model):
             return None
         return {"target": "remote", "base_url": base, "model": model, "api_key": api_key}
+    if t == "glm":
+        # GLM-5.2 (Z.ai) — local via Ollama ou cloud via OpenRouter.
+        # Variables :
+        #   LBG_DIALOGUE_GLM_ENABLED      — 0|1 (défaut 0)
+        #   LBG_DIALOGUE_GLM_BASE_URL     — ex: https://openrouter.ai/api/v1
+        #                                   ou http://192.168.0.110:11434/v1 (Ollama local)
+        #   LBG_DIALOGUE_GLM_MODEL        — défaut z-ai/glm-5.2 (OpenRouter)
+        #                                   ou glm4 (Ollama pull)
+        #   LBG_DIALOGUE_GLM_API_KEY      — clé OpenRouter ou vide pour Ollama
+        #   LBG_DIALOGUE_GLM_THINKING     — disabled|high|max (défaut high)
+        if not _is_truthy(os.environ.get("LBG_DIALOGUE_GLM_ENABLED", "0")):
+            return None
+        glm_base = os.environ.get("LBG_DIALOGUE_GLM_BASE_URL", "").strip().rstrip("/")
+        glm_model = os.environ.get("LBG_DIALOGUE_GLM_MODEL", "z-ai/glm-5.2").strip()
+        glm_api_key = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_GLM_API_KEY", ""))
+        glm_thinking = os.environ.get("LBG_DIALOGUE_GLM_THINKING", "high").strip().lower()
+        if glm_thinking not in ("disabled", "high", "max"):
+            glm_thinking = "high"
+        if not glm_base:
+            return None
+        return {
+            "target": "glm",
+            "base_url": glm_base,
+            "model": glm_model,
+            "api_key": glm_api_key,
+            "thinking_effort": glm_thinking,
+        }
     return None
 
 
@@ -283,7 +310,7 @@ def _failover_tier_sequence() -> list[str]:
     out: list[str] = []
     for x in raw.split(","):
         t = x.strip().lower()
-        if t in ("local", "fast", "remote"):
+        if t in ("local", "fast", "remote", "glm"):
             out.append(t)
     return out
 
@@ -321,7 +348,7 @@ def _resolve_auto_route(context: dict[str, Any]) -> dict[str, Any]:
     skipped: list[dict[str, Any]] = []
     tried: list[str] = []
     for tier in tiers:
-        if tier not in ("local", "fast", "remote"):
+        if tier not in ("local", "fast", "remote", "glm"):
             continue
         if tier in ("fast", "remote") and not _budget_allows_paid_for_auto():
             skipped.append({"tier": tier, "reason": "budget_cap"})
@@ -588,18 +615,25 @@ def _resolve_route(context: dict[str, Any]) -> dict[str, Any]:
     if isinstance(target_raw, str) and target_raw.strip():
         target = target_raw.strip().lower()
     else:
-        if default_tgt not in ("local", "remote", "fast", "auto"):
+        if default_tgt not in ("local", "remote", "fast", "glm", "auto"):
             default_tgt = "local"
         target = default_tgt
 
     if target == "auto":
         return _resolve_auto_route(context)
 
-    if target not in ("local", "remote", "fast"):
+    if target not in ("local", "remote", "fast", "glm"):
         target = "local"
 
     allow_remote = _is_truthy(os.environ.get("LBG_DIALOGUE_REMOTE_ENABLED", "0"))
     allow_fast = _is_truthy(os.environ.get("LBG_DIALOGUE_FAST_ENABLED", "0"))
+    allow_glm = _is_truthy(os.environ.get("LBG_DIALOGUE_GLM_ENABLED", "0"))
+
+    if target == "glm":
+        r = _tier_route("glm")
+        if r:
+            return {**r, "route_decision": "explicit"}
+        target = "fast" if allow_fast else ("remote" if allow_remote else "local")
 
     if target == "fast":
         r = _tier_route("fast")
@@ -1893,6 +1927,12 @@ def run_dialogue_turn(
         key = (route.get("api_key") or "").strip() or _api_key()
         if key:
             headers["Authorization"] = f"Bearer {key}"
+        # Headers spécifiques OpenRouter (requis pour le routage GLM-5.2 et d'autres providers).
+        if route.get("target") == "glm" and "openrouter.ai" in b:
+            headers["HTTP-Referer"] = os.environ.get(
+                "LBG_OPENROUTER_HTTP_REFERER", "https://github.com/lbg-ia-mmo"
+            )
+            headers["X-Title"] = os.environ.get("LBG_OPENROUTER_X_TITLE", "LBG-IA-MMO Agent")
 
         payload: dict[str, Any] = {
             "model": selected_model,
@@ -1902,6 +1942,16 @@ def run_dialogue_turn(
         }
         if not _world_actions_enabled(context=context) and not _desktop_plan_enabled(context=context):
             payload["stop"] = ["\n\n"]
+        # GLM-5.2 : injection des paramètres de Thinking Mode.
+        # - disabled → désactive le raisonnement interne (réponses directes, rapides).
+        # - high     → raisonnement activé, bon équilibre vitesse/qualité (défaut).
+        # - max      → raisonnement maximal, idéal pour tâches agentiques complexes.
+        if route.get("target") == "glm":
+            thinking_effort = str(route.get("thinking_effort", "high")).lower()
+            if thinking_effort == "disabled":
+                payload["chat_template_kwargs"] = {"enable_thinking": False}
+            else:
+                payload["reasoning_effort"] = thinking_effort
 
         def _parse_openai_chat_completions(data: Any) -> tuple[str, dict[str, int]]:
             if not isinstance(data, dict):
@@ -1988,7 +2038,7 @@ def run_dialogue_turn(
             ct = int(usage.get("completion_tokens", 0))
             tgt = str(route.get("target") or "local")
             cost = _estimate_cost_usd(prompt_tokens=pt, completion_tokens=ct, target=tgt)
-            if tgt in ("fast", "remote"):
+            if tgt in ("fast", "remote", "glm"):
                 _budget_record(cost)
             _emit_dialogue_trace_followup(
                 context,
@@ -2051,7 +2101,7 @@ def run_dialogue_turn(
         last_exc: BaseException | None = None
         attempted = False
         for tier in _failover_tier_sequence():
-            if tier in ("fast", "remote") and not _budget_allows_paid_for_auto():
+            if tier in ("fast", "remote", "glm") and not _budget_allows_paid_for_auto():
                 continue
             tr = _tier_route(tier)
             if not tr:

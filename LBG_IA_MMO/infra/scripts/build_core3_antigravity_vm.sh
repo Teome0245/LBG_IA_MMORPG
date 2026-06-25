@@ -75,6 +75,13 @@ echo "CMake configure…"
 # BUILD_IDL=ON : lie les .cpp autogen (sinon idlobjects ne prend que server-core3/src/*.cpp → linker errors)
 cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_NATIVE=OFF -DBUILD_IDL=ON .. > "\${LOG}" 2>&1
 
+echo "Pre-creating autogen object directories…"
+if [[ -d "\${SRC}/server-core3/autogen" ]]; then
+  cd "\${SRC}/server-core3/autogen"
+  find . -type d -exec mkdir -p "\${SRC}/build/server-core3/CMakeFiles/idlobjects.dir/autogen/{}" \;
+  cd "\${SRC}/build"
+fi
+
 echo "Compilation (arrière-plan) — journal : \${LOG}"
 nohup cmake --build . -j"\$(nproc)" --target core3 >> "\${LOG}" 2>&1 &
 echo "Build PID: \$!"

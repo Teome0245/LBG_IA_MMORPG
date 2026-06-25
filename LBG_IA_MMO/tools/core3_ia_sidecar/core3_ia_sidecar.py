@@ -651,6 +651,24 @@ def _tier_route(tier: str) -> dict[str, Any] | None:
         if not (base and model):
             return None
         return {"target": "remote", "base_url": base, "model": model, "api_key": key}
+    if t == "glm":
+        if not _is_truthy(os.environ.get("LBG_DIALOGUE_GLM_ENABLED", "0")):
+            return None
+        base = os.environ.get("LBG_DIALOGUE_GLM_BASE_URL", "").strip().rstrip("/")
+        model = os.environ.get("LBG_DIALOGUE_GLM_MODEL", "z-ai/glm-5.2").strip()
+        key = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_GLM_API_KEY", ""))
+        thinking = os.environ.get("LBG_DIALOGUE_GLM_THINKING", "high").strip().lower()
+        if thinking not in ("disabled", "high", "max"):
+            thinking = "high"
+        if not base:
+            return None
+        return {
+            "target": "glm",
+            "base_url": base,
+            "model": model,
+            "api_key": key,
+            "thinking_effort": thinking,
+        }
     return None
 
 
@@ -668,7 +686,7 @@ def resolve_llm_routes() -> list[dict[str, Any]]:
             return routes
         target = "local"
 
-    if target in ("local", "fast", "remote"):
+    if target in ("local", "fast", "remote", "glm"):
         route = _tier_route(target)
         if route:
             return [route]
@@ -704,12 +722,24 @@ def _llm_http_complete(
     key = str(route.get("api_key", "")).strip() or llm_api_key()
     if key:
         headers["Authorization"] = f"Bearer {key}"
-    body = {
+    if route.get("target") == "glm" and "openrouter.ai" in base:
+        headers["HTTP-Referer"] = os.environ.get(
+            "LBG_OPENROUTER_HTTP_REFERER", "https://github.com/lbg-ia-mmo"
+        )
+        headers["X-Title"] = os.environ.get("LBG_OPENROUTER_X_TITLE", "LBG-IA-MMO Agent")
+
+    body: dict[str, Any] = {
         "model": str(route.get("model", llm_model())),
         "messages": messages,
         "temperature": float(os.environ.get("LBG_DIALOGUE_LLM_TEMPERATURE", "0.3")),
         "max_tokens": llm_max_tokens(max_tokens),
     }
+    if route.get("target") == "glm":
+        thinking_effort = str(route.get("thinking_effort", "high")).lower()
+        if thinking_effort == "disabled":
+            body["chat_template_kwargs"] = {"enable_thinking": False}
+        else:
+            body["reasoning_effort"] = thinking_effort
     req = urllib.request.Request(
         url,
         data=json.dumps(body).encode("utf-8"),

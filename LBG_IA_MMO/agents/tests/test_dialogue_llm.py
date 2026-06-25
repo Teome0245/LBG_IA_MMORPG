@@ -100,6 +100,24 @@ def test_resolve_route_fast_provider(monkeypatch: pytest.MonkeyPatch) -> None:
     assert route.get("route_decision") == "explicit"
 
 
+def test_resolve_route_glm_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    from lbg_agents import dialogue_llm as mod
+
+    monkeypatch.setenv("LBG_DIALOGUE_GLM_ENABLED", "1")
+    monkeypatch.setenv("LBG_DIALOGUE_GLM_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("LBG_DIALOGUE_GLM_MODEL", "z-ai/glm-5.2")
+    monkeypatch.setenv("LBG_DIALOGUE_GLM_API_KEY", "secret-glm")
+    monkeypatch.setenv("LBG_DIALOGUE_GLM_THINKING", "max")
+
+    route = mod._resolve_route({"dialogue_target": "glm"})
+    assert route["target"] == "glm"
+    assert route["base_url"] == "https://openrouter.ai/api/v1"
+    assert route["model"] == "z-ai/glm-5.2"
+    assert route["api_key"] == "secret-glm"
+    assert route["thinking_effort"] == "max"
+    assert route.get("route_decision") == "explicit"
+
+
 def test_resolve_route_fast_provider_resolves_api_key_reference(monkeypatch: pytest.MonkeyPatch) -> None:
     from lbg_agents import dialogue_llm as mod
 
