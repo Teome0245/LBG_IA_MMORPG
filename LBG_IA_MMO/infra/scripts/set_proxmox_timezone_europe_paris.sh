@@ -3,13 +3,13 @@
 # Sûr pendant un build cmake dans une VM : ne redémarre ni n'arrête les VM.
 #
 # Prérequis : accès SSH root (ou sudo) sur chaque nœud Proxmox.
-#   ssh-copy-id root@192.168.0.200
+#   ssh-copy-id root@192.168.0.201
 #
-# Usage (défaut LBG_PROXMOX_HOST ou 192.168.0.200) :
+# Usage (défaut 192.168.0.201) :
 #   bash infra/scripts/set_proxmox_timezone_europe_paris.sh
 #
-# Plusieurs hyperviseurs (futur cluster / second PVE) :
-#   LBG_PROXMOX_SSH_HOSTS=192.168.0.200,192.168.0.201 bash infra/scripts/set_proxmox_timezone_europe_paris.sh
+# Plusieurs hyperviseurs (optionnel) :
+#   LBG_PROXMOX_SSH_HOSTS=192.168.0.201,192.168.0.202 bash infra/scripts/set_proxmox_timezone_europe_paris.sh
 #
 # Dry-run (affiche sans appliquer) :
 #   LBG_PROXMOX_TZ_DRY_RUN=1 bash infra/scripts/set_proxmox_timezone_europe_paris.sh
@@ -27,7 +27,7 @@ elif [[ -n "${LBG_PROXMOX_HOSTS:-}" ]]; then
 elif [[ -n "${LBG_PROXMOX_HOST:-}" ]]; then
   HOSTS=("${LBG_PROXMOX_HOST}")
 else
-  HOSTS=(192.168.0.200 192.168.0.201)
+  HOSTS=(192.168.0.201)
 fi
 
 apply_host() {

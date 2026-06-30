@@ -51,8 +51,8 @@ def proxmox_hosts() -> list[str]:
     )
     if single:
         single = single.strip().removeprefix("https://").removeprefix("http://").split(":", 1)[0]
-        return [single] if single else [_DEFAULT_HOST, "192.168.0.200"]
-    return [_DEFAULT_HOST, "192.168.0.200"]
+        return [single] if single else [_DEFAULT_HOST]
+    return [_DEFAULT_HOST]
 
 
 def proxmox_port() -> int:

@@ -32,9 +32,9 @@ systemctl list-timers lbg-storage-watchdog-job.timer --no-pager
 EOF
 
 echo ""
-echo "Prérequis SSH Proxmox (une fois) — clé lbg@140 autorisée sur root@PVE :"
+echo "Prérequis SSH Proxmox — clé lbg@140 autorisée sur root@201 :"
 echo "  PUB=\$(ssh ${VM_USER}@${VM_HOST} 'cat ~/.ssh/id_ed25519.pub')"
-echo "  ssh root@\${LBG_PROXMOX_SSH_HOST:-192.168.0.201} \"grep -qF \\\"\\\$PUB\\\" ~/.ssh/authorized_keys || echo \\\"\\\$PUB\\\" >> ~/.ssh/authorized_keys\""
+echo "  ssh root@192.168.0.201 \"grep -qF \\\"\\\$PUB\\\" ~/.ssh/authorized_keys || echo \\\"\\\$PUB\\\" >> ~/.ssh/authorized_keys\""
 
 echo ""
 echo "OK — jobs visibles sur http://192.168.0.110:8080/#/jobs (filtrer actor: system:storage_watchdog)"

@@ -4,7 +4,7 @@
 # Usage :
 #   bash infra/scripts/check_proxmox_storage_lan.sh
 #   bash infra/scripts/check_proxmox_storage_lan.sh --json
-#   LBG_PROXMOX_SSH_HOST=192.168.0.200 bash infra/scripts/check_proxmox_storage_lan.sh
+#   LBG_PROXMOX_SSH_HOST=192.168.0.201 bash infra/scripts/check_proxmox_storage_lan.sh
 #
 # Codes sortie : 0 OK, 1 warn, 2 critical, 3 erreur sonde
 

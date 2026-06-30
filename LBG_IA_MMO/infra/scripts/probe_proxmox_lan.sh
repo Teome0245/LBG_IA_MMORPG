@@ -4,7 +4,7 @@
 #
 # Usage :
 #   bash infra/scripts/probe_proxmox_lan.sh
-#   LBG_PROXMOX_HOSTS=192.168.0.200,192.168.0.201 bash infra/scripts/probe_proxmox_lan.sh
+#   LBG_PROXMOX_HOST=192.168.0.201 bash infra/scripts/probe_proxmox_lan.sh
 
 set -euo pipefail
 

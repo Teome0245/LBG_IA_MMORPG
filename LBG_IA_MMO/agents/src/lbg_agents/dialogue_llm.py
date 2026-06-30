@@ -321,7 +321,7 @@ def _context_explicit_dialogue_target(context: dict[str, Any]) -> str | None:
     if not isinstance(raw, str):
         return None
     t = raw.strip().lower()
-    if t in ("local", "fast", "remote"):
+    if t in ("local", "fast", "remote", "glm"):
         return t
     return None
 
@@ -350,7 +350,7 @@ def _resolve_auto_route(context: dict[str, Any]) -> dict[str, Any]:
     for tier in tiers:
         if tier not in ("local", "fast", "remote", "glm"):
             continue
-        if tier in ("fast", "remote") and not _budget_allows_paid_for_auto():
+        if tier in ("fast", "remote", "glm") and not _budget_allows_paid_for_auto():
             skipped.append({"tier": tier, "reason": "budget_cap"})
             tried.append(tier)
             continue
@@ -680,6 +680,13 @@ def _estimate_cost_usd(*, prompt_tokens: int, completion_tokens: int, target: st
         try:
             in_per_k = float(os.environ.get("LBG_DIALOGUE_FAST_COST_IN_PER_1K", "0") or "0")
             out_per_k = float(os.environ.get("LBG_DIALOGUE_FAST_COST_OUT_PER_1K", "0") or "0")
+        except ValueError:
+            return None
+        return round((max(0, prompt_tokens) / 1000.0) * in_per_k + (max(0, completion_tokens) / 1000.0) * out_per_k, 6)
+    if t == "glm":
+        try:
+            in_per_k = float(os.environ.get("LBG_DIALOGUE_GLM_COST_IN_PER_1K", "0.00125") or "0")
+            out_per_k = float(os.environ.get("LBG_DIALOGUE_GLM_COST_OUT_PER_1K", "0") or "0")
         except ValueError:
             return None
         return round((max(0, prompt_tokens) / 1000.0) * in_per_k + (max(0, completion_tokens) / 1000.0) * out_per_k, 6)
