@@ -15,16 +15,28 @@ Incident documenté : **2026-06-22** — VM **Prime** (`246`) en `running (io-er
 
 Déclencheur fréquent sur Prime : **build Antigravity** (`cmake --build` sous `/opt/lbg-antigravity/lbg-mmo/build`, journal `/tmp/core3-antigravity-build.log` pouvant dépasser des centaines de Mo).
 
-## Architecture (nœud `192.168.0.201`)
+## Architecture (hyperviseur Proxmox)
 
-Les VM **110** (front/ollama), **245** (precu/db) et **246** (mmo/prime) sont hébergées sur le second hyperviseur Proxmox à l'adresse **`192.168.0.201`**. La VM **140** (core-orchestrateur) reste hébergée sur le premier nœud **`192.168.0.200`**.
+| Hyperviseur | URL UI | Rôle |
+|-------------|--------|------|
+| **proxmox** | `https://192.168.0.201:8006/` | Héberge toutes les VM du stack LBG |
+
+**VM LBG sur `192.168.0.201`** :
+
+| VMID | IP LAN | Rôle |
+|------|--------|------|
+| 110 | 192.168.0.110 | front / Pilot / Ollama |
+| 140 | 192.168.0.140 | core / orchestrateur |
+| 245 | 192.168.0.245 | precu / base MMO |
+| 246 | 192.168.0.246 | Prime / Core3 MMO |
 
 | Élément | Détail |
 |---------|--------|
-| Hyperviseurs | `192.168.0.200` (proxmox-1) et `192.168.0.201` (proxmox-2) |
-| VM 246 Prime | disque `scsi0: local-lvm:vm-246-disk-0`, 80 Go thin, 12 Go RAM (sur proxmox-2) |
-| Pool partagé | Les VM de chaque nœud partagent le pool `pve/data` de leur hyperviseur |
+| VM 246 Prime | disque `scsi0: local-lvm:vm-246-disk-0`, 80 Go thin, 12 Go RAM |
+| Pool partagé | Toutes les VM partagent le pool `pve/data` (`local-lvm`) |
 | Sur-provisionnement | Somme des disques thin > taille physique du pool (normal en thin) |
+
+Variable : `LBG_PROXMOX_HOST="192.168.0.201"` (ou `LBG_PROXMOX_SSH_HOST` pour la sonde stockage SSH).
 
 Le disque **guest** Ubuntu peut afficher 50 %+ libre (`df -h /`) alors que Proxmox est en **io-error** : c'est le pool **hyperviseur** qui est plein, pas seulement la partition vue dans la VM.
 
@@ -152,7 +164,7 @@ bash infra/scripts/check_proxmox_storage_lan.sh --json
 
 Sur **192.168.0.140**, le timer `lbg-storage-watchdog-job` (toutes les **10 min**) :
 
-1. Sonde SSH Proxmox (`pve/data`, statut VM 246)
+1. Sonde SSH Proxmox **201** — pool `pve/data`, statut VM 246
 2. Si pool ≥ **85 %** (warn) ou ≥ **95 %** (critical) → crée un job orchestrateur
 3. Job visible dans Pilot : [http://192.168.0.110:8080/#/jobs](http://192.168.0.110:8080/#/jobs) (filtrer `system:storage_watchdog`)
 
@@ -162,7 +174,7 @@ Installation :
 bash infra/scripts/install_storage_watchdog_job_vm.sh
 ```
 
-**Prérequis** : la clé SSH de `lbg@140` doit être autorisée sur `root@192.168.0.201` (sonde `lvs` / `qm status`) :
+**Prérequis** : la clé SSH de `lbg@140` doit être autorisée sur `root@192.168.0.201` :
 
 ```bash
 PUB=$(ssh lbg@192.168.0.140 'cat ~/.ssh/id_ed25519.pub')

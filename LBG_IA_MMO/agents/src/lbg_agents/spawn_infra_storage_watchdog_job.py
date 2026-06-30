@@ -51,7 +51,7 @@ def cooldown_s(outcome: str) -> float:
 def default_objective() -> str:
     return os.environ.get(
         "LBG_STORAGE_WATCHDOG_OBJECTIVE",
-        "Surveillance stockage Proxmox local-lvm et Prime 246 — sonde thin pool, remédiation disque si alerte",
+        "Surveillance stockage Proxmox 201 local-lvm et Prime 246 — sonde thin pool, remédiation disque si alerte",
     ).strip()
 
 

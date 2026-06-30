@@ -5,6 +5,8 @@ Patch branding Prime directement dans les TRE vanilla (copie PreCu = backup).
 Étapes (une à la fois, tester le client après chaque étape) :
   --step 1  texture/helmet_rebel_ace_sm.dds dans patch_11_03.tre (fond login via CSHD)
   --step 2  music/mus_title_lp.mp3 dans data_music_00.tre (inline)
+  --step 3  texture/helmet_rebel_ace_sm_spec.dds (reflets login)
+  --step 4  texture/ui_rebel_final_space.dds (logo Rebelle neutralisé)
   --step roundtrip  réécrit patch_11_03 sans changer l'image (test outil)
 
 Usage :
@@ -31,13 +33,21 @@ from generate_lbg_login_station_dds import (  # noqa: E402
 )
 
 
-from build_helmet_lbg_dds import build_helmet_lbg_dds, extract_helmet_from_tre  # noqa: E402
+from build_helmet_lbg_dds import extract_helmet_from_tre  # noqa: E402
+from build_lbg_dds import (  # noqa: E402
+    build_helmet_lbg_dds,
+    build_helmet_spec_lbg_dds,
+    build_rebel_ui_lbg_dds,
+    extract_texture_from_tre,
+)
 
 
 DEFAULT_PRIME = Path("/mnt/j/swgemu/clients/prime-lbg")
 PATCH_11 = "patch_11_03.tre"
 MUSIC_TRE = "data_music_00.tre"
 HELMET_TEX = "texture/helmet_rebel_ace_sm.dds"
+HELMET_SPEC_TEX = "texture/helmet_rebel_ace_sm_spec.dds"
+REBEL_UI_TEX = "texture/ui_rebel_final_space.dds"
 MUSIC_PATH = "music/mus_title_lp.mp3"
 MUSIC_SLOT = 696448
 
@@ -118,6 +128,27 @@ def patch_login_roundtrip(prime_dir: Path) -> None:
     print(f"{PATCH_11}: roundtrip {HELMET_TEX} ({stats['total']} entrées)")
 
 
+def _patch_patch11_texture(prime_dir: Path, logical: str, builder) -> None:
+    tre = prime_dir / PATCH_11
+    if not tre.is_file():
+        raise SystemExit(f"introuvable: {tre}")
+    _backup(tre)
+    vanilla = extract_texture_from_tre(tre, logical)
+    patched = builder(vanilla)
+    work_tre = tre.with_suffix(".tre.work.lbg")
+    stats = replace_and_write(tre, work_tre, {logical: patched})
+    work_tre.replace(tre)
+    print(f"{PATCH_11}: {logical} → branding LBG ({len(patched)} o, {stats['total']} entrées)")
+
+
+def patch_login_helmet_spec(prime_dir: Path) -> None:
+    _patch_patch11_texture(prime_dir, HELMET_SPEC_TEX, build_helmet_spec_lbg_dds)
+
+
+def patch_rebel_ui(prime_dir: Path) -> None:
+    _patch_patch11_texture(prime_dir, REBEL_UI_TEX, build_rebel_ui_lbg_dds)
+
+
 def patch_login_texture(prime_dir: Path, work: Path) -> None:
     patch_login_helmet(prime_dir)
 
@@ -149,8 +180,8 @@ def main() -> int:
     parser.add_argument("--music", type=Path, help="MP3 titre (sinon tonalité 8s via ffmpeg)")
     parser.add_argument(
         "--step",
-        choices=("1", "2", "roundtrip"),
-        help="1=texture login helmet, 2=musique titre, roundtrip=test TRE",
+        choices=("1", "2", "3", "4", "roundtrip"),
+        help="1=helmet, 2=musique, 3=spec, 4=logo UI, roundtrip=test TRE",
     )
     parser.add_argument("--login-only", action="store_true", help="= --step 1")
     parser.add_argument("--music-only", action="store_true", help="= --step 2")
@@ -175,8 +206,12 @@ def main() -> int:
             patch_login_roundtrip(prime)
         elif args.step == "2":
             patch_title_music(prime, _load_music(args))
+        elif args.step == "3":
+            patch_login_helmet_spec(prime)
+        elif args.step == "4":
+            patch_rebel_ui(prime)
 
-    if args.step != "2":
+    if args.step not in ("2",):
         cleanup_overlay_tre(prime)
 
     print("OK — relancer le client Prime et vérifier l'écran login.")

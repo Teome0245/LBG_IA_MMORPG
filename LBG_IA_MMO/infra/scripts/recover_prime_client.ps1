@@ -22,7 +22,9 @@ foreach ($name in $files) {
     $path = Join-Path $GameDir $name
     if (-not (Test-Path $path)) { continue }
     $text = Get-Content $path -Raw
+    $text = $text -replace '(?m)^\s*searchTree_00_99=patch_lbg_00\.tre\s*\r?\n', ''
     $text = $text -replace '(?m)^\s*searchTree_00_25=patch_lbg_00\.tre\s*\r?\n', ''
+    $text = $text -replace 'maxSearchPriority=99', 'maxSearchPriority=98'
     $text = $text -replace 'maxSearchPriority=26', 'maxSearchPriority=25'
     Set-Content -Path $path -Value $text -NoNewline
     Write-Host "  OK $name"
