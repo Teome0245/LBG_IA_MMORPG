@@ -9,7 +9,7 @@ from urllib.parse import quote
 
 import httpx
 
-_DEFAULT_HOST = "192.168.0.200"
+_DEFAULT_HOST = "192.168.0.201"
 _DEFAULT_PORT = 8006
 
 
@@ -48,10 +48,11 @@ def proxmox_hosts() -> list[str]:
     single = (
         os.environ.get("LBG_PROXMOX_HOST")
         or os.environ.get("PROXMOX_HOST")
-        or _DEFAULT_HOST
-    ).strip() or _DEFAULT_HOST
-    single = single.removeprefix("https://").removeprefix("http://").split(":", 1)[0]
-    return [single]
+    )
+    if single:
+        single = single.strip().removeprefix("https://").removeprefix("http://").split(":", 1)[0]
+        return [single] if single else [_DEFAULT_HOST, "192.168.0.200"]
+    return [_DEFAULT_HOST, "192.168.0.200"]
 
 
 def proxmox_port() -> int:

@@ -45,9 +45,11 @@ def test_offline_player_skips(monkeypatch):
     assert out["outcome"] == "skipped_offline"
 
 
-def test_online_player_posts_think(monkeypatch):
+def test_online_player_posts_think(monkeypatch, tmp_path):
     monkeypatch.setenv("LBG_CORE3_IA_SIDECAR_URL", "http://127.0.0.1:8791")
     monkeypatch.setenv("LBG_CORE3_PLAYER_AUTONOMY_MODE", "sidecar")
+    monkeypatch.setenv("LBG_CORE3_PLAYER_AUTONOMY_STATE_DIR", str(tmp_path))
+    monkeypatch.setattr("lbg_agents.core3_player_autonomy.deterministic_proactive_action", lambda *a, **k: None)
     calls: list[dict[str, object]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -75,9 +77,11 @@ def test_online_player_posts_think(monkeypatch):
     assert calls
 
 
-def test_online_player_posts_orchestrator_route(monkeypatch):
+def test_online_player_posts_orchestrator_route(monkeypatch, tmp_path):
     monkeypatch.setenv("LBG_CORE3_IA_SIDECAR_URL", "http://127.0.0.1:8791")
     monkeypatch.setenv("LBG_ORCHESTRATOR_URL", "http://127.0.0.1:8010")
+    monkeypatch.setenv("LBG_CORE3_PLAYER_AUTONOMY_STATE_DIR", str(tmp_path))
+    monkeypatch.setattr("lbg_agents.core3_player_autonomy.deterministic_proactive_action", lambda *a, **k: None)
     calls: list[dict[str, object]] = []
 
     def handler(request: httpx.Request) -> httpx.Response:

@@ -34,6 +34,7 @@ def test_connect_player_uses_sidecar_endpoint(monkeypatch):
 def test_ensure_bots_respects_cooldown(monkeypatch):
     monkeypatch.setenv("LBG_CORE3_IA_SIDECAR_URL", "http://127.0.0.1:8791")
     monkeypatch.setattr("lbg_agents.core3_bot_connection.is_player_online", lambda _n: False)
+    monkeypatch.setattr("lbg_agents.core3_bot_connection.prime_server_ready", lambda: True)
     monkeypatch.setattr(
         "lbg_agents.core3_bot_connection.fetch_snapshot",
         lambda _n: {"online": False, "reason": "snapshot_missing"},
@@ -50,7 +51,9 @@ def test_ensure_bots_respects_cooldown(monkeypatch):
 
 def test_ensure_bots_zombie_bypasses_cooldown(monkeypatch):
     monkeypatch.setenv("LBG_CORE3_IA_SIDECAR_URL", "http://127.0.0.1:8791")
+    monkeypatch.setenv("LBG_CORE3_IA_BOTS", "lia,nix")
     monkeypatch.setattr("lbg_agents.core3_bot_connection.is_player_online", lambda _n: False)
+    monkeypatch.setattr("lbg_agents.core3_bot_connection.prime_server_ready", lambda: True)
     monkeypatch.setattr(
         "lbg_agents.core3_bot_connection.fetch_snapshot",
         lambda _n: {"online": False, "reason": "not_in_online_log"},

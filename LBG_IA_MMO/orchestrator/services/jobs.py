@@ -253,9 +253,21 @@ _lock = threading.RLock()
 _jobs: dict[str, Job] = {}
 _thread: threading.Thread | None = None
 _stop = threading.Event()
+_listeners: list[Callable[[Job, dict[str, Any]], None]] = []
 
 # Dispatcher courant (les tests peuvent remplacer ``_dispatch``).
 _dispatch: Dispatcher = invoke_after_route
+
+
+def register_listener(listener: Callable[[Job, dict[str, Any]], None]) -> None:
+    with _lock:
+        _listeners.append(listener)
+
+
+def unregister_listener(listener: Callable[[Job, dict[str, Any]], None]) -> None:
+    with _lock:
+        if listener in _listeners:
+            _listeners.remove(listener)
 
 
 def _now() -> float:
@@ -275,6 +287,12 @@ def _emit(job: Job, kind: str, **detail: Any) -> None:
             ensure_ascii=False,
         )
     )
+    with _lock:
+        for listener in _listeners:
+            try:
+                listener(job, evt)
+            except Exception:
+                pass
 
 
 # --------------------------------------------------------------------------- #
@@ -488,10 +506,17 @@ def create_job(
     approval_token: str | None = None,
     steps: list[dict[str, Any]] | None = None,
     auto_start: bool = True,
+    model: str | None = None,
+    planner: str | None = None,
 ) -> Job:
     """Crée un job. Planifie immédiatement (sauf si ``steps`` fourni explicitement)."""
     base_ctx = dict(context) if isinstance(context, dict) else {}
+    if model:
+        base_ctx["_planner_model"] = model
+    if planner:
+        base_ctx["_planner"] = planner
     trace_id = base_ctx.get("_trace_id")
+
     trace_id = trace_id if isinstance(trace_id, str) and trace_id.strip() else _new_id()
     base_ctx["_trace_id"] = trace_id
 
@@ -917,9 +942,25 @@ def _dispatch_text_for_step(job: Job, step: JobStep, ctx: dict[str, Any]) -> str
 
 def _context_for_step(job: Job, step: JobStep) -> dict[str, Any]:
     ctx: dict[str, Any] = dict(job.base_context)
+    
+    # Injection de variables inter-étapes
+    for s in job.steps:
+        if s.id == step.id:
+            break
+        if s.status == "done" and isinstance(s.result, dict):
+            v = s.result.get("variables")
+            if not isinstance(v, dict):
+                inner = s.result.get("result")
+                if isinstance(inner, dict):
+                    v = inner.get("variables")
+            if isinstance(v, dict):
+                for key, val in v.items():
+                    ctx[key] = val
+
     ctx.update(step.context_patch)
     ctx["_trace_id"] = job.trace_id
     ctx["_job_id"] = job.id
+
     if ctx.get("_job_synthesis"):
         prior = _prior_completed_steps(job, step.id)
         if prior:

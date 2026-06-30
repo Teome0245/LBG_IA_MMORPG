@@ -22,6 +22,7 @@ DEFAULT_SNAPSHOT = Path("ia_bridge/player_snapshot.json")
 DEFAULT_PLAYER_SNAPSHOTS = Path("ia_bridge/player_snapshots.json")
 DEFAULT_NPC_SNAPSHOTS = Path("ia_bridge/npc_snapshots.json")
 DEFAULT_EVENTS = Path("ia_bridge/events.jsonl")
+DEFAULT_QUEST_STATE = Path("ia_bridge/quest_state.jsonl")
 DEFAULT_BIND = ("127.0.0.1", 8791)
 ALLOWED_ACTIONS = frozenset({
     "say",
@@ -85,6 +86,33 @@ def player_snapshots_path() -> Path:
 def events_path() -> Path:
     raw = os.environ.get("CORE3_IA_EVENTS_PATH", "").strip()
     return Path(raw) if raw else DEFAULT_EVENTS
+
+
+def quest_state_path() -> Path:
+    raw = os.environ.get("CORE3_IA_QUEST_STATE_PATH", "").strip()
+    return Path(raw) if raw else DEFAULT_QUEST_STATE
+
+
+def load_quest_state() -> list[dict[str, Any]]:
+    path = quest_state_path()
+    if not path.is_file():
+        return []
+    out: list[dict[str, Any]] = []
+    try:
+        with path.open("r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                    if isinstance(row, dict):
+                        out.append(row)
+                except json.JSONDecodeError:
+                    continue
+    except OSError:
+        return []
+    return out
 
 
 def online_players_log_path() -> Path:
@@ -623,6 +651,24 @@ def _tier_route(tier: str) -> dict[str, Any] | None:
         if not (base and model):
             return None
         return {"target": "remote", "base_url": base, "model": model, "api_key": key}
+    if t == "glm":
+        if not _is_truthy(os.environ.get("LBG_DIALOGUE_GLM_ENABLED", "0")):
+            return None
+        base = os.environ.get("LBG_DIALOGUE_GLM_BASE_URL", "").strip().rstrip("/")
+        model = os.environ.get("LBG_DIALOGUE_GLM_MODEL", "z-ai/glm-5.2").strip()
+        key = _resolve_secret_ref(os.environ.get("LBG_DIALOGUE_GLM_API_KEY", ""))
+        thinking = os.environ.get("LBG_DIALOGUE_GLM_THINKING", "high").strip().lower()
+        if thinking not in ("disabled", "high", "max"):
+            thinking = "high"
+        if not base:
+            return None
+        return {
+            "target": "glm",
+            "base_url": base,
+            "model": model,
+            "api_key": key,
+            "thinking_effort": thinking,
+        }
     return None
 
 
@@ -640,7 +686,7 @@ def resolve_llm_routes() -> list[dict[str, Any]]:
             return routes
         target = "local"
 
-    if target in ("local", "fast", "remote"):
+    if target in ("local", "fast", "remote", "glm"):
         route = _tier_route(target)
         if route:
             return [route]
@@ -676,12 +722,24 @@ def _llm_http_complete(
     key = str(route.get("api_key", "")).strip() or llm_api_key()
     if key:
         headers["Authorization"] = f"Bearer {key}"
-    body = {
+    if route.get("target") == "glm" and "openrouter.ai" in base:
+        headers["HTTP-Referer"] = os.environ.get(
+            "LBG_OPENROUTER_HTTP_REFERER", "https://github.com/lbg-ia-mmo"
+        )
+        headers["X-Title"] = os.environ.get("LBG_OPENROUTER_X_TITLE", "LBG-IA-MMO Agent")
+
+    body: dict[str, Any] = {
         "model": str(route.get("model", llm_model())),
         "messages": messages,
         "temperature": float(os.environ.get("LBG_DIALOGUE_LLM_TEMPERATURE", "0.3")),
         "max_tokens": llm_max_tokens(max_tokens),
     }
+    if route.get("target") == "glm":
+        thinking_effort = str(route.get("thinking_effort", "high")).lower()
+        if thinking_effort == "disabled":
+            body["chat_template_kwargs"] = {"enable_thinking": False}
+        else:
+            body["reasoning_effort"] = thinking_effort
     req = urllib.request.Request(
         url,
         data=json.dumps(body).encode("utf-8"),
@@ -1367,6 +1425,19 @@ class Handler(BaseHTTPRequestHandler):
             snap = load_npc_snapshot(npc_ref)
             code = 200 if snap.get("online") else 409
             self._json(code, {"ok": snap.get("online", False), "snapshot": snap})
+            return
+
+        if path == "/v1/quest-state":
+            states = load_quest_state()
+            self._json(
+                200,
+                {
+                    "ok": True,
+                    "quest_states": states,
+                    "count": len(states),
+                    "path": str(quest_state_path().resolve()),
+                },
+            )
             return
 
         self._json(404, {"error": "not_found"})

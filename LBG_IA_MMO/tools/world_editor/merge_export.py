@@ -5,9 +5,13 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
-from zoneinfo import ZoneInfo
+try:
+    from zoneinfo import ZoneInfo
+except ImportError:
+    ZoneInfo = None  # type: ignore
+
 
 
 def load_session(path: Path) -> dict:
@@ -218,16 +222,29 @@ def main() -> int:
                 "object_id": p.get("object_id", 0),
             }
         )
+    local_tz = None
+    if ZoneInfo is not None:
+        try:
+            local_tz = ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))
+        except Exception:
+            pass
+    if local_tz is None:
+        try:
+            local_tz = datetime.now().astimezone().tzinfo or timezone.utc
+        except Exception:
+            local_tz = timezone.utc
+
     export_doc = {
         "schema_version": 1,
         "zone_id": "tatooine",
         "display_zone": "Scrapaltai",
         "hub_location_id": "loc:lost_heaven_hub",
-        "exported_at": datetime.now(ZoneInfo(os.environ.get("LBG_LOCAL_TIMEZONE", "Europe/Paris"))).isoformat(timespec="seconds"),
+        "exported_at": datetime.now(local_tz).isoformat(timespec="seconds"),
         "exported_by": sess.get("actor") or "agent",
         "pois": pois_export,
         "npc_slots": npc_export,
     }
+
     for poi_out in (
         content / "world_poi/scrapaltai.json",
         content / "world_poi/tatooine.json",

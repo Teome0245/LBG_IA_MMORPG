@@ -5,4 +5,6 @@ python-multipart
 mss
 pillow
 pyautogui
+tzdata
+
 

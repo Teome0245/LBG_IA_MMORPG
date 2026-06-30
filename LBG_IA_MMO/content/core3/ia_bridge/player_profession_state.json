@@ -1,5 +1,28 @@
 {
   "version": 1,
-  "updated_at": 0,
-  "players": {}
+  "updated_at": 1782230920,
+  "players": {
+    "nix": {
+      "primary": "scout",
+      "secondary": "marksman",
+      "phase": "learning",
+      "primary_mastery_pct": 2.5499999999999994,
+      "secondary_mastery_pct": 0.0,
+      "phase_started_at": 1782227988,
+      "cycle_index": 0,
+      "forgotten": [],
+      "last_tick_at": 1782230905
+    },
+    "lia": {
+      "primary": "entertainer",
+      "secondary": "artisan",
+      "phase": "learning",
+      "primary_mastery_pct": 1.9499999999999995,
+      "secondary_mastery_pct": 0.0,
+      "phase_started_at": 1782227988,
+      "cycle_index": 0,
+      "forgotten": [],
+      "last_tick_at": 1782230920
+    }
+  }
 }

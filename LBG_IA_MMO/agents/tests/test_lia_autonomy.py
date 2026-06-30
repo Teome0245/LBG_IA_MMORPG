@@ -10,8 +10,10 @@ import pytest
 from lbg_agents.lia_autonomy import lia_autonomy_tick
 
 
-def test_snapshot_offline_skips(monkeypatch):
+def test_snapshot_offline_skips(monkeypatch, tmp_path):
+    monkeypatch.setenv("LBG_CORE3_PLAYER_AUTONOMY_STATE_DIR", str(tmp_path))
     monkeypatch.setenv("LBG_CORE3_IA_SIDECAR_URL", "http://127.0.0.1:8791")
+    monkeypatch.setenv("LBG_CORE3_BOT_AUTO_CONNECT", "0")
 
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(409, json={"ok": False, "snapshot": {"online": False}})
@@ -28,10 +30,12 @@ def test_snapshot_offline_skips(monkeypatch):
     assert out["outcome"] == "skipped_offline"
 
 
-def test_tick_sidecar_think(monkeypatch):
+def test_tick_sidecar_think(monkeypatch, tmp_path):
+    monkeypatch.setenv("LBG_CORE3_PLAYER_AUTONOMY_STATE_DIR", str(tmp_path))
     monkeypatch.setenv("LBG_CORE3_IA_SIDECAR_URL", "http://127.0.0.1:8791")
     monkeypatch.setenv("LBG_CORE3_LIA_AUTONOMY_MODE", "sidecar")
     monkeypatch.setenv("LBG_CORE3_LIA_AUTONOMY_PROMPT", "Dis bonjour.")
+    monkeypatch.setattr("lbg_agents.lia_orchestrator.deterministic_proactive_action", lambda *a, **k: None)
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path == "/v1/player-snapshot":

@@ -535,7 +535,7 @@ def player_autonomy_tick(player_id: str, *, via: str | None = None) -> dict[str,
         }
     else:
         direct = deterministic_proactive_action(player, snapshot=snap)
-        if direct is not None and player.id in {"nix", "mira", "kael"}:
+        if direct is not None and player.id in {"nix", "mira", "kael", "lia"}:
             prompt = ""
             result = direct
         else:

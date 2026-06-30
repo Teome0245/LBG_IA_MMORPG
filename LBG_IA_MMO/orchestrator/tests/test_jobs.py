@@ -562,3 +562,100 @@ def test_redis_index_layout_per_job(monkeypatch) -> None:  # noqa: ANN001
     finally:
         svc_jobs._jobs.pop(job_a.id, None)
         svc_jobs._jobs.pop(job_b.id, None)
+
+
+def test_job_create_with_model_and_planner() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/jobs",
+        json={
+            "actor_id": "user:test-model",
+            "objective": "vérifie l'état du backend",
+            "auto_start": False,
+            "model": "my-ollama-model:latest",
+            "planner": "llm",
+        },
+    )
+    assert r.status_code == 200
+    job_view = r.json()
+    job = svc_jobs.get_job(job_view["id"])
+    assert job is not None
+    assert job.base_context.get("_planner_model") == "my-ollama-model:latest"
+    assert job.base_context.get("_planner") == "llm"
+
+
+def test_job_context_variable_injection() -> None:
+    calls: list[dict] = []
+
+    def fake_dispatch(routed_to, *, actor_id, text, context):
+        calls.append(dict(context))
+        if routed_to == "agent.devops":
+            return {"ok": True, "variables": {"target_device_ip": "192.168.0.99"}}
+        return {"ok": True, "reply": "ok"}
+
+    svc_jobs._dispatch = fake_dispatch
+    try:
+        job = svc_jobs.create_job(
+            actor_id="user:var-injection",
+            objective="test variables",
+            steps=[
+                {
+                    "capability": "devops_probe",
+                    "routed_to": "agent.devops",
+                    "summary": "step 1",
+                    "risk_level": "low",
+                },
+                {
+                    "capability": "npc_dialogue",
+                    "routed_to": "agent.dialogue",
+                    "summary": "step 2",
+                    "risk_level": "low",
+                }
+            ],
+            auto_start=True,
+        )
+        final = svc_jobs.run_job_to_completion(job.id)
+        assert final is not None
+        assert final.status == "done"
+        assert len(calls) == 2
+        assert "target_device_ip" not in calls[0]
+        assert calls[1].get("target_device_ip") == "192.168.0.99"
+    finally:
+        _reset_dispatch()
+
+
+def test_world_director_unified_planning() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/jobs",
+        json={
+            "actor_id": "user:test-wd",
+            "objective": "lance le cycle du World Director",
+            "auto_start": False,
+        },
+    )
+    assert r.status_code == 200
+    job_view = r.json()
+    assert len(job_view["steps"]) == 4
+    assert job_view["steps"][0]["capability"] == "devops_probe"
+    assert job_view["steps"][1]["capability"] == "economy_regulate"
+    assert job_view["steps"][2]["capability"] == "world_direct"
+    assert job_view["steps"][3]["capability"] == "npc_dialogue"
+
+
+def test_job_events_stream() -> None:
+    client = TestClient(app)
+    job = svc_jobs.create_job(
+        actor_id="user:sse-test",
+        objective="sse objective",
+        auto_start=False,
+    )
+    svc_jobs.run_job_to_completion(job.id)
+    
+    with client.stream("GET", f"/v1/jobs/{job.id}/events") as r:
+        lines = list(r.iter_lines())
+    
+    assert len(lines) >= 1
+    assert any("completed" in l for l in lines if l)
+
+

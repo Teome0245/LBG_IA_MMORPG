@@ -5610,7 +5610,7 @@ function IaBridgeScreenPlay:handlePlayerInteract(pPlayer, message)
 			self:playerSay(pPlayer, targetName .. ", veux-tu me grouper ? (invite manuelle si besoin)")
 			self:sendInteractionNotice(pTarget, "Lia souhaite un groupe — /invite Lia ou accepte son invitation.")
 		end
-	elif (kind == "accept_group") then
+	elseif (kind == "accept_group") then
 		if (self:tryJoinPendingGroup(pPlayer)) then
 			self:playerSay(pPlayer, "Merci " .. targetName .. " — groupe rejoint.")
 			self:sendInteractionNotice(pTarget, "Lia a rejoint le groupe.")

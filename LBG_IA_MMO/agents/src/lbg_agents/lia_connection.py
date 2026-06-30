@@ -8,14 +8,26 @@ from lbg_agents.core3_bot_connection import (
     bot_auto_connect_enabled as lia_auto_connect_enabled,
     bot_connect_wait_s as lia_connect_wait_s,
     connect_player,
-    ensure_player_connected as ensure_lia_connected,
-    is_player_online as is_lia_online,
+    ensure_player_connected,
+    is_player_online,
 )
 from lbg_agents.lia_orchestrator import bot_player_name
 
 
 def is_lia_online(player: str | None = None) -> bool:
     return is_player_online(player or bot_player_name())
+
+
+def ensure_lia_connected(
+    *,
+    force_restart: bool = False,
+    apply_placement: bool = True,
+) -> dict[str, Any]:
+    return ensure_player_connected(
+        "lia",
+        force_restart=force_restart,
+        apply_placement=apply_placement,
+    )
 
 
 def connect_lia(

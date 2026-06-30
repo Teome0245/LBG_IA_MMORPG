@@ -97,7 +97,9 @@ zone_up() {
 
 count_stream_errors() {
   [[ -f "${CORE3_LOG}" ]] || { echo 0; return; }
-  tail -n 2500 "${CORE3_LOG}" 2>/dev/null | grep -c 'StreamIndexOutOfBoundsException' || echo 0
+  local count
+  count="$(tail -n 2500 "${CORE3_LOG}" 2>/dev/null | grep -c 'StreamIndexOutOfBoundsException' || true)"
+  echo "${count:-0}"
 }
 
 recent_headless_login_timeout() {
@@ -136,7 +138,7 @@ lia_sidecar_online() {
 cooldown_active() {
   local state last_restart now
   state="$(read_state)"
-  last_restart="$(echo "${state}" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('last_restart_ts') or 0)" 2>/dev/null || echo 0)"
+  last_restart="$(echo "${state}" | python3 -c "import json,sys; d=json.load(sys.stdin); print(int(float(d.get('last_restart_ts') or 0)))" 2>/dev/null || echo 0)"
   now="$(now_epoch)"
   [[ $((now - last_restart)) -lt "${COOLDOWN_S}" ]]
 }
@@ -144,7 +146,7 @@ cooldown_active() {
 grace_after_restart() {
   local state last_restart now
   state="$(read_state)"
-  last_restart="$(echo "${state}" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('last_restart_ts') or 0)" 2>/dev/null || echo 0)"
+  last_restart="$(echo "${state}" | python3 -c "import json,sys; d=json.load(sys.stdin); print(int(float(d.get('last_restart_ts') or 0)))" 2>/dev/null || echo 0)"
   [[ "${last_restart}" == "0" ]] && return 1
   now="$(now_epoch)"
   [[ $((now - last_restart)) -lt "${GRACE_AFTER_RESTART_S}" ]]
@@ -163,9 +165,9 @@ from pathlib import Path
 p = Path('${STATE_FILE}')
 p.parent.mkdir(parents=True, exist_ok=True)
 p.write_text(json.dumps({
-    'last_restart_ts': time.time(),
+    'last_restart_ts': int(time.time()),
     'last_reason': '''${RECOVER_REASON:-unknown}''',
-}), ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+}, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 "
 }
 
@@ -232,7 +234,7 @@ REASONS_JOINED="$(IFS=,; echo "${REASONS[*]:-}")"
 
 if [[ "${HEALTHY}" -eq 1 ]]; then
   log "OK uptime=${UPTIME}s login_probe=ok stream_errors=${STREAM_ERRS}"
-  write_state "$(python3 -c "import json,time; print(json.dumps({'last_ok_ts': time.time(), 'uptime_s': ${UPTIME}, 'stream_errors': ${STREAM_ERRS}}))")"
+  write_state "$(python3 -c "import json,time; print(json.dumps({'last_ok_ts': int(time.time()), 'uptime_s': ${UPTIME}, 'stream_errors': ${STREAM_ERRS}}))")"
   [[ "${JSON_OUT}" == "1" ]] && echo "{\"ok\":true,\"healthy\":true,\"uptime_s\":${UPTIME},\"stream_errors\":${STREAM_ERRS}}"
   exit 0
 fi

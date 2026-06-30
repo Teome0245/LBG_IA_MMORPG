@@ -3,9 +3,11 @@ import logging
 import os
 import time
 import uuid
+import json
 
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from models.intents import IntentRequest, IntentResponse
@@ -159,7 +161,29 @@ async def _pilot_route_impl(*, payload: IntentRequest, trace_id: str) -> dict[st
     return out
 
 
+@router.get("/ollama/tags", tags=["pilot"])
+async def pilot_proxy_ollama_tags() -> dict[str, object]:
+    """
+    Proxy same-origin vers l'instance Ollama (normalement VM 110 sur le port 11434).
+    Permet de lister les modèles disponibles via /api/tags.
+    """
+    ollama_base = os.environ.get("OLLAMA_BASE_URL", "http://192.168.0.110:11434").strip().rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{ollama_base}/api/tags")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"Ollama HTTP {r.status_code}", "body": r.text[:500]}
+        try:
+            data = r.json()
+        except ValueError:
+            return {"ok": False, "error": "corps non JSON", "body": r.text[:500]}
+        return data if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @router.get("/status", tags=["pilot"])
+
 async def pilot_aggregate_status() -> dict[str, object]:
     """
     Santé agrégée pour l’UI de pilotage : évite au navigateur d’appeler
@@ -357,7 +381,7 @@ async def pilot_aggregate_status() -> dict[str, object]:
             mmo_state = "error"
             mmo_detail = str(e)
 
-    return {
+    res = {
         "backend": "ok",
         "orchestrator": orch_state,
         "orchestrator_url": orch_url,
@@ -392,6 +416,82 @@ async def pilot_aggregate_status() -> dict[str, object]:
         "mmo_server_health_url": mmo_probe_url,
         "mmo_server_detail": mmo_detail,
     }
+
+    # Sondes TCP rapides sur le LAN pour l'infra et le jeu (pastilles)
+    import socket
+    def check_port(h: str, p: int) -> bool:
+        try:
+            with socket.create_connection((h, p), timeout=0.8):
+                return True
+        except Exception:
+            return False
+
+    precu_ip = os.environ.get("LBG_LAN_HOST_PRECU", "192.168.0.245").split(":")[0]
+    prime_ip = os.environ.get("LBG_LAN_HOST_MMO", "192.168.0.246").split(":")[0]
+    front_ip = os.environ.get("LBG_LAN_HOST_FRONT", "192.168.0.110").split(":")[0]
+
+    res["infra_status"] = {
+        "vm140": "ok" if orch_state == "ok" else "error",
+        "vm110": "ok" if check_port(front_ip, 11434) else "error",
+        "vm245": "ok" if check_port(precu_ip, 3306) else "error",
+        "vm246": "ok" if check_port(prime_ip, 8791) else "error",
+    }
+    res["game_status"] = {
+        "precu_game": "ok" if check_port(precu_ip, 44453) else "offline",
+        "prime_game": "ok" if check_port(prime_ip, 44553) else "offline",
+    }
+    # Prober Lia / Nix / Mira status
+    lia_online = False
+    nix_online = False
+    mira_online = False
+    if mmo_state == "ok" and mmo_url_raw:
+        try:
+            mmo_base = mmo_url_raw.rstrip("/")
+            async with httpx.AsyncClient(timeout=1.5) as client:
+                r_lia = await client.get(f"{mmo_base}/v1/player-snapshot?player=Lia")
+                if r_lia.status_code == 200:
+                    lia_online = r_lia.json().get("online", False)
+                r_nix = await client.get(f"{mmo_base}/v1/player-snapshot?player=Nix")
+                if r_nix.status_code == 200:
+                    nix_online = r_nix.json().get("online", False)
+                r_mira = await client.get(f"{mmo_base}/v1/player-snapshot?player=Mira")
+                if r_mira.status_code == 200:
+                    mira_online = r_mira.json().get("online", False)
+        except Exception:
+            pass
+
+    res["bots_status"] = {
+        "lia": "online" if lia_online else "offline",
+        "nix": "online" if nix_online else "offline",
+        "mira": "online" if mira_online else "offline",
+    }
+
+    # Métriques d'économie et objectifs du Chroniqueur de monde (Option C)
+    economy_metrics = {}
+    chronicler_metrics = {}
+    try:
+        from lbg_agents.economy_director import run_economy_director_tick
+        from lbg_agents.world_chronicler import run_chronicler_tick
+        eco_tick = run_economy_director_tick(dry_run=True)
+        chrono_tick = run_chronicler_tick(dry_run=True)
+        economy_metrics = {
+            "signal_count": eco_tick.get("signal_count", 0),
+            "evaluation_count": eco_tick.get("evaluation_count", 0),
+            "proposed_actions": eco_tick.get("proposed_actions", [])[:5],
+        }
+        chronicler_metrics = {
+            "active_goal_count": chrono_tick.get("active_goal_count", 0),
+            "active_goals": chrono_tick.get("active_goals", [])[:5],
+            "roster_hints_count": len(chrono_tick.get("roster_hints", [])),
+        }
+    except Exception as e:
+        economy_metrics = {"error": str(e)}
+        chronicler_metrics = {"error": str(e)}
+
+    res["economy_metrics"] = economy_metrics
+    res["chronicler_metrics"] = chronicler_metrics
+
+    return res
 
 
 @router.get("/lbg-ia/status", tags=["pilot"])
@@ -814,6 +914,9 @@ class JobCreateBody(BaseModel):
     context: dict[str, object] = Field(default_factory=dict)
     approval_token: str | None = None
     auto_start: bool = True
+    model: str | None = None
+    planner: str | None = None
+
 
 
 class JobApproveBody(BaseModel):
@@ -906,6 +1009,23 @@ async def pilot_jobs_advance(job_id: str) -> dict[str, object]:
         return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+@router.get("/jobs/{job_id}/events", tags=["pilot"])
+async def pilot_jobs_events_stream(job_id: str):
+    """Proxy same-origin vers l'instance orchestrateur pour le flux SSE des événements."""
+    async def event_generator():
+        client = httpx.AsyncClient(timeout=3600.0)
+        try:
+            async with client.stream("GET", f"{_orchestrator_base()}/v1/jobs/{job_id}/events") as response:
+                async for line in response.aiter_lines():
+                    yield line + "\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'kind': 'stream_error', 'error': str(e)})}\n\n"
+        finally:
+            await client.aclose()
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.post("/route", tags=["pilot"])
