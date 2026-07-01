@@ -18,25 +18,34 @@ from tre_writer import build_tre  # noqa: E402
 
 DEFAULT_PRIME = Path("/mnt/j/swgemu/clients/prime-lbg")
 DEFAULT_SOURCES = Path("/mnt/j/swgemu/custom_branding_sources")
+VANILLA_INC_SOURCE = "patch_00.tre"
 LOGIN_INC_SOURCE = "LBG_patch_029.tre"
 
 # Aligné sur custom_branding_sources/compile_branding_patch.py
 BRANDING_FILE_MAP: dict[str, str] = {
-    "ui_splash_screen.inc": "ui/ui_splash_screen.inc",
-    "ui_loginscreen.inc": "ui/ui_loginscreen.inc",
-    "ui_loading2.inc": "ui/ui_loading2.inc",
-    "ui_load_planet_flag.dds": "texture/loading/lbg/ui_load_planet_flag.dds",
-    "ui_load_planet.dds": "texture/loading/lbg/ui_load_planet.dds",
     "ui_background_arrow.dds": "texture/ui_background_arrow.dds",
-    "ui_logo_lucas.dds": "texture/ui_logo_lucas.dds",
-    "ui_logo_soe.dds": "texture/ui_logo_soe.dds",
-    "starwarslogo_optimized_12_000.dds": "texture/font/starwarslogo_optimized_12_000.dds",
     "theme.mp3": "music/mus_title_lp.mp3",
     "mus_title_lp.mp3": "music/mus_title_lp.mp3",
 }
 
+BRANDING_LOADING: dict[str, str] = {
+    "ui_loading2.inc": "ui/ui_loading2.inc",
+    "ui_load_planet_flag.dds": "texture/loading/lbg/ui_load_planet_flag.dds",
+    "ui_load_planet.dds": "texture/loading/lbg/ui_load_planet.dds",
+}
 
-def _pack_custom_sources(sources_dir: Path) -> dict[str, bytes]:
+# Splash / logos : optionnels (peuvent bloquer le login si mal configurés)
+BRANDING_OPTIONAL: dict[str, str] = {
+    "ui_splash_screen.inc": "ui/ui_splash_screen.inc",
+    "ui_logo_lucas.dds": "texture/ui_logo_lucas.dds",
+    "ui_logo_soe.dds": "texture/ui_logo_soe.dds",
+    "starwarslogo_optimized_12_000.dds": "texture/font/starwarslogo_optimized_12_000.dds",
+}
+
+
+def _pack_custom_sources(
+    sources_dir: Path, *, include_splash: bool, include_loading: bool
+) -> dict[str, bytes]:
     files: dict[str, bytes] = {}
     if not sources_dir.is_dir():
         return files
@@ -44,6 +53,16 @@ def _pack_custom_sources(sources_dir: Path) -> dict[str, bytes]:
         src = sources_dir / local_name
         if src.is_file():
             files[tre_path] = src.read_bytes()
+    if include_loading:
+        for local_name, tre_path in BRANDING_LOADING.items():
+            src = sources_dir / local_name
+            if src.is_file():
+                files[tre_path] = src.read_bytes()
+    if include_splash:
+        for local_name, tre_path in BRANDING_OPTIONAL.items():
+            src = sources_dir / local_name
+            if src.is_file():
+                files[tre_path] = src.read_bytes()
     return files
 
 
@@ -71,36 +90,111 @@ def _procedural_login_dds(tex_size: int = 512) -> bytes:
         dds_path.unlink(missing_ok=True)
 
 
+def _fix_login_inc_input(inc_raw: bytes) -> bytes:
+    """Cadres décoratifs : ne pas intercepter les clics (conserve CRLF Windows)."""
+    nl = b"\r\n" if b"\r\n" in inc_raw else b"\n"
+    text = inc_raw.decode("latin-1", errors="replace")
+    lines = text.splitlines()
+    out: list[str] = []
+    in_input = False
+    depth = 0
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("<Page") and "Name='InputPage'" in stripped:
+            in_input = True
+            depth = 0
+        if in_input:
+            if stripped.startswith("<"):
+                if stripped.startswith("</"):
+                    depth -= stripped.count("</")
+                elif not stripped.endswith("/>") and "<Page" in stripped:
+                    depth += 1
+            if depth <= 1 and "Name='box'" in stripped and stripped.startswith("<Page"):
+                if "GetsInput=" not in stripped:
+                    line = line.replace("<Page", "<Page GetsInput='false'", 1)
+            if stripped.startswith("</Page>") and depth <= 0:
+                in_input = False
+        if "Name='blur'" in stripped and stripped.startswith("<Page"):
+            if "GetsInput=" not in stripped:
+                line = line.replace("<Page", "<Page GetsInput='false'", 1)
+            if "Selectable='true'" in line:
+                line = line.replace("Selectable='true'", "Selectable='false'")
+        if (
+            "Name='frame'" in stripped
+            and "fullFrame.rs_default" in stripped
+            and stripped.startswith("<Page")
+            and "GetsInput=" not in stripped
+        ):
+            line = line.replace("<Page", "<Page GetsInput='false'", 1)
+        out.append(line)
+    return nl.join(line.encode("latin-1", errors="replace") for line in out)
+
+
 def build_prime_login_patch(
     *,
     prime_dir: Path,
     sources_dir: Path,
     out_tre: Path,
-    inc_source: str = LOGIN_INC_SOURCE,
+    inc_source: str = VANILLA_INC_SOURCE,
     tex_size: int = 512,
+    include_splash: bool = False,
+    include_loading: bool = False,
+    force_vanilla: bool = True,
 ) -> None:
-    files = _pack_custom_sources(sources_dir)
+    files: dict[str, bytes] = {}
+    if not force_vanilla:
+        files = _pack_custom_sources(
+            sources_dir, include_splash=include_splash, include_loading=include_loading
+        )
 
-    if "ui/ui_loginscreen.inc" not in files:
-        files["ui/ui_loginscreen.inc"] = _fallback_login_inc(prime_dir, inc_source)
-        print(f"  login inc : repli {inc_source} (pas de ui_loginscreen.inc custom)")
+    src_tre = inc_source if force_vanilla else LOGIN_INC_SOURCE
+    login_raw = _fallback_login_inc(prime_dir, src_tre)
+    files["ui/ui_loginscreen.inc"] = _fix_login_inc_input(login_raw)
+    print(f"  login inc : {src_tre} + correctif saisie")
+
+    if include_loading:
+        for local_name, tre_path in BRANDING_LOADING.items():
+            src = sources_dir / local_name
+            if src.is_file():
+                files[tre_path] = src.read_bytes()
     else:
-        inc_text = files["ui/ui_loginscreen.inc"].decode("latin-1", errors="replace")
-        if "new_login_screen" in inc_text:
-            raise SystemExit(
-                "ui_loginscreen.inc custom référence new_login_screen — retirer les images Aurora"
+        loading_src = src_tre if force_vanilla else LOGIN_INC_SOURCE
+        loading_raw = extract_file_from_tre(prime_dir / loading_src, "ui/ui_loading2.inc")
+        if not loading_raw and force_vanilla:
+            loading_raw = extract_file_from_tre(
+                prime_dir / "data_other_00.tre", "ui/ui_loading2.inc"
             )
-        print("  login inc : custom_branding_sources/ui_loginscreen.inc")
+        if loading_raw:
+            if b"aurora" in loading_raw or b"lbg/ui_load_planet" in loading_raw:
+                loading_raw = extract_file_from_tre(
+                    prime_dir / VANILLA_INC_SOURCE, "ui/ui_loading2.inc"
+                ) or loading_raw
+            files["ui/ui_loading2.inc"] = loading_raw
+            print(f"  loading inc : {loading_src} (sans Aurora)")
 
-    # Remplace toute référence résiduelle à l'atlas Aurora du patch 026
-    if "texture/new_login_screen.dds" not in files:
-        flag = sources_dir / "ui_load_planet_flag.dds"
-        if flag.is_file():
-            files["texture/new_login_screen.dds"] = flag.read_bytes()
-            print("  new_login_screen.dds ← ui_load_planet_flag.dds")
-        else:
-            files["texture/new_login_screen.dds"] = _procedural_login_dds(tex_size)
-            print("  new_login_screen.dds : procédural LBG")
+    splash_raw = extract_file_from_tre(prime_dir / VANILLA_INC_SOURCE, "ui/ui_splash_screen.inc")
+    if include_splash and splash_raw:
+        lbg_splash = extract_file_from_tre(
+            prime_dir / LOGIN_INC_SOURCE, "ui/ui_splash_screen.inc"
+        )
+        files["ui/ui_splash_screen.inc"] = lbg_splash or splash_raw
+        print("  splash inc  : LBG_patch_029 (compatible JTL)")
+
+    files["texture/new_login_screen.dds"] = _procedural_login_dds(tex_size)
+    print("  new_login_screen.dds : station procédurale (écrase LBG_client)")
+
+    tatooine = None
+    for tre_name, path in [
+        ("LBG_patch_029.tre", "texture/loading/tatooine/ui_load_permanent.dds.dds"),
+        ("LBG_patch_029.tre", "texture/loading/generic/generic_flag.dds"),
+        ("patch_00.tre", "texture/loading/generic/generic_flag.dds"),
+    ]:
+        tatooine = extract_file_from_tre(prime_dir / tre_name, path)
+        if tatooine:
+            break
+    if tatooine:
+        files["texture/loading/aurora1/ui_load_planet.dds"] = tatooine
+        print("  aurora1/ui_load_planet.dds : texture neutre (écrase Destroyer)")
 
     build_tre(out_tre, files, compress=True)
     print(f"OK: {out_tre} ({len(files)} entrées)")
@@ -121,9 +215,24 @@ def main() -> int:
         help="Défaut: <prime-dir>/patch_prime_login_00.tre",
     )
     p.add_argument(
+        "--include-loading",
+        action="store_true",
+        help="Inclure ui_loading2.inc + fonds planète (défaut: non)",
+    )
+    p.add_argument(
+        "--include-splash",
+        action="store_true",
+        help="Inclure ui_splash_screen.inc et logos (défaut: non, évite blocage splash)",
+    )
+    p.add_argument(
         "--inc-source",
-        default=LOGIN_INC_SOURCE,
-        help="TRE repli si pas de ui_loginscreen.inc custom",
+        default=VANILLA_INC_SOURCE,
+        help="TRE source pour ui_loginscreen.inc (défaut: patch_00)",
+    )
+    p.add_argument(
+        "--lbg-login",
+        action="store_true",
+        help="Utiliser LBG_patch_029 + branding custom (défaut: patch_00 vanilla)",
     )
     args = p.parse_args()
     out = args.out or (args.prime_dir / "patch_prime_login_00.tre")
@@ -134,6 +243,9 @@ def main() -> int:
         sources_dir=args.sources_dir,
         out_tre=out,
         inc_source=args.inc_source,
+        include_splash=args.include_splash,
+        include_loading=args.include_loading,
+        force_vanilla=not args.lbg_login,
     )
     return 0
 

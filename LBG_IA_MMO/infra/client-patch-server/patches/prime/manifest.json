@@ -1,15 +1,45 @@
 {
-  "version": "prime-20260624",
+  "version": "prime-20260630",
   "files": [
-    { "name": "lbgemu.exe", "hash": "47436739d9adf27a7aca283f0f1b3e86" },
-    { "name": "swgemu.cfg", "hash": "ba1262a792312eb43aef62a1d9767422" },
-    { "name": "swgemu_login.cfg", "hash": "9604e10022c25de931677d241de16233" },
-    { "name": "swgemu_live.cfg", "hash": "6ea2fb73313b13a3191de294e536cce4" },
-    { "name": "swgemu_preload.cfg", "hash": "0afeddc346edfb136bf55315f002f45a" },
-    { "name": "user.cfg", "hash": "fac6a7d9f311f01585a3a889bce43d09" },
-    { "name": "lbgemu_client.cfg", "hash": "932a094c0fea9f950c0ca685ca476e11" },
-    { "name": "options.cfg", "hash": "eeba93e193df4681fdcd0c5568228d7d" },
-    { "name": "patch_lbg_00.tre", "hash": "8a8ef8bbc90985fdfc149551533699ca" },
-    { "name": "patch_lbg_01.tre", "hash": "d58ed489d88ea6c454143832663a5942" }
+    {
+      "name": "lbgemu.exe",
+      "hash": "47436739d9adf27a7aca283f0f1b3e86"
+    },
+    {
+      "name": "swgemu.cfg",
+      "hash": "ba1262a792312eb43aef62a1d9767422"
+    },
+    {
+      "name": "swgemu_login.cfg",
+      "hash": "9604e10022c25de931677d241de16233"
+    },
+    {
+      "name": "swgemu_live.cfg",
+      "hash": "03854a6553b6d31f2d3cb525e7553086"
+    },
+    {
+      "name": "swgemu_preload.cfg",
+      "hash": "0afeddc346edfb136bf55315f002f45a"
+    },
+    {
+      "name": "user.cfg",
+      "hash": "2679d708c8b4552e0e98343e8f254bbb"
+    },
+    {
+      "name": "lbgemu_client.cfg",
+      "hash": "932a094c0fea9f950c0ca685ca476e11"
+    },
+    {
+      "name": "options.cfg",
+      "hash": "5a1e209384bac17964213eed690b471e"
+    },
+    {
+      "name": "patch_prime_login_00.tre",
+      "hash": "3105e92892e696d9a95a554dad5be2da"
+    },
+    {
+      "name": "patch_prime_ui_fr_00.tre",
+      "hash": "cefe3d8da2b3b136699da88d559f06d4"
+    }
   ]
 }
