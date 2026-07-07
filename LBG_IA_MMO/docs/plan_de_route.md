@@ -134,6 +134,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-07-07 | **Poste Claude VM 140** : ADR `docs/adr/0013-claude-code-vs-hermes-openclaw.md` — Claude Code + Ollama (`gemma4-claude`) retenu pour le poste dev opérateur ; Hermes/OpenClaw reportés en couche complémentaire optionnelle ; scripts `claude_ollama_lan.sh`, `verify_claude_alignment.sh`. |
 | 2026-07-06 | **pilot_shell — Chat naturel + Supervisé + PM LLM** : modes Chat/Ops/Supervisé, agent PM LLM (`pm_llm.py`), `POST /v1/pilot/tasks/run` (jobs synchrone), classifieur projet élargi. |
 | 2026-07-06 | **pilot_shell Phase 3** : migration vues métier Ops, MMO, Jobs, PM, Lyra, Desktop, Santé (`pilot_shell/src/features/*`) — API `pilotClient.ts`, parité fonctionnelle avec pilot legacy. |
 | 2026-07-06 | **pilot_shell Phase 2** : panneau Agent permanent — chat `POST /v1/pilot/route`, propositions `action-proposal`, presets, intent auto/LLM/mots-clés, historique PNJ, context JSON, Lyra détails ; `pilot_shell/src/agent/`, `hooks/useAgentChat.ts`. |
