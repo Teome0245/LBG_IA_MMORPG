@@ -197,3 +197,7 @@ sudo hostnamectl set-hostname lbg-ia-ui   # adapter selon la machine
 Cloud-init / Proxmox : `preserve_hostname: true` dans `/etc/cloud/cloud.cfg` si le nom revient au reboot.
 
 **Ne pas confondre** : `/etc/lbg-ia-mmo.env` (variables app) ≠ hostname Unix.
+
+### VM 140 — Claude Code (poste prod)
+
+Bootstrap une fois : `bash infra/scripts/bootstrap_claude_on_core140.sh` (voir `docs/fusion_env_lan.md` § VM 140).

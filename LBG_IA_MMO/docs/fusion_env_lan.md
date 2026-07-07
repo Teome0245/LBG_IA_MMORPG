@@ -7,11 +7,52 @@ Document **vivant** : à mettre à jour si les IPs ou les rôles changent. Lié 
 | IP | Rôle | Services clés |
 |----|------|----------------|
 | **`192.168.0.110`** | **Front + UI + LLM** | Hostname : **`lbg-ia-ui`** (Nginx **:8080**, Ollama **:11434**) |
-| **`192.168.0.140`** | **Backend** | Hostname : **`lbg-backend`** (FastAPI **:8000**, orchestrateur, agents) |
+| **`192.168.0.140`** | **Backend** | Hostname : **`lbg-backend`** (FastAPI **:8000**, orchestrateur, agents) — **à terme aussi poste Claude Code** (tmux, builds `pilot_shell`) |
 | **`192.168.0.245`** | **Core3 PreCU** | Hostname : **`lbg-mmo-precu`** |
 | **`192.168.0.246`** | **Core3 Prime** | Hostname : **`lbg-mmo-prime`** (MMO personnalisé LBG) |
 
 **Règle UI** : l’interface opérateur **`pilot_shell`** est servie en prod sur **110** (front Nginx), pas sur 140. Le backend **140** expose l’API `/v1/*` ; le front **110** proxy ou le client pointe vers **140**.
+
+## VM 140 — backend prod + Claude Code (cible)
+
+La VM **140** (`lbg-backend`, Proxmox **VMID 140**) concentre :
+
+| Couche | Contenu |
+|--------|---------|
+| **Prod** | `lbg-backend`, `lbg-orchestrator`, `lbg-agent-*` (systemd), code `/opt/LBG_IA_MMO` |
+| **Dev / IA** | **Claude Code** (`claude work .`), **tmux** (sessions PuTTY), **Node/npm** (build `pilot_shell`) |
+
+**Dimensionnement Proxmox cible** (depuis ~8 GiB / 45 Go / 8 vCPU observés) :
+
+| Ressource | Actuel (typ.) | Cible |
+|-----------|---------------|--------|
+| RAM | 8 GiB | **16 GiB** |
+| vCPU | 8 | **8** (déjà suffisant) |
+| Disque | 45 GiB | **100+ GiB** (`local-lvm` ou `local-vm-930g`) |
+
+**Proxmox** (VM arrêtée ou à chaud selon option) : *Hardware → Memory* → 16384 ; *Hardware → Disk* → redimensionner le volume.
+
+**Dans la VM** (après agrandissement disque) :
+
+```bash
+# Identifier la partition racine (souvent /dev/sda3 sur Ubuntu cloud)
+lsblk
+sudo growpart /dev/sda 3
+sudo resize2fs /dev/sda3
+df -h /
+```
+
+**Bootstrap outillage** (sur 140, une fois) :
+
+```bash
+cd /opt/LBG_IA_MMO
+bash infra/scripts/bootstrap_claude_on_core140.sh
+sudo -u lbg -i claude login   # auth Anthropic, une fois
+```
+
+Alias shell (`~lbg/.bashrc`) : `claude-lbg`, `lbg-tmux`. Accès distant : **PuTTY → `lbg@192.168.0.140` → `lbg-tmux`**.
+
+**Bonnes pratiques** : builds `npm run build` en creux de charge ; ne pas lancer une 2ᵉ stack locale si la prod systemd tourne déjà (`curl 127.0.0.1:8000/healthz`).
 
 ## Environnement WSL (test en parallèle)
 
