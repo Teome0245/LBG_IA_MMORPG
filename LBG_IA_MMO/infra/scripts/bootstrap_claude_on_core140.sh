@@ -77,7 +77,7 @@ install_claude_for_user() {
 
   log "Installation Claude Code pour ${user}…"
   sudo -u "$user" bash -lc 'curl -fsSL https://claude.ai/install.sh | bash'
-  log "→ LLM : Ollama LAN (gemma4-claude) — voir claude-lbg"
+  log "→ LLM : Ollama LAN (gemma4:e2b) — voir claude-lbg"
 }
 
 setup_claude_ollama_config() {
@@ -101,10 +101,10 @@ setup_claude_ollama_config() {
     "ANTHROPIC_BASE_URL": "http://192.168.0.110:11434",
     "ANTHROPIC_AUTH_TOKEN": "ollama",
     "ANTHROPIC_API_KEY": "",
-    "ANTHROPIC_MODEL": "gemma4-claude",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gemma4-claude",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gemma4-claude",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gemma4-claude",
+    "ANTHROPIC_MODEL": "gemma4:e2b",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gemma4:e2b",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gemma4:e2b",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gemma4:e2b",
     "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1"
   }
 }
@@ -178,7 +178,7 @@ print_next_steps() {
    lbg-tmux
    claude-lbg
 
-2. LLM : Ollama ${FRONT_IP}:11434 (gemma4-claude) — même config que Windows.
+2. LLM : Ollama ${FRONT_IP}:11434 (gemma4:e2b par défaut) — même config que Windows.
    Pas de login Anthropic cloud requis.
 
 3. Build pilot_shell (si besoin) :

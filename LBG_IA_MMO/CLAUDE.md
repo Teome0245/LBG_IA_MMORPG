@@ -14,7 +14,7 @@ Toutes les réponses en **français**, sauf demande contraire.
 
 ## LLM
 
-Claude Code est configuré pour **Ollama sur 110** (`gemma4-claude`), pas l’abonnement Anthropic cloud.
+Claude Code est configuré pour **Ollama sur 110** (`gemma4:e2b` par défaut — plus rapide ; `gemma4-claude` via `LBG_CLAUDE_OLLAMA_MODEL` si besoin).
 
 ```bash
 bash infra/scripts/claude_ollama_lan.sh work .

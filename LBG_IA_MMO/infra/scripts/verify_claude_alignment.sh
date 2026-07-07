@@ -9,7 +9,7 @@
 #   LBG_LAN_HOST_FRONT  (défaut 192.168.0.110)
 #   LBG_VM_USER         (défaut lbg)
 #   LBG_VM_DIR          (défaut /opt/LBG_IA_MMO)
-#   LBG_CLAUDE_OLLAMA_MODEL (défaut gemma4-claude)
+#   LBG_CLAUDE_OLLAMA_MODEL (défaut gemma4:e2b ; gemma4-claude si besoin qualité)
 #   LBG_WINDOWS_REPO    chemin Windows ex. /mnt/c/Users/.../LBG_IA_MMORPG (auto si trouvé)
 #   LBG_SSH_IDENTITY    clé SSH optionnelle
 
@@ -21,7 +21,7 @@ CORE_HOST="${LBG_LAN_HOST_CORE:-192.168.0.140}"
 FRONT_HOST="${LBG_LAN_HOST_FRONT:-192.168.0.110}"
 VM_USER="${LBG_VM_USER:-lbg}"
 REMOTE_DIR="${LBG_VM_DIR:-/opt/LBG_IA_MMO}"
-MODEL="${LBG_CLAUDE_OLLAMA_MODEL:-gemma4-claude}"
+MODEL="${LBG_CLAUDE_OLLAMA_MODEL:-gemma4:e2b}"
 OLLAMA_BASE="http://${FRONT_HOST}:11434"
 
 SSH_OPTS=(

@@ -28,7 +28,7 @@ Le monorepo `LBG_IA_MMO` a livré en juillet 2026 une **UI pilot type Cursor** (
 |----------|-----|-----|
 | Prod LAN | `http://192.168.0.110:8080/pilot/v2/` | `http://192.168.0.140:8000` |
 | Poste Claude sur 140 | Navigateur local ou 110 | `http://127.0.0.1:8000` (prod locale) |
-| Ollama (LLM) | — | `http://192.168.0.110:11434` (`gemma4-claude`) |
+| Ollama (LLM) | — | `http://192.168.0.110:11434` (`gemma4:e2b` par défaut depuis 2026-07-08 ; `gemma4-claude` trop lent en CPU) |
 
 **Compte SSH** : `lbg` (sudo) sur 110/140 — pas `sdesharches`.
 
@@ -161,7 +161,7 @@ df -h / && free -h
 
 ## 6. Lancer Claude 140
 
-**Session interactive** (recommandé — `gemma4-claude` est lent en mode `-p`) :
+**Session interactive** (recommandé — défaut `gemma4:e2b` ; `gemma4-claude` via `LBG_CLAUDE_OLLAMA_MODEL` si besoin) :
 
 ```bash
 ssh lbg@192.168.0.140

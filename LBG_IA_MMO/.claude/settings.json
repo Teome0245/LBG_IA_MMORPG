@@ -5,10 +5,10 @@
     "ANTHROPIC_BASE_URL": "http://192.168.0.110:11434",
     "ANTHROPIC_AUTH_TOKEN": "ollama",
     "ANTHROPIC_API_KEY": "",
-    "ANTHROPIC_MODEL": "gemma4-claude",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gemma4-claude",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gemma4-claude",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gemma4-claude",
+    "ANTHROPIC_MODEL": "gemma4:e2b",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gemma4:e2b",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gemma4:e2b",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gemma4:e2b",
     "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1"
   }
 }

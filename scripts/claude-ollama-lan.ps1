@@ -7,10 +7,10 @@ $ErrorActionPreference = "Stop"
 $env:ANTHROPIC_BASE_URL = "http://192.168.0.110:11434"
 $env:ANTHROPIC_AUTH_TOKEN = "ollama"
 $env:ANTHROPIC_API_KEY = ""
-$env:ANTHROPIC_MODEL = "gemma4-claude"
-$env:ANTHROPIC_DEFAULT_SONNET_MODEL = "gemma4-claude"
-$env:ANTHROPIC_DEFAULT_HAIKU_MODEL = "gemma4-claude"
-$env:ANTHROPIC_DEFAULT_OPUS_MODEL = "gemma4-claude"
+$env:ANTHROPIC_MODEL = "gemma4:e2b"
+$env:ANTHROPIC_DEFAULT_SONNET_MODEL = "gemma4:e2b"
+$env:ANTHROPIC_DEFAULT_HAIKU_MODEL = "gemma4:e2b"
+$env:ANTHROPIC_DEFAULT_OPUS_MODEL = "gemma4:e2b"
 $env:CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1"
 
 try {
@@ -25,4 +25,4 @@ if (-not (Test-Path $claude)) {
     Write-Error "Claude Code introuvable : $claude"
 }
 
-& $claude --model gemma4-claude @args
+& $claude --model gemma4:e2b @args

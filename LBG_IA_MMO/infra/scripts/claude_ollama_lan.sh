@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Lance Claude Code vers Ollama LAN (VM 110, modèle gemma4-claude).
+# Lance Claude Code vers Ollama LAN (VM 110).
+# Modèle par défaut : gemma4:e2b (plus rapide que gemma4-claude sur CPU).
+# Surcharge : LBG_CLAUDE_OLLAMA_MODEL=gemma4-claude
 # Équivalent Linux de scripts/claude-ollama-lan.ps1 (Windows).
 #
 # Usage :
@@ -11,7 +13,7 @@ set -euo pipefail
 
 FRONT_IP="${LBG_LAN_HOST_FRONT:-192.168.0.110}"
 OLLAMA_BASE="http://${FRONT_IP}:11434"
-MODEL="${LBG_CLAUDE_OLLAMA_MODEL:-gemma4-claude}"
+MODEL="${LBG_CLAUDE_OLLAMA_MODEL:-gemma4:e2b}"
 
 export ANTHROPIC_BASE_URL="${OLLAMA_BASE}"
 export ANTHROPIC_AUTH_TOKEN="ollama"
