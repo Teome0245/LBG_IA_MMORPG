@@ -9,7 +9,13 @@ local LH_GRID_SPACING = 100
 local LH_BUILD_FLAG = "lbg_lost_heaven_city_built_v1"
 local LH_BUILD_VERSION_KEY = "lbg_lost_heaven_build_version_v1"
 local LH_BUILD_BUSY_FLAG = "lbg_lost_heaven_build_busy_v1"
+local LH_BLUE_FROG_FLAG = "lbg_lost_heaven_blue_frog_v1"
+local LH_BLUE_FROG_OID_KEY = "lbg_lost_heaven_blue_frog_oid_v1"
+local LH_BLUE_FROG_TEMPLATE = "object/tangible/terminal/terminal_character_builder.iff"
+local LH_STARPORT_SPAWN_OY = 200
 local LH_STARPORT_OID_KEY = "lbg_lost_heaven_starport_oid_v1"
+local LH_BANK_OID_KEY = "lbg_lost_heaven_bank_oid_v1"
+local LH_MARKET_OID_KEY = "lbg_lost_heaven_market_oid_v1"
 local LH_THEATER_FLAG = "lbg_lost_heaven_theater_v1"
 local LH_BUILD_VERSION = 9
 local LH_BUILD_PHASE_DELAY_MS = 8000
@@ -36,7 +42,7 @@ local LH_AUTOBUILD_OFF_FILE = "ia_bridge/lost_heaven_autobuild_off"
 local LH_AUTOBUILD_KEY = "lbg_lost_heaven_autobuild_v1"
 local LH_NAVMESH_NAME = "lost_heaven_hub"
 local LH_MIN_PRESENT_POIS = 6
-local LH_PLACEMENT_WATCH = { "Gally", "Lia", "Nix", "Bot_IA" }
+local LH_PLACEMENT_WATCH = { "Gally", "Teome", "Lia", "Nix", "Mira", "Bot_IA" }
 
 local S = LH_GRID_SPACING
 local LH_OUTER = S * 2
@@ -386,7 +392,33 @@ function LbgLostHeavenScreenPlay:start()
 		LH_BUILD_VERSION, LH_GRID_SPACING, #LH_BUILD_PLAN, LH_ANCHOR_X, LH_ANCHOR_Y,
 		self:isAutobuildEnabled() and "ON" or "OFF")
 	createEvent(20000, "LbgLostHeavenScreenPlay", "replayHubTerrainOnBoot", nil, "")
+	createEvent(12000, "LbgLostHeavenScreenPlay", "pollHubEssentials", nil, "")
 	self:scheduleBuildPoll()
+end
+
+function LbgLostHeavenScreenPlay:pollHubEssentials()
+	-- Banque + bazar + blue frog : toujours, même si autobuild OFF
+	self:ensureHubEssentials(nil)
+	createEvent(45000, "LbgLostHeavenScreenPlay", "pollHubEssentials", nil, "")
+end
+
+function LbgLostHeavenScreenPlay:ensureHubEssentialsEvent(pPlayer)
+	self:ensureHubEssentials(pPlayer)
+end
+
+function LbgLostHeavenScreenPlay:ensureHubEssentials(pPreferred)
+	local pOwner = self:resolvePlacementPlayer(pPreferred)
+	if (pOwner == nil) then
+		return false
+	end
+	local ax, ay, az = self:readHubAnchor()
+	local plateauZ = self:readPlateauZ(az)
+	local okMarket = self:ensureBuildingAtKey(pOwner, LH_MARKET_OID_KEY, "poi:lost_heaven_market",
+		"object/building/tatooine/guild_commerce_tatooine_style_01.iff", ax, ay, plateauZ, 90, ax, ay)
+	local okBank = self:ensureBuildingAtKey(pOwner, LH_BANK_OID_KEY, "poi:lost_heaven_bank",
+		"object/building/tatooine/bank_tatooine.iff", ax - 200, ay, plateauZ, 90, ax, ay)
+	local okFrog = self:ensureBlueFrog(pOwner, ax, ay, plateauZ)
+	return okMarket and okBank and okFrog
 end
 
 function LbgLostHeavenScreenPlay:replayHubTerrainOnBoot()
@@ -427,8 +459,43 @@ function LbgLostHeavenScreenPlay:pollBuildCity()
 		printf("LbgLostHeaven: hub incomplet ou doublons — reconstruction\n")
 		self:resetHubState()
 	end
+	-- Fallback minimal : si le build complet tarde, on pose au moins banque + bazar + blue frog
+	self:ensureHubEssentials(nil)
 	self:tryBuildCity(nil)
 	createEvent(60000, "LbgLostHeavenScreenPlay", "pollBuildCity", nil, "")
+end
+
+function LbgLostHeavenScreenPlay:ensureMinimalCoreBuildings()
+	return self:ensureHubEssentials(nil)
+end
+
+function LbgLostHeavenScreenPlay:ensureBuildingAtKey(pOwner, oidKey, poiId, template, wx, wy, plateauZ, heading, hubX, hubY)
+	if (pOwner == nil) then
+		return false
+	end
+	local oid = readData(oidKey) or 0
+	if (oid > 0 and getSceneObject(oid) ~= nil) then
+		return true
+	end
+	local entry = {
+		poi_id = poiId,
+		template = template,
+		heading = heading or LH_HUB_DEFAULT_HEADING,
+	}
+	local pB, h = self:spawnHubBuilding(pOwner, entry, wx, wy, plateauZ, hubX or wx, hubY or wy)
+	if (pB == nil) then
+		printf("LbgLostHeaven: echec minimal %s @ %d,%d (spawnBuilding)\n", tostring(poiId), wx, wy)
+		return false
+	end
+	local newOid = SceneObject(pB):getObjectID()
+	writeData(oidKey, newOid)
+	self:appendHistoryOid(newOid)
+	self:finalizeHubBuilding(pB)
+	pcall(function()
+		SceneObject(pB):setDirection(h or heading or 0)
+	end)
+	printf("LbgLostHeaven: minimal OK %s oid=%d @ %d,%d\n", tostring(poiId), newOid, wx, wy)
+	return true
 end
 
 function LbgLostHeavenScreenPlay:readHistoryOids()
@@ -661,16 +728,50 @@ function LbgLostHeavenScreenPlay:safeTeleportToHub(pPlayer)
 		return
 	end
 	local ax, ay, az = self:readHubAnchor()
+	local tx = ax
+	local ty = ay + LH_STARPORT_SPAWN_OY
 	local z = self:readPlateauZ(az)
-	-- Spawn joueur au starport (sud) si dispo, sinon place bazar
-	local tx, ty = ax, ay - LH_GRID_SPACING
 	if (getPlanetHeight ~= nil) then
 		local hz = getPlanetHeight(LH_ZONE, tx, ty)
 		if (hz ~= nil and hz > -15000) then
 			z = hz
 		end
 	end
-	CreatureObject(pPlayer):teleport(tx, z + 0.15, ty, 0)
+	CreatureObject(pPlayer):teleport(tx, z + 0.15, ty, LH_HUB_DEFAULT_HEADING)
+end
+
+function LbgLostHeavenScreenPlay:ensureBlueFrog(pOwner, ax, ay, plateauZ)
+	if (readData(LH_BLUE_FROG_FLAG) == 1) then
+		local oid = readData(LH_BLUE_FROG_OID_KEY)
+		if (oid ~= nil and oid > 0 and getSceneObject(oid) ~= nil) then
+			return true
+		end
+	end
+	if (pOwner == nil) then
+		return false
+	end
+	local wx = ax + 50
+	local wy = ay - 50
+	local z = plateauZ or LH_ANCHOR_Z
+	pcall(function()
+		if (getPlanetHeight ~= nil) then
+			local hz = getPlanetHeight(LH_ZONE, wx, wy)
+			if (hz ~= nil and hz > -15000) then
+				z = hz
+			end
+		end
+	end)
+	local pTerm = spawnSceneObject(LH_ZONE, LH_BLUE_FROG_TEMPLATE, wx, z + 0.1, wy, 0, 1, 0, 0, 0)
+	if (pTerm == nil) then
+		printf("LbgLostHeaven: echec blue frog @ %d,%d\n", wx, wy)
+		return false
+	end
+	local oid = SceneObject(pTerm):getObjectID()
+	writeData(LH_BLUE_FROG_OID_KEY, oid)
+	writeData(LH_BLUE_FROG_FLAG, 1)
+	self:appendHistoryOid(oid)
+	printf("LbgLostHeaven: blue frog oid=%d @ %d,%d z=%.1f\n", oid, wx, wy, z)
+	return true
 end
 
 function LbgLostHeavenScreenPlay:finalizeHubBuilding(pBuilding)
@@ -705,6 +806,7 @@ function LbgLostHeavenScreenPlay:onPlayerLoggedIn(pPlayer)
 	if (pPlayer == nil or SceneObject(pPlayer):getZoneName() ~= LH_ZONE) then
 		return
 	end
+	createEvent(2000, "LbgLostHeavenScreenPlay", "ensureHubEssentialsEvent", pPlayer, "")
 	if (not self:isAutobuildEnabled()) then
 		return
 	end
@@ -851,6 +953,7 @@ function LbgLostHeavenScreenPlay:tryBuildCityPhase2(pOwner, coordStr)
 	if (starportOid > 0) then
 		writeData(LH_STARPORT_OID_KEY, starportOid)
 	end
+	self:ensureBlueFrog(pOwner, ax, ay, plateauZ)
 
 	local msg = string.format(
 		"[LBG] Lost Heaven v%d : %d batiments (Z local), plateau siteZ=%.1f @ %d,%d.",

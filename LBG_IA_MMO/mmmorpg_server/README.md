@@ -1,4 +1,12 @@
-# Serveur WebSocket `mmmorpg` (port monorepo)
+# Serveur WebSocket `mmmorpg` — **DÉCOMMISSIONNÉ**
+
+> **Ne plus déployer en prod/LAN.** Port WS **7733** et unité `lbg-mmmorpg-ws` retirés du déploiement par défaut (juillet 2026).  
+> Remplacement : **Core3 Prime VM 246**. Voir [`docs/ARCHIVED_mmmorpg_sandbox.md`](../docs/ARCHIVED_mmmorpg_sandbox.md) et ADR [`0012-decommission-mmmorpg-ws.md`](../docs/adr/0012-decommission-mmmorpg-ws.md).  
+> Réactivation exceptionnelle : `LBG_DEPLOY_MMMORPG_WS=1` + `deploy_vm.sh mmo`.
+
+---
+
+# Serveur WebSocket `mmmorpg` (port monorepo) — archive lecture seule
 
 Code **reproduit** depuis le dépôt source **`~/projects/mmmorpg/server/`** — **ne pas modifier** ce dépôt upstream ; les évolutions se font **ici**.
 

@@ -34,10 +34,12 @@ Valeurs possibles pour intent (exactement une) :
 - quest_request : quête, mission, objectif à accomplir dans le jeu
 - combat_action : combat, attaque, affrontement
 - devops_probe : infrastructure, santé des services, diagnostic technique, logs, systemd, selfcheck
-- project_pm : chef de projet, jalons, roadmap, vision produit, planning
+- project_pm : chef de projet, jalons, roadmap, vision produit, planning, avancement du projet LBG, questions « où en est-on », état du dépôt
 - unknown : rien ne correspond clairement ou trop ambigu
 
 Règles :
+- Questions sur le projet, l'avancement, LBG_Project, l'initiateur, la roadmap → project_pm (pas unknown).
+- Salutations seules ou small talk général sans action technique → npc_dialogue.
 - Ne renvoie JAMAIS desktop_control, world_aid, prototype_game (réservés au contexte JSON structuré côté client).
 - assistant_reply : ce que l'utilisateur comprendra (résumé de l'action routée ou demande de précision).
 - confidence : ta certitude (ex. 0.85 si clair, 0.45 si flou — dans ce cas intent peut être unknown)."""

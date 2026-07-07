@@ -27,3 +27,22 @@ def test_classifier_detects_opengame_prototype() -> None:
     assert intent == "prototype_game"
     assert 0.0 <= conf <= 1.0
 
+
+def test_classifier_detects_project_status_questions() -> None:
+    c = DeterministicIntentClassifier()
+    for text in (
+        "que peut tu me dire sur le projet LBG_Project_03, ou en est on ?",
+        "je suis l'initiateur du projet, et tu es le projet",
+        "comment avance le projet ?",
+    ):
+        intent, conf = c.classify(text)
+        assert intent == "project_pm", text
+        assert conf >= 0.7
+
+
+def test_classifier_greeting_is_dialogue() -> None:
+    c = DeterministicIntentClassifier()
+    intent, conf = c.classify("Bonjour")
+    assert intent == "npc_dialogue"
+    assert conf >= 0.6
+

@@ -5,7 +5,7 @@ set -euo pipefail
 #
 # Rôles (LBG_DEPLOY_ROLE) :
 #   core  — backend, orchestrator, agents, pilot_web (optionnel) ; **sans** mmo_server/ sur le disque
-#   mmo   — **mmo_server** (HTTP Lyra) + **mmmorpg_server** (WebSocket jeu) + unités systemd associées
+#   mmo   — **mmo_server** (HTTP Lyra) + unités systemd associées ; **mmmorpg_server** WS opt-in (`LBG_DEPLOY_MMMORPG_WS=1`, décommissionné ADR 0012)
 #           (serveur Core3 / MMOCoreORB du repo **new_mmo** : script séparé `infra/scripts/rsync_new_mmo_core3_orb.sh`, en pratique même VM MMO **245**)
 #   front — **pilot_web/** statique uniquement (ex. VM 110 ; API reste sur core)
 #   all   — enchaîne core → mmo → front sur les hôtes LBG_LAN_HOST_* (voir ci‑dessous)
@@ -195,14 +195,21 @@ ${REMOTE_PROMOTE}
   sudo -n chown -R ${SERVICE_USER}:${SERVICE_USER} /var/lib/lbg/mmmorpg /var/lib/lbg/mmo /var/lib/lbg/jobs
   sudo -n -u ${SERVICE_USER} -H bash -c \"cd \\\"${REMOTE_DIR}\\\" && bash infra/scripts/install_local_mmo.sh\"
   if [ ! -f infra/systemd/lbg-mmo-server.service ]; then echo ERROR lbg-mmo-server.service; exit 1; fi
-  if [ ! -f infra/systemd/lbg-mmmorpg-ws.service ]; then echo ERROR lbg-mmmorpg-ws.service; exit 1; fi
   sudo -n cp infra/systemd/lbg-mmo-server.service /etc/systemd/system/
-  sudo -n cp infra/systemd/lbg-mmmorpg-ws.service /etc/systemd/system/
   sudo -n systemctl daemon-reload
   sudo -n systemctl enable --now lbg-mmo-server
   sudo -n systemctl restart lbg-mmo-server
-  sudo -n systemctl enable --now lbg-mmmorpg-ws
-  sudo -n systemctl restart lbg-mmmorpg-ws
+  if [ \"\${LBG_DEPLOY_MMMORPG_WS:-0}\" = \"1\" ]; then
+    echo \"WARN: déploiement mmmorpg_server (décommissionné) — opt-in LBG_DEPLOY_MMMORPG_WS=1\"
+    if [ ! -f infra/systemd/lbg-mmmorpg-ws.service ]; then echo ERROR lbg-mmmorpg-ws.service; exit 1; fi
+    sudo -n cp infra/systemd/lbg-mmmorpg-ws.service /etc/systemd/system/
+    sudo -n systemctl daemon-reload
+    sudo -n systemctl enable --now lbg-mmmorpg-ws
+    sudo -n systemctl restart lbg-mmmorpg-ws
+  else
+    echo \"Skip lbg-mmmorpg-ws (décommissionné — ADR 0012). Opt-in : LBG_DEPLOY_MMMORPG_WS=1\"
+    sudo -n systemctl disable --now lbg-mmmorpg-ws 2>/dev/null || true
+  fi
 '"
 fi
 

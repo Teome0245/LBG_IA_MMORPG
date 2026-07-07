@@ -1,7 +1,7 @@
-# Bac à sable MMO Python — archivé (gelé)
+# Bac à sable MMO Python — archivé (gelé + WS décommissionné)
 
-**Statut** : **gelé** — juin 2026  
-**Décision** : pivot produit vers **Core3 Prime** (serveur jeu) + **client SWGEmu personnalisé** (launchpad, patches `.tre`).  
+**Statut** : **gelé** — juin 2026 · **`mmmorpg_server` WS `:7733` décommissionné** — juillet 2026 (ADR [`0012-decommission-mmmorpg-ws.md`](adr/0012-decommission-mmmorpg-ws.md))  
+**Décision** : pivot produit vers **Core3 Prime** (serveur jeu, VM **246**) + **client SWGEmu personnalisé** (launchpad, patches `.tre`).  
 **Références** : ADR [`0005-new-mmo-core3-coexistence.md`](adr/0005-new-mmo-core3-coexistence.md) (amendement juin 2026), ADR [`0002-mmo-autorite-pont.md`](adr/0002-mmo-autorite-pont.md) (supersédé pour l’autorité jeu), carnet racine [`../../plan MMMORPG.md`](../../plan%20MMMORPG.md) § *Décision stratégique*.
 
 ---
@@ -11,7 +11,7 @@
 | Composant | Chemin | Rôle historique |
 |-----------|--------|-----------------|
 | **`mmo_server`** | `LBG_IA_MMO/mmo_server/` | HTTP slice IA — `WorldState`, `GET /v1/world/lyra`, persistance JSON |
-| **`mmmorpg_server`** | `LBG_IA_MMO/mmmorpg_server/` | WebSocket jeu bac à sable — village Lyra / Pixie Seat, protocole `mmmorpg-ws/1` |
+| **`mmmorpg_server`** | `LBG_IA_MMO/mmmorpg_server/` | WebSocket jeu bac à sable — **décommissionné** (`:7733`, unité `lbg-mmmorpg-ws`) |
 | **`web_client`** | `LBG_IA_MMO/web_client/` | Client navigateur MMO (rendu 2D village, dialogue IA) |
 | **`lbg_client_godot`** | `LBG_IA_MMO/lbg_client_godot/` | Client Godot phase 0 (login, WASD, WS) — **gelé** |
 | Docs associées | `docs/mmmorpg_PROTOCOL.md`, `docs/plan_client_lbg_godot.md`, `docs/ws_contract_mmmorpg_ws_v1.md` | Contrats et études — **lecture seule** |
@@ -40,7 +40,8 @@
 | Nouvelle feature gameplay dans `mmo_server` / `mmmorpg_server` | **Non** |
 | Correctif bloquant un smoke ou un test CI existant | **Oui** (minimal) |
 | Réutiliser des patterns (pont lecture/écriture, `trace_id`, commits dialogue) côté Core3 | **Oui** — c’est la cible |
-| Déployer le rôle `mmo` sur VM 245 pour démo Lyra | **Optionnel** — pas requis pour Prime |
+| Déployer le rôle `mmo` sur VM 245 pour démo Lyra | **Optionnel** — `mmo_server` HTTP seul ; **pas** `mmmorpg_server` sauf opt-in |
+| Démarrer `lbg-mmmorpg-ws` en prod/LAN | **Non** — décommissionné (ADR 0012) ; opt-in `LBG_DEPLOY_MMMORPG_WS=1` uniquement |
 | Supprimer le code archivé du repo | **Non** pour l’instant — conservation en lecture ; archivage physique possible plus tard |
 
 ---
@@ -52,7 +53,7 @@
 | Jeu temps réel multijoueur | **Core3 Prime** (VM 246, galaxie 3, UDP 44553) |
 | Comptes / persistance SWG | **MariaDB** sur VM 245 |
 | IA ↔ monde (bots, PNJ pilotes, quêtes data-driven) | **Pont Lua/JSON** + sidecar orchestrateur |
-| Slice Lyra / dialogue (legacy) | `mmo_server` + `mmmorpg_server` — **uniquement si stack 245 encore démarrée** |
+| Slice Lyra / dialogue (legacy) | `mmo_server` HTTP — **optionnel** sur 245 ; `mmmorpg_server` WS — **décommissionné** |
 
 Voir amendement ADR 0002 et 0005.
 
@@ -67,17 +68,20 @@ Voir amendement ADR 0002 et 0005.
 
 ---
 
-## Déploiement legacy (si besoin de redémarrer le bac à sable)
+## Déploiement legacy (réactivation exceptionnelle uniquement)
 
-VM **245** (rôle `mmo`) :
+> **Décommissionné** depuis juillet 2026. Ne pas utiliser en routine. Voir ADR 0012.
+
+VM **245** (rôle `mmo`) — **uniquement** si debug historique requis :
 
 ```bash
-# Depuis poste dev — voir bootstrap.md
+# Opt-in explicite — ne pas lancer sans raison
+export LBG_DEPLOY_MMMORPG_WS=1
 ./infra/scripts/deploy_vm.sh mmo
-# Services typiques : lbg-mmo, lbg-mmmorpg-ws
+# Services : lbg-mmo-server (+ lbg-mmmorpg-ws seulement si opt-in)
 ```
 
-Variables : `LBG_MMO_*`, `MMMORPG_*`, `LBG_MMMORPG_INTERNAL_HTTP_URL` — `infra/secrets/lbg.env.example`.
+Variables : `LBG_MMO_*`, `MMMORPG_*` (décommissionnées dans `lbg.env.example`) — `infra/secrets/lbg.env.example`.
 
 **Non requis** pour jouer sur Prime (246 + client SWG launchpad).
 
@@ -88,7 +92,7 @@ Variables : `LBG_MMO_*`, `MMMORPG_*`, `LBG_MMMORPG_INTERNAL_HTTP_URL` — `infra
 | Ancien | Actuel |
 |--------|--------|
 | `web_client` / Godot | **Client SWGEmu LBG** (PreCU / Prime) |
-| WS `mmmorpg-ws/1` | Protocole SWG natif + patches `.tre` |
+| WS `mmmorpg-ws/1` (`:7733`) | **Décommissionné** — Core3 Prime VM 246, protocole SWG natif |
 | Doc | [`client_dual_launchpad.md`](client_dual_launchpad.md) |
 
 ---
@@ -102,6 +106,7 @@ Variables : `LBG_MMO_*`, `MMMORPG_*`, `LBG_MMMORPG_INTERNAL_HTTP_URL` — `infra
 | 2026-05-27 | Core3 Prime systèmes monde — bascule prod |
 | 2026-06-01 | Godot phase 0 livré puis **gelé** |
 | 2026-06-28 | **Gel formel** bac à sable Python + Godot ; focus Core3 + SWGEmu |
+| 2026-07-06 | **Décommission** `mmmorpg_server` WS `:7733` — ADR 0012 ; déploiement opt-in `LBG_DEPLOY_MMMORPG_WS=1` |
 
 ---
 

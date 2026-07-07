@@ -37,17 +37,28 @@ local IA_BRIDGE_CANTINA_LIA_GUEST_X = 7.26
 local IA_BRIDGE_CANTINA_LIA_GUEST_Y = -0.35
 local IA_BRIDGE_CANTINA_LIA_GUEST_Z = IA_BRIDGE_CANTINA_BAR_Z
 local IA_BRIDGE_CANTINA_LIA_GUEST_HEADING = 210.0
--- Lost Heaven / Scrapaltai (ADR 0009) — ancre confirmée IG 2026-06-01 (Teome /way 4809 -802)
--- Option A (2026-06-28) : redirect login ME → LH **désactivé** jusqu'au hub terrain déployé (lbg_lost_heaven_screenplay).
--- Réactiver : passer IA_BRIDGE_LOST_HEAVEN_ENABLED à true après rebuild hub v9.
-local IA_BRIDGE_LOST_HEAVEN_ENABLED = false
-local IA_BRIDGE_LOST_HEAVEN_X = 4809
-local IA_BRIDGE_LOST_HEAVEN_Y = -802
-local IA_BRIDGE_LOST_HEAVEN_Z = 9
+-- Lost Heaven / Scrapaltai (ADR 0009 + M8) — coords = content/core3/scrapaltai_world.json
+local IA_BRIDGE_LOST_HEAVEN_ENABLED = true
+local IA_BRIDGE_LOST_HEAVEN_X = 4749
+local IA_BRIDGE_LOST_HEAVEN_Y = -537
+local IA_BRIDGE_LOST_HEAVEN_Z = 1
+local IA_BRIDGE_LOST_HEAVEN_HEADING = 90
 local IA_BRIDGE_ME_SPAWN_X = 3496
 local IA_BRIDGE_ME_SPAWN_Y = -4784
-local IA_BRIDGE_ME_REDIRECT_RADIUS_M = 1000
-local IA_BRIDGE_LOST_HEAVEN_ARRIVED_RADIUS_M = 120
+local IA_BRIDGE_ME_REDIRECT_RADIUS_M = 1200
+local IA_BRIDGE_LOST_HEAVEN_ARRIVED_RADIUS_M = 150
+local IA_BRIDGE_M8_FLAG_PREFIX = "lbg_world_m8_v1:"
+-- Postes exterieur Lost Heaven par bot IA (M8) — alignes lost_heaven_hub + screenplay v9
+local IA_BRIDGE_AI_LH_POSTS = {
+	Lia = { x = 4849, y = -637, heading = 210 },
+	Nix = { x = 4755, y = -532, heading = 180 },
+	Mira = { x = 4849, y = -837, heading = 129 },
+}
+-- Centre hub Lost Heaven (place bazar) — rapatriement PNJ IA (pilots catalogue)
+local IA_BRIDGE_LH_HUB_X = 4749
+local IA_BRIDGE_LH_HUB_Y = -737
+local IA_BRIDGE_LH_PILOT_RING_RADIUS_M = 45
+local IA_BRIDGE_LH_PILOT_RING_JITTER_M = 6
 local IA_BRIDGE_CANTINA_BAR_STAFF_Y = 2.8
 local IA_BRIDGE_CANTINA_LIA_NEAR_BAR_M = 1.5
 local IA_BRIDGE_THEATER_X = 0.34
@@ -1322,6 +1333,76 @@ function IaBridgeScreenPlay:deferredBoot()
 	end)
 	if (not ok) then
 		printf("IaBridge: ensurePilots erreur : %s\n", tostring(err))
+	end
+	createEvent(12000, "IaBridgeScreenPlay", "migrateAiBridgePlayersDeferred", nil, "")
+end
+
+function IaBridgeScreenPlay:migrateAiBridgePlayersDeferred()
+	pcall(function()
+		self:migrateAiBridgePlayersToLostHeaven()
+	end)
+end
+
+function IaBridgeScreenPlay:isM8LostHeavenMode()
+	-- M8 = hub unique Lost Heaven ; on désactive les routines cantina Mos Eisley.
+	return IA_BRIDGE_LOST_HEAVEN_ENABLED == true
+end
+
+function IaBridgeScreenPlay:lostHeavenPilotRingPos(i, n)
+	local idx = tonumber(i) or 1
+	local total = tonumber(n) or 12
+	if (total < 6) then
+		total = 6
+	end
+	-- Répartition en anneau, avec léger jitter pour éviter les collages parfaits
+	local a = (idx % total) / total * (math.pi * 2)
+	local r = IA_BRIDGE_LH_PILOT_RING_RADIUS_M + ((idx % 3) - 1) * 7
+	local jx = ((idx * 17) % 13) - 6
+	local jy = ((idx * 29) % 13) - 6
+	local x = IA_BRIDGE_LH_HUB_X + math.floor(math.cos(a) * r + jx)
+	local y = IA_BRIDGE_LH_HUB_Y + math.floor(math.sin(a) * r + jy)
+	local heading = math.floor((a * 180 / math.pi + 360) % 360)
+	return x, y, heading
+end
+
+function IaBridgeScreenPlay:teleportMobToOutdoor(pMob, tx, ty, heading)
+	if (pMob == nil) then
+		return false
+	end
+	local z = 5
+	pcall(function()
+		if (getPlanetHeight ~= nil) then
+			local hz = getPlanetHeight(IA_BRIDGE_ZONE, tx, ty)
+			if (hz ~= nil and hz > -15000) then
+				z = hz + 0.15
+			end
+		end
+	end)
+	CreatureObject(pMob):teleport(tx, z, ty, 0)
+	pcall(function()
+		CreatureObject(pMob):setDirection(heading or 0)
+	end)
+	return true
+end
+
+function IaBridgeScreenPlay:repatriateAllPilotsToLostHeaven()
+	-- Rapatrie les PNJ IA (pilots) déjà spawnés ailleurs (ME, etc.) vers Lost Heaven.
+	if (not self:isM8LostHeavenMode()) then
+		return
+	end
+	local cat = self:catalogPilotTable()
+	local n = 0
+	for _ in pairs(cat) do
+		n = n + 1
+	end
+	local i = 0
+	for pilotId, _ in pairs(cat) do
+		i = i + 1
+		local pMob = self:resolvePilotMob(pilotId)
+		if (pMob ~= nil) then
+			local tx, ty, h = self:lostHeavenPilotRingPos(i, n)
+			self:teleportMobToOutdoor(pMob, tx, ty, h)
+		end
 	end
 end
 
@@ -3336,51 +3417,123 @@ function IaBridgeScreenPlay:enforceLbgPlayerHeightOnLogin(pPlayer)
 	end
 end
 
-function IaBridgeScreenPlay:maybeRedirectPlayerToLostHeaven(pPlayer)
-	if (not IA_BRIDGE_LOST_HEAVEN_ENABLED or pPlayer == nil) then
-		return
+function IaBridgeScreenPlay:getLostHeavenPostForPlayer(pPlayer)
+	if (pPlayer == nil) then
+		return {
+			x = IA_BRIDGE_LOST_HEAVEN_X,
+			y = IA_BRIDGE_LOST_HEAVEN_Y,
+			heading = IA_BRIDGE_LOST_HEAVEN_HEADING,
+		}
 	end
-	if (self:isAiBridgePlayer(pPlayer)) then
-		return
+	local name = self:eventActorName(pPlayer)
+	local post = IA_BRIDGE_AI_LH_POSTS[name]
+	if (post ~= nil) then
+		return post
+	end
+	return {
+		x = IA_BRIDGE_LOST_HEAVEN_X,
+		y = IA_BRIDGE_LOST_HEAVEN_Y,
+		heading = IA_BRIDGE_LOST_HEAVEN_HEADING,
+	}
+end
+
+function IaBridgeScreenPlay:isNearLostHeavenPost(pPlayer)
+	if (pPlayer == nil) then
+		return false
+	end
+	local post = self:getLostHeavenPostForPlayer(pPlayer)
+	local scene = SceneObject(pPlayer)
+	local px = scene:getPositionX()
+	local py = scene:getPositionY()
+	local dx = px - post.x
+	local dy = py - post.y
+	return math.sqrt(dx * dx + dy * dy) < IA_BRIDGE_LOST_HEAVEN_ARRIVED_RADIUS_M
+end
+
+function IaBridgeScreenPlay:isNearLostHeavenSpawn(px, py)
+	local dxLh = px - IA_BRIDGE_LOST_HEAVEN_X
+	local dyLh = py - IA_BRIDGE_LOST_HEAVEN_Y
+	return math.sqrt(dxLh * dxLh + dyLh * dyLh) < IA_BRIDGE_LOST_HEAVEN_ARRIVED_RADIUS_M
+end
+
+function IaBridgeScreenPlay:shouldMigratePlayerToLostHeavenM8(pPlayer)
+	if (not IA_BRIDGE_LOST_HEAVEN_ENABLED or pPlayer == nil) then
+		return false
 	end
 	local scene = SceneObject(pPlayer)
 	if (scene:getZoneName() ~= IA_BRIDGE_ZONE) then
-		return
+		return false
 	end
 	local oid = scene:getObjectID()
-	local flagKey = "lbg_spawn_lost_heaven_v1:" .. oid
+	local flagKey = IA_BRIDGE_M8_FLAG_PREFIX .. oid
 	if (readData(flagKey) == 1) then
-		return
+		return false
 	end
 	local parent = scene:getParentID() or 0
 	if (parent > 0) then
-		return
+		return true
 	end
-	local px = scene:getPositionX()
-	local py = scene:getPositionY()
-	local dxMe = px - IA_BRIDGE_ME_SPAWN_X
-	local dyMe = py - IA_BRIDGE_ME_SPAWN_Y
-	local dMe = math.sqrt(dxMe * dxMe + dyMe * dyMe)
-	local dxLh = px - IA_BRIDGE_LOST_HEAVEN_X
-	local dyLh = py - IA_BRIDGE_LOST_HEAVEN_Y
-	local dLh = math.sqrt(dxLh * dxLh + dyLh * dyLh)
-	if (dLh < IA_BRIDGE_LOST_HEAVEN_ARRIVED_RADIUS_M) then
+	if (self:isNearLostHeavenPost(pPlayer)) then
 		writeData(flagKey, 1)
+		writeData("lbg_spawn_lost_heaven_v1:" .. oid, 1)
+		return false
+	end
+	return true
+end
+
+function IaBridgeScreenPlay:teleportPlayerToLostHeavenSpawn(pPlayer, reason)
+	if (pPlayer == nil) then
 		return
 	end
-	if (dMe > IA_BRIDGE_ME_REDIRECT_RADIUS_M) then
+	local post = self:getLostHeavenPostForPlayer(pPlayer)
+	local tx = post.x
+	local ty = post.y
+	local heading = post.heading or IA_BRIDGE_LOST_HEAVEN_HEADING
+	local z = IA_BRIDGE_LOST_HEAVEN_Z
+	pcall(function()
+		if (getPlanetHeight ~= nil) then
+			local hz = getPlanetHeight(IA_BRIDGE_ZONE, tx, ty)
+			if (hz ~= nil and hz > -15000) then
+				z = hz + 0.15
+			end
+		end
+	end)
+	CreatureObject(pPlayer):teleport(tx, z, ty, 0)
+	pcall(function()
+		CreatureObject(pPlayer):setDirection(heading)
+	end)
+	if (self:isAiBridgePlayer(pPlayer)) then
+		self:cancelPlayerWalk(pPlayer)
+		local name = self:eventActorName(pPlayer)
+		self:appendBotMove("stop|" .. name)
+		self:appendBotMove(string.format("sync_pos|%s|%.2f|%.2f|%.2f", name, tx, ty, z))
+	end
+	local oid = SceneObject(pPlayer):getObjectID()
+	writeData(IA_BRIDGE_M8_FLAG_PREFIX .. oid, 1)
+	writeData("lbg_spawn_lost_heaven_v1:" .. oid, 1)
+	if (not self:isAiBridgePlayer(pPlayer)) then
+		local msg = "[LBG] Bienvenue sur Scrapaltai — Lost Heaven est votre hub."
+		if (reason ~= nil and reason ~= "") then
+			msg = msg .. " (" .. reason .. ")"
+		end
+		CreatureObject(pPlayer):sendSystemMessage(msg)
+	end
+end
+
+function IaBridgeScreenPlay:migrateAiBridgePlayersToLostHeaven()
+	for i = 1, #IA_BRIDGE_AI_PLAYERS do
+		local pPlayer = self:resolvePlayer(IA_BRIDGE_AI_PLAYERS[i])
+		if (pPlayer ~= nil) then
+			self:maybeRedirectPlayerToLostHeaven(pPlayer)
+		end
+	end
+end
+
+function IaBridgeScreenPlay:maybeRedirectPlayerToLostHeaven(pPlayer)
+	if (not self:shouldMigratePlayerToLostHeavenM8(pPlayer)) then
 		return
 	end
-	CreatureObject(pPlayer):teleport(
-		IA_BRIDGE_LOST_HEAVEN_X,
-		IA_BRIDGE_LOST_HEAVEN_Z,
-		IA_BRIDGE_LOST_HEAVEN_Y,
-		0
-	)
-	writeData(flagKey, 1)
-	CreatureObject(pPlayer):sendSystemMessage(
-		"[LBG] Bienvenue sur Scrapaltai — vous êtes redirigé vers Lost Heaven (nouveau hub)."
-	)
+	self:teleportPlayerToLostHeavenSpawn(pPlayer, "migration M8")
 end
 
 function IaBridgeScreenPlay:onPlayerLoggedIn(pPlayer)
@@ -6430,16 +6583,24 @@ function IaBridgeScreenPlay:tick()
 	if (line == nil or line == "") then
 		local okTick, tickErr = pcall(function()
 			self:ensureCatalogReady()
-			self:containLiaInCantina()
+			if (not self:isM8LostHeavenMode()) then
+				self:containLiaInCantina()
+			end
 			self:tickRosterLifecycle()
 			self:ensureCantinaBarmanOnDuty()
 			self:ensureArtisanTrainerOnDuty()
 			self:maintainInteriorRosterPosts()
 			self:syncPilotsNearLia()
-			self:maybeSyncRelayCantina()
-			self:maybeFollowRelayPlayers()
+			if (not self:isM8LostHeavenMode()) then
+				self:maybeSyncRelayCantina()
+				self:maybeFollowRelayPlayers()
+			end
 			self:tickAiPlayersSocialInbox()
 			self:repatriateDriftedPilots()
+			-- M8 : rapatrier les PNJ IA autour du hub Lost Heaven (toutes ~60s)
+			if (self:isM8LostHeavenMode() and (IA_BRIDGE_TICK_COUNT % 30 == 0)) then
+				self:repatriateAllPilotsToLostHeaven()
+			end
 			if (IA_BRIDGE_TICK_COUNT % 30 == 0) then
 				self:ensurePilotBodiesApplied()
 			end

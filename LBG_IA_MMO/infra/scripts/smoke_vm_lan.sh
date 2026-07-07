@@ -21,7 +21,7 @@ H_CORE="${LBG_LAN_HOST_CORE:-192.168.0.140}"
 H_MMO="${LBG_LAN_HOST_MMO:-192.168.0.245}"
 H_FRONT="${LBG_LAN_HOST_FRONT:-192.168.0.110}"
 SVC_CORE="${LBG_SMOKE_CORE_SERVICES:-lbg-backend lbg-orchestrator lbg-agent-dialogue lbg-agent-quests lbg-agent-combat}"
-SVC_MMO="${LBG_SMOKE_MMO_SERVICES:-lbg-mmo-server lbg-mmmorpg-ws}"
+SVC_MMO="${LBG_SMOKE_MMO_SERVICES:-lbg-mmo-server}"
 CHECK_OLLAMA="${LBG_SMOKE_FRONT_OLLAMA:-1}"
 
 # Éviter d'écrire dans ~/.ssh (peut être non accessible selon le contexte d'exécution).

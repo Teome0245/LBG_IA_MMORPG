@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from lbg_agents.proxmox_client import get_cluster_status, list_vms, match_lan_vms, probe_all_proxmox_hosts, proxmox_configured
+from lbg_agents.proxmox_client import (
+    get_cluster_status,
+    get_nodes_status,
+    list_vms,
+    match_lan_vms,
+    probe_all_proxmox_hosts,
+    proxmox_configured,
+)
 
 
 def run_proxmox_status(
@@ -28,6 +35,7 @@ def run_proxmox_status(
     cluster = get_cluster_status()
     probes = probe_all_proxmox_hosts()
     lan = match_lan_vms()
+    node_status = get_nodes_status()
     vms = list_vms(running_only=False)
 
     alerts: list[str] = []
@@ -49,14 +57,32 @@ def run_proxmox_status(
             continue
         mem_pct = inner.get("mem_pct")
         if isinstance(mem_pct, (int, float)) and mem_pct >= 90:
-            alerts.append(f"{label}: RAM Proxmox {mem_pct}% (vmid {row.get('vmid')})")
+            alerts.append(f"{label}: RAM VM {mem_pct}% (vmid {row.get('vmid')})")
+        elif isinstance(mem_pct, (int, float)) and mem_pct >= 80:
+            alerts.append(f"{label}: RAM VM élevée {mem_pct}% (vmid {row.get('vmid')})")
         state = str(inner.get("status") or inner.get("qmpstatus") or "")
         if state and state not in {"running", "OK"}:
             alerts.append(f"{label}: état VM {state}")
 
+    if node_status.get("ok"):
+        for nrow in node_status.get("nodes") or []:
+            if not isinstance(nrow, dict):
+                continue
+            mp = nrow.get("mem_pct")
+            node = nrow.get("node", "?")
+            if isinstance(mp, (int, float)) and mp >= 85:
+                alerts.append(f"nœud {node}: RAM hôte {mp}%")
+            load = nrow.get("loadavg")
+            if isinstance(load, list) and load:
+                try:
+                    if float(load[0]) >= 8.0:
+                        alerts.append(f"nœud {node}: charge élevée {load[0]}")
+                except (TypeError, ValueError):
+                    pass
+
     status_level = "ok"
     if alerts:
-        status_level = "warn"
+        status_level = "critical" if any("RAM VM" in a and "90" in a for a in alerts) else "warn"
 
     lines = [
         f"Proxmox {cluster.get('host')}: version {cluster.get('version')} ({cluster.get('vm_count')} VMs).",
@@ -81,6 +107,14 @@ def run_proxmox_status(
         cpu_pct = inner.get("cpu_pct") if isinstance(inner, dict) else None
         state = inner.get("status") if isinstance(inner, dict) else "?"
         lines.append(f"  {label}: vmid={vid} status={state} mem={mem_pct}% cpu={cpu_pct}%")
+    if node_status.get("ok"):
+        for nrow in node_status.get("nodes") or []:
+            if not isinstance(nrow, dict):
+                continue
+            lines.append(
+                f"  hôte {nrow.get('node')}: RAM {nrow.get('mem_pct')}% "
+                f"CPU~{nrow.get('cpu_pct')}% load={nrow.get('loadavg')}"
+            )
 
     if alerts:
         lines.append("Alertes: " + "; ".join(alerts))
@@ -92,6 +126,7 @@ def run_proxmox_status(
         "cluster": cluster,
         "probes": probes,
         "lan_vms": lan,
+        "nodes": node_status,
         "vms": vms,
         "alerts": alerts,
         "reply": "\n".join(lines),

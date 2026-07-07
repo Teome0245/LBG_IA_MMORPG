@@ -339,7 +339,7 @@ En prod/LAN, ces valeurs sont en général définies via `/etc/lbg-ia-mmo.env` (
 uvicorn lbg_agents.dialogue_http_app:app --host 0.0.0.0 --port 8020
 ```
 
-**Ollama sur les VM LBG (ex. `192.168.0.140` *vm140*, `192.168.0.110` *lbg-ia-backend*)** : le même catalogue de modèles peut exister sur les deux. Choisir l’URL selon **où tourne** le daemon Ollama utilisé par l’agent dialogue :
+**Ollama sur les VM LBG (ex. `192.168.0.140`, `192.168.0.110` hostname `lbg-ia-ui`)** : le même catalogue de modèles peut exister sur les deux. Choisir l’URL selon **où tourne** le daemon Ollama utilisé par l’agent dialogue :
 
 | Cas | `LBG_DIALOGUE_LLM_BASE_URL` |
 |-----|-----------------------------|

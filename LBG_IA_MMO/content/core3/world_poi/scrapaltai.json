@@ -3,85 +3,89 @@
   "zone_id": "tatooine",
   "display_zone": "Scrapaltai",
   "hub_location_id": "loc:lost_heaven_hub",
-  "build_version": 3,
-  "grid_spacing_m": 130,
+  "build_version": 9,
+  "grid_spacing_m": 100,
   "deployed_via": "lbg_lost_heaven_screenplay",
-  "exported_at": null,
-  "exported_by": null,
-  "notes": "Grille 130m entre centres — rebuild via lbg_we hub clean puis hub build",
+  "hub_anchor": { "x": 4749, "y": -737, "z": 1 },
+  "notes": "Coords statiques M8 — alignées lost_heaven_hub.json + screenplay v9",
   "pois": [
     {
-      "poi_id": "poi:lost_heaven_starport",
-      "structure_template": "object/building/tatooine/shuttleport_tatooine.iff",
-      "world": { "x": 4809, "y": -802, "z": 9, "heading": 90 },
-      "object_id": 0
-    },
-    {
-      "poi_id": "poi:lost_heaven_cantina",
-      "structure_template": "object/building/tatooine/cantina_tatooine.iff",
-      "world": { "x": 4939, "y": -802, "z": 9, "heading": 270 },
+      "poi_id": "poi:lost_heaven_market",
+      "structure_template": "object/building/tatooine/guild_commerce_tatooine_style_01.iff",
+      "world": { "x": 4749, "y": -737, "z": 1, "heading": 90 },
       "object_id": 0
     },
     {
       "poi_id": "poi:lost_heaven_bank",
       "structure_template": "object/building/tatooine/bank_tatooine.iff",
-      "world": { "x": 4679, "y": -802, "z": 9, "heading": 90 },
+      "world": { "x": 4549, "y": -737, "z": 1, "heading": 90 },
+      "object_id": 0
+    },
+    {
+      "poi_id": "poi:lost_heaven_cantina",
+      "structure_template": "object/building/tatooine/cantina_tatooine.iff",
+      "world": { "x": 4849, "y": -637, "z": 1, "heading": 270 },
       "object_id": 0
     },
     {
       "poi_id": "poi:lost_heaven_inn",
       "structure_template": "object/building/tatooine/hotel_tatooine_general.iff",
-      "world": { "x": 4809, "y": -672, "z": 9, "heading": 180 },
+      "world": { "x": 4649, "y": -637, "z": 1, "heading": 180 },
       "object_id": 0
     },
     {
-      "poi_id": "poi:lost_heaven_market",
-      "structure_template": "object/building/tatooine/guild_commerce_tatooine_style_01.iff",
-      "world": { "x": 4809, "y": -932, "z": 9, "heading": 0 },
+      "poi_id": "poi:lost_heaven_starport",
+      "structure_template": "object/building/tatooine/shuttleport_tatooine.iff",
+      "world": { "x": 4749, "y": -537, "z": 1, "heading": 90 },
       "object_id": 0
     },
     {
       "poi_id": "poi:lost_heaven_training_hall",
       "structure_template": "object/building/tatooine/guild_combat_tatooine_style_01.iff",
-      "world": { "x": 4939, "y": -672, "z": 9, "heading": 0 },
+      "world": { "x": 4849, "y": -837, "z": 1, "heading": 0 },
       "object_id": 0
     },
     {
       "poi_id": "poi:lost_heaven_clinic",
       "structure_template": "object/building/tatooine/hospital_tatooine.iff",
-      "world": { "x": 4679, "y": -672, "z": 9, "heading": 135 },
+      "world": { "x": 4649, "y": -837, "z": 1, "heading": 135 },
       "object_id": 0
     },
     {
       "poi_id": "poi:lost_heaven_mission_post",
       "structure_template": "object/building/tatooine/salon_tatooine.iff",
-      "world": { "x": 4939, "y": -932, "z": 9, "heading": 90 },
+      "world": { "x": 4949, "y": -937, "z": 1, "heading": 90 },
       "object_id": 0
     },
     {
       "poi_id": "poi:lost_heaven_town_hall",
       "structure_template": "object/building/tatooine/capitol_tatooine.iff",
-      "world": { "x": 4679, "y": -932, "z": 9, "heading": 270 },
+      "world": { "x": 4749, "y": -937, "z": 1, "heading": 270 },
       "object_id": 0
     },
     {
       "poi_id": "poi:lost_heaven_artisan_hall",
       "structure_template": "object/building/tatooine/housing_tatt_style01_med.iff",
-      "world": { "x": 5069, "y": -802, "z": 9, "heading": 90 },
+      "world": { "x": 4949, "y": -737, "z": 1, "heading": 90 },
       "object_id": 0
     },
     {
       "poi_id": "poi:lost_heaven_housing_npc",
       "structure_template": "object/building/tatooine/housing_tatt_style01_small.iff",
-      "world": { "x": 4549, "y": -802, "z": 9, "heading": 180 },
+      "world": { "x": 4549, "y": -537, "z": 1, "heading": 180 },
       "object_id": 0
     },
     {
       "poi_id": "poi:lost_heaven_gate",
       "structure_template": "object/building/tatooine/filler_building_block_64x32_style_01.iff",
-      "world": { "x": 4809, "y": -1062, "z": 9, "heading": 0 },
+      "world": { "x": 4749, "y": -1037, "z": 1, "heading": 0 },
+      "object_id": 0
+    },
+    {
+      "poi_id": "poi:lost_heaven_blue_frog",
+      "structure_template": "object/tangible/terminal/terminal_character_builder.iff",
+      "world": { "x": 4799, "y": -787, "z": 1, "heading": 90 },
       "object_id": 0
     }
-  ],
-  "npc_slots": []
+  ]
 }

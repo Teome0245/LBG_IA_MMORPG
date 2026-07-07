@@ -1,35 +1,37 @@
 {
   "schema_version": 1,
   "zone": "tatooine",
-  "description": "PNJ pilotes Serveur Prime (Mos Eisley) — liaison npc_id LBG ↔ mobile Core3",
+  "display_zone": "Scrapaltai",
+  "hub": "Lost Heaven",
+  "description": "PNJ pilotes Serveur Prime — hub Lost Heaven (M8)",
   "pilots": [
     {
       "pilot_id": "npc:core3_scribe",
       "lbg_npc_id": "npc:scribe",
       "display_name": "[IA] Archiviste",
       "mobile_template": "commoner_old",
-      "spawn": { "x": 3510, "y": -4795, "z": 5, "heading": 90 }
+      "spawn": { "x": 4749, "y": -937, "z": 5, "heading": 90 }
     },
     {
       "pilot_id": "npc:core3_guard",
       "lbg_npc_id": "npc:guard",
       "display_name": "[IA] Garde",
       "mobile_template": "mos_espa_police_officer",
-      "spawn": { "x": 3540, "y": -4810, "z": 5, "heading": 180 }
+      "spawn": { "x": 4749, "y": -737, "z": 5, "heading": 180 }
     },
     {
       "pilot_id": "npc:core3_kisreudi",
       "lbg_npc_id": "npc:scientist_mos",
       "display_name": "Kisreudi Teste",
       "mobile_template": "scientist",
-      "spawn": { "x": 3551, "y": -4725, "z": 5, "heading": 270 }
+      "spawn": { "x": 4849, "y": -837, "z": 5, "heading": 270 }
     },
     {
       "pilot_id": "npc:core3_bige_coto",
       "lbg_npc_id": "npc:entertainer_trainer_mos",
       "display_name": "Bige Coto",
       "mobile_template": "trainer_entertainer",
-      "spawn": { "x": 3465, "y": -4682, "z": 6, "heading": 180 }
+      "spawn": { "x": 4849, "y": -637, "z": 6, "heading": 180 }
     },
     {
       "pilot_id": "npc:core3_lyra_velo",
@@ -37,7 +39,7 @@
       "display_name": "Lyra Velo",
       "mobile_template": "trainer_entertainer",
       "combat_policy": "peaceful",
-      "spawn": { "x": 3492, "y": -4802, "z": 5, "heading": 215 }
+      "spawn": { "x": 4855, "y": -640, "z": 5, "heading": 215 }
     },
     {
       "pilot_id": "npc:core3_talen_ress",
@@ -45,28 +47,28 @@
       "display_name": "Talen Ress",
       "mobile_template": "trainer_entertainer",
       "combat_policy": "peaceful",
-      "spawn": { "x": 3480, "y": -4812, "z": 5, "heading": 215 }
+      "spawn": { "x": 4843, "y": -645, "z": 5, "heading": 215 }
     },
     {
       "pilot_id": "npc:core3_vex_sorn",
       "lbg_npc_id": "npc:quest_giver_mos",
       "display_name": "Vex Sorn",
       "mobile_template": "informant_npc_lvl_1",
-      "spawn": { "x": 3488, "y": -4782, "z": 5, "heading": 135 }
+      "spawn": { "x": 4755, "y": -730, "z": 5, "heading": 135 }
     },
     {
       "pilot_id": "npc:core3_nira_kell",
       "lbg_npc_id": "npc:quest_giver_mos_relief",
       "display_name": "Nira Kell",
       "mobile_template": "informant_npc_lvl_1",
-      "spawn": { "x": 3488, "y": -4782, "z": 5, "heading": 135 }
+      "spawn": { "x": 4743, "y": -728, "z": 5, "heading": 135 }
     },
     {
       "pilot_id": "npc:core3_daan_oth",
       "lbg_npc_id": "npc:quest_giver_mos_relief2",
       "display_name": "Daan Oth",
       "mobile_template": "informant_npc_lvl_1",
-      "spawn": { "x": 3488, "y": -4782, "z": 5, "heading": 135 }
+      "spawn": { "x": 4750, "y": -742, "z": 5, "heading": 135 }
     },
     {
       "pilot_id": "npc:core3_guide_quartier",
@@ -74,7 +76,7 @@
       "display_name": "[IA] Guide de quartier",
       "mobile_template": "commoner_tatooine",
       "min_sublot": 1,
-      "spawn": { "x": 3532.96, "y": -4788.08, "z": 5, "heading": 313 }
+      "spawn": { "x": 4745, "y": -540, "z": 5, "heading": 313 }
     },
     {
       "pilot_id": "npc:core3_sergent_rue",
@@ -83,7 +85,7 @@
       "mobile_template": "mos_eisley_police_sergeant",
       "combat_policy": "peaceful_static",
       "min_sublot": 1,
-      "spawn": { "x": 3536.3, "y": -4799.3, "z": 5, "heading": 226 }
+      "spawn": { "x": 4749, "y": -1030, "z": 5, "heading": 226 }
     },
     {
       "pilot_id": "npc:core3_rumeuriste",
@@ -91,7 +93,7 @@
       "display_name": "[IA] Rumeuriste",
       "mobile_template": "info_broker",
       "min_sublot": 2,
-      "spawn": { "x": 3526.8, "y": -4799.0, "z": 5, "heading": 123 }
+      "spawn": { "x": 4760, "y": -735, "z": 5, "heading": 123 }
     },
     {
       "pilot_id": "npc:core3_agent_circulation",
@@ -100,7 +102,7 @@
       "mobile_template": "mos_espa_police_officer",
       "combat_policy": "peaceful_static",
       "min_sublot": 2,
-      "spawn": { "x": 3532, "y": -4796, "z": 5, "heading": 180 }
+      "spawn": { "x": 4755, "y": -532, "z": 5, "heading": 180 }
     },
     {
       "pilot_id": "npc:core3_maitre_salle",
@@ -108,7 +110,7 @@
       "display_name": "[IA] Maitre de salle",
       "mobile_template": "bartender",
       "min_sublot": 3,
-      "spawn": { "x": 18.2, "y": 62.5, "z": 2.12804, "heading": 180, "cell": 1105853 }
+      "spawn": { "x": 4849, "y": -632, "z": 5, "heading": 180 }
     },
     {
       "pilot_id": "npc:core3_artiste_scene",
@@ -116,7 +118,7 @@
       "display_name": "[IA] Artiste de scene",
       "mobile_template": "entertainer",
       "min_sublot": 3,
-      "spawn": { "x": 2.32, "y": -16.47, "z": -0.895, "heading": 44, "cell": 1082880 }
+      "spawn": { "x": 4855, "y": -630, "z": 5, "heading": 44 }
     },
     {
       "pilot_id": "npc:core3_habitue_cantina",
@@ -124,7 +126,7 @@
       "display_name": "[IA] Habitue",
       "mobile_template": "patron",
       "min_sublot": 3,
-      "spawn": { "x": 12.5, "y": 56.0, "z": 2.12804, "heading": 90, "cell": 1105853 }
+      "spawn": { "x": 4840, "y": -635, "z": 5, "heading": 90 }
     },
     {
       "pilot_id": "npc:core3_videur",
@@ -132,7 +134,7 @@
       "display_name": "[IA] Videur",
       "mobile_template": "patron",
       "min_sublot": 3,
-      "spawn": { "x": 28.5, "y": 63.8, "z": 2.12804, "heading": 310, "cell": 1105853 }
+      "spawn": { "x": 4860, "y": -638, "z": 5, "heading": 310 }
     }
   ]
 }

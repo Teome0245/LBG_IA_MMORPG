@@ -25,4 +25,9 @@ function PlayerTriggers:playerLoggedIn(pPlayer)
 			LbgLostHeavenScreenPlay:onPlayerLoggedIn(pPlayer)
 		end)
 	end
+	if (LbgScrapaltaiWorldScreenPlay ~= nil and LbgScrapaltaiWorldScreenPlay.onPlayerLoggedIn ~= nil) then
+		pcall(function()
+			LbgScrapaltaiWorldScreenPlay:onPlayerLoggedIn(pPlayer)
+		end)
+	end
 end

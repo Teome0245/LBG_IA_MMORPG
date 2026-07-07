@@ -271,3 +271,44 @@ def test_action_proposal_mmo_dev_requires_explicit_bridge() -> None:
     )
     assert r.status_code == 200
     assert r.json()["proposal"] is None
+
+
+def test_action_proposal_proxmox_storage() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/action-proposal",
+        json={
+            "actor_id": "ui:assistant",
+            "text": "Quel est l'état du stockage Proxmox thin sur Prime ?",
+            "context": {},
+        },
+    )
+    assert r.status_code == 200
+    proposal = r.json()["proposal"]
+    assert proposal is not None
+    assert proposal["action"]["kind"] == "proxmox_storage"
+
+
+def test_action_proposal_infra_overview() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/action-proposal",
+        json={
+            "actor_id": "ui:assistant",
+            "text": "Comment va l'infra LAN ?",
+            "context": {},
+        },
+    )
+    assert r.status_code == 200
+    proposal = r.json()["proposal"]
+    assert proposal is not None
+    assert proposal["action"]["kind"] == "proxmox_status"
+
+
+def test_infra_alerts_endpoint() -> None:
+    client = TestClient(app)
+    r = client.get("/v1/infra/alerts", params={"probe": "false"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is True
+    assert "summary_fr" in body

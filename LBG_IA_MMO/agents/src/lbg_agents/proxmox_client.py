@@ -267,10 +267,54 @@ def get_vm_config(vmid: int) -> dict[str, Any]:
     return {"ok": True, "vmid": vmid, "node": node, "config": data}
 
 
+def get_nodes_status() -> dict[str, Any]:
+    """RAM / CPU / charge des nœuds Proxmox (lecture seule)."""
+    if not proxmox_configured():
+        return {"ok": False, "error": "proxmox_not_configured"}
+    nodes_resp = _safe_request("GET", "/api2/json/nodes")
+    if not nodes_resp.get("ok"):
+        return {"ok": False, "error": nodes_resp.get("error", "nodes_unavailable")}
+    rows: list[dict[str, Any]] = []
+    for node_row in nodes_resp.get("data") or []:
+        if not isinstance(node_row, dict):
+            continue
+        node = str(node_row.get("node") or "")
+        if not node:
+            continue
+        st = _safe_request("GET", f"/api2/json/nodes/{quote(node)}/status")
+        data = st.get("data") if isinstance(st.get("data"), dict) else {}
+        mem_block = data.get("memory")
+        if isinstance(mem_block, dict):
+            mem_pct = _pct(mem_block.get("used"), mem_block.get("total"))
+        else:
+            mem_pct = _pct(data.get("mem"), data.get("maxmem"))
+        cpu_pct = None
+        try:
+            cpu_pct = round(float(data.get("cpu", 0)) * 100.0, 2)
+        except (TypeError, ValueError):
+            pass
+        rows.append(
+            {
+                "node": node,
+                "status": data.get("status") or node_row.get("status"),
+                "mem_pct": mem_pct,
+                "cpu_pct": cpu_pct,
+                "loadavg": data.get("loadavg"),
+                "uptime": data.get("uptime") or node_row.get("uptime"),
+            }
+        )
+    return {"ok": True, "host": proxmox_host(), "nodes": rows}
+
+
+def _lan_vm_defaults() -> dict[str, int]:
+    """VMID LAN fixes (surcharge via LBG_PROXMOX_VM_LABELS)."""
+    return {"core": 140, "front": 110, "precu": 245, "prime": 246}
+
+
 def match_lan_vms() -> dict[str, Any]:
-    """Associe les VM Proxmox aux rôles LAN connus (nom ou LBG_PROXMOX_VM_LABELS)."""
+    """Associe les VM Proxmox aux rôles LAN connus (vmid explicite ou nom)."""
     raw = os.environ.get("LBG_PROXMOX_VM_LABELS", "").strip()
-    labels: dict[str, int] = {}
+    labels: dict[str, int] = dict(_lan_vm_defaults())
     if raw:
         for part in raw.split(","):
             if "=" not in part:
@@ -280,13 +324,10 @@ def match_lan_vms() -> dict[str, Any]:
                 labels[label.strip()] = int(vid.strip())
             except ValueError:
                 continue
-    else:
-        # vmid 0 → résolution par nom (regex) ; surcharger via LBG_PROXMOX_VM_LABELS=prime=104,...
-        labels = {"core": 0, "front": 0, "precu": 0, "prime": 0}
     hints = {
-        "core": re.compile(r"core|140|orchestr", re.I),
-        "front": re.compile(r"front|110|ollama|pilot", re.I),
-        "precu": re.compile(r"precu|245|swgemu", re.I),
+        "core": re.compile(r"core|140|orchestr|mmorpg", re.I),
+        "front": re.compile(r"front|110|ollama|pilot|lbg-ia\b", re.I),
+        "precu": re.compile(r"precu|245|swgemu|serveurswg", re.I),
         "prime": re.compile(r"prime|246|clean", re.I),
     }
     listed = list_vms()

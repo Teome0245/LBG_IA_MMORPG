@@ -23,6 +23,7 @@ router/routes/action_proposal.py
 router/routes/brain.py
 router/routes/capabilities.py
 router/routes/core3_player_routes.py
+router/routes/infra_alerts.py
 router/routes/jobs.py
 router/routes/lia_incarnation.py
 router/routes/proactive.py
@@ -32,6 +33,7 @@ services/action_policy.py
 services/action_proposal.py
 services/brain.py
 services/experience_memory.py
+services/infra_alerts.py
 services/jobs.py
 services/lia_autonomy.py
 services/lia_jobs.py
@@ -43,6 +45,7 @@ tests/test_agentic.py
 tests/test_capabilities.py
 tests/test_classifier.py
 tests/test_core3_player_routes.py
+tests/test_infra_alerts.py
 tests/test_jobs.py
 tests/test_jobs_cognitive.py
 tests/test_lia_incarnation_routes.py

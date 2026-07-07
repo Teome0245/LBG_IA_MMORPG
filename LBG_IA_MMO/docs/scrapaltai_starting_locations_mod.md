@@ -1,18 +1,18 @@
 # Scrapaltai — spawn joueur & patch `starting_locations.iff`
 
 **ADR** : [`adr/0009-scrapaltai-lost-heaven.md`](adr/0009-scrapaltai-lost-heaven.md)  
-**Ancre confirmée** : [`content/core3/locations/lost_heaven_hub.json`](../content/core3/locations/lost_heaven_hub.json) — **4809, -802**, hauteur **9**
+**Ancre confirmée** : [`content/core3/scrapaltai_world.json`](../content/core3/scrapaltai_world.json) — spawn **4749, -537**, hauteur terrain **~1**
 
 ---
 
-## État actuel (serveur)
+## État actuel (serveur M8)
 
 | Mécanisme | Statut |
 |-----------|--------|
-| Redirect login ME → Lost Heaven | **Désactivé (juin 2026)** — `IA_BRIDGE_LOST_HEAVEN_ENABLED = false` dans `ia_bridge_screenplay.lua` ; reprendre quand hub LH déployé |
-| Rayon Mos Eisley | 1000 m autour de (3496, -4784) |
-| Persistance | Flag `lbg_spawn_lost_heaven_v1:<oid>` — une fois par perso |
-| Bots Lia/Nix | Exclus |
+| Redirect login → Lost Heaven | **Actif** — `IA_BRIDGE_LOST_HEAVEN_ENABLED = true` |
+| Migration tous persos (1×) | Flag `lbg_world_m8_v1:<oid>` |
+| Bots Lia/Nix/Mira | Exclus |
+| Blue frog | Spawn auto après `hub build` v9 |
 
 Déployer après modification :
 
@@ -36,15 +36,15 @@ Fichier retail / patch : **`datatables/creation/starting_locations.iff`**
 
 1. Ouvrir `starting_locations.iff` avec **Sytner IFF Editor** (`J:\swgemu\sytners_iff_editor_...`).
 2. Dupliquer une ligne `mos_eisley` → renommer clé ville **`lost_heaven`**.
-3. Coords (repère SWG datatable, aligner sur hub) :
-   - **X** = 4809
-   - **Z** (hauteur) = 9
-   - **Y** (plan) = -802
+3. Coords (repère SWG datatable, aligner sur `scrapaltai_world.json`) :
+   - **X** = 4749
+   - **Z** (hauteur) = 1
+   - **Y** (plan) = -537
    - **Zone** = `tatooine`
    - **Heading** = 90
 4. Option : désactiver / retirer `mos_eisley` de la liste proposée au client.
-5. Packager dans `J:\swgemu\MOD_LBG\` + patch client Prime (`clients/prime-lbg`).
-6. Redistribuer le patch launchpad / manifeste client.
+5. **Automatique** : `python3 tools/client_patch/patch_starting_locations.py starting_locations.iff -o MOD_LBG/...`
+6. Packager dans `MOD_LBG` + patch client Prime (`clients/prime-lbg`).
 
 ### Strings client (optionnel)
 

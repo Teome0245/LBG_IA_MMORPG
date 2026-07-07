@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "zone_id": "tatooine",
+  "display_zone": "Scrapaltai",
+  "display_city": "Lost Heaven",
+  "hub_location_id": "loc:lost_heaven_hub",
+  "status": "m8_active",
+  "movement": {
+    "planet_bounds_m": 6500,
+    "allow_full_planet": true,
+    "hub_soft_radius_m": 400,
+    "notes": "Joueurs libres sur toute la planète ; seul Lost Heaven a du contenu LBG actif."
+  },
+  "world_anchor": {
+    "x": 4749,
+    "y": -737,
+    "z": 1
+  },
+  "new_player_spawn": {
+    "x": 4749,
+    "y": -537,
+    "z": 1,
+    "heading": 90,
+    "cell": 0,
+    "label": "Port shuttle Lost Heaven"
+  },
+  "migration": {
+    "flag_key": "lbg_world_m8_v1",
+    "redirect_on_login": true,
+    "exclude_ai_bridge_players": false,
+    "ai_player_posts": {
+      "Lia": { "x": 4849, "y": -637, "role": "cantina_entertainer" },
+      "Nix": { "x": 4755, "y": -532, "role": "starport_scout" },
+      "Mira": { "x": 4849, "y": -837, "role": "training_artisan" }
+    },
+    "arrived_radius_m": 150,
+    "deprecated_hubs": [
+      {
+        "id": "mos_eisley",
+        "center_x": 3496,
+        "center_y": -4784,
+        "radius_m": 1200
+      },
+      {
+        "id": "mos_espa",
+        "center_x": -2902,
+        "center_y": 2130,
+        "radius_m": 800
+      },
+      {
+        "id": "bestine",
+        "center_x": -1290,
+        "center_y": -3590,
+        "radius_m": 800
+      },
+      {
+        "id": "anchorhead",
+        "center_x": -100,
+        "center_y": -5400,
+        "radius_m": 600
+      }
+    ]
+  },
+  "purge": {
+    "cull_vanilla_spawns": true,
+    "block_interplanet_travel": true,
+    "rebuild_gradual": true
+  },
+  "blue_frog": {
+    "enabled": true,
+    "template": "object/tangible/terminal/terminal_character_builder.iff",
+    "offset_from_anchor": { "x": 50, "y": -50, "z": 0 },
+    "label": "Terminal Character Builder (GM/dev)"
+  }
+}

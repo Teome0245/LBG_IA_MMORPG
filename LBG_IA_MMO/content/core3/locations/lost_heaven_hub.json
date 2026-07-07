@@ -5,7 +5,7 @@
   "display_zone": "Scrapaltai",
   "display_city": "Lost Heaven",
   "description": "Hub principal LBG — désert est, remplace Mos Eisley comme ville de départ et centre PNJ IA.",
-  "status": "build_script_ready",
+  "status": "m8_active",
   "world_anchor": {
     "x": 4749,
     "y": -737,

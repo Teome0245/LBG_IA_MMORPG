@@ -67,6 +67,9 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
     # OpenGame : génération de prototype uniquement via action structurée et sandboxée.
     elif isinstance(ctx.get("opengame_action"), dict):
         intent, confidence = ("prototype_game", 1.0)
+    # Chat opérateur (pilot_shell) — bypass classifieur → assistant projet.
+    elif ctx.get("pilot_chat") is True or ctx.get("pilot_assistant") is True:
+        intent, confidence = ("project_pm", 1.0)
     # Chef de projet : priorité explicite (payload ou drapeau).
     elif ctx.get("pm_focus") is True or isinstance(ctx.get("project_pm"), dict):
         intent, confidence = ("project_pm", 1.0)
@@ -193,6 +196,11 @@ def route_intent(payload: RouteRequest) -> RouteResponse:
     out_body: dict[str, object] = {"capability": cap.name, "policy": policy.model_dump(), **agent_out}
     if route_meta:
         out_body["orchestrator_route_meta"] = route_meta
+        # Réponse lisible quand le classifieur LLM a formulé une clarification.
+        if intent == "unknown":
+            ar = route_meta.get("assistant_reply")
+            if isinstance(ar, str) and ar.strip() and not out_body.get("reply"):
+                out_body["reply"] = ar.strip()
     print(
         json.dumps(
             {

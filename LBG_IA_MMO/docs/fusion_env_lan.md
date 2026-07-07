@@ -2,13 +2,39 @@
 
 Document **vivant** : à mettre à jour si les IPs ou les rôles changent. Lié à **`plan_fusion_lbg_ia.md`**.
 
-## Décision actuelle (réseau privé)
+## Référence canonique (prod LAN)
+
+| IP | Rôle | Services clés |
+|----|------|----------------|
+| **`192.168.0.110`** | **Front + UI + LLM** | Hostname : **`lbg-ia-ui`** (Nginx **:8080**, Ollama **:11434**) |
+| **`192.168.0.140`** | **Backend** | Hostname : **`lbg-backend`** (FastAPI **:8000**, orchestrateur, agents) |
+| **`192.168.0.245`** | **Core3 PreCU** | Hostname : **`lbg-mmo-precu`** |
+| **`192.168.0.246`** | **Core3 Prime** | Hostname : **`lbg-mmo-prime`** (MMO personnalisé LBG) |
+
+**Règle UI** : l’interface opérateur **`pilot_shell`** est servie en prod sur **110** (front Nginx), pas sur 140. Le backend **140** expose l’API `/v1/*` ; le front **110** proxy ou le client pointe vers **140**.
+
+## Environnement WSL (test en parallèle)
+
+Le poste **WSL n’est pas la prod** : c’est un bac à sable qui **appelle la prod LAN** pour éviter les écarts (LLM, SSH, Core3, chemins VM).
+
+| Mode | URL UI | API / LLM |
+|------|--------|-----------|
+| **WSL test** (`npm run dev`) | `http://127.0.0.1:5175/pilot/v2/` | Proxy Vite → **140** (`pilot_shell/.env.development`) ; **apiBase vide** dans Réglages |
+| **Prod front** | `http://192.168.0.110:8080/` | API **140:8000** (Nginx proxy ou réglage explicite) |
+| **Prod backend direct** | `http://192.168.0.140:8000/pilot/v2/` | Fallback si pas de Nginx 110 |
+
+Script : **`infra/scripts/dev_pilot_workflow.sh`** (`--full` = core 140 + front 110, `--dev` = WSL test).
+
+---
+
+## Décision actuelle (réseau privé) — détail historique
 
 | IP | Rôle principal | Notes |
 |----|------------------|--------|
 | **`192.168.0.140`** | **Orchestrateur LBG** (monorepo : `lbg-orchestrator`, etc.) + **stack LBG_IA** (orchestrateur « produit » : Vue / Docker / `RouterIA`, Postgres selon déploiement) | Point d’entrée **logique** pour l’IA et l’UI produit ; **`deploy_vm.sh`** déploie **ce monorepo** vers cette machine par défaut (`LBG_VM_HOST`). |
-| **`192.168.0.245`** | **Serveur MMO** : **`mmmorpg`** (WebSocket, jeu) + idéalement **`mmo_server`** HTTP (Lyra PNJ, `/v1/world/lyra`, persistance `WorldState`) | Séparer le **monde jeu** et la **slice Lyra** réseau du reste ; les services **140** appellent **245** via URLs (voir ci‑dessous). |
-| **`192.168.0.110`** | **LLM local** (Ollama) + **Frontend Unifié** (Nginx :8080) | Héberge l'interface **Lyra** (racine) et le **Client MMO** (`/mmo/`). |
+| **`192.168.0.245`** | **Serveur MMO** : **`mmmorpg`** (WebSocket, jeu) + idéalement **`mmo_server`** HTTP (Lyra PNJ, `/v1/world/lyra`, persistance `WorldState`) | **Core3 PreCU** ; les services **140** appellent **245** via URLs (voir ci‑dessous). |
+| **`192.168.0.246`** | **Core3 Prime** | MMO personnalisé LBG — autorité jeu (remplace l’ancien WS :7733, ADR 0012). |
+| **`192.168.0.110`** | **LLM local** (Ollama) + **Frontend Unifié** (Nginx :8080) | Héberge l'interface **Lyra** (racine), le **Client MMO** (`/mmo/`) et **`pilot_shell`** (`/pilot/v2/`). |
 
 ---
 

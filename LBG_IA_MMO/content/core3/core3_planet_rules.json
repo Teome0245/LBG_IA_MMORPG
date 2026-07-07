@@ -3,7 +3,8 @@
   "planets": [
     {
       "zone": "tatooine",
-      "label": "Terre1",
+      "label": "Scrapaltai",
+      "display_city": "Lost Heaven",
       "geometry": "sphere",
       "game_time": {
         "real_hours_per_game_day": 6,

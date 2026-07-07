@@ -54,6 +54,8 @@ def propose_action_from_text(text: str, context: dict[str, object] | None = None
         or _propose_core3_lia(raw, normalized)
         or _propose_capabilities_inventory(normalized)
         or _propose_network_inventory(normalized)
+        or _propose_proxmox_storage(normalized)
+        or _propose_infra_overview(normalized)
         or _propose_infra_selfcheck(normalized)
         or _propose_dialogue_consult(normalized, raw)
         or _propose_project_pm_consult(normalized)
@@ -515,6 +517,55 @@ def _propose_proxmox_status(normalized: str) -> ActionProposal | None:
         summary="Sonde Proxmox read-only (cluster, VMs LAN core/front/precu/prime).",
         risk_level=cap.risk_level,
         confidence=0.83,
+    )
+
+
+def _propose_proxmox_storage(normalized: str) -> ActionProposal | None:
+    if not re.search(r"\b(proxmox|stockage|storage|thin|local-lvm|pool\s*thin|disque)\b", normalized):
+        return None
+    if not re.search(
+        r"\b(état|etat|status|supervis|surveill|sond|alerte|io-error|prime|246|satur|plein|espace)\b",
+        normalized,
+    ):
+        return None
+    cap = capability_registry.get("devops_probe")
+    assert cap is not None
+    return ActionProposal(
+        capability=cap.name,
+        routed_to=cap.routed_to,
+        action_context_key=cap.action_context_key or "devops_action",
+        action={"kind": "proxmox_storage"},
+        context_patch={"devops_action": {"kind": "proxmox_storage"}},
+        summary="Sonde pool thin Proxmox 201 + statut VM Prime 246.",
+        risk_level=cap.risk_level,
+        confidence=0.86,
+    )
+
+
+def _propose_infra_overview(normalized: str) -> ActionProposal | None:
+    if re.search(
+        r"\b(comment\s+va|état\s+de\s+l['\u2019]?infra|bilan\s+infra|diagnostic\s+infra|"
+        r"santé\s+infra|sante\s+infra|surveillance\s+infra)\b",
+        normalized,
+    ):
+        pass
+    elif re.search(r"\b(infra|infrastructure)\b", normalized) and re.search(
+        r"\b(comment|état|etat|bilan|diagnostic|va|vont)\b", normalized
+    ):
+        pass
+    else:
+        return None
+    cap = capability_registry.get("devops_probe")
+    assert cap is not None
+    return ActionProposal(
+        capability=cap.name,
+        routed_to=cap.routed_to,
+        action_context_key=cap.action_context_key or "devops_action",
+        action={"kind": "proxmox_status"},
+        context_patch={"devops_action": {"kind": "proxmox_status"}},
+        summary="Bilan infra Proxmox (VM LAN, RAM, charge nœud) + aligné UI Proxmox.",
+        risk_level=cap.risk_level,
+        confidence=0.88,
     )
 
 

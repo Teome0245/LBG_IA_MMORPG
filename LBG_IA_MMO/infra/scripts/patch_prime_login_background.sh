@@ -30,7 +30,7 @@ if [[ -d "${ARCHIVE_DIR}" ]]; then
   rmdir "${ARCHIVE_DIR}" 2>/dev/null || true
   echo "patch_lbg archivé hors client → ${TRASH_DIR}"
 fi
-for f in patch_lbg_00.tre patch_lbg_01.tre LBG_patch_026.tre; do
+for f in patch_lbg_00.tre patch_lbg_01.tre; do
   if [[ -f "${PRIME_DIR}/${f}" ]]; then
     mv -f "${PRIME_DIR}/${f}" "${TRASH_DIR}/"
     echo "Retiré: ${f}"
@@ -77,7 +77,10 @@ for line in lines:
             seen_ui_fr = True
         continue
     if s == "searchTree_00_55=LBG_patch_026.tre":
-        out.append("\t# searchTree_00_55=LBG_patch_026.tre  # Aurora login — désactivé")
+        out.append("\tsearchTree_00_55=LBG_patch_026.tre  # assets Aurora (login → patch_prime 99)")
+        continue
+    if s.startswith("# searchTree_00_55=LBG_patch_026.tre"):
+        out.append("\tsearchTree_00_55=LBG_patch_026.tre  # assets Aurora (login → patch_prime 99)")
         continue
     out.append(line)
 
@@ -102,6 +105,4 @@ PY
 
 echo ""
 echo "OK — relancer lbgemu.exe (Prime)."
-echo "  Login        : patch_00 vanilla via patch_prime_login_00.tre (priorité 99)"
-echo "  Destroyer    : textures Aurora neutralisées dans le patch"
-echo "  LBG_patch_026: retiré (login Aurora)"
+echo "  Login        : LBG_patch_029 via patch_prime_login_00.tre (fond Aurora = 026)"

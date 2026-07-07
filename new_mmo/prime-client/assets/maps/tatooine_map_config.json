@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "planet": "tatooine",
+  "half_size": 6500.0,
+  "bounds": {
+    "minX": -6500,
+    "maxX": 6500,
+    "minY": -6500,
+    "maxY": 6500
+  },
+  "north_up": true,
+  "texture": "res://assets/maps/tatooine.svg",
+  "projection_scale": 0.5,
+  "flip_texture_y": true,
+  "notes": "bounds.minY/maxY = axe Z Core3 (carte éditeur north-up)"
+}

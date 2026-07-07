@@ -1,0 +1,295 @@
+{
+  "ts": 1782897078.0696895,
+  "origin": {
+    "x": 3445.72,
+    "z": -4668.87
+  },
+  "entities": [
+    {
+      "id": "player:Lia",
+      "kind": "player",
+      "name": "Lia",
+      "x": 3445.72,
+      "y": -2.5999999999999996,
+      "z": -4668.87,
+      "online": true,
+      "stale": false,
+      "zone": "tatooine"
+    },
+    {
+      "id": "player:Nix",
+      "kind": "player",
+      "name": "Nix",
+      "x": 3465.0,
+      "y": -4795.0,
+      "z": 5.0,
+      "online": true,
+      "stale": false,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_daan_oth",
+      "kind": "npc",
+      "name": "Daan Oth \uffc2\uffb7 Murrik (PNJ IA)",
+      "x": 3488.0,
+      "y": -4782.0,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_scribe",
+      "kind": "npc",
+      "name": "Archiviste \uffc2\uffb7 Tinkling (PNJ IA)",
+      "x": 3498.0,
+      "y": -4788.0,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "player:Mira",
+      "kind": "player",
+      "name": "Mira",
+      "x": 3520.0,
+      "y": -4810.0,
+      "z": 5.0,
+      "online": true,
+      "stale": false,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_rumeuriste",
+      "kind": "npc",
+      "name": "Rumeuriste \uffc2\uffb7 Murrik (PNJ IA)",
+      "x": 3526.8,
+      "y": -4799.0,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_agent_circulation",
+      "kind": "npc",
+      "name": "Agent de circulation \uffc2\uffb7 Fel'Rani (PNJ IA)",
+      "x": 3532.0,
+      "y": -4796.0,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_guide_quartier",
+      "kind": "npc",
+      "name": "Guide de quartier \uffc2\uffb7 Fel'Rani (PNJ IA)",
+      "x": 3532.96,
+      "y": -4788.08,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_sergent_rue",
+      "kind": "npc",
+      "name": "Sergent de rue \uffc2\uffb7 Mechari (PNJ IA)",
+      "x": 3536.3,
+      "y": -4799.3,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_kisreudi",
+      "kind": "npc",
+      "name": "Kisreudi Teste \uffc2\uffb7 Fel'Rani (PNJ IA)",
+      "x": 3551.0,
+      "y": -4725.0,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_guard",
+      "kind": "npc",
+      "name": "Garde \uffc2\uffb7 Mechari (PNJ IA)",
+      "x": 3568.0,
+      "y": -4818.0,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_pilot_imperial_c",
+      "kind": "npc",
+      "name": "Mord Kael (PNJ IA)",
+      "x": 3582.0,
+      "y": -4778.0,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_pilot_alliance_c",
+      "kind": "npc",
+      "name": "Theo Nash (PNJ IA)",
+      "x": 3582.0,
+      "y": -4772.0,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_pilot_freelance_c",
+      "kind": "npc",
+      "name": "Dorn Pike (PNJ IA)",
+      "x": 3592.0,
+      "y": -4770.0,
+      "z": 5.0,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_videur",
+      "kind": "npc",
+      "name": "Videur \uffc2\uffb7 Plimp (PNJ IA)",
+      "x": 28.5,
+      "y": 63.8,
+      "z": 2.13,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_maitre_salle",
+      "kind": "npc",
+      "name": "Maitre de salle \uffc2\uffb7 Fae-Lume (PNJ IA)",
+      "x": 18.2,
+      "y": 62.5,
+      "z": 2.13,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_brawler_trainer_c",
+      "kind": "npc",
+      "name": "Tobin Ress (PNJ IA)",
+      "x": 14.04,
+      "y": -13.75,
+      "z": 1.13,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_medic_trainer_c",
+      "kind": "npc",
+      "name": "Odo Merr (PNJ IA)",
+      "x": 11.69,
+      "y": 1.05,
+      "z": 1.13,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_habitue_cantina",
+      "kind": "npc",
+      "name": "Habitue \uffc2\uffb7 Mogrul (PNJ IA)",
+      "x": 12.5,
+      "y": 56.0,
+      "z": 2.13,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_barman_jax",
+      "kind": "npc",
+      "name": "Jax Moro \uffc2\uffb7 Fel'Rani (PNJ IA)",
+      "x": 7.26,
+      "y": 1.15,
+      "z": -0.89,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_artiste_scene",
+      "kind": "npc",
+      "name": "Artiste de scene \uffc2\uffb7 Fae-Lume (PNJ IA)",
+      "x": 2.32,
+      "y": -16.47,
+      "z": -0.89,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_talen_ress",
+      "kind": "npc",
+      "name": "Talen Ress \uffc2\uffb7 Fel'Rani (PNJ IA)",
+      "x": 0.18,
+      "y": -1.49,
+      "z": 1.13,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_politician_trainer_c",
+      "kind": "npc",
+      "name": "Vorn Thess (PNJ IA)",
+      "x": 0.08,
+      "y": 8.75,
+      "z": 2.5,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_marksman_trainer_c",
+      "kind": "npc",
+      "name": "Unar Tek (PNJ IA)",
+      "x": -3.78,
+      "y": -14.17,
+      "z": 1.13,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_scout_trainer_c",
+      "kind": "npc",
+      "name": "Yara Nis (PNJ IA)",
+      "x": -8.59,
+      "y": -0.38,
+      "z": 1.13,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    },
+    {
+      "id": "npc:npc:core3_artisan_trainer_c",
+      "kind": "npc",
+      "name": "Kell Asa (PNJ IA)",
+      "x": -14.28,
+      "y": -8.6,
+      "z": 1.13,
+      "online": true,
+      "stale": true,
+      "zone": "tatooine"
+    }
+  ]
+}

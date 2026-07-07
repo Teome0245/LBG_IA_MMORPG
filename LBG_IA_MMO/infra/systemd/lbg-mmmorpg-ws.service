@@ -1,5 +1,5 @@
 [Unit]
-Description=LBG MMMORPG WebSocket server (Phase 1)
+Description=LBG MMMORPG WebSocket server — DÉCOMMISSIONNÉ (ADR 0012, opt-in LBG_DEPLOY_MMMORPG_WS=1)
 After=network.target
 
 [Service]

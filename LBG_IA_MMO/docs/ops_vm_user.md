@@ -158,3 +158,42 @@ export LBG_SSH_IDENTITY="$HOME/.ssh/id_ed25519"
 - `infra/scripts/push_secrets_vm.sh` — droits `640 root:lbg`
 - `infra/logrotate/lbg-devops-audit` — `create 0640 lbg lbg`
 - `docs/ops_devops_audit.md` — audit JSONL
+
+## 4. Hostnames LAN (convention)
+
+L’**IP** reste la source de vérité pour les scripts. Hostnames cibles :
+
+| IP | Hostname cible | Rôle | Ancien (exemples observés) |
+|----|----------------|------|----------------------------|
+| **110** | **`lbg-ia-ui`** | Front, Nginx, Ollama, UI pilot | `lbg-ia-backend` |
+| **140** | **`lbg-backend`** | Backend, orchestrateur, agents | `vm140-lbg-ia-mmorpg`, `lbg-ia-backend` |
+| **245** | **`lbg-mmo-precu`** | Core3 PreCU | `lbgswgmtg`, `lbg-ia-mmo-precu` |
+| **246** | **`lbg-mmo-prime`** | Core3 Prime (MMO LBG) | `ubuntu`, `lbg-ia-mmo-prime` |
+
+### Appliquer en une commande (depuis le poste de dev)
+
+```bash
+cd LBG_IA_MMO
+bash infra/scripts/set_lan_hostnames.sh --dry-run   # aperçu
+bash infra/scripts/set_lan_hostnames.sh              # applique sur les 4 VM
+bash infra/scripts/set_lan_hostnames.sh --verify-only
+bash infra/scripts/set_lan_hostnames.sh --host 140  # une seule VM
+```
+
+### Manuel (une VM)
+
+```bash
+sudo hostnamectl set-hostname lbg-ia-ui   # adapter selon la machine
+```
+
+`/etc/hosts` — exemple pour **110** :
+
+```
+127.0.1.1       lbg-ia-ui
+127.0.0.1       localhost
+192.168.0.110   lbg-ia-ui
+```
+
+Cloud-init / Proxmox : `preserve_hostname: true` dans `/etc/cloud/cloud.cfg` si le nom revient au reboot.
+
+**Ne pas confondre** : `/etc/lbg-ia-mmo.env` (variables app) ≠ hostname Unix.

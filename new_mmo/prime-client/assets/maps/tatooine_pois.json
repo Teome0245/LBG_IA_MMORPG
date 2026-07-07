@@ -1,0 +1,117 @@
+{
+  "zone": "tatooine",
+  "pois": [
+    {
+      "id": "poi:mos_eisley",
+      "kind": "city",
+      "label": "Mos Eisley",
+      "x": 3520.0,
+      "z": -4800.0
+    },
+    {
+      "id": "poi:anchorhead",
+      "kind": "city",
+      "label": "Anchorhead",
+      "x": -100.0,
+      "z": -5400.0
+    },
+    {
+      "id": "poi:bestine",
+      "kind": "city",
+      "label": "Bestine",
+      "x": -4000.0,
+      "z": -6000.0
+    },
+    {
+      "id": "poi:lost_heaven",
+      "kind": "hub",
+      "label": "Lost Heaven",
+      "x": 4749.0,
+      "z": -737.0
+    },
+    {
+      "id": "poi:lost_heaven_starport",
+      "kind": "starport_shuttle",
+      "label": "Port shuttle",
+      "x": 4749.0,
+      "z": -537.0
+    },
+    {
+      "id": "poi:lost_heaven_cantina",
+      "kind": "cantina",
+      "label": "Cantina",
+      "x": 4849.0,
+      "z": -637.0
+    },
+    {
+      "id": "poi:lost_heaven_inn",
+      "kind": "inn",
+      "label": "Auberge",
+      "x": 4649.0,
+      "z": -637.0
+    },
+    {
+      "id": "poi:lost_heaven_bank",
+      "kind": "bank",
+      "label": "Banque",
+      "x": 4549.0,
+      "z": -737.0
+    },
+    {
+      "id": "poi:lost_heaven_market",
+      "kind": "shops",
+      "label": "Marché / commerces",
+      "x": 4749.0,
+      "z": -737.0
+    },
+    {
+      "id": "poi:lost_heaven_artisan_hall",
+      "kind": "trainer_artisan",
+      "label": "Atelier artisan",
+      "x": 4949.0,
+      "z": -737.0
+    },
+    {
+      "id": "poi:lost_heaven_training_hall",
+      "kind": "trainers_combat",
+      "label": "Hall d'entraînement",
+      "x": 4849.0,
+      "z": -837.0
+    },
+    {
+      "id": "poi:lost_heaven_clinic",
+      "kind": "clinic",
+      "label": "Clinique",
+      "x": 4649.0,
+      "z": -837.0
+    },
+    {
+      "id": "poi:lost_heaven_mission_post",
+      "kind": "mission_terminal",
+      "label": "Bureau des missions",
+      "x": 4949.0,
+      "z": -937.0
+    },
+    {
+      "id": "poi:lost_heaven_housing_npc",
+      "kind": "npc_housing_block",
+      "label": "Logements PNJ",
+      "x": 4549.0,
+      "z": -537.0
+    },
+    {
+      "id": "poi:lost_heaven_gate",
+      "kind": "city_gate",
+      "label": "Porte / palissade",
+      "x": 4749.0,
+      "z": -1037.0
+    },
+    {
+      "id": "poi:lost_heaven_town_hall",
+      "kind": "town_hall",
+      "label": "Mairie",
+      "x": 4749.0,
+      "z": -937.0
+    }
+  ]
+}

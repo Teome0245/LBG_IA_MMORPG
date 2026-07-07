@@ -199,6 +199,16 @@ Chaque job exécute (via planner) :
 
 Cooldown entre jobs : **30 min** (warn) / **15 min** (critical) — variables `LBG_STORAGE_WATCHDOG_COOLDOWN_*`.
 
+### Assistant Core (`#/assistant`)
+
+Le chat Assistant affiche un **bandeau infra** (sonde Proxmox + jobs en attente) et répond en langage naturel :
+
+- *« Comment va l'infra ? »* → bilan selfcheck
+- *« Stockage Proxmox ? »* → sonde pool thin
+- *« oui »* (si job en attente) → approbation via jeton dans Réglages techniques
+
+API : `GET /v1/pilot/infra-alerts` (proxy backend → orchestrateur).
+
 Le watchdog infra général (`lbg-infra-watchdog`, 5 min) inclut aussi la sonde stockage dans son agrégat.
 
 Référence ops : [`runbook_ops_bots_watchdog.md`](runbook_ops_bots_watchdog.md).

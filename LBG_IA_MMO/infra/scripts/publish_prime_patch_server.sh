@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
-# Publie le manifest Prime sur le serveur de patch (Launchpad → :8080).
-# Sans ça, « Vérifier mises à jour » réinjecte patch_lbg_01 + login Aurora cassé.
+# Publie le manifest Prime (canal Launchpad).
+#
+# Modes (un seul à la fois) :
+#   PRIME_PATCH_VANILLA=1  — reset aligné PreCu (en)
+#   PRIME_PATCH_FR=1       — étape 1 : locale FR + LBG_French.tre
+#   défaut                 — pipeline branding LBG (expérimental)
+#
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -10,37 +15,59 @@ PATCH_HOST="${PATCH_SERVER_HOST:-192.168.0.245}"
 PATCH_USER="${PATCH_SERVER_USER:-lbg}"
 PATCH_REMOTE="${PATCH_REMOTE_DIR:-/home/lbg/lbg-client-patches/patches/prime}"
 
-bash "${ROOT_DIR}/infra/scripts/patch_prime_login_background.sh"
+if [[ "${PRIME_PATCH_VANILLA:-0}" == "1" ]]; then
+  bash "${ROOT_DIR}/infra/scripts/align_prime_client_precu.sh"
+elif [[ "${PRIME_PATCH_FR:-0}" == "1" ]]; then
+  bash "${ROOT_DIR}/infra/scripts/patch_prime_client_locale_fr.sh"
+  bash "${ROOT_DIR}/infra/scripts/patch_prime_client_lbg_content.sh"
+else
+  bash "${ROOT_DIR}/infra/scripts/patch_prime_login_background.sh"
+fi
 
 mkdir -p "${PATCH_SRC}"
 
-for f in swgemu_live.cfg swgemu_login.cfg swgemu.cfg swgemu_preload.cfg user.cfg lbgemu_client.cfg options.cfg; do
-  cp -f "${PRIME_CLIENT}/${f}" "${PATCH_SRC}/${f}"
+CFG_FILES="swgemu_live.cfg swgemu_login.cfg swgemu.cfg swgemu_preload.cfg user.cfg options.cfg"
+for f in ${CFG_FILES}; do
+  cp -f "${PRIME_CLIENT}/${f}" "${PATCH_SRC}/"
 done
-cp -f "${PRIME_CLIENT}/patch_prime_login_00.tre" "${PATCH_SRC}/"
-cp -f "${PRIME_CLIENT}/patch_prime_ui_fr_00.tre" "${PATCH_SRC}/"
 
-# Retirer anciens TRE cassés du dépôt patch
 rm -f "${PATCH_SRC}/patch_lbg_00.tre" "${PATCH_SRC}/patch_lbg_01.tre"
+rm -f "${PATCH_SRC}/patch_prime_fr_stf_00.tre" "${PATCH_SRC}/patch_prime_fr_login_00.tre"
 
-python3 <<PY
-import hashlib, json
+TRE_FILES=""
+if [[ "${PRIME_PATCH_FR:-0}" == "1" ]]; then
+  if [[ -f "${PRIME_CLIENT}/patch_prime_fr_login_00.tre" ]]; then
+    cp -f "${PRIME_CLIENT}/patch_prime_fr_login_00.tre" "${PATCH_SRC}/"
+    TRE_FILES=" patch_prime_fr_login_00.tre"
+  fi
+elif [[ "${PRIME_PATCH_VANILLA:-0}" != "1" ]]; then
+  for f in patch_prime_login_00.tre patch_prime_ui_fr_00.tre; do
+    if [[ -f "${PRIME_CLIENT}/${f}" ]]; then
+      cp -f "${PRIME_CLIENT}/${f}" "${PATCH_SRC}/"
+      TRE_FILES="${TRE_FILES} ${f}"
+    fi
+  done
+fi
+
+if [[ "${PRIME_PATCH_VANILLA:-0}" == "1" ]]; then
+  MANIFEST_VERSION="prime-precu-$(date +%Y%m%d)"
+elif [[ "${PRIME_PATCH_FR:-0}" == "1" ]]; then
+  MANIFEST_VERSION="prime-fr-step1-$(date +%Y%m%d)"
+else
+  MANIFEST_VERSION="prime-20260630"
+fi
+
+export PATCH_SRC PRIME_CLIENT MANIFEST_VERSION CFG_FILES TRE_FILES
+python3 <<'PY'
+import hashlib, json, os
 from pathlib import Path
-src = Path("${PATCH_SRC}")
-files = [
-    "lbgemu.exe",
-    "swgemu.cfg",
-    "swgemu_login.cfg",
-    "swgemu_live.cfg",
-    "swgemu_preload.cfg",
-    "user.cfg",
-    "lbgemu_client.cfg",
-    "options.cfg",
-    "patch_prime_login_00.tre",
-    "patch_prime_ui_fr_00.tre",
-]
-client = Path("${PRIME_CLIENT}")
-manifest = {"version": "prime-20260630", "files": []}
+
+src = Path(os.environ["PATCH_SRC"])
+client = Path(os.environ["PRIME_CLIENT"])
+cfg_files = os.environ["CFG_FILES"].split()
+tre_files = [f for f in os.environ.get("TRE_FILES", "").split() if f]
+files = ["lbgemu.exe", *cfg_files, *tre_files]
+manifest = {"version": os.environ["MANIFEST_VERSION"], "files": []}
 for name in files:
     p = client / name if name == "lbgemu.exe" else src / name
     if not p.is_file():
@@ -64,4 +91,10 @@ else
 fi
 
 echo ""
-echo "Terminé. Ne pas utiliser l'ancien patch_lbg_01 sur le client."
+if [[ "${PRIME_PATCH_VANILLA:-0}" == "1" ]]; then
+  echo "Canal Prime = copie config PreCu + login 246 (sans TRE custom)."
+elif [[ "${PRIME_PATCH_FR:-0}" == "1" ]]; then
+  echo "Canal Prime = PreCu + locale FR (LBG_French.tre prio 25)."
+else
+  echo "Canal Prime = branding LBG (expérimental)."
+fi

@@ -31,6 +31,7 @@ WE_LUA="${ROOT_DIR}/content/core3/lua/lbg_world_editor_screenplay.lua"
 WE_HOOKS_LUA="${ROOT_DIR}/content/core3/lua/lbg_player_hooks.lua"
 TERRAIN_LIB="${ROOT_DIR}/content/core3/lua/lbg_terrain_lib.lua"
 LH_LUA="${ROOT_DIR}/content/core3/lua/lbg_lost_heaven_screenplay.lua"
+SW_LUA="${ROOT_DIR}/content/core3/lua/lbg_scrapaltai_world_screenplay.lua"
 WE_SCREENPLAYS="${ROOT_DIR}/content/core3/lua/screenplays.lua"
 LOCAL_SCRIPTS="${LBG_NEW_MMO_REPO:-${ROOT_DIR}/../../new_mmo}/lbg-mmo/Core3/MMOCoreORB/bin/scripts"
 if [[ ! -f "${IA_BRIDGE_LUA}" && ! -d "${LOCAL_SCRIPTS}/custom_scripts/screenplays" ]]; then
@@ -53,7 +54,7 @@ if [[ -f "${LBG_ARTISAN_HUB_LUA}" ]]; then
   scp -q "${LBG_ARTISAN_HUB_LUA}" \
     "${VM_USER}@${VM_HOST}:${CLEAN_BIN}/scripts/custom_scripts/screenplays/lbg_artisan_hub_screenplay.lua"
 fi
-for lua in "${TERRAIN_LIB}" "${WE_LUA}" "${WE_HOOKS_LUA}" "${LH_LUA}"; do
+for lua in "${TERRAIN_LIB}" "${WE_LUA}" "${WE_HOOKS_LUA}" "${LH_LUA}" "${SW_LUA}"; do
   if [[ -f "${lua}" ]]; then
     scp -q "${lua}" \
       "${VM_USER}@${VM_HOST}:${CLEAN_BIN}/scripts/custom_scripts/screenplays/$(basename "${lua}")"
@@ -89,6 +90,7 @@ scp -q "${ROOT_DIR}/content/core3/core3_species_slot_map.json" \
   "${ROOT_DIR}/content/core3/lia_perform_catalog.json" \
   "${ROOT_DIR}/content/core3/lia_orchestrator_persona.json" \
   "${ROOT_DIR}/content/core3/core3_behavior_profiles.json" \
+  "${ROOT_DIR}/content/core3/scrapaltai_world.json" \
   "${VM_USER}@${VM_HOST}:/tmp/"
 
 scp -q "${ROOT_DIR}/tools/core3_ia_sidecar/core3_ia_sidecar.py" \
@@ -144,6 +146,8 @@ sudo cp /tmp/core3_artisan_dispenser.json ${CLEAN_BIN}/ia_bridge/core3_artisan_d
 sudo cp /tmp/lia_perform_catalog.json /opt/LBG_IA_MMO/content/core3/lia_perform_catalog.json 2>/dev/null || true
 sudo cp /tmp/lia_orchestrator_persona.json /opt/LBG_IA_MMO/content/core3/lia_orchestrator_persona.json 2>/dev/null || true
 sudo cp /tmp/core3_behavior_profiles.json /opt/LBG_IA_MMO/content/core3/core3_behavior_profiles.json 2>/dev/null || true
+sudo cp /tmp/scrapaltai_world.json /opt/LBG_IA_MMO/content/core3/scrapaltai_world.json 2>/dev/null || true
+sudo cp /tmp/scrapaltai_world.json ${CLEAN_BIN}/ia_bridge/scrapaltai_world.json 2>/dev/null || true
 sudo cp /tmp/core3_*.json ${CLEAN_BIN}/ia_bridge/ 2>/dev/null || true
 sudo touch ${CLEAN_BIN}/ia_bridge/pending.jsonl
 sudo touch ${CLEAN_BIN}/ia_bridge/player_snapshot.json

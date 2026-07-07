@@ -1,0 +1,14 @@
+[Unit]
+Description=LBG M3 mirror (user) — zone_feed Prime → Godot UDP
+After=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/projects/LBG_IA_MMORPG/LBG_IA_MMO/infra/config/m3_mirror.env
+WorkingDirectory=%h/projects/LBG_IA_MMORPG/LBG_IA_MMO
+ExecStart=%h/projects/LBG_IA_MMORPG/LBG_IA_MMO/tools/zone_observer/run_m3_mirror_daemon.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

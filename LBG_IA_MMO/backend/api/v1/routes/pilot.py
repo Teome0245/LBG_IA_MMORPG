@@ -923,8 +923,60 @@ class JobApproveBody(BaseModel):
     token: str = Field(..., min_length=1)
 
 
+class TaskRunBody(BaseModel):
+    """Corps pour `POST orchestrator /v1/tasks/run` (mode supervisé)."""
+
+    goal: str = Field(..., min_length=1, max_length=4000)
+    actor_id: str = "pilot:supervised"
+    context: dict[str, object] = Field(default_factory=dict)
+
+
 def _orchestrator_base() -> str:
     return os.environ.get("LBG_ORCHESTRATOR_URL", "http://127.0.0.1:8010").rstrip("/")
+
+
+@router.post("/tasks/run", tags=["pilot"])
+async def pilot_tasks_run(payload: TaskRunBody) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/tasks/run` (boucle supervisée jobs)."""
+    timeout = float(os.environ.get("LBG_SUPERVISED_TIMEOUT_S", "600").strip() or "600")
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.post(
+                f"{_orchestrator_base()}/v1/tasks/run",
+                json=payload.model_dump(),
+            )
+        if r.status_code == 503:
+            detail = r.json().get("detail", r.text) if r.content else "supervised_disabled"
+            return {"ok": False, "status": "disabled", "error": str(detail), "reply": "", "state": {}}
+        if r.status_code != 200:
+            return {
+                "ok": False,
+                "status": "error",
+                "error": f"orchestrator HTTP {r.status_code}",
+                "reply": r.text[:500],
+                "state": {},
+            }
+        data = r.json()
+        return data if isinstance(data, dict) else {"ok": False, "error": "invalid_json", "state": {}}
+    except Exception as e:
+        return {"ok": False, "status": "error", "error": str(e), "reply": "", "state": {}}
+
+
+@router.get("/infra-alerts", tags=["pilot"])
+async def pilot_infra_alerts(probe: bool = True) -> dict[str, object]:
+    """Synthèse infra pour Assistant (#/assistant) — jobs système + sonde stockage."""
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            r = await client.get(
+                f"{_orchestrator_base()}/v1/infra/alerts",
+                params={"probe": "true" if probe else "false"},
+            )
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 @router.post("/jobs", tags=["pilot"])
@@ -1022,6 +1074,81 @@ async def pilot_jobs_events_stream(job_id: str):
                     yield line + "\n"
         except Exception as e:
             yield f"data: {json.dumps({'kind': 'stream_error', 'error': str(e)})}\n\n"
+        finally:
+            await client.aclose()
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+def _assistant_chat_context(payload: IntentRequest, trace_id: str) -> tuple[IntentRequest, str]:
+    ctx = dict(payload.context) if isinstance(payload.context, dict) else {}
+    ctx.update(
+        {
+            "pilot_chat": True,
+            "pilot_assistant": True,
+            "pm_focus": True,
+            "pm_include_plan": True,
+            "pm_include_structure": True,
+            "pm_include_repo": True,
+            "prefer_pm_llm": True,
+            "_trace_id": trace_id,
+        }
+    )
+    return payload.model_copy(update={"context": ctx}), trace_id
+
+
+@router.post("/assistant/chat", tags=["pilot"])
+async def pilot_assistant_chat(payload: IntentRequest) -> dict[str, object]:
+    """
+    Chat opérateur type Cursor — bypass du classifieur d'intention.
+    Force project_pm + plan de route + LLM (si agent PM configuré).
+    """
+    trace_id = uuid.uuid4().hex
+    enriched, trace_id = _assistant_chat_context(payload, trace_id)
+    return await _pilot_route_impl(payload=enriched, trace_id=trace_id)
+
+
+@router.post("/assistant/chat/stream", tags=["pilot"])
+async def pilot_assistant_chat_stream(payload: IntentRequest) -> StreamingResponse:
+    """Chat opérateur en SSE — tokens + outils visibles (proxy agent PM)."""
+    trace_id = uuid.uuid4().hex
+    enriched, trace_id = _assistant_chat_context(payload, trace_id)
+    pm_url = os.environ.get("LBG_AGENT_PM_URL", "").strip().rstrip("/")
+
+    async def event_generator():
+        if not pm_url:
+            wrapped = await _pilot_route_impl(payload=enriched, trace_id=trace_id)
+            reply = ""
+            if isinstance(wrapped.get("result"), dict):
+                out = wrapped["result"].get("output")
+                if isinstance(out, dict):
+                    remote = out.get("remote")
+                    if isinstance(remote, dict) and isinstance(remote.get("reply"), str):
+                        reply = remote["reply"]
+                    elif isinstance(out.get("reply"), str):
+                        reply = out["reply"]
+            yield f"data: {json.dumps({'kind': 'token', 'delta': reply}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'kind': 'done', 'reply': reply, 'tools': [], 'trace_id': trace_id}, ensure_ascii=False)}\n\n"
+            return
+
+        body = {
+            "actor_id": enriched.actor_id or "pilot:shell:chat",
+            "text": enriched.text,
+            "context": enriched.context,
+        }
+        timeout = _pilot_agent_dialogue_invoke_timeout_s()
+        client = httpx.AsyncClient(timeout=timeout)
+        try:
+            async with client.stream("POST", f"{pm_url}/invoke/stream", json=body) as response:
+                if response.status_code != 200:
+                    err = (await response.aread()).decode()[:400]
+                    yield f"data: {json.dumps({'kind': 'error', 'error': f'PM HTTP {response.status_code}: {err}'}, ensure_ascii=False)}\n\n"
+                    return
+                async for line in response.aiter_lines():
+                    if line:
+                        yield line + "\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'kind': 'error', 'error': str(e)}, ensure_ascii=False)}\n\n"
         finally:
             await client.aclose()
 
