@@ -12,7 +12,7 @@
 # Après redimension Proxmox (voir docs/fusion_env_lan.md § VM 140) :
 #   sudo growpart /dev/sda 3 && sudo resize2fs /dev/sda3   # adapter partition si besoin
 #
-# Prérequis : sudo pour apt ; auth Claude (`claude login`) manuelle une fois par utilisateur.
+# Prérequis : sudo pour apt ; LLM via Ollama LAN (110) — pas de login Anthropic requis.
 
 set -euo pipefail
 
@@ -77,23 +77,71 @@ install_claude_for_user() {
 
   log "Installation Claude Code pour ${user}…"
   sudo -u "$user" bash -lc 'curl -fsSL https://claude.ai/install.sh | bash'
-  log "→ Connectez-vous une fois : sudo -u ${user} -i claude login"
+  log "→ LLM : Ollama LAN (gemma4-claude) — voir claude-lbg"
+}
+
+setup_claude_ollama_config() {
+  local user="$1"
+  local home proj_settings user_settings
+  home="$(getent passwd "$user" | cut -d: -f6)"
+  proj_settings="${APP_DIR}/.claude/settings.json"
+  user_settings="${home}/.claude/settings.json"
+
+  log "Config Claude Ollama (alignée Windows)…"
+  install -d -m 0755 -o "$user" -g "$user" "${APP_DIR}/.claude" "${home}/.claude"
+
+  if [[ -f "$proj_settings" ]]; then
+    log "  settings projet déjà présents (${proj_settings})"
+  else
+    cat >"$proj_settings" <<'JSON'
+{
+  "language": "français",
+  "skipDangerousModePermissionPrompt": true,
+  "env": {
+    "ANTHROPIC_BASE_URL": "http://192.168.0.110:11434",
+    "ANTHROPIC_AUTH_TOKEN": "ollama",
+    "ANTHROPIC_API_KEY": "",
+    "ANTHROPIC_MODEL": "gemma4-claude",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "gemma4-claude",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "gemma4-claude",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "gemma4-claude",
+    "CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS": "1"
+  }
+}
+JSON
+  fi
+  chown "$user:$user" "$proj_settings"
+
+  cat >"$user_settings" <<'JSON'
+{
+  "language": "français",
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark"
+}
+JSON
+  chown "$user:$user" "$user_settings"
+  chmod 600 "$user_settings" 2>/dev/null || true
+
+  if [[ -f "${APP_DIR}/infra/scripts/claude_ollama_lan.sh" ]]; then
+    chmod +x "${APP_DIR}/infra/scripts/claude_ollama_lan.sh"
+  fi
 }
 
 setup_shell_aliases() {
   local user="$1"
-  local home rc
+  local home rc marker
   home="$(getent passwd "$user" | cut -d: -f6)"
   rc="${home}/.bashrc"
   [[ -f "$rc" ]] || return
 
-  local marker="# LBG Claude core140"
+  marker="# LBG Claude core140"
   if grep -q "$marker" "$rc" 2>/dev/null; then
-    log "Alias déjà présents dans ${rc}"
-    return
+    log "Mise à jour alias dans ${rc}…"
+    sed -i "/^${marker}$/,\$d" "$rc"
+  else
+    log "Alias claude-lbg dans ${rc}…"
   fi
 
-  log "Alias claude-lbg dans ${rc}…"
   if ! grep -q '\.local/bin' "$rc" 2>/dev/null; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$rc"
   fi
@@ -101,8 +149,8 @@ setup_shell_aliases() {
 
 $marker
 export LBG_REPO_ROOT="${APP_DIR}"
-alias claude-lbg='cd ${APP_DIR} && claude work .'
-alias claude-lbg-chat='cd ${APP_DIR} && claude chat'
+alias claude-lbg='cd ${APP_DIR} && bash infra/scripts/claude_ollama_lan.sh work .'
+alias claude-lbg-chat='cd ${APP_DIR} && bash infra/scripts/claude_ollama_lan.sh chat'
 alias lbg-tmux='tmux attach -t lbg 2>/dev/null || tmux new -s lbg'
 EOF
   chown "${user}:${user}" "$rc" 2>/dev/null || true
@@ -126,13 +174,12 @@ print_next_steps() {
 
 === Prochaines étapes ===
 
-1. Auth Claude (une fois, interactif) :
-   sudo -u ${TARGET_USER} -i
-   claude login
-
-2. Session persistante (PuTTY / SSH) :
+1. Session persistante (PuTTY / SSH) :
    lbg-tmux
    claude-lbg
+
+2. LLM : Ollama ${FRONT_IP}:11434 (gemma4-claude) — même config que Windows.
+   Pas de login Anthropic cloud requis.
 
 3. Build pilot_shell (si besoin) :
    cd ${APP_DIR}/pilot_shell && npm install && npm run build
@@ -152,6 +199,7 @@ need_sudo
 install_apt_base
 install_node
 install_claude_for_user "$TARGET_USER"
+setup_claude_ollama_config "$TARGET_USER"
 setup_shell_aliases "$TARGET_USER"
 verify_lan
 print_next_steps
