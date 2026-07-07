@@ -57,6 +57,7 @@ curl -s http://127.0.0.1:8000/healthz
 
 ## Références
 
+- `docs/prompt_claude_140_non_mmo.md` — **prompt opérateur non-MMO** (à coller dans `claude-lbg`)
 - `docs/handoff_windows_vers_vm140.md`
 - `docs/fusion_env_lan.md`
 - `docs/ops_vm_user.md`
