@@ -46,8 +46,8 @@ need_sudo() {
 install_apt_base() {
   log "Paquets de base (git, tmux, curl, build-essential)…"
   $SUDO apt-get update -qq
-  $SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-    git tmux curl ca-certificates build-essential jq
+  $SUDO sh -c 'DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+    git tmux curl ca-certificates build-essential jq'
 }
 
 install_node() {
@@ -56,8 +56,8 @@ install_node() {
     return
   fi
   log "Installation Node.js 20.x (nodesource)…"
-  curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO -E bash -
-  $SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nodejs
+  curl -fsSL https://deb.nodesource.com/setup_20.x | $SUDO bash -
+  $SUDO sh -c 'DEBIAN_FRONTEND=noninteractive apt-get install -y -qq nodejs'
   log "Node : $(node -v) — npm : $(npm -v)"
 }
 
@@ -94,6 +94,9 @@ setup_shell_aliases() {
   fi
 
   log "Alias claude-lbg dans ${rc}…"
+  if ! grep -q '\.local/bin' "$rc" 2>/dev/null; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >>"$rc"
+  fi
   cat >>"$rc" <<EOF
 
 $marker
