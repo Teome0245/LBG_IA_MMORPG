@@ -1,0 +1,22 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../new_mmo"
+		},
+		{
+			"path": "../../../../../../../mnt/j/swgemu"
+		},
+		{
+			"path": "../../../.."
+		}
+	],
+	"settings": {
+		"terminal.integrated.accessibleViewFocusOnCommandExecution": true,
+		"terminal.integrated.accessibleViewPreserveCursorPosition": true,
+		"terminal.explorerKind": "both",
+		"terminal.integrated.allowMnemonics": true
+	}
+}
