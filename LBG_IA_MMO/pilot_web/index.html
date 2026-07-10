@@ -871,6 +871,7 @@
       <a href="#/chat">Chat & presets</a>
       <a href="#/assistant">Assistant Core</a>
       <a href="#/jobs">Jobs autonomes <span id="jobs-nav-badge" class="jobs-badge jobs-badge--waiting_approval" style="display:none; margin-left:0.25rem;">!</span></a>
+      <a href="#/team">Équipe</a>
       <a href="#/ops">Ops & santé</a>
       <a href="#/pm">Chef de projet</a>
       <a href="#/lyra">Lyra (hors MMO)</a>
@@ -897,6 +898,7 @@
           <a class="pilot-home-card" href="#/chat"><h3>Chat & presets</h3><p>Intentions, PNJ, quêtes, combat, DevOps, Lyra via le monde MMO.</p></a>
           <a class="pilot-home-card" href="#/assistant"><h3>Assistant Core</h3><p>Texte naturel → proposition éditable → policy → exécution dry-run ou réelle avec approval.</p></a>
           <a class="pilot-home-card" href="#/jobs"><h3>Jobs autonomes</h3><p>Objectif en langage naturel → plan → exécution en tâche de fond auto-corrigée (« type Cowork », sous garde-fous).</p></a>
+          <a class="pilot-home-card" href="#/team"><h3>Équipe virtuelle</h3><p>Rôles <code>ops</code>, <code>qa</code>, <code>pm</code> — file SQLite, autonomie L1, via <code>/v1/pilot/team/*</code>.</p></a>
           <a class="pilot-home-card" href="#/ops"><h3>Ops & santé</h3><p>Statut agrégé, capabilities, benchmark, cache, métriques.</p></a>
           <a class="pilot-home-card" href="#/pm"><h3>Chef de projet</h3><p>Jalons, tâches, étape actuelle, file d’attente ; chemins <code>docs/</code> copiables ; export Markdown.</p></a>
           <a class="pilot-home-card" href="#/lyra"><h3>Lyra (hors MMO)</h3><p>Lyra via <code>/v1/pilot/route</code> (modes PNJ monde / assistant), échelles alignées en UI.</p></a>
@@ -1435,6 +1437,63 @@
             <details style="margin-top:0.6rem;"><summary class="muted">JSON brut (technique)</summary>
               <pre id="jobs-detail-raw" class="muted" style="font-size:0.78rem; max-height:18rem;">—</pre>
             </details>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="pilot-page-team" class="pilot-page" hidden>
+    <header>
+      <h1>Équipe virtuelle <span class="muted" style="font-size:0.9rem;">(phase A — ops / qa / pm)</span></h1>
+      <p class="muted">
+        File de tâches par rôle sur l'orchestrateur <strong>140</strong>. Autonomie max <strong>L1</strong> (read-only auto).
+        Endpoints proxifiés sous <code>/v1/pilot/team/*</code>.
+      </p>
+    </header>
+    <div class="dashboard" style="grid-template-columns: minmax(20rem, 1fr) minmax(24rem, 1.6fr);">
+      <div class="col">
+        <section>
+          <div class="panel-title"><h2>Nouvelle tâche</h2></div>
+          <label for="team-actor">actor_id</label>
+          <input type="text" id="team-actor" value="pilot:team" />
+          <label for="team-role">Rôle</label>
+          <select id="team-role">
+            <option value="qa">qa — smoke / healthz</option>
+            <option value="ops">ops — sonde infra</option>
+            <option value="pm">pm — brief projet</option>
+          </select>
+          <label for="team-objective">Objectif</label>
+          <textarea id="team-objective" style="min-height:4rem;">smoke LAN read-only (healthz)</textarea>
+          <label for="team-plan-objective">Planifier depuis un objectif NL (optionnel)</label>
+          <textarea id="team-plan-objective" style="min-height:3rem;" placeholder="ex. valide le LAN et brief PM"></textarea>
+          <button type="button" id="btn-team-plan" style="margin-top:0.35rem;">Proposer des tâches</button>
+          <pre id="team-plan-out" class="muted" style="font-size:0.82rem; max-height:8rem;">—</pre>
+          <button type="button" id="btn-team-create" style="margin-top:0.5rem;">Créer la tâche</button>
+          <span id="team-create-hint" class="muted" style="margin-left:0.6rem;">—</span>
+        </section>
+        <section>
+          <div class="panel-title">
+            <h2>Tâches récentes</h2>
+            <button type="button" id="btn-team-refresh" style="margin:0; padding:0.2rem 0.6rem; font-size:0.8rem;">Rafraîchir</button>
+          </div>
+          <div id="team-list" style="margin-top:0.6rem;">—</div>
+        </section>
+      </div>
+      <div class="col">
+        <section>
+          <div class="panel-title"><h2>Détail</h2></div>
+          <p id="team-detail-empty" class="muted">Sélectionne une tâche pour voir le résultat et agir.</p>
+          <div id="team-detail" hidden>
+            <p class="muted" id="team-detail-objective" style="margin:0 0 0.5rem 0;"></p>
+            <p id="team-detail-meta" class="muted" style="font-size:0.85rem;"></p>
+            <p style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+              <input type="text" id="team-approve-token" placeholder="token approbation" style="max-width:14rem; margin:0;" />
+              <button type="button" id="btn-team-approve" style="margin:0;">Approuver</button>
+              <button type="button" id="btn-team-run" style="margin:0;">Exécuter</button>
+              <button type="button" id="btn-team-cancel" style="margin:0;">Annuler</button>
+            </p>
+            <pre id="team-detail-result" class="muted" style="font-size:0.78rem; max-height:22rem;">—</pre>
           </div>
         </section>
       </div>
@@ -4675,12 +4734,143 @@
       if (seg === "chat") return "chat";
       if (seg === "assistant") return "assistant";
       if (seg === "jobs") return "jobs";
+      if (seg === "team") return "team";
       if (seg === "ops") return "ops";
       if (seg === "pm") return "pm";
       if (seg === "lyra") return "lyra";
       if (seg === "desktop") return "desktop";
       if (seg === "home") return "home";
       return "home";
+    }
+
+    /* ===================== Équipe virtuelle (phase A) ===================== */
+    let __teamSelectedId = null;
+    let __teamBound = false;
+
+    function teamGetActor() {
+      const el = document.getElementById("team-actor");
+      return (el && el.value ? el.value.trim() : "") || "pilot:team";
+    }
+
+    function teamHint(msg, isError) {
+      pilotInlineHint("team-create-hint", msg || "—", !!isError);
+    }
+
+    async function teamListRefresh() {
+      const list = document.getElementById("team-list");
+      if (!list) return;
+      const out = await jobsGet(getBase() + "/v1/pilot/team/tasks?limit=50");
+      const data = out.json || {};
+      if (!data.ok && data.tasks === undefined) {
+        list.textContent = data.error || "erreur chargement";
+        return;
+      }
+      const tasks = data.tasks || [];
+      if (!tasks.length) { list.textContent = "Aucune tâche."; return; }
+      list.innerHTML = tasks.map(function (t) {
+        const active = t.id === __teamSelectedId ? " jobs-card--active" : "";
+        return '<button type="button" class="jobs-card' + active + '" data-team-id="' + escapeHtmlPm(t.id) + '">' +
+          '<strong>' + escapeHtmlPm(t.role) + '</strong> · ' + escapeHtmlPm(t.status) +
+          '<br><span class="muted" style="font-size:0.82rem;">' + escapeHtmlPm(t.objective).slice(0, 80) + '</span></button>';
+      }).join("");
+      list.querySelectorAll("[data-team-id]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          teamSelect(btn.getAttribute("data-team-id"));
+        });
+      });
+    }
+
+    async function teamSelect(id) {
+      if (!id) return;
+      __teamSelectedId = id;
+      const out = await jobsGet(getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(id));
+      const t = out.json || {};
+      const empty = document.getElementById("team-detail-empty");
+      const detail = document.getElementById("team-detail");
+      if (!t.id) {
+        if (empty) { empty.hidden = false; empty.textContent = t.error || "introuvable"; }
+        if (detail) detail.hidden = true;
+        return;
+      }
+      if (empty) empty.hidden = true;
+      if (detail) detail.hidden = false;
+      const obj = document.getElementById("team-detail-objective");
+      const meta = document.getElementById("team-detail-meta");
+      const res = document.getElementById("team-detail-result");
+      if (obj) obj.textContent = t.objective || "";
+      if (meta) meta.textContent = "id=" + t.id + " · role=" + t.role + " · status=" + t.status + " · priority=" + (t.priority || "normal");
+      if (res) res.textContent = JSON.stringify(t.result || {}, null, 2);
+      await teamListRefresh();
+    }
+
+    async function teamCreate() {
+      const roleEl = document.getElementById("team-role");
+      const objEl = document.getElementById("team-objective");
+      const role = roleEl ? roleEl.value : "qa";
+      const objective = objEl && objEl.value ? objEl.value.trim() : "";
+      if (!objective) { teamHint("Objectif vide.", true); return; }
+      const out = await postJson(getBase() + "/v1/pilot/team/tasks", {
+        role: role,
+        objective: objective,
+        actor_id: teamGetActor(),
+      }, 60000);
+      if (!out.ok && !out.id) { teamHint(out.error || "échec création", true); return; }
+      teamHint("Tâche créée : " + (out.id || "?"), false);
+      __teamSelectedId = out.id || null;
+      await teamListRefresh();
+      if (out.id) await teamSelect(out.id);
+    }
+
+    async function teamPlan() {
+      const el = document.getElementById("team-plan-objective");
+      const objective = el && el.value ? el.value.trim() : "";
+      if (!objective) return;
+      const out = await postJson(getBase() + "/v1/pilot/team/plan", {
+        objective: objective,
+        actor_id: teamGetActor(),
+      }, 30000);
+      const pre = document.getElementById("team-plan-out");
+      if (pre) pre.textContent = JSON.stringify(out.proposals || out, null, 2);
+    }
+
+    async function teamRun() {
+      if (!__teamSelectedId) return;
+      const tok = (document.getElementById("team-approve-token") || {}).value || "";
+      const body = tok.trim() ? { approval_token: tok.trim() } : {};
+      const out = await postJson(getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(__teamSelectedId) + "/run", body, 300000);
+      await teamSelect(__teamSelectedId);
+      teamHint(out.status === "done" ? "Terminé" : (out.status || out.error || "—"), out.status === "failed");
+    }
+
+    async function teamApprove() {
+      if (!__teamSelectedId) return;
+      const tok = (document.getElementById("team-approve-token") || {}).value || "";
+      if (!tok.trim()) { teamHint("Token requis.", true); return; }
+      await postJson(getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(__teamSelectedId) + "/approve", { token: tok.trim() }, 30000);
+      await teamSelect(__teamSelectedId);
+    }
+
+    async function teamCancel() {
+      if (!__teamSelectedId) return;
+      await postJson(getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(__teamSelectedId) + "/cancel", {}, 30000);
+      await teamSelect(__teamSelectedId);
+    }
+
+    function teamBindPage() {
+      if (__teamBound) return;
+      __teamBound = true;
+      const bCreate = document.getElementById("btn-team-create");
+      const bPlan = document.getElementById("btn-team-plan");
+      const bRefresh = document.getElementById("btn-team-refresh");
+      const bRun = document.getElementById("btn-team-run");
+      const bApprove = document.getElementById("btn-team-approve");
+      const bCancel = document.getElementById("btn-team-cancel");
+      if (bCreate) bCreate.addEventListener("click", function () { teamCreate(); });
+      if (bPlan) bPlan.addEventListener("click", function () { teamPlan(); });
+      if (bRefresh) bRefresh.addEventListener("click", function () { teamListRefresh(); });
+      if (bRun) bRun.addEventListener("click", function () { teamRun(); });
+      if (bApprove) bApprove.addEventListener("click", function () { teamApprove(); });
+      if (bCancel) bCancel.addEventListener("click", function () { teamCancel(); });
     }
 
     /* ===================== Jobs autonomes ("type Cowork") ===================== */
@@ -5470,6 +5660,7 @@
       const work = document.getElementById("pilot-page-work");
       const assistantPage = document.getElementById("pilot-page-assistant");
       const jobsPage = document.getElementById("pilot-page-jobs");
+      const teamPage = document.getElementById("pilot-page-team");
       const pm = document.getElementById("pilot-page-pm");
       const ly = document.getElementById("pilot-page-lyra");
       const de = document.getElementById("pilot-page-desktop");
@@ -5477,6 +5668,7 @@
       if (work) work.hidden = r !== "chat" && r !== "ops";
       if (assistantPage) assistantPage.hidden = r !== "assistant";
       if (jobsPage) jobsPage.hidden = r !== "jobs";
+      if (teamPage) teamPage.hidden = r !== "team";
       if (pm) pm.hidden = r !== "pm";
       if (ly) ly.hidden = r !== "lyra";
       if (de) de.hidden = r !== "desktop";
@@ -5485,6 +5677,10 @@
         try { jobsLoadModels(); } catch (_) {}
         try { jobsListRefresh(); } catch (_) {}
         try { jobsPollStart(); } catch (_) {}
+      }
+      if (r === "team") {
+        try { teamBindPage(); } catch (_) {}
+        try { teamListRefresh(); } catch (_) {}
       }
       if (r === "desktop") {
         try { pilotDesktopRefreshConfigHint(); } catch (_) {}

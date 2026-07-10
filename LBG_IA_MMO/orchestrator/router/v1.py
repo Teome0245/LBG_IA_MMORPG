@@ -8,6 +8,7 @@ from router.routes.proactive import router as proactive_router
 from router.routes.route_intent import router as route_intent_router
 from router.routes.lia_incarnation import router as lia_incarnation_router
 from router.routes.core3_player_routes import router as core3_players_router
+from router.routes.team import router as team_router
 
 router = APIRouter()
 router.include_router(action_proposal_router)
@@ -18,4 +19,5 @@ router.include_router(proactive_router)
 router.include_router(route_intent_router)
 router.include_router(lia_incarnation_router)
 router.include_router(core3_players_router)
+router.include_router(team_router)
 

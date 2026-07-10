@@ -7,6 +7,7 @@ infra/secrets/lbg.env
 *.pyc
 .venv/
 .venv-smoke-ws/
+team_trace.jsonl
 
 # Moteur jeu Core3 (clone local non versionné — voir third_party/README.md)
 third_party/new_mmo/
