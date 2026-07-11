@@ -1,0 +1,19 @@
+[Unit]
+Description=LBG équipe virtuelle — Infographiste IA assets GLB (tâche dev_game L1)
+After=network-online.target lbg-orchestrator.service
+Wants=lbg-orchestrator.service
+
+[Service]
+Type=oneshot
+User=lbg
+Group=lbg
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+Environment=LBG_TEAM_INFOGRAPHISTE_JOB_ENABLED=1
+Environment=LBG_ORCHESTRATOR_URL=http://127.0.0.1:8010
+Environment=LBG_TEAM_INFOGRAPHISTE_JOB_STATE=/var/lib/lbg/team_infographiste/state.json
+Environment=LBG_TEAM_INFOGRAPHISTE_JOB_ACTOR_ID=system:team_infographiste
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python -m lbg_agents.spawn_team_infographiste_job
+
+[Install]
+WantedBy=multi-user.target

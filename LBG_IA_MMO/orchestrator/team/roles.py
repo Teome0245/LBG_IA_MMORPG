@@ -19,6 +19,7 @@ from team.godot_client_workflow import execute_godot_client_workflow, resolve_go
 from team.godot_followup import auto_run_followup_tasks as godot_auto_run_followup
 from team.godot_followup import maybe_spawn_after_godot_failure
 from team.godot_supervisor import execute_godot_supervisor
+from team.infographiste_workflow import execute_infographiste_workflow, resolve_infographiste_workflow
 from team.player_ia_exec import execute_player_ia
 from team.qa_followup import auto_run_followup_tasks, maybe_spawn_after_qa_failure
 from team.role_aliases import role_display
@@ -256,6 +257,8 @@ def _execute_pm(task: TeamTask) -> dict[str, object]:
 
 
 def _execute_dev_game(task: TeamTask) -> dict[str, object]:
+    if resolve_infographiste_workflow(task):
+        return execute_infographiste_workflow(task, _dispatch)
     if resolve_godot_client_workflow(task):
         return execute_godot_client_workflow(task, _dispatch)
     return execute_dev_game_workflow(task, _dispatch)
@@ -332,6 +335,20 @@ def plan_from_objective(objective: str, *, actor_id: str = "system:team") -> lis
                 "actor_id": actor_id,
                 "capability": ROLE_SPECS["dev_game"]["capability"],
                 "context": {"godot_track": "lbg_ws2"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("infographiste", "infograph", "glb", "blender", "pipeline assets", "assets 3d")):
+        igo = objective if "infograph" in text or "glb" in text else "Audit pipeline assets GLB — manifest Godot et prochain export Blender"
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": igo,
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"infographiste_ia": True, "subproject": "infographiste_ia"},
                 **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
             }
         )

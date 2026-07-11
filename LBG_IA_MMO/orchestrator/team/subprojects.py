@@ -58,9 +58,17 @@ SUBPROJECTS: list[dict[str, object]] = [
         "id": "infographiste_ia",
         "label": "Infographiste IA (assets 3D Godot)",
         "owner_role": "dev_game",
-        "paths": [],
-        "docs": [],
-        "status": "conversation_parallèle",
+        "persona": "Pygmalion",
+        "paths": [
+            "lbg_client_godot/assets/",
+            "docs/pipeline_assets_swg_godot.md",
+        ],
+        "docs": [
+            "docs/pipeline_assets_swg_godot.md",
+            "docs/plan_client_godot_prime_rendu.md",
+            "docs/jalon_infographiste_ia.md",
+        ],
+        "status": "en_cours",
     },
     {
         "id": "sandbox_python",

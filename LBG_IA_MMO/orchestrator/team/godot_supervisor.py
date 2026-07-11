@@ -137,6 +137,21 @@ def _check_lbg_ws2_readiness() -> dict[str, Any]:
     return audit_lbg_ws2_readiness()
 
 
+def _check_infographiste_track() -> dict[str, Any]:
+    from team.infographiste_probe import probe_infographiste_assets
+
+    out = probe_infographiste_assets(None)
+    return {
+        "track": "infographiste_assets",
+        "ok": bool(out.get("ok")),
+        "readiness": out.get("readiness"),
+        "glb_expected": out.get("glb_expected"),
+        "glb_present": out.get("glb_present"),
+        "glb_missing": (out.get("glb_missing") or [])[:8],
+        "hint": out.get("hint"),
+    }
+
+
 def execute_godot_supervisor(task: TeamTask) -> dict[str, object]:
     """Exécute les pistes Godot en parallèle logique (sidecar, miroir, gateway, lbg-ws/2)."""
     if not supervisor_enabled():
@@ -158,6 +173,8 @@ def execute_godot_supervisor(task: TeamTask) -> dict[str, object]:
         tracks.append(_check_gateway_track())
     if mode in ("full", "supervisor", "lbg_ws2", "audit"):
         tracks.append(_check_lbg_ws2_readiness())
+    if mode in ("full", "supervisor", "infographiste", "assets"):
+        tracks.append(_check_infographiste_track())
 
     required = [t for t in tracks if not t.get("skipped")]
     sidecar_tracks = [t for t in required if t.get("track") in ("sidecar_m1", "godot_mirror_m1")]

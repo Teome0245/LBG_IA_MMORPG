@@ -187,7 +187,37 @@ assert res.get("kind") == "godot_supervisor", res
 assert res.get("ok") is True, res
 tracks = {t.get("track") for t in (res.get("tracks") or []) if isinstance(t, dict)}
 assert "sidecar_m1" in tracks and "lbg_ws2_readiness" in tracks, tracks
+assert "infographiste_assets" in tracks, tracks
 print("OK godot_supervisor — tracks:", sorted(tracks))
+PY
+
+echo ""
+echo "=== Test infographiste workflow (Pygmalion / dev_game) ==="
+CREATE6=$(curl -sf -X POST "${ORCH}/v1/team/tasks" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "role": "dev_game",
+    "objective": "Audit pipeline assets GLB Infographiste IA",
+    "actor_id": "system:test_infographiste",
+    "context": {"infographiste_ia": true, "subproject": "infographiste_ia"}
+  }')
+TASK6=$(python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" <<<"${CREATE6}")
+RUN6=$(curl -sf -X POST "${ORCH}/v1/team/tasks/${TASK6}/run" -H 'Content-Type: application/json' -d '{}')
+echo "${RUN6}" > /tmp/lbg_test_infographiste_run.json
+python3 <<'PY'
+import json
+with open("/tmp/lbg_test_infographiste_run.json", encoding="utf-8") as f:
+    run = json.load(f)
+assert run.get("status") == "done", run
+res = run.get("result") or {}
+assert res.get("kind") == "infographiste_workflow", res
+assert res.get("ok") is True, res
+assert res.get("persona") == "Pygmalion", res
+probe = res.get("probe") or {}
+assert probe.get("kind") == "infographiste_probe", probe
+prop = res.get("action_proposal") or {}
+assert prop.get("source") == "team_infographiste_ia", prop
+print("OK infographiste_workflow — glb_expected:", probe.get("glb_expected"))
 PY
 
 echo ""

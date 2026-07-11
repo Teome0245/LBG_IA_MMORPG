@@ -22,6 +22,7 @@ flowchart TD
 | Timer | Actor | Rôle | Période |
 |-------|-------|------|---------|
 | `lbg-team-godot-supervisor-job` | `system:team_godot_supervisor` | qa (godot_supervisor) | **6 h** |
+| `lbg-team-infographiste-job` | `system:team_infographiste` | dev_game (infographiste_ia) | **12 h** |
 | `lbg-team-player-ia-job` | `system:team_player_ia` | player_ia probe | 12 h |
 | `lbg-team-pm-reunification-job` | `system:team_pm_reunification` | pm brief | 24 h |
 | `lbg-team-qa-smoke-job` | `system:team_qa_smoke` | qa smoke LAN | 24 h |
@@ -29,6 +30,7 @@ flowchart TD
 Installation :
 ```bash
 bash infra/scripts/install_team_godot_supervisor_job_vm.sh
+bash infra/scripts/install_team_infographiste_job_vm.sh
 ```
 
 ---
@@ -53,6 +55,7 @@ LBG_GATEWAY_WS2_PREVIEW=1                   # négociation lbg-ws/2 sur gateway
 |--------|--------|
 | **Supervise Godot** | qa godot_supervisor full → Lancer |
 | **Audit lbg-ws/2** | dev_game piste gateway → Lancer |
+| **Infographiste IA** | dev_game Pygmalion — manifest GLB → Lancer |
 | **Brief réunification** | pm sous-projets |
 | **Sonde joueurs IA** | player_ia probe |
 
@@ -87,3 +90,4 @@ Plan NL exemple : *« supervise godot et lbg-ws/2 sur Prime »* → propose qa +
 - [`jalon_client_godot_sidecar_246.md`](jalon_client_godot_sidecar_246.md)
 - [`runbook_promotion_prototype_core3.md`](runbook_promotion_prototype_core3.md)
 - [`core3_zone_bridge_spec.md`](core3_zone_bridge_spec.md)
+- [`jalon_infographiste_ia.md`](jalon_infographiste_ia.md)

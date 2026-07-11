@@ -70,6 +70,7 @@ def test_team_run_godot_supervisor(monkeypatch: pytest.MonkeyPatch) -> None:
     tracks = {t["track"] for t in ran["result"]["tracks"]}
     assert "sidecar_m1" in tracks
     assert "lbg_ws2_readiness" in tracks
+    assert "infographiste_assets" in tracks
 
 
 def test_team_run_godot_client_workflow() -> None:

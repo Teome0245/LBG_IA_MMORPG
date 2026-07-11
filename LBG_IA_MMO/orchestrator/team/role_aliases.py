@@ -33,6 +33,22 @@ DEFAULT_ROLE_ALIASES: dict[str, dict[str, str]] = {
     },
 }
 
+# Personas sous-projets (affichage tâches — rôle technique inchangé)
+SUBPROJECT_PERSONAS: dict[str, dict[str, str]] = {
+    "infographiste_ia": {
+        "alias": "Pygmalion",
+        "title": "Infographiste IA",
+        "tagline": "Pipeline GLB, Blender, assets Godot",
+        "owner_role": "dev_game",
+    },
+    "client_godot": {
+        "alias": "Dédale",
+        "title": "Client Godot",
+        "tagline": "Prime, gateway, sidecar",
+        "owner_role": "dev_game",
+    },
+}
+
 
 def role_aliases() -> dict[str, dict[str, str]]:
     raw = os.environ.get("LBG_TEAM_ROLE_ALIASES_JSON", "").strip()
@@ -61,6 +77,20 @@ def role_display(role: str) -> dict[str, str]:
 
 def enrich_task_view(data: dict[str, object]) -> dict[str, object]:
     role = str(data.get("role") or "")
+    ctx = data.get("context") if isinstance(data.get("context"), dict) else {}
+    sub = str(ctx.get("subproject") or "")
+    if ctx.get("infographiste_ia") and not sub:
+        sub = "infographiste_ia"
+    if sub and sub in SUBPROJECT_PERSONAS:
+        persona = SUBPROJECT_PERSONAS[sub]
+        alias = persona.get("alias") or role
+        title = persona.get("title") or role
+        out = dict(data)
+        out["role_alias"] = alias
+        out["role_title"] = title
+        out["role_label"] = f"{alias} ({sub})"
+        out["subproject_id"] = sub
+        return out
     disp = role_display(role)
     out = dict(data)
     out["role_alias"] = disp["alias"]

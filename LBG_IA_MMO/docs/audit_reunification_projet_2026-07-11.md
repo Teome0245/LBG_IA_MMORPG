@@ -48,7 +48,7 @@ Registre machine : `orchestrator/team/subprojects.py` — exposé via `GET /v1/t
 | `equipe_virtuelle` | Méta-orchestrateur | pm | actif |
 | `assistant_pilot` | Assistant + Pilot | pm | actif |
 | `infra_ops` | Infra LAN | ops | actif |
-| `infographiste_ia` | Assets 3D | dev_game | fil conversation |
+| `infographiste_ia` | Assets 3D (Pygmalion) | dev_game | **en_cours** |
 | `sandbox_python` | MMO Python 245 | qa | gelé |
 
 ---
@@ -82,6 +82,7 @@ Registre machine : `orchestrator/team/subprojects.py` — exposé via `GET /v1/t
 5. [x] Godot jalon M1 : miroir sidecar 246 — [`jalon_client_godot_sidecar_246.md`](jalon_client_godot_sidecar_246.md)
 6. [ ] Godot M3/M5 : SOE live + `lbg-ws/2` C++ (client autoritaire)
 7. [x] Équipe autonome Godot — superviseur 6h + followups — [`equipe_autonome_godot.md`](equipe_autonome_godot.md)
+8. [x] Infographiste IA intégré — piste dev_game Pygmalion + timer 12h — [`jalon_infographiste_ia.md`](jalon_infographiste_ia.md)
 
 ---
 
