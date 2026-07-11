@@ -19,7 +19,7 @@ from services.lia_jobs import (
 )
 
 
-ProposalSource = Literal["deterministic", "mmo_session_bridge"]
+ProposalSource = Literal["deterministic", "mmo_session_bridge", "team_dev_game"]
 
 
 class ActionProposal(BaseModel):
@@ -62,6 +62,7 @@ def propose_action_from_text(text: str, context: dict[str, object] | None = None
         or _propose_vm_memory_probe(normalized)
         or _propose_proxmox_status(normalized)
         or _propose_open_app(raw, normalized)
+        or _propose_team_dev_game_forge(raw, normalized, ctx)
         or _propose_mmo_dev_plan(raw, normalized, ctx)
     )
     if proposal is None:
@@ -287,6 +288,73 @@ def _session_summary_prompt_fragment(context: dict[str, object]) -> str:
             parts.append(f"{key}: {val.strip()[:400]}")
     out = "\n".join(parts)
     return out[:1200]
+
+
+def _qa_failure_prompt_fragment(context: dict[str, object]) -> str:
+    raw = context.get("qa_failure_summary")
+    if not isinstance(raw, dict):
+        return ""
+    parts: list[str] = []
+    for key in ("kind", "smoke_ok", "smoke_exit_code", "failed_health_urls"):
+        val = raw.get(key)
+        if val is not None and val != "" and val != []:
+            parts.append(f"{key}: {val}")
+    return "\n".join(parts)[:800]
+
+
+def _propose_team_dev_game_forge(raw: str, normalized: str, context: dict[str, object]) -> ActionProposal | None:
+    """
+    Forge OpenGame pour le rôle équipe dev_game (QA followup ou focus explicite).
+    Dry-run obligatoire via context_patch ; pas de merge automatique.
+    """
+    if not (context.get("dev_game_focus") or context.get("_qa_followup")):
+        return None
+    if not re.search(
+        r"\b(forge|forger|prototype|sandbox|opengame|correctif|bug|gameplay|investig|smoke|patch)\b"
+        r'|\bplan\b.*\b(mmo|monde|jeu)\b',
+        normalized,
+    ):
+        return None
+    cap = capability_registry.get("prototype_game")
+    assert cap is not None
+    prompt_parts = [
+        "Prototype sandbox équipe dev_game (hors tronc MMO / sandbox mmmorpg gelé ADR 0005).",
+        _session_summary_prompt_fragment(context),
+        _qa_failure_prompt_fragment(context),
+        f"Objectif équipe : {raw.strip()[:700]}",
+    ]
+    prompt = "\n\n".join(p for p in prompt_parts if p).strip()[:2000]
+    project = "team_dev_game"
+    if context.get("_qa_followup"):
+        project = "team_qa_followup_forge"
+    action: dict[str, object] = {
+        "kind": "generate_prototype",
+        "project_name": project,
+        "prompt": prompt,
+    }
+    trace: dict[str, object] = {"origin": "team_dev_game"}
+    if context.get("_qa_followup"):
+        trace["qa_followup"] = True
+    parent = context.get("parent_task_id")
+    if isinstance(parent, str) and parent.strip():
+        trace["parent_task_id"] = parent.strip()
+    return ActionProposal(
+        capability=cap.name,
+        routed_to=cap.routed_to,
+        action_context_key=cap.action_context_key or "opengame_action",
+        action=action,
+        context_patch={
+            "opengame_action": action,
+            "opengame_dry_run": True,
+        },
+        summary=(
+            "Proposition forge OpenGame (dry-run) pour dev_game — revue humaine avant exécution réelle."
+        ),
+        risk_level=cap.risk_level,
+        confidence=0.68,
+        source="team_dev_game",
+        mmo_trace=trace,
+    )
 
 
 def _propose_mmo_dev_plan(raw: str, normalized: str, context: dict[str, object]) -> ActionProposal | None:

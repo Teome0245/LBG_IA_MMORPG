@@ -134,6 +134,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-07-11 | **Équipe virtuelle phase C (suite)** : rôle `dev_game`, auto-run PM followup, pont MMO assistant (`7a3fc59`) ; workflow `dev_game_workflow.py` + source `team_dev_game` dans `action_proposal` ; UI `#/team` bouton « Forge → Assistant ». |
 | 2026-07-11 | **Équipe virtuelle phase C (début)** : `team/qa_followup.py` — QA `failed` → tâches suivi `pm` (+ `ops` si smoke KO) ; token L2 repli `LBG_DEVOPS_APPROVAL_TOKEN` ; UI `#/team` filtres role/status/actor + checkbox L2 ; tests `test_team_qa_followup.py`. |
 | 2026-07-11 | **Équipe virtuelle phase B — playbooks ops** : `spawn_team_ops_storage_job` + `spawn_team_ops_ollama_job` ; `team_job_spawn.py` ; timers systemd + `install_team_ops_jobs_vm.sh` (12 tests OK). |
 | 2026-07-11 | **Équipe virtuelle — clôture phase A + début phase B** : deploy LAN 140/110 validé ; smoke QA via `POST /v1/team/tasks` + `run` **vert** ; fix `smoke_vm_lan.sh` (`LBG_LAN_HOST_MMO_SERVER`, sonde core locale) + `/var/lib/lbg-ia-mmo` au deploy (`6c04082`) ; playbook **`spawn_team_qa_smoke_job`** + timer `lbg-team-qa-smoke-job`. **Assistant Core Jalon 6 suite** : `#/assistant` enrichi ; `POST /v1/pilot/assistant/session-summary/export`. |
@@ -385,7 +386,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 - [x] **Jalon #5 : Physique & Collisions (Priorité 3)** : Bloquer les murs du village (`hollow=False`), ajuster les marges et régénérer le PNG sans chevauchements (v1.4).
 - [x] **Jalon #6 : Interactions & Dialogue (Priorité 2/3)** : inventaire session + commit Pilot ; **stub client** (`world_commit` + touche E) ; **ACTION_JSON quest + `player_item_*`** côté agent.
 
-**Étape actuelle** : **Phase C équipe virtuelle** (workflow QA→PM/ops, UI `#/team` filtres) **en cours** ; playbooks phase B **actifs** sur 140. Assistant Core Jalon 6 : livré. Gel sandbox mmmorpg (ADR 0005) inchangé.
+**Étape actuelle** : **Phase C équipe virtuelle** — workflow `dev_game` (forge/action_proposal) **livré** ; playbooks phase B **actifs** sur 140. Prochaine étape : promotion manuelle prototype → Core3 ou phase D joueurs IA (245). Gel sandbox mmmorpg (ADR 0005) inchangé.
 
 **File d’attente (intention produit)** : **Développement de l'univers MMO** — implémentation des niveaux de détails de simulation PNJ (LOD), Ticks sociaux, événements dynamiques (voir `plan_mmorpg.md`).
 

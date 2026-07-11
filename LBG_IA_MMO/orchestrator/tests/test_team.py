@@ -86,7 +86,10 @@ def test_team_run_dev_game_with_fake_dispatch() -> None:
     ).json()
     ran = client.post(f"/v1/team/tasks/{created['id']}/run").json()
     assert ran["status"] == "done"
-    assert ran["result"]["kind"] == "dev_game_brief"
+    assert ran["result"]["kind"] == "dev_game_workflow"
+    assert ran["result"].get("brief") is not None
+    assert ran["result"].get("action_proposal") is not None
+    assert ran["result"]["action_proposal"]["capability"] == "prototype_game"
 
 
 def test_team_plan_includes_dev_game() -> None:

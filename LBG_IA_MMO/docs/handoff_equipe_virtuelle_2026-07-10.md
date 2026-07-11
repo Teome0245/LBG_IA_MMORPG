@@ -131,7 +131,8 @@ Ne pas toucher au gel sandbox mmmorpg (ADR 0005) sans demande explicite.
 3. [x] Rôle `dev_game` — exécuteur phase C (`dev_game_brief` via agent.pm, hors sandbox mmmorpg)
 4. [x] Auto-run L1 des tâches PM de suivi (`LBG_TEAM_QA_FOLLOWUP_AUTO_RUN_PM=1`)
 5. [x] Assistant — `POST /v1/pilot/assistant/session-summary/mmo-bridge` + bouton « Appliquer pont MMO (API) »
-6. [ ] Workflow dev_game complet (forge / action_proposal gameplay)
+6. [x] Workflow dev_game complet (forge / action_proposal gameplay) — `team/dev_game_workflow.py`, source `team_dev_game`
+7. [ ] Promotion manuelle prototype → Core3 (hors scope auto)
 
 ### Vérifications infra (quand LAN up)
 
@@ -167,4 +168,4 @@ bash LBG_IA_MMO/infra/scripts/smoke_vm_lan.sh
 
 ---
 
-*Dernière mise à jour : 2026-07-11 — phase A validée LAN, phase B smoke quotidien codé.*
+*Dernière mise à jour : 2026-07-11 — phase C dev_game workflow forge livré.*

@@ -271,3 +271,28 @@ def test_action_proposal_mmo_dev_requires_explicit_bridge() -> None:
     )
     assert r.status_code == 200
     assert r.json()["proposal"] is None
+
+
+def test_action_proposal_team_dev_game_forge_qa_followup() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/action-proposal",
+        json={
+            "actor_id": "system:team_qa_followup",
+            "text": "Analyser échec smoke — proposition correctif gameplay",
+            "context": {
+                "dev_game_focus": True,
+                "_qa_followup": True,
+                "parent_task_id": "qa-123",
+                "qa_failure_summary": {"smoke_ok": False, "smoke_exit_code": 1},
+            },
+        },
+    )
+    assert r.status_code == 200
+    proposal = r.json()["proposal"]
+    assert proposal is not None
+    assert proposal["capability"] == "prototype_game"
+    assert proposal["source"] == "team_dev_game"
+    assert proposal["action"]["kind"] == "generate_prototype"
+    assert proposal["context_patch"].get("opengame_dry_run") is True
+    assert proposal["mmo_trace"]["qa_followup"] is True

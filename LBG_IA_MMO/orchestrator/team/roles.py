@@ -13,6 +13,7 @@ from lbg_agents.dispatch import invoke_after_route
 
 from team import store as team_store
 from team.models import TeamTask
+from team.dev_game_workflow import execute_dev_game_workflow
 from team.qa_followup import auto_run_followup_tasks, maybe_spawn_after_qa_failure
 
 Dispatcher = Callable[..., dict[str, object]]
@@ -217,19 +218,7 @@ def _execute_pm(task: TeamTask) -> dict[str, object]:
 
 
 def _execute_dev_game(task: TeamTask) -> dict[str, object]:
-    ctx = dict(task.context)
-    ctx.setdefault("dev_game_focus", True)
-    ctx.setdefault("project_pm", {"include_plan": True, "scope": "game_dev", "exclude_sandbox_mmmorpg": True})
-    summary = ctx.get("qa_failure_summary")
-    if isinstance(summary, dict):
-        ctx.setdefault("qa_failure_summary", summary)
-    out = _dispatch(
-        "agent.pm",
-        actor_id=task.actor_id,
-        text=task.objective,
-        context=ctx,
-    )
-    return {"kind": "dev_game_brief", "output": out, "ok": True}
+    return execute_dev_game_workflow(task, _dispatch)
 
 
 _EXECUTORS: dict[str, Callable[[TeamTask], dict[str, object]]] = {

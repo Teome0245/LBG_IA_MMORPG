@@ -1561,7 +1561,9 @@
               <button type="button" id="btn-team-approve" style="margin:0;">Approuver</button>
               <button type="button" id="btn-team-run" style="margin:0;">Exécuter</button>
               <button type="button" id="btn-team-cancel" style="margin:0;">Annuler</button>
+              <button type="button" id="btn-team-forge-assistant" style="margin:0;" hidden title="Copie context_patch forge vers #/assistant">Forge → Assistant</button>
             </p>
+            <p id="team-forge-hint" class="muted" style="font-size:0.82rem; margin:0.25rem 0 0.5rem 0;" hidden></p>
             <pre id="team-detail-result" class="muted" style="font-size:0.78rem; max-height:22rem;">—</pre>
           </div>
         </section>
@@ -5120,6 +5122,7 @@
     /* ===================== Équipe virtuelle (phase A) ===================== */
     let __teamSelectedId = null;
     let __teamBound = false;
+    let __teamLastForgePatch = null;
 
     function teamGetActor() {
       const el = document.getElementById("team-actor");
@@ -5189,7 +5192,55 @@
         meta.textContent = m;
       }
       if (res) res.textContent = JSON.stringify(t.result || {}, null, 2);
+      __teamLastForgePatch = null;
+      const forgeBtn = document.getElementById("btn-team-forge-assistant");
+      const forgeHint = document.getElementById("team-forge-hint");
+      const prop =
+        t.result && t.result.action_proposal && typeof t.result.action_proposal === "object"
+          ? t.result.action_proposal
+          : null;
+      if (prop && prop.context_patch && typeof prop.context_patch === "object") {
+        __teamLastForgePatch = prop.context_patch;
+        if (forgeBtn) forgeBtn.hidden = false;
+        if (forgeHint) {
+          forgeHint.hidden = false;
+          forgeHint.textContent =
+            "Forge : " +
+            String(prop.summary || prop.capability || "prototype_game") +
+            " (dry-run — voir action_proposal dans le JSON).";
+        }
+      } else {
+        if (forgeBtn) forgeBtn.hidden = true;
+        if (forgeHint) {
+          if (t.result && t.result.forge_note) {
+            forgeHint.hidden = false;
+            forgeHint.textContent = String(t.result.forge_note);
+          } else {
+            forgeHint.hidden = true;
+            forgeHint.textContent = "";
+          }
+        }
+      }
       await teamListRefresh();
+    }
+
+    function teamForgeToAssistant() {
+      if (!__teamLastForgePatch || typeof __teamLastForgePatch !== "object") {
+        teamHint("Aucune proposition forge dans la tâche sélectionnée.", true);
+        return;
+      }
+      let ctx = {};
+      try {
+        ctx = assistantParseJsonTextarea("assistant-context", {});
+        if (!ctx || typeof ctx !== "object" || Array.isArray(ctx)) ctx = {};
+      } catch (_) {
+        ctx = {};
+      }
+      Object.assign(ctx, __teamLastForgePatch);
+      const ctxEl = document.getElementById("assistant-context");
+      if (ctxEl) ctxEl.value = JSON.stringify(ctx, null, 2);
+      teamHint("context_patch forge copié — ouvrez #/assistant pour dry-run.", false);
+      location.hash = "#/assistant";
     }
 
     async function teamCreate() {
@@ -5268,6 +5319,8 @@
       if (bRun) bRun.addEventListener("click", function () { teamRun(); });
       if (bApprove) bApprove.addEventListener("click", function () { teamApprove(); });
       if (bCancel) bCancel.addEventListener("click", function () { teamCancel(); });
+      const bForge = document.getElementById("btn-team-forge-assistant");
+      if (bForge) bForge.addEventListener("click", function () { teamForgeToAssistant(); });
     }
 
     /* ===================== Jobs autonomes ("type Cowork") ===================== */
