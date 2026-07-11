@@ -8,6 +8,7 @@
 # Variables :
 #   LBG_VM_USER              défaut : lbg
 #   LBG_LAN_HOST_CORE|MMO|FRONT — défauts 192.168.0.140 / .245 / .110
+#   LBG_LAN_HOST_MMO_SERVER  prioritaire sur LBG_LAN_HOST_MMO pour la VM mmo_server (245)
 #   LBG_SMOKE_CORE_SERVICES, LBG_SMOKE_MMO_SERVICES
 #   LBG_SMOKE_FRONT_OLLAMA=1|0 (défaut 1)
 #   LBG_SSH_IDENTITY         chemin vers une clé privée (ex. ~/.ssh/id_ed25519) si non utilisée par défaut
@@ -18,7 +19,8 @@ set -euo pipefail
 
 VM_USER="${LBG_VM_USER:-lbg}"
 H_CORE="${LBG_LAN_HOST_CORE:-192.168.0.140}"
-H_MMO="${LBG_LAN_HOST_MMO:-192.168.0.245}"
+# mmo_server (245) ≠ Prime/Core3 (246) : préférer LBG_LAN_HOST_MMO_SERVER si défini.
+H_MMO="${LBG_LAN_HOST_MMO_SERVER:-${LBG_LAN_HOST_MMO:-192.168.0.245}}"
 H_FRONT="${LBG_LAN_HOST_FRONT:-192.168.0.110}"
 SVC_CORE="${LBG_SMOKE_CORE_SERVICES:-lbg-backend lbg-orchestrator lbg-agent-dialogue lbg-agent-quests lbg-agent-combat}"
 SVC_MMO="${LBG_SMOKE_MMO_SERVICES:-lbg-mmo-server lbg-mmmorpg-ws}"
@@ -53,10 +55,44 @@ fi
 fail=0
 ssh_connect_failed=0
 
+is_local_host() {
+  local host="$1"
+  [[ "${host}" == "127.0.0.1" || "${host}" == "localhost" ]] && return 0
+  local ip
+  if command -v hostname >/dev/null 2>&1; then
+    for ip in $(hostname -I 2>/dev/null); do
+      [[ "${ip}" == "${host}" ]] && return 0
+    done
+    local hn
+    hn="$(hostname -s 2>/dev/null || hostname 2>/dev/null || true)"
+    [[ -n "${hn}" && "${host}" == "${hn}" ]] && return 0
+  fi
+  return 1
+}
+
+local_active_all() {
+  local label="$1"
+  local host="$2"
+  local services="$3"
+  echo "=== ${label} (${host}) [local] ==="
+  for svc in ${services}; do
+    if ! sudo -n systemctl is-active "${svc}" >/dev/null 2>&1; then
+      echo "  ${svc}: PAS active"
+      fail=1
+      return
+    fi
+    echo "  ${svc}: active"
+  done
+}
+
 remote_active_all() {
   local label="$1"
   local host="$2"
   local services="$3"
+  if is_local_host "${host}"; then
+    local_active_all "${label}" "${host}" "${services}"
+    return
+  fi
   echo "=== ${label} (${host}) ==="
   if ! ssh "${SSH_OPTS[@]}" "${VM_USER}@${host}" "true"; then
     echo "  SSH indisponible — ${VM_USER}@${host}"

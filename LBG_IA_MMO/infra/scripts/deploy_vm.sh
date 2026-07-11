@@ -167,6 +167,8 @@ ${REMOTE_PROMOTE}
     sudo -n apt-get install -y \"python\${PY_VER}-venv\" python3-venv
   fi
   sudo -n chown -R ${SERVICE_USER}:${SERVICE_USER} \"${REMOTE_DIR}\"
+  sudo -n mkdir -p /var/lib/lbg-ia-mmo
+  sudo -n chown ${SERVICE_USER}:${SERVICE_USER} /var/lib/lbg-ia-mmo
   sudo -n -u ${SERVICE_USER} -H bash -c \"cd \\\"${REMOTE_DIR}\\\" && LBG_SKIP_MMO_SERVER=1 bash infra/scripts/install_local.sh\"
   for u in lbg-agent-dialogue.service lbg-agent-quests.service lbg-agent-combat.service lbg-agent-pm.service lbg-orchestrator.service lbg-backend.service lbg-companion-bot.service; do
     if [ ! -f \"infra/systemd/\$u\" ]; then echo ERROR missing \$u; exit 1; fi
