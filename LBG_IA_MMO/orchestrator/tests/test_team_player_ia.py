@@ -29,7 +29,7 @@ def test_probe_player_ia_ok(monkeypatch: pytest.MonkeyPatch) -> None:
             return _Resp(200, {"ok": True})
         if "player-snapshot" in url:
             player = (params or {}).get("player", "").lower()
-            return _Resp(200, {"online": True, "player": player, "zone": "tatooine"})
+            return _Resp(200, {"ok": True, "snapshot": {"online": True, "player": player, "zone": "tatooine"}})
         raise AssertionError(url)
 
     mock_client = MagicMock()

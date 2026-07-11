@@ -38,9 +38,11 @@ TASK_ID=$(python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" <<<"${
 echo "Tâche dev_game créée : ${TASK_ID}"
 
 RUN=$(curl -sf -X POST "${ORCH}/v1/team/tasks/${TASK_ID}/run" -H 'Content-Type: application/json' -d '{}')
-python3 <<PY
-import json, sys
-run = json.loads('''${RUN}''')
+echo "${RUN}" > /tmp/lbg_test_dev_game_run.json
+python3 <<'PY'
+import json
+with open("/tmp/lbg_test_dev_game_run.json", encoding="utf-8") as f:
+    run = json.load(f)
 assert run.get("status") == "done", run
 res = run.get("result") or {}
 assert res.get("kind") == "dev_game_workflow", res
@@ -103,9 +105,11 @@ CREATE2=$(curl -sf -X POST "${ORCH}/v1/team/tasks" \
   }')
 TASK2=$(python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" <<<"${CREATE2}")
 RUN2=$(curl -sf -X POST "${ORCH}/v1/team/tasks/${TASK2}/run" -H 'Content-Type: application/json' -d '{}')
-python3 <<PY
+echo "${RUN2}" > /tmp/lbg_test_player_ia_run.json
+python3 <<'PY'
 import json
-run = json.loads('''${RUN2}''')
+with open("/tmp/lbg_test_player_ia_run.json", encoding="utf-8") as f:
+    run = json.load(f)
 res = run.get("result") or {}
 print("player_ia status:", run.get("status"), "ok:", res.get("ok"), "online:", res.get("online_count"))
 if run.get("status") != "done" and res.get("ok") is not True:

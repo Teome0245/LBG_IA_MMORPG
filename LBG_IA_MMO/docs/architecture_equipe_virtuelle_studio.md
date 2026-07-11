@@ -37,14 +37,15 @@ flowchart LR
   PC["10 — Poste dev"]
   V110["110 — Pilot + Ollama"]
   V140["140 — Orchestrateur + team"]
-  V245["245 — Monde"]
+  V246["246 — Core3 Prime + IA"]
+  V245["245 — legacy PreCU"]
   PVE["201 — Proxmox"]
 
   PC --> V110
   V110 --> V140
   V140 --> V110
-  V140 --> V246["246 — Core3 Prime + IA"]
-  V140 -.-> V245["245 — legacy PreCU"]
+  V140 --> V246
+  V140 -.-> V245
   V140 -.-> PVE
 ```
 
