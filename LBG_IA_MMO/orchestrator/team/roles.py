@@ -14,6 +14,7 @@ from lbg_agents.dispatch import invoke_after_route
 from team import store as team_store
 from team.models import TeamTask
 from team.dev_game_workflow import execute_dev_game_workflow
+from team.player_ia_probe import probe_player_ia
 from team.qa_followup import auto_run_followup_tasks, maybe_spawn_after_qa_failure
 
 Dispatcher = Callable[..., dict[str, object]]
@@ -44,6 +45,12 @@ ROLE_SPECS: dict[str, dict[str, object]] = {
         "routed_to": "agent.pm",
         "autonomy": "L0-L1",
         "default_objective": "Analyser bug gameplay / correctif proposé (hors sandbox mmmorpg gelé)",
+    },
+    "player_ia": {
+        "capability": "core3_bot_action",
+        "routed_to": "agent.core3",
+        "autonomy": "L1",
+        "default_objective": "Sonde joueurs IA Core3 Prime (246) — sidecar + snapshots Lia/Nix",
     },
 }
 
@@ -221,11 +228,16 @@ def _execute_dev_game(task: TeamTask) -> dict[str, object]:
     return execute_dev_game_workflow(task, _dispatch)
 
 
+def _execute_player_ia(task: TeamTask) -> dict[str, object]:
+    return probe_player_ia(task)
+
+
 _EXECUTORS: dict[str, Callable[[TeamTask], dict[str, object]]] = {
     "ops": _execute_ops,
     "qa": _execute_qa,
     "pm": _execute_pm,
     "dev_game": _execute_dev_game,
+    "player_ia": _execute_player_ia,
 }
 
 
@@ -259,6 +271,9 @@ def plan_from_objective(objective: str, *, actor_id: str = "system:team") -> lis
     if any(k in text for k in ("dev", "game", "gameplay", "bug", "correctif", "mmo", "core3")):
         obj = objective if any(k in text for k in ("dev", "bug", "game")) else str(ROLE_SPECS["dev_game"]["default_objective"])
         _add("dev_game", obj)
+    if any(k in text for k in ("joueur", "joueurs", "lia", "nix", "bot", "player_ia", "prime", "246")):
+        obj = objective if "joueur" in text or "lia" in text else str(ROLE_SPECS["player_ia"]["default_objective"])
+        _add("player_ia", obj)
 
     if not proposals:
         _add("pm", objective)

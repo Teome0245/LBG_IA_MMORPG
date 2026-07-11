@@ -21,7 +21,7 @@ et approbations humaines.
 2. **Trois couches** :
    - **Studio** (140, poste 10) — dev, QA, PM, infra logicielle ;
    - **Ops** (201 via 140) — sondes, playbooks, write avec approbation ;
-   - **Monde** (245) — PNJ, compagnons, joueurs IA — credentials séparés, pas de SSH Proxmox.
+   - **Monde** (246 — Core3 Prime) — joueurs IA, sidecar — credentials séparés, pas de SSH Proxmox.
 3. **Phase A** : rôles `ops`, `qa`, `pm` ; autonomie max **L1** (read-only auto) ;
    write → **L2** + `LBG_TEAM_APPROVAL_TOKEN` (ou token Pilot existant).
 4. **UI Pilot** : onglet **Équipe** (`#/team`) — liste tâches, approve, run.

@@ -16,7 +16,7 @@ L’orchestrateur **140** devient un **méta-orchestrateur** d’équipe virtuel
 
 - **Ops** : infra Proxmox 201, VMs, disques, Ollama
 - **Studio** : dev MMO, QA, PM, brief créatif
-- **Monde** (plus tard) : compagnons / joueurs IA sur **245**
+- **Monde** (246 — Core3 Prime) : joueurs IA (Lia, Nix…), sidecar `:8791` — **pas** le bac à sable Python **245**
 
 **Phase A** : rôles `ops`, `qa`, `pm` ; SQLite tâches ; API `/v1/team/*` ; Pilot `#/team` ; autonomie **L1**.
 
@@ -133,6 +133,14 @@ Ne pas toucher au gel sandbox mmmorpg (ADR 0005) sans demande explicite.
 5. [x] Assistant — `POST /v1/pilot/assistant/session-summary/mmo-bridge` + bouton « Appliquer pont MMO (API) »
 6. [x] Workflow dev_game complet (forge / action_proposal gameplay) — `team/dev_game_workflow.py`, source `team_dev_game`
 7. [ ] Promotion manuelle prototype → Core3 (hors scope auto)
+
+### Phase D (début — 2026-07-11)
+
+1. [x] Rôle `player_ia` — sonde sidecar Prime **246** (`player_ia_probe.py`)
+2. [x] Playbook L1 `spawn_team_player_ia_job` + timer `lbg-team-player-ia-job`
+3. [x] Script test LAN `test_team_dev_game_workflow_lan.sh`
+4. [ ] Autonomie joueurs IA (think/tick) via équipe — L2+ avec approbation
+5. [ ] Client : **SWGEmu LBG** (launchpad) — cible prod ; Godot gelé (ADR sandbox archivé)
 
 ### Vérifications infra (quand LAN up)
 

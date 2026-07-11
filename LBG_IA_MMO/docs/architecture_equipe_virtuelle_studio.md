@@ -14,7 +14,7 @@ d’une équipe virtuelle qui :
 
 1. **Maintient l’infra** (sondes, playbooks, jobs Pilot) — write avec approbation.
 2. **Développe et corrige** le MMO (PM, dev, QA, brief créatif).
-3. **À terme** — persos / compagnons IA dans le monde (**245**), séparés des agents studio.
+3. **À terme** — persos / joueurs IA dans le monde (**246 Core3 Prime**), séparés des agents studio.
 
 Modèle : **rôles + file de tâches + garde-fous** (complète le moteur jobs Jalon 7, ne le remplace pas).
 
@@ -27,8 +27,8 @@ Modèle : **rôles + file de tâches + garde-fous** (complète le moteur jobs Ja
 | Proxmox | `192.168.0.201` | Hyperviseur, backups — cible Ops (SSH RO) |
 | LBG-IA | `192.168.0.110` | Pilot `:8080`, Ollama `:11434`, nginx |
 | LBG-IA-MMORPG | `192.168.0.140` | Orchestrateur `:8010`, backend `:8000`, agents, **méta-orchestrateur** |
-| ServeurSWG | `192.168.0.245` | MMO HTTP `:8050`, WS `:7733` |
-| Prime | `192.168.0.246` | Core3 Prime / tests |
+| ServeurSWG | `192.168.0.245` | PreCU / legacy (sandbox Python gelé) |
+| Prime | `192.168.0.246` | **Core3 Prime prod** — sidecar IA `:8791`, joueurs IA |
 | Poste dev | `192.168.0.10` | Cursor, Claude Code, agent desktop `:5005` |
 | NAS | `192.168.0.51` | Sauvegardes iSCSI → `/mnt/sauvegardes` sur 201 |
 
@@ -43,7 +43,8 @@ flowchart LR
   PC --> V110
   V110 --> V140
   V140 --> V110
-  V140 --> V245
+  V140 --> V246["246 — Core3 Prime + IA"]
+  V140 -.-> V245["245 — legacy PreCU"]
   V140 -.-> PVE
 ```
 
@@ -73,9 +74,9 @@ Méta-orchestrateur, workers par rôle, SQLite tâches, UI `#/team`.
 
 Sondes L1 ; playbooks L2 avec approbation.
 
-### Monde (245)
+### Monde (246)
 
-Dialogue, companion, joueurs IA — pas d’accès SSH Proxmox.
+Dialogue, companion, **joueurs IA Core3** — pas d’accès SSH Proxmox.
 
 ---
 
@@ -90,7 +91,8 @@ Dialogue, companion, joueurs IA — pas d’accès SSH Proxmox.
 | `dev_game` | `prototype_game` (via agent.pm) | Groq / GLM | L0–L1 |
 | `creative` | phase C | — | — |
 | `dialogue` | existant | auto | — |
-| `companion` | phase D | — | — |
+| `companion` | microservice chat | — | phase D (UI) |
+| `player_ia` | `core3_bot_action` | sidecar 246 | L1 |
 | `human` | 10 | — | approve |
 
 ---
@@ -99,7 +101,7 @@ Dialogue, companion, joueurs IA — pas d’accès SSH Proxmox.
 
 ```yaml
 task_id: uuid
-role: ops | qa | pm | dev_game
+role: ops | qa | pm | dev_game | player_ia
 status: queued | running | review | done | failed | cancelled
 priority: low | normal | high | critical
 approval_required: boolean
@@ -155,7 +157,7 @@ Token : `LBG_TEAM_APPROVAL_TOKEN` (aligné tokens Pilot / opengame).
 | **A** | Rôles ops/qa/pm, SQLite, API, `#/team` |
 | **B** | Rôles ops/qa/pm, SQLite, API, `#/team` ; playbooks L1 smoke/ops **livrés** |
 | **C** | Workflow bug QA→dev, creative |
-| **D** | Joueurs IA WS 245 |
+| **D** | Joueurs IA Core3 Prime **246** (sidecar, comptes dédiés) |
 
 ---
 
