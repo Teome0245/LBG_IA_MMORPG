@@ -45,3 +45,4 @@ tests/test_pilot_status.py
 tests/test_pilot_status_combat.py
 tests/test_pilot_status_dialogue.py
 tests/test_pilot_status_quests.py
+tests/test_pilot_team.py

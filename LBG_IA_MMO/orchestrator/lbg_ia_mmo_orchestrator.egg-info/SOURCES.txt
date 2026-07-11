@@ -27,6 +27,7 @@ router/routes/jobs.py
 router/routes/lia_incarnation.py
 router/routes/proactive.py
 router/routes/route_intent.py
+router/routes/team.py
 services/__init__.py
 services/action_policy.py
 services/action_proposal.py
@@ -57,3 +58,4 @@ tests/test_proactive.py
 tests/test_route.py
 tests/test_route_core3.py
 tests/test_route_devops.py
+tests/test_team.py

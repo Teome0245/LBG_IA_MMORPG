@@ -1028,6 +1028,146 @@ async def pilot_jobs_events_stream(job_id: str):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
+class TeamCreateBody(BaseModel):
+    role: str = Field(..., min_length=1)
+    objective: str = Field(..., min_length=1)
+    actor_id: str = "pilot:team"
+    priority: str = "normal"
+    approval_required: bool | None = None
+    context: dict[str, object] = Field(default_factory=dict)
+    approval_token: str | None = None
+
+
+class TeamPlanBody(BaseModel):
+    objective: str = Field(..., min_length=1)
+    actor_id: str = "pilot:team"
+
+
+class TeamApproveBody(BaseModel):
+    token: str = Field(..., min_length=1)
+
+
+class TeamRunBody(BaseModel):
+    approval_token: str | None = None
+
+
+@router.post("/team/plan", tags=["pilot"])
+async def pilot_team_plan(payload: TeamPlanBody) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/team/plan`."""
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(f"{_orchestrator_base()}/v1/team/plan", json=payload.model_dump())
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/team/tasks", tags=["pilot"])
+async def pilot_team_create(payload: TeamCreateBody) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/team/tasks`."""
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(f"{_orchestrator_base()}/v1/team/tasks", json=payload.model_dump())
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/team/tasks", tags=["pilot"])
+async def pilot_team_list(
+    role: str | None = None,
+    status: str | None = None,
+    actor_id: str | None = None,
+    limit: int = 100,
+) -> dict[str, object]:
+    """Proxy same-origin vers `GET orchestrator /v1/team/tasks`."""
+    try:
+        params: dict[str, object] = {"limit": limit}
+        if role:
+            params["role"] = role
+        if status:
+            params["status"] = status
+        if actor_id:
+            params["actor_id"] = actor_id
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{_orchestrator_base()}/v1/team/tasks", params=params)
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.get("/team/tasks/{task_id}", tags=["pilot"])
+async def pilot_team_get(task_id: str) -> dict[str, object]:
+    """Proxy same-origin vers `GET orchestrator /v1/team/tasks/{id}`."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            r = await client.get(f"{_orchestrator_base()}/v1/team/tasks/{task_id}")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/team/tasks/{task_id}/approve", tags=["pilot"])
+async def pilot_team_approve(task_id: str, payload: TeamApproveBody) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/team/tasks/{id}/approve`."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(
+                f"{_orchestrator_base()}/v1/team/tasks/{task_id}/approve",
+                json=payload.model_dump(),
+            )
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/team/tasks/{task_id}/run", tags=["pilot"])
+async def pilot_team_run(task_id: str, payload: TeamRunBody | None = None) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/team/tasks/{id}/run`."""
+    body = payload.model_dump() if payload else {}
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            r = await client.post(
+                f"{_orchestrator_base()}/v1/team/tasks/{task_id}/run",
+                json=body,
+            )
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+@router.post("/team/tasks/{task_id}/cancel", tags=["pilot"])
+async def pilot_team_cancel(task_id: str) -> dict[str, object]:
+    """Proxy same-origin vers `POST orchestrator /v1/team/tasks/{id}/cancel`."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.post(f"{_orchestrator_base()}/v1/team/tasks/{task_id}/cancel")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @router.post("/route", tags=["pilot"])
 async def pilot_route_intent_timed(payload: IntentRequest) -> dict[str, object]:
     """
