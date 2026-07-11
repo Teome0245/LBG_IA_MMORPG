@@ -28,6 +28,10 @@ stop_clean() {
 
 for c in "${CANDIDATES[@]}"; do
   if [[ -x "$c" ]] && ldd "$c" >/dev/null 2>&1; then
+    if ! strings "$c" | grep -q publishZoneBridgeJson; then
+      echo "SKIP: $c sans symbole ZB-1 publishZoneBridgeJson" >&2
+      continue
+    fi
     stop_clean
     tmp="${BIN}/core3-clean.new"
     dest="${BIN}/core3-clean"
@@ -35,6 +39,11 @@ for c in "${CANDIDATES[@]}"; do
     chmod +x "${tmp}"
     mv -f "${tmp}" "${dest}"
     echo "Installé : ${dest} ($(stat -c%s "${dest}") bytes) depuis $c"
+    if strings "${dest}" | grep -q publishZoneBridgeJson; then
+      echo "ZB-1 : publishZoneBridgeJson présent"
+    else
+      echo "WARN: symbole ZB-1 absent"
+    fi
     if strings "${dest}" | grep -q writeIaBridgePlayerSnapshot; then
       echo "Phase B : writeIaBridgePlayerSnapshot présent"
     else
