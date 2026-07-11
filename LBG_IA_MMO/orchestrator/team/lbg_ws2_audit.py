@@ -27,6 +27,9 @@ def _zb0_header_paths() -> list[Path]:
     return [
         root / "lbg-mmo/server-core3/server/lbg/LbgZoneBridge.h",
         root / "lbg-mmo/server-core3/server/lbg/LbgZoneBridge.cpp",
+        root / "lbg-mmo/server-core3/server/lbg/LbgZoneBridgeReadOnly.cpp",
+        root / "lbg-mmo/server-core3/server/lbg/LbgZoneBridgeTickTask.h",
+        root / "lbg-mmo/server-core3/server/lbg/LbgZoneBridgeInit.cpp",
     ]
 
 
@@ -44,6 +47,15 @@ def audit_zb0_readiness() -> dict[str, Any]:
         checks[f"zb0_file_{i}"] = hp.is_file()
     checks["zb0_header"] = header_paths[0].is_file() if header_paths else False
     checks["zb0_impl"] = header_paths[1].is_file() if len(header_paths) > 1 else False
+    checks["zb0_readonly_impl"] = header_paths[2].is_file() if len(header_paths) > 2 else False
+    checks["zb0_tick_task"] = header_paths[3].is_file() if len(header_paths) > 3 else False
+    checks["zb0_init"] = header_paths[4].is_file() if len(header_paths) > 4 else False
+
+    cmake = _new_mmo_root() / "lbg-mmo/server-core3/CMakeLists.txt"
+    checks["cmake_lbg_sources"] = False
+    if cmake.is_file():
+        cmake_text = cmake.read_text(encoding="utf-8", errors="ignore")
+        checks["cmake_lbg_sources"] = "server/lbg/*.cpp" in cmake_text
 
     if not checks["spec_zone_bridge"]:
         gaps.append("spec core3_zone_bridge_spec.md manquante")
@@ -51,26 +63,38 @@ def audit_zb0_readiness() -> dict[str, Any]:
         gaps.append("LbgZoneBridge.h absent (ZB-0)")
     if checks.get("zb0_header") and not checks.get("zb0_impl"):
         gaps.append("LbgZoneBridge.cpp absent (ZB-0 squelette)")
+    if checks.get("zb0_header") and not checks.get("zb0_readonly_impl"):
+        gaps.append("LbgZoneBridgeReadOnly.cpp absent (ZB-0 lecture seule)")
+    if checks.get("zb0_header") and not checks.get("zb0_tick_task"):
+        gaps.append("LbgZoneBridgeTickTask absent (ZB-0 tick 20 Hz)")
+    if checks.get("zb0_header") and not checks.get("cmake_lbg_sources"):
+        gaps.append("CMakeLists.txt sans server/lbg/*.cpp")
 
     zone_server = _new_mmo_root() / "lbg-mmo/server-core3/server/zone/ZoneServerImplementation.cpp"
     checks["zone_server_impl_path"] = zone_server.is_file()
     if zone_server.is_file():
         text = zone_server.read_text(encoding="utf-8", errors="ignore")
-        checks["zone_server_zb_hook"] = "LbgZoneBridge" in text or "lbgZoneBridge" in text
+        checks["zone_server_zb_hook"] = "startZoneBridgeTick" in text
         if not checks["zone_server_zb_hook"]:
-            gaps.append("hook ZoneServer::update sans LbgZoneBridge (ZB-0)")
+            gaps.append("hook ZoneServer startManagers sans startZoneBridgeTick (ZB-0)")
 
-    ok = bool(checks.get("zb0_header")) and bool(checks.get("spec_zone_bridge"))
-    if checks.get("zone_server_zb_hook"):
-        ok = True
+    hook_ok = bool(checks.get("zone_server_zb_hook"))
+    files_ok = bool(checks.get("zb0_header")) and bool(checks.get("zb0_readonly_impl")) and bool(
+        checks.get("zb0_tick_task")
+    )
+    ok = bool(checks.get("spec_zone_bridge")) and files_ok and hook_ok and bool(checks.get("cmake_lbg_sources"))
 
     next_actions: list[str] = []
     if not checks.get("zb0_header"):
         next_actions.append("Créer server/lbg/LbgZoneBridge.h (interface lecture seule)")
-    elif not checks.get("zone_server_zb_hook"):
-        next_actions.append("Hook read-only LbgZoneBridge dans ZoneServer::update")
+    elif not hook_ok:
+        next_actions.append("Hook startZoneBridgeTick dans ZoneServerImplementation::startManagers")
+    elif not checks.get("cmake_lbg_sources"):
+        next_actions.append("Ajouter server/lbg/*.cpp au CMakeLists server-core3")
+    elif ok:
+        next_actions.append("Compiler Core3 (Vulcan) puis ZB-1 : export JSON/SHM 20 Hz vers lbg_gateway")
     else:
-        next_actions.append("ZB-1 : export JSON/SHM 20 Hz vers lbg_gateway")
+        next_actions.append("Compléter LbgZoneBridgeReadOnly + LbgZoneBridgeTickTask (ZB-0)")
 
     return {
         "track": "zb0_readiness",

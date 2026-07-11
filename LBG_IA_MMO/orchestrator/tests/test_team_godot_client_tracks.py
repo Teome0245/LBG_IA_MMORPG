@@ -31,10 +31,24 @@ def test_audit_zb0_finds_header_stub(monkeypatch: pytest.MonkeyPatch, tmp_path: 
     hdr.mkdir(parents=True)
     (hdr / "LbgZoneBridge.h").write_text("// stub\n", encoding="utf-8")
     (hdr / "LbgZoneBridge.cpp").write_text("// stub\n", encoding="utf-8")
+    (hdr / "LbgZoneBridgeReadOnly.cpp").write_text("// stub\n", encoding="utf-8")
+    (hdr / "LbgZoneBridgeTickTask.h").write_text("// stub\n", encoding="utf-8")
+    (hdr / "LbgZoneBridgeInit.cpp").write_text("// stub\n", encoding="utf-8")
+    zone_impl = new_mmo / "lbg-mmo/server-core3/server/zone"
+    zone_impl.mkdir(parents=True)
+    (zone_impl / "ZoneServerImplementation.cpp").write_text(
+        "lbg::zonebridge::startZoneBridgeTick(_this);\n",
+        encoding="utf-8",
+    )
+    cmake = new_mmo / "lbg-mmo/server-core3"
+    cmake.mkdir(parents=True)
+    (cmake / "CMakeLists.txt").write_text('file(GLOB_RECURSE lbg_sources "server/lbg/*.cpp")\n', encoding="utf-8")
     monkeypatch.setenv("LBG_NEW_MMO_ROOT", str(new_mmo))
     out = audit_zb0_readiness()
     assert out["track"] == "zb0_readiness"
     assert out["checks"]["zb0_header"] is True
+    assert out["checks"]["zone_server_zb_hook"] is True
+    assert out["ok"] is True
 
 
 def test_team_plan_includes_soe_m3() -> None:
