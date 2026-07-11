@@ -126,9 +126,12 @@ Ne pas toucher au gel sandbox mmmorpg (ADR 0005) sans demande explicite.
 
 ### Phase C (début — 2026-07-11)
 
-1. [x] QA échouée → suivi auto `pm` (+ `ops` si smoke KO) — `orchestrator/team/qa_followup.py`
+1. [x] QA échouée → suivi auto `pm` (+ `ops` + `dev_game` si smoke KO) — `orchestrator/team/qa_followup.py`
 2. [x] UI `#/team` : filtres role/status/actor, L2 + token (repli `LBG_DEVOPS_APPROVAL_TOKEN`)
-3. [ ] Rôle `dev_game` / workflow dev complet
+3. [x] Rôle `dev_game` — exécuteur phase C (`dev_game_brief` via agent.pm, hors sandbox mmmorpg)
+4. [x] Auto-run L1 des tâches PM de suivi (`LBG_TEAM_QA_FOLLOWUP_AUTO_RUN_PM=1`)
+5. [x] Assistant — `POST /v1/pilot/assistant/session-summary/mmo-bridge` + bouton « Appliquer pont MMO (API) »
+6. [ ] Workflow dev_game complet (forge / action_proposal gameplay)
 
 ### Vérifications infra (quand LAN up)
 

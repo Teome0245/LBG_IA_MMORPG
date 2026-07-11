@@ -46,3 +46,26 @@ def test_assistant_session_export_empty_payload_ok() -> None:
     assert export["voluntary"] is True
     assert "history" not in export
     assert "session_summary" not in export
+
+
+def test_assistant_session_mmo_bridge_returns_context_patch() -> None:
+    from backend.main import app
+
+    client = TestClient(app)
+    r = client.post(
+        "/v1/pilot/assistant/session-summary/mmo-bridge",
+        json={
+            "notes": "session test",
+            "session_summary": {"tracked_quest": "quête village", "secret": "drop"},
+            "mmo_bridge": {"source": "mmo_session_summary", "via": "test"},
+        },
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data.get("ok") is True
+    patch = data["context_patch"]
+    assert patch["session_summary"]["tracked_quest"] == "quête village"
+    assert "secret" not in patch["session_summary"]
+    assert patch["mmo_bridge"]["source"] == "mmo_session_summary"
+    assert patch["mmo_bridge"]["via"] == "test"
+    assert data.get("hint")

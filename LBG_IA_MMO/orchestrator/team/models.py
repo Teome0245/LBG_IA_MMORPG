@@ -3,11 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-TeamRole = Literal["ops", "qa", "pm"]
+TeamRole = Literal["ops", "qa", "pm", "dev_game"]
 TaskStatus = Literal["queued", "running", "review", "done", "failed", "cancelled"]
 TaskPriority = Literal["low", "normal", "high", "critical"]
 
-VALID_ROLES: frozenset[str] = frozenset({"ops", "qa", "pm"})
+VALID_ROLES: frozenset[str] = frozenset({"ops", "qa", "pm", "dev_game"})
 VALID_STATUSES: frozenset[str] = frozenset({"queued", "running", "review", "done", "failed", "cancelled"})
 VALID_PRIORITIES: frozenset[str] = frozenset({"low", "normal", "high", "critical"})
 

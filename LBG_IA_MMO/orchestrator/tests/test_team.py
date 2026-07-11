@@ -69,6 +69,37 @@ def test_team_run_pm_with_fake_dispatch() -> None:
     assert ran["result"]["kind"] == "pm_brief"
 
 
+def test_team_run_dev_game_with_fake_dispatch() -> None:
+    def fake_dispatch(routed_to, *, actor_id, text, context):  # noqa: ANN001
+        return {"ok": True, "agent": routed_to, "brief": "correctif proposé"}
+
+    team_roles.set_dispatch_for_tests(fake_dispatch)
+    client = TestClient(app)
+    created = client.post(
+        "/v1/team/tasks",
+        json={
+            "role": "dev_game",
+            "objective": "analyser bug gameplay",
+            "actor_id": "u:dev",
+            "context": {"qa_failure_summary": {"smoke_ok": False}},
+        },
+    ).json()
+    ran = client.post(f"/v1/team/tasks/{created['id']}/run").json()
+    assert ran["status"] == "done"
+    assert ran["result"]["kind"] == "dev_game_brief"
+
+
+def test_team_plan_includes_dev_game() -> None:
+    client = TestClient(app)
+    r = client.post(
+        "/v1/team/plan",
+        json={"objective": "corriger le bug gameplay core3", "actor_id": "u:plan"},
+    )
+    assert r.status_code == 200
+    roles = {p["role"] for p in r.json()["proposals"]}
+    assert "dev_game" in roles
+
+
 def test_team_run_qa_health_checks(monkeypatch: pytest.MonkeyPatch) -> None:
     class _Resp:
         status_code = 200

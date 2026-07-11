@@ -23,6 +23,32 @@ def followup_actor_id() -> str:
     return os.environ.get("LBG_TEAM_QA_FOLLOWUP_ACTOR_ID", "system:team_qa_followup").strip()
 
 
+def auto_run_pm_enabled() -> bool:
+    return os.environ.get("LBG_TEAM_QA_FOLLOWUP_AUTO_RUN_PM", "1").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+
+
+def auto_run_followup_tasks(task_ids: list[str]) -> list[dict[str, object]]:
+    """Exécute automatiquement les tâches PM de suivi (L1). Import paresseux pour éviter cycle roles↔qa_followup."""
+    if not auto_run_pm_enabled():
+        return []
+    from team import roles as team_roles
+
+    results: list[dict[str, object]] = []
+    for tid in task_ids:
+        task = team_store.get_task(tid)
+        if task is None or task.role != "pm" or task.status != "queued":
+            continue
+        ran = team_roles.run_task(tid)
+        if ran is not None:
+            results.append({"task_id": tid, "role": ran.role, "status": ran.status})
+    return results
+
+
 def maybe_spawn_after_qa_failure(task: TeamTask) -> list[str]:
     """Crée des tâches de suivi si la QA a échoué. Retourne les ids créés."""
     if not followup_enabled():
@@ -68,6 +94,23 @@ def maybe_spawn_after_qa_failure(task: TeamTask) -> list[str]:
             },
         )
         created_ids.append(ops.id)
+
+        dev_obj = os.environ.get(
+            "LBG_TEAM_QA_FOLLOWUP_DEV_OBJECTIVE",
+            f"Analyser échec smoke — proposition correctif gameplay/infra hors sandbox mmmorpg (parent QA {task.id})",
+        ).strip()
+        dev = team_store.create_task(
+            role="dev_game",
+            objective=dev_obj,
+            actor_id=followup_actor_id(),
+            priority="high",
+            context={
+                **parent_ref,
+                "_qa_followup": True,
+                "qa_failure_summary": _summarize_failure(result),
+            },
+        )
+        created_ids.append(dev.id)
 
     team_store.update_task(
         task.id,

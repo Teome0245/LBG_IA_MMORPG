@@ -87,7 +87,7 @@ Dialogue, companion, joueurs IA — pas d’accès SSH Proxmox.
 | `qa` | `team.qa` (nouveau) → smokes | Groq fast | L1 |
 | `pm` | `project_pm` | Groq / GLM | L0–L1 |
 | `dev_infra` | phase C | — | — |
-| `dev_game` | phase C | — | — |
+| `dev_game` | `prototype_game` (via agent.pm) | Groq / GLM | L0–L1 |
 | `creative` | phase C | — | — |
 | `dialogue` | existant | auto | — |
 | `companion` | phase D | — | — |
@@ -99,7 +99,7 @@ Dialogue, companion, joueurs IA — pas d’accès SSH Proxmox.
 
 ```yaml
 task_id: uuid
-role: ops | qa | pm
+role: ops | qa | pm | dev_game
 status: queued | running | review | done | failed | cancelled
 priority: low | normal | high | critical
 approval_required: boolean

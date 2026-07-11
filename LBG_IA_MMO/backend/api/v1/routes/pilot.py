@@ -17,7 +17,7 @@ from services import metrics as svc_metrics
 from services.mmo_lyra_sync import merge_mmo_lyra_if_configured
 from services.mmmorpg_commit import try_commit_dialogue
 from services.orchestrator_client import OrchestratorClient, OrchestratorError
-from services.session_summary_export import build_assistant_session_export
+from services.session_summary_export import build_assistant_session_export, build_mmo_bridge_context
 
 router = APIRouter()
 LOG = logging.getLogger("pilot")
@@ -878,6 +878,31 @@ async def pilot_assistant_session_summary_export(body: AssistantSessionExportBod
         payload["mmo_bridge"] = body.mmo_bridge
     export = build_assistant_session_export(payload)
     return {"ok": True, "export": export}
+
+
+@router.post("/assistant/session-summary/mmo-bridge", tags=["pilot"])
+async def pilot_assistant_session_summary_mmo_bridge(body: AssistantSessionExportBody) -> dict[str, object]:
+    """
+    Valide un résumé volontaire et retourne un context_patch prêt pour chat/route (pont MMO).
+    Ne persiste rien côté serveur.
+    """
+    payload: dict[str, object] = {}
+    if body.notes is not None:
+        payload["notes"] = body.notes
+    if body.history is not None:
+        payload["history"] = body.history
+    if body.session_summary is not None:
+        payload["session_summary"] = body.session_summary
+    if body.mmo_bridge is not None:
+        payload["mmo_bridge"] = body.mmo_bridge
+    export = build_assistant_session_export(payload)
+    context_patch = build_mmo_bridge_context(export)
+    return {
+        "ok": True,
+        "export": export,
+        "context_patch": context_patch,
+        "hint": "Fusionnez context_patch dans le contexte assistant ou route Pilot.",
+    }
 
 
 @router.get("/orchestrator/brain/status", tags=["pilot"])

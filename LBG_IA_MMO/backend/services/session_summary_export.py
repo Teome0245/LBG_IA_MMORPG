@@ -115,3 +115,23 @@ def build_assistant_session_export(payload: dict[str, Any]) -> dict[str, object]
         export["dropped_keys"] = dropped
 
     return export
+
+
+def build_mmo_bridge_context(export: dict[str, object]) -> dict[str, object]:
+    """Contexte prêt à fusionner dans chat/route (session_summary + mmo_bridge sanitisés)."""
+    from datetime import datetime, timezone
+
+    ctx: dict[str, object] = {}
+    ss = export.get("session_summary")
+    if isinstance(ss, dict) and ss:
+        ctx["session_summary"] = dict(ss)
+    bridge = export.get("mmo_bridge")
+    if isinstance(bridge, dict) and bridge:
+        ctx["mmo_bridge"] = dict(bridge)
+    else:
+        ctx["mmo_bridge"] = {
+            "source": "mmo_session_summary",
+            "via": "pilot_assistant_api",
+            "imported_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        }
+    return ctx

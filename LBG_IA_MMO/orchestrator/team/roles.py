@@ -13,7 +13,7 @@ from lbg_agents.dispatch import invoke_after_route
 
 from team import store as team_store
 from team.models import TeamTask
-from team.qa_followup import maybe_spawn_after_qa_failure
+from team.qa_followup import auto_run_followup_tasks, maybe_spawn_after_qa_failure
 
 Dispatcher = Callable[..., dict[str, object]]
 
@@ -37,6 +37,12 @@ ROLE_SPECS: dict[str, dict[str, object]] = {
         "routed_to": "agent.pm",
         "autonomy": "L0-L1",
         "default_objective": "Brief jalons et prochaines tâches projet",
+    },
+    "dev_game": {
+        "capability": "prototype_game",
+        "routed_to": "agent.pm",
+        "autonomy": "L0-L1",
+        "default_objective": "Analyser bug gameplay / correctif proposé (hors sandbox mmmorpg gelé)",
     },
 }
 
@@ -210,10 +216,27 @@ def _execute_pm(task: TeamTask) -> dict[str, object]:
     return {"kind": "pm_brief", "output": out, "ok": True}
 
 
+def _execute_dev_game(task: TeamTask) -> dict[str, object]:
+    ctx = dict(task.context)
+    ctx.setdefault("dev_game_focus", True)
+    ctx.setdefault("project_pm", {"include_plan": True, "scope": "game_dev", "exclude_sandbox_mmmorpg": True})
+    summary = ctx.get("qa_failure_summary")
+    if isinstance(summary, dict):
+        ctx.setdefault("qa_failure_summary", summary)
+    out = _dispatch(
+        "agent.pm",
+        actor_id=task.actor_id,
+        text=task.objective,
+        context=ctx,
+    )
+    return {"kind": "dev_game_brief", "output": out, "ok": True}
+
+
 _EXECUTORS: dict[str, Callable[[TeamTask], dict[str, object]]] = {
     "ops": _execute_ops,
     "qa": _execute_qa,
     "pm": _execute_pm,
+    "dev_game": _execute_dev_game,
 }
 
 
@@ -244,6 +267,9 @@ def plan_from_objective(objective: str, *, actor_id: str = "system:team") -> lis
     if any(k in text for k in ("pm", "jalon", "roadmap", "plan", "projet", "tâche", "tache")):
         obj = objective if "pm" in text else str(ROLE_SPECS["pm"]["default_objective"])
         _add("pm", obj)
+    if any(k in text for k in ("dev", "game", "gameplay", "bug", "correctif", "mmo", "core3")):
+        obj = objective if any(k in text for k in ("dev", "bug", "game")) else str(ROLE_SPECS["dev_game"]["default_objective"])
+        _add("dev_game", obj)
 
     if not proposals:
         _add("pm", objective)
@@ -299,6 +325,7 @@ def run_task(task_id: str, *, approval_token: str | None = None) -> TeamTask | N
                             "trace_id": trace_id,
                         }
                     )
+                    auto_run_followup_tasks(followups)
     except Exception as e:
         team_store.update_task(task_id, status="failed", result={"error": str(e)})
         _trace_log({"event": "run_error", "task_id": task_id, "error": str(e), "trace_id": trace_id})

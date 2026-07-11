@@ -1265,6 +1265,7 @@
               <button type="button" id="btn-assistant-session-build">Générer</button>
               <button type="button" id="btn-assistant-session-copy">Copier JSON</button>
               <button type="button" id="btn-assistant-session-export-server" title="POST /v1/pilot/assistant/session-summary/export">Valider (API)</button>
+              <button type="button" id="btn-assistant-session-mmo-bridge" title="POST /v1/pilot/assistant/session-summary/mmo-bridge">Appliquer pont MMO (API)</button>
               <span class="assistant-muted" id="assistant-session-hint">—</span>
             </p>
             <pre id="assistant-session-summary-out" class="assistant-raw-collapsed" style="max-height:10rem;margin-top:0.35rem">—</pre>
@@ -1500,6 +1501,7 @@
             <option value="qa">qa — smoke / healthz</option>
             <option value="ops">ops — sonde infra</option>
             <option value="pm">pm — brief projet</option>
+            <option value="dev_game">dev_game — analyse gameplay / correctif</option>
           </select>
           <label for="team-objective">Objectif</label>
           <textarea id="team-objective" style="min-height:4rem;">smoke LAN read-only (healthz)</textarea>
@@ -1526,6 +1528,7 @@
                 <option value="qa">qa</option>
                 <option value="ops">ops</option>
                 <option value="pm">pm</option>
+                <option value="dev_game">dev_game</option>
               </select>
             </label>
             <label style="margin:0;">Statut
@@ -3276,6 +3279,9 @@
     try { document.getElementById("btn-assistant-session-export-server").addEventListener("click", function () {
       assistantSessionExportViaServer().catch(function (e) { pilotInlineHint("assistant-session-hint", String(e), true); });
     }); } catch (_) {}
+    try { document.getElementById("btn-assistant-session-mmo-bridge").addEventListener("click", function () {
+      assistantSessionMmoBridgeApply().catch(function (e) { pilotInlineHint("assistant-session-hint", String(e), true); });
+    }); } catch (_) {}
     try { document.getElementById("btn-assistant-caps-refresh").addEventListener("click", function () {
       assistantCapsRefresh().catch(function () {});
     }); } catch (_) {}
@@ -4283,6 +4289,54 @@
         assistantLastVoluntarySummaryJson = JSON.stringify(exportObj, null, 2);
         if (outEl) outEl.textContent = assistantLastVoluntarySummaryJson;
         pilotInlineHint("assistant-session-hint", "Export validé (sanitisé, non persisté serveur).", false);
+      } catch (e) {
+        pilotInlineHint("assistant-session-hint", "Erreur : " + e, true);
+      }
+    }
+
+    async function assistantSessionMmoBridgeApply() {
+      const ctxEl = document.getElementById("assistant-context");
+      const mmoTa = document.getElementById("assistant-mmo-session-import");
+      pilotInlineHint("assistant-session-hint", "Pont MMO (API)…", false);
+      const payload = assistantCollectSessionPayloadForExport();
+      try {
+        const base = getBase();
+        const out = await postJson(base + "/v1/pilot/assistant/session-summary/mmo-bridge", payload);
+        if (out.status !== 200 || !out.json || out.json.ok !== true) {
+          pilotInlineHint(
+            "assistant-session-hint",
+            "API mmo-bridge HTTP " + out.status + (out.json && out.json.error ? " — " + out.json.error : ""),
+            true
+          );
+          return;
+        }
+        const patch = out.json.context_patch || {};
+        let ctx = assistantParseJsonTextarea("assistant-context", {});
+        if (!ctx || typeof ctx !== "object" || Array.isArray(ctx)) ctx = {};
+        if (patch.session_summary && typeof patch.session_summary === "object") {
+          ctx.session_summary = patch.session_summary;
+        }
+        if (patch.mmo_bridge && typeof patch.mmo_bridge === "object") {
+          ctx.mmo_bridge = patch.mmo_bridge;
+        }
+        if (ctxEl) ctxEl.value = JSON.stringify(ctx, null, 2);
+        if (patch.session_summary && mmoTa) {
+          mmoTa.value = JSON.stringify(patch.session_summary, null, 2);
+          try {
+            localStorage.setItem(LBG_PILOT_MMO_SESSION_SUMMARY_STORAGE, mmoTa.value || "");
+          } catch (_) {}
+        }
+        const exportObj = out.json.export || {};
+        assistantLastVoluntarySummaryJson = JSON.stringify(exportObj, null, 2);
+        const outEl = document.getElementById("assistant-session-summary-out");
+        if (outEl) outEl.textContent = assistantLastVoluntarySummaryJson;
+        pilotInlineHint(
+          "assistant-session-hint",
+          out.json.hint || "context_patch appliqué au contexte assistant.",
+          false
+        );
+        assistantUiHint("Pont MMO appliqué — vous pouvez Proposer ou Router.", false);
+        try { assistantRenderSessionState(); } catch (_) {}
       } catch (e) {
         pilotInlineHint("assistant-session-hint", "Erreur : " + e, true);
       }
