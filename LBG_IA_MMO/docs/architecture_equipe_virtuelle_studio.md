@@ -153,7 +153,7 @@ Token : `LBG_TEAM_APPROVAL_TOKEN` (aligné tokens Pilot / opengame).
 | Phase | Contenu |
 |-------|---------|
 | **A** | Rôles ops/qa/pm, SQLite, API, `#/team` |
-| **B** | Playbooks ops (smoke quotidien, disque, Ollama) |
+| **B** | Rôles ops/qa/pm, SQLite, API, `#/team` ; playbooks L1 smoke/ops **livrés** |
 | **C** | Workflow bug QA→dev, creative |
 | **D** | Joueurs IA WS 245 |
 
