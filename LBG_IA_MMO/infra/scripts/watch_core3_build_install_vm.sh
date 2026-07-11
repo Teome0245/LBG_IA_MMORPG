@@ -11,7 +11,7 @@ MAX_WAIT_S="${MAX_WAIT_S:-7200}"
 echo "=== Watch build → install (${VM_USER}@${VM_HOST}) ==="
 deadline=$((SECONDS + MAX_WAIT_S))
 while (( SECONDS < deadline )); do
-  if ssh -o BatchMode=yes "${VM_USER}@${VM_HOST}" "grep -qE 'Built target core3[^a-zA-Z]' '${LOG}' 2>/dev/null || grep -Fxq '[100%] Built target core3' '${LOG}' 2>/dev/null"; then
+  if ssh -o BatchMode=yes "${VM_USER}@${VM_HOST}" "grep -qE '\\[100%\\] Built target core3$' '${LOG}' 2>/dev/null"; then
     echo "Build terminé — installation core3-clean…"
     LBG_NEW_MMO_VM_HOST="${VM_HOST}" bash "${ROOT_DIR}/infra/scripts/install_core3_clean_after_vm_build.sh"
     sleep 15
