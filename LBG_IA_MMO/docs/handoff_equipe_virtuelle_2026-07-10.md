@@ -121,7 +121,8 @@ Ne pas toucher au gel sandbox mmmorpg (ADR 0005) sans demande explicite.
 
 1. [x] Playbook L1 : `spawn_team_qa_smoke_job` + timer systemd `lbg-team-qa-smoke-job`
 2. [x] Activer timer sur 140 (`install_team_qa_smoke_job_vm.sh` + vars `LBG_TEAM_QA_SMOKE_JOB_*`)
-3. [ ] Playbooks ops disque / Ollama (prochain sprint B)
+3. [x] Playbooks ops disque (`spawn_team_ops_storage_job`) + Ollama (`spawn_team_ops_ollama_job`)
+4. [x] Activer timers ops sur 140 (`install_team_ops_jobs_vm.sh`)
 
 ### Vérifications infra (quand LAN up)
 

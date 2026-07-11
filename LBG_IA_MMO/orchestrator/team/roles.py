@@ -106,8 +106,45 @@ def _run_qa_smoke_script() -> dict[str, object]:
 
 
 def _execute_ops(task: TeamTask) -> dict[str, object]:
-    orch = _orchestrator_url()
     ctx = dict(task.context)
+    ops_kind = str(ctx.get("ops_kind") or "").strip().lower()
+
+    storage = ctx.get("proxmox_storage")
+    if ops_kind == "proxmox_storage" and isinstance(storage, dict):
+        outcome = str(storage.get("outcome") or "ok")
+        ok = outcome != "critical"
+        return {"kind": "ops_storage", "storage": storage, "outcome": outcome, "ok": ok}
+
+    if ops_kind == "ollama":
+        import httpx
+
+        url = str(ctx.get("ollama_tags_url") or "").strip()
+        if not url:
+            base = os.environ.get("LBG_TEAM_OPS_OLLAMA_URL", os.environ.get("OLLAMA_BASE_URL", "http://192.168.0.110:11434"))
+            url = base.strip().rstrip("/") + "/api/tags"
+        try:
+            timeout = float(os.environ.get("LBG_TEAM_OPS_OLLAMA_TIMEOUT_S", "8"))
+            resp = httpx.get(url, timeout=timeout)
+            ok = resp.status_code == 200
+            body: dict[str, object] = {}
+            try:
+                parsed = resp.json()
+                if isinstance(parsed, dict):
+                    models = parsed.get("models")
+                    body["model_count"] = len(models) if isinstance(models, list) else 0
+            except Exception:
+                pass
+            return {
+                "kind": "ops_ollama",
+                "url": url,
+                "status_code": resp.status_code,
+                "body": body,
+                "ok": ok,
+            }
+        except Exception as e:
+            return {"kind": "ops_ollama", "url": url, "ok": False, "error": str(e)}
+
+    orch = _orchestrator_url()
     action = ctx.get("devops_action")
     if not isinstance(action, dict):
         action = {"kind": "http_get", "url": f"{orch}/healthz"}

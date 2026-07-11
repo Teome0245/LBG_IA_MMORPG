@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer — sonde stockage Proxmox → tâche équipe ops (warn/critical)
+
+[Timer]
+OnBootSec=25min
+OnUnitActiveSec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

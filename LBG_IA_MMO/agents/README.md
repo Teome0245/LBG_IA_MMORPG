@@ -487,6 +487,22 @@ cd agents
 PYTHONPATH=src uv run --with pytest python -m pytest tests/test_spawn_team_qa_smoke_job.py -q
 ```
 
+### Équipe virtuelle — ops stockage + Ollama (`spawn_team_ops_*`)
+
+Playbooks **L1** (phase B) : timers sur **140** → tâches équipe **`ops`**.
+
+| Module | Déclenchement | Rôle |
+|--------|---------------|------|
+| `spawn_team_ops_storage_job` | warn/critical Proxmox (cooldown 30 min / 15 min) | `ops` + contexte `proxmox_storage` |
+| `spawn_team_ops_ollama_job` | toutes les 6 h (cooldown 6 h) | `ops` + `GET /api/tags` sur 110 |
+
+```bash
+bash infra/scripts/install_team_ops_jobs_vm.sh
+sudo systemctl start lbg-team-ops-ollama-job.service   # test manuel
+```
+
+Tests : `pytest tests/test_spawn_team_ops_jobs.py -q`
+
 ## Évolution
 
 Ajouter d’autres URLs ou une découverte par registry ; garder `invoke_after_route` comme point d’entrée unique.

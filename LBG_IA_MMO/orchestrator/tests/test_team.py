@@ -139,3 +139,61 @@ def test_team_cancel() -> None:
     ).json()
     cancelled = client.post(f"/v1/team/tasks/{created['id']}/cancel").json()
     assert cancelled["status"] == "cancelled"
+
+
+def test_team_ops_storage_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = TestClient(app)
+    created = client.post(
+        "/v1/team/tasks",
+        json={
+            "role": "ops",
+            "objective": "sonde stockage",
+            "actor_id": "u:ops",
+            "context": {
+                "ops_kind": "proxmox_storage",
+                "proxmox_storage": {"ok": True, "outcome": "warn", "data_percent": 90},
+            },
+        },
+    ).json()
+    ran = client.post(f"/v1/team/tasks/{created['id']}/run").json()
+    assert ran["status"] == "done"
+    assert ran["result"]["kind"] == "ops_storage"
+    assert ran["result"]["ok"] is True
+
+
+def test_team_ops_ollama_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _Resp:
+        status_code = 200
+
+        def json(self) -> dict[str, object]:
+            return {"models": [{"name": "gemma4:26b"}]}
+
+    class _Client:
+        def __enter__(self) -> "_Client":
+            return self
+
+        def __exit__(self, *a: object) -> None:
+            return None
+
+        def get(self, url: str) -> _Resp:
+            return _Resp()
+
+    import httpx
+
+    monkeypatch.setattr(httpx, "Client", lambda **kw: _Client())
+    monkeypatch.setattr(httpx, "get", lambda url, timeout=8: _Resp())
+
+    client = TestClient(app)
+    created = client.post(
+        "/v1/team/tasks",
+        json={
+            "role": "ops",
+            "objective": "sonde ollama",
+            "actor_id": "u:ops",
+            "context": {"ops_kind": "ollama", "ollama_tags_url": "http://127.0.0.1:11434/api/tags"},
+        },
+    ).json()
+    ran = client.post(f"/v1/team/tasks/{created['id']}/run").json()
+    assert ran["status"] == "done"
+    assert ran["result"]["kind"] == "ops_ollama"
+    assert ran["result"]["ok"] is True
