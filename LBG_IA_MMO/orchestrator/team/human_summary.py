@@ -35,6 +35,9 @@ def format_probe_lines(probes: list[dict[str, Any]]) -> list[str]:
             hook = checks.get("zone_server_zb_hook")
             hdr = checks.get("zb0_header")
             line += f" — header={hdr} hook={hook}"
+        elif track == "zb1_readiness":
+            checks = p.get("checks") if isinstance(p.get("checks"), dict) else {}
+            line += f" — code_ok={p.get('code_ok')} live={checks.get('live_feed_ok')}"
         elif track in ("soe_m3_login", "soe_m3_zone", "soe_m5_play"):
             line += f" — host={p.get('host', '?')}"
         lines.append(line)

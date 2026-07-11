@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer — build Core3 + ZB-1 parallèle (équipe virtuelle)
+
+[Timer]
+OnBootSec=85min
+OnUnitActiveSec=8h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

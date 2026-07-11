@@ -7,7 +7,15 @@ from typing import Any
 
 
 def supported_protos() -> list[str]:
-    return ["lbg-ws/1", "lbg-ws/2-preview"]
+    protos = ["lbg-ws/1", "lbg-ws/2-preview"]
+    try:
+        from services.lbg_gateway.zone_bridge_feed import read_live_zone_state, zone_bridge_live_enabled
+
+        if zone_bridge_live_enabled() and read_live_zone_state() is not None:
+            protos.append("lbg-ws/2")
+    except ImportError:
+        pass
+    return protos
 
 
 def normalize_proto(raw: str | None) -> str:

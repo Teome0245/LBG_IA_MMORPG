@@ -14,7 +14,7 @@ os.environ.setdefault("LBG_DEVOPS_HTTP_ALLOWLIST", "http://127.0.0.1:8010/health
 from orchestrator.main import app  # noqa: E402
 from team import roles as team_roles  # noqa: E402
 from team import store as team_store  # noqa: E402
-from team.lbg_ws2_audit import audit_zb0_readiness  # noqa: E402
+from team.lbg_ws2_audit import audit_zb0_readiness, audit_zb1_readiness  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -49,6 +49,33 @@ def test_audit_zb0_finds_header_stub(monkeypatch: pytest.MonkeyPatch, tmp_path: 
     assert out["checks"]["zb0_header"] is True
     assert out["checks"]["zone_server_zb_hook"] is True
     assert out["ok"] is True
+
+
+def test_audit_zb1_code_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    new_mmo = tmp_path / "new_mmo"
+    lbg = new_mmo / "lbg-mmo/server-core3/server/lbg"
+    lbg.mkdir(parents=True)
+    for name in (
+        "LbgZoneBridge.h",
+        "LbgZoneBridge.cpp",
+        "LbgZoneBridgeReadOnly.cpp",
+        "LbgZoneBridgeTickTask.h",
+        "LbgZoneBridgeInit.cpp",
+        "LbgZoneBridgeJsonExport.h",
+        "LbgZoneBridgeJsonExport.cpp",
+    ):
+        (lbg / name).write_text("// stub\n", encoding="utf-8")
+    (lbg / "LbgZoneBridgeTickTask.h").write_text("publishZoneBridgeJson\n", encoding="utf-8")
+    zone_impl = new_mmo / "lbg-mmo/server-core3/server/zone"
+    zone_impl.mkdir(parents=True)
+    (zone_impl / "ZoneServerImplementation.cpp").write_text("startZoneBridgeTick\n", encoding="utf-8")
+    cmake = new_mmo / "lbg-mmo/server-core3"
+    cmake.mkdir(parents=True)
+    (cmake / "CMakeLists.txt").write_text('file(GLOB_RECURSE lbg_sources "server/lbg/*.cpp")\n', encoding="utf-8")
+    monkeypatch.setenv("LBG_NEW_MMO_ROOT", str(new_mmo))
+    out = audit_zb1_readiness(probe_live_feed=False)
+    assert out["track"] == "zb1_readiness"
+    assert out["code_ok"] is True
 
 
 def test_team_plan_includes_soe_m3() -> None:

@@ -1505,6 +1505,8 @@
             <button type="button" class="preset" data-team-preset="soe_m3" title="SOE M3 — login + zone UDP Prime">SOE M3</button>
             <button type="button" class="preset" data-team-preset="soe_m5" title="SOE M5 — play ZQSD prime_controller">SOE M5</button>
             <button type="button" class="preset" data-team-preset="zb0_audit" title="Audit ZB-0 LbgZoneBridge C++">Audit ZB-0</button>
+            <button type="button" class="preset" data-team-preset="zb1_audit" title="Audit ZB-1 export JSON live gateway">Audit ZB-1</button>
+            <button type="button" class="preset" data-team-preset="parallel_prime" title="Vulcan plan build + ZB-1 en parallèle">Prime //</button>
             <button type="button" class="preset" data-team-preset="client_live" title="M3 + M5 + ZB-0 + lbg-ws/2">Client live</button>
             <button type="button" class="preset" data-team-preset="validate_godot" title="Smokes + checklist lancement Godot">Valider client</button>
             <button type="button" class="preset" data-team-preset="core3_build_plan" title="Plan build ZB-0 dry-run (Vulcan)">Plan build ZB-0</button>
@@ -5176,6 +5178,7 @@
     let __teamCore3Build = false;
     let __teamCore3BuildExecute = false;
     let __teamGodotValidation = false;
+    let __teamParallelPrime = false;
 
     const TEAM_ROLE_DEFAULTS = {
       qa: "Smoke LAN read-only (healthz + systemd via script si configuré)",
@@ -5188,6 +5191,8 @@
       soe_m3: "Audit SOE M3 — login + zone UDP Godot Prime (soe_handshake)",
       soe_m5: "Audit SOE M5 — play ZQSD prime_controller sur Prime",
       zb0_audit: "Audit ZB-0 LbgZoneBridge C++ — header et hook ZoneServer",
+      zb1_audit: "Audit ZB-1 export JSON 20 Hz — gateway lbg-ws/2 live",
+      parallel_prime: "Parallèle Vulcan plan build Core3 + audit ZB-1 gateway",
       client_live: "Audit client Godot live — M3 SOE + M5 play + ZB-0 + lbg-ws/2",
       validate_godot: "Valider client Godot — smokes LAN + checklist lancement Godot",
       core3_build_plan: "Plan build Core3 ZB-0 Antigravity (dry-run, Vulcan)",
@@ -5207,6 +5212,8 @@
       soe_m3: { role: "dev_game", objectiveKey: "soe_m3", godotTrackKey: "soe_m3", autoRun: true },
       soe_m5: { role: "dev_game", objectiveKey: "soe_m5", godotTrackKey: "soe_m5", autoRun: true },
       zb0_audit: { role: "dev_game", objectiveKey: "zb0_audit", godotTrackKey: "zb0", autoRun: true },
+      zb1_audit: { role: "dev_game", objectiveKey: "zb1_audit", godotTrackKey: "zb1", autoRun: true },
+      parallel_prime: { role: "dev_game", objectiveKey: "parallel_prime", parallelPrime: true, autoRun: true },
       client_live: { role: "dev_game", objectiveKey: "client_live", godotTrackKey: "client_live", autoRun: true },
       validate_godot: { role: "qa", objectiveKey: "validate_godot", godotValidation: true, autoRun: true },
       core3_build_plan: { role: "dev_game", objectiveKey: "core3_build_plan", core3Build: true, autoRun: true },
@@ -5284,6 +5291,7 @@
       __teamCore3Build = !!preset.core3Build;
       __teamCore3BuildExecute = !!preset.core3BuildExecute;
       __teamGodotValidation = !!preset.godotValidation;
+      __teamParallelPrime = !!preset.parallelPrime;
       const apprEl = document.getElementById("team-approval-required");
       if (apprEl) {
         apprEl.checked = !!preset.approvalRequired || preset.player_ia_mode === "think_tick";
@@ -5304,7 +5312,23 @@
         btn.classList.toggle("preset--active", btn.getAttribute("data-team-preset") === key);
       });
       if (launch) {
-        teamCreate({ autoRun: true }).catch(function () {});
+        if (__teamParallelPrime) {
+          (async function () {
+            __teamCore3Build = true;
+            __teamCore3BuildExecute = false;
+            __teamGodotTrackKey = "";
+            const objEl = document.getElementById("team-objective");
+            if (objEl) objEl.value = TEAM_ROLE_DEFAULTS.core3_build_plan || objEl.value;
+            await teamCreate({ autoRun: true });
+            __teamCore3Build = false;
+            __teamGodotTrackKey = "zb1";
+            if (objEl) objEl.value = TEAM_ROLE_DEFAULTS.zb1_audit || objEl.value;
+            await teamCreate({ autoRun: true });
+            __teamParallelPrime = false;
+          })().catch(function () {});
+        } else {
+          teamCreate({ autoRun: true }).catch(function () {});
+        }
       }
     }
 
@@ -5351,6 +5375,10 @@
         ctx.dev_game_focus = true;
         if (__teamCore3BuildExecute || /compiler core3|build réel/i.test(objective)) {
           ctx.core3_build_execute = true;
+        }
+        if (/parallel|poll.*log/i.test(objective)) {
+          ctx.parallel_prime = true;
+          ctx.poll_build_log = true;
         }
       }
       if (__teamGodotTrackKey) {
@@ -5681,6 +5709,7 @@
         __teamCore3Build = false;
         __teamCore3BuildExecute = false;
         __teamGodotValidation = false;
+        __teamParallelPrime = false;
         teamSyncFormUi();
       });
       if (modeEl) modeEl.addEventListener("change", function () { __teamObjectiveCustom = false; teamSyncFormUi(); });

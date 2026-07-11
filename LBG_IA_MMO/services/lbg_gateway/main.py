@@ -40,6 +40,11 @@ try:
     from services.lbg_gateway.roster_filter import allow_roster_npc, roster_policies_from_catalog
     from services.lbg_gateway.zone_players import build_zone_player_entities
     from services.lbg_gateway.lbg_ws2 import build_zone_state_v2, enter_world_v2, normalize_proto, supported_protos
+    from services.lbg_gateway.zone_bridge_feed import (
+        merge_snapshot_entities,
+        read_live_zone_state,
+        zone_bridge_live_enabled,
+    )
 except ImportError:
     from catalog_context import build_dialogue_context  # type: ignore[no-redef]
     from dialogue_ia import (  # type: ignore[no-redef]
@@ -63,6 +68,7 @@ except ImportError:
     from roster_filter import allow_roster_npc, roster_policies_from_catalog  # type: ignore[no-redef]
     from zone_players import build_zone_player_entities  # type: ignore[no-redef]
     from lbg_ws2 import build_zone_state_v2, enter_world_v2, normalize_proto, supported_protos  # type: ignore[no-redef]
+    from zone_bridge_feed import merge_snapshot_entities, read_live_zone_state, zone_bridge_live_enabled  # type: ignore[no-redef]
 
 LOG = logging.getLogger("lbg_gateway")
 HOST = os.environ.get("LBG_GATEWAY_HOST", "0.0.0.0")
@@ -369,9 +375,39 @@ async def _handle_interact(
     )
 
 
+def _ws2_zone_state(sess: Session, snapshot_entities: list[dict[str, Any]]) -> dict[str, Any]:
+    live = read_live_zone_state() if zone_bridge_live_enabled() else None
+    snap_ws2 = _entities_ws2(snapshot_entities)
+    if live:
+        merged = merge_snapshot_entities(live, snap_ws2)
+        removed = live.get("removed_entity_ids")
+        return build_zone_state_v2(
+            zone=str(live.get("zone") or "tatooine"),
+            tick=int(live.get("tick") or sess.tick),
+            entities=_entities_ws2(merged if isinstance(merged, list) else snap_ws2),
+            your_character_id=sess.character_id or 1,
+            removed_entity_ids=removed if isinstance(removed, list) else None,
+        )
+    return build_zone_state_v2(
+        zone="tatooine",
+        tick=sess.tick,
+        entities=snap_ws2,
+        your_character_id=sess.character_id or 1,
+    )
+
+
+def _broadcast_tick_s() -> float:
+    if zone_bridge_live_enabled() and read_live_zone_state() is not None:
+        try:
+            return max(0.02, float(os.environ.get("LBG_GATEWAY_TICK_LIVE_S", "0.05")))
+        except ValueError:
+            return 0.05
+    return TICK_S
+
+
 async def _broadcast_loop(clients: set[Any]) -> None:
     while True:
-        await asyncio.sleep(TICK_S)
+        await asyncio.sleep(_broadcast_tick_s())
         for ws in list(clients):
             sess: Session | None = getattr(ws, "lbg_sess", None)
             if sess is None or not sess.in_world:
@@ -380,16 +416,7 @@ async def _broadcast_loop(clients: set[Any]) -> None:
             try:
                 entities = _build_entities(sess.player_pos)
                 if normalize_proto(sess.proto) == "lbg-ws/2":
-                    await _send(
-                        ws,
-                        build_zone_state_v2(
-                            zone="tatooine",
-                            tick=sess.tick,
-                            entities=_entities_ws2(entities),
-                            your_character_id=sess.character_id or 1,
-                        ),
-                        sess,
-                    )
+                    await _send(ws, _ws2_zone_state(sess, entities), sess)
                 else:
                     await _send(
                         ws,
@@ -451,16 +478,10 @@ async def _handler(ws: Any) -> None:
                 sess.in_world = True
                 entities = _build_entities(sess.player_pos)
                 if normalize_proto(sess.proto) == "lbg-ws/2":
-                    await _send(
-                        ws,
-                        enter_world_v2(
-                            zone="tatooine",
-                            entities=_entities_ws2(entities),
-                            your_character_id=sess.character_id,
-                            position=sess.player_pos,
-                        ),
-                        sess,
-                    )
+                    payload = _ws2_zone_state(sess, entities)
+                    payload["type"] = "enter_world"
+                    payload["position"] = sess.player_pos
+                    await _send(ws, payload, sess)
                 else:
                     await _send(
                         ws,
@@ -477,16 +498,10 @@ async def _handler(ws: Any) -> None:
                 sess.in_world = True
                 entities = _build_entities(sess.player_pos)
                 if normalize_proto(sess.proto) == "lbg-ws/2":
-                    await _send(
-                        ws,
-                        enter_world_v2(
-                            zone="tatooine",
-                            entities=_entities_ws2(entities),
-                            your_character_id=sess.character_id or 1,
-                            position=sess.player_pos,
-                        ),
-                        sess,
-                    )
+                    payload = _ws2_zone_state(sess, entities)
+                    payload["type"] = "enter_world"
+                    payload["position"] = sess.player_pos
+                    await _send(ws, payload, sess)
                 else:
                     await _send(
                         ws,

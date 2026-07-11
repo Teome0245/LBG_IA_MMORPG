@@ -27,6 +27,9 @@ LBG_GATEWAY_LOCATIONS=${REMOTE_DIR}/locations
 LBG_GATEWAY_PENDING_FILE=${BIN}/ia_bridge/pending.jsonl
 LBG_GATEWAY_INJECT_MOVE=0
 LBG_GATEWAY_INJECT_PLAYER=Teome
+LBG_GATEWAY_ZONE_BRIDGE_LIVE=1
+LBG_GATEWAY_ZONE_BRIDGE_JSON=${BIN}/ia_bridge/zone_bridge_live.json
+LBG_GATEWAY_TICK_LIVE_S=0.05
 ENV
 sudo cp /tmp/lbg-gateway.service /etc/systemd/system/lbg-gateway.service
 sudo systemctl daemon-reload

@@ -106,6 +106,89 @@ def audit_zb0_readiness() -> dict[str, Any]:
     }
 
 
+def _zb1_export_paths() -> list[Path]:
+    root = _new_mmo_root()
+    return [
+        root / "lbg-mmo/server-core3/server/lbg/LbgZoneBridgeJsonExport.h",
+        root / "lbg-mmo/server-core3/server/lbg/LbgZoneBridgeJsonExport.cpp",
+    ]
+
+
+def audit_zb1_readiness(*, probe_live_feed: bool = True) -> dict[str, Any]:
+    """Audit ZB-1 — export JSON C++ + module gateway live."""
+    gaps: list[str] = []
+    checks: dict[str, Any] = {}
+    zb0 = audit_zb0_readiness()
+    checks["zb0_ok"] = bool(zb0.get("ok"))
+
+    export_paths = _zb1_export_paths()
+    checks["zb1_json_export_h"] = export_paths[0].is_file()
+    checks["zb1_json_export_cpp"] = export_paths[1].is_file() if len(export_paths) > 1 else False
+
+    tick_task = _new_mmo_root() / "lbg-mmo/server-core3/server/lbg/LbgZoneBridgeTickTask.h"
+    if tick_task.is_file():
+        tt = tick_task.read_text(encoding="utf-8", errors="ignore")
+        checks["zb1_tick_publishes_json"] = "publishZoneBridgeJson" in tt
+    else:
+        checks["zb1_tick_publishes_json"] = False
+
+    gw_feed = _repo_root() / "services/lbg_gateway/zone_bridge_feed.py"
+    checks["gateway_zone_bridge_feed"] = gw_feed.is_file()
+
+    if not checks.get("zb1_json_export_cpp"):
+        gaps.append("LbgZoneBridgeJsonExport.cpp absent (ZB-1)")
+    if not checks.get("zb1_tick_publishes_json"):
+        gaps.append("LbgZoneBridgeTickTask n'appelle pas publishZoneBridgeJson")
+    if not checks.get("gateway_zone_bridge_feed"):
+        gaps.append("services/lbg_gateway/zone_bridge_feed.py absent")
+
+    live_probe: dict[str, Any] | None = None
+    if probe_live_feed and checks.get("gateway_zone_bridge_feed"):
+        try:
+            import sys
+
+            root_s = str(_repo_root())
+            if root_s not in sys.path:
+                sys.path.insert(0, root_s)
+            from services.lbg_gateway.zone_bridge_feed import probe_zone_bridge_feed
+
+            live_probe = probe_zone_bridge_feed()
+            checks["live_feed_ok"] = bool(live_probe.get("ok"))
+            if not live_probe.get("ok"):
+                gaps.append("feed live JSON absent ou périmé (compile + Prime requis)")
+        except ImportError as e:
+            checks["live_feed_ok"] = False
+            gaps.append(f"import zone_bridge_feed: {e}")
+
+    code_ok = bool(checks.get("zb1_json_export_cpp")) and bool(checks.get("zb1_tick_publishes_json"))
+    code_ok = code_ok and bool(checks.get("gateway_zone_bridge_feed"))
+    ok = bool(checks.get("zb0_ok")) and code_ok
+    if probe_live_feed and live_probe is not None:
+        ok = ok and bool(live_probe.get("ok"))
+        checks["runtime_feed"] = live_probe.get("checks")
+
+    next_actions: list[str] = []
+    if not checks.get("zb0_ok"):
+        next_actions.append("Finaliser ZB-0 avant ZB-1")
+    elif not code_ok:
+        next_actions.append("Implémenter LbgZoneBridgeJsonExport + zone_bridge_feed gateway")
+    elif live_probe and not live_probe.get("ok"):
+        next_actions.append("Compiler Core3 (Vulcan) et redémarrer Prime — feed JSON 20 Hz")
+    else:
+        next_actions.append("ZB-2 : injection move validé depuis gateway")
+
+    return {
+        "track": "zb1_readiness",
+        "ok": ok,
+        "code_ok": code_ok,
+        "checks": checks,
+        "gaps": gaps,
+        "live_probe": live_probe,
+        "next_actions": next_actions[:4],
+        "zb0": zb0,
+    }
+
+
 def audit_lbg_ws2_readiness() -> dict[str, Any]:
     root = _repo_root()
     gaps: list[str] = []

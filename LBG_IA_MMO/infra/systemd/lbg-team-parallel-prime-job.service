@@ -1,0 +1,21 @@
+[Unit]
+Description=LBG équipe virtuelle — compile Core3 + ZB-1 en parallèle (Vulcan + Dédale)
+After=network-online.target lbg-orchestrator.service
+Wants=lbg-orchestrator.service
+
+[Service]
+Type=oneshot
+User=lbg
+Group=lbg
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+Environment=LBG_TEAM_PARALLEL_PRIME_JOB_ENABLED=1
+Environment=LBG_ORCHESTRATOR_URL=http://127.0.0.1:8010
+Environment=LBG_TEAM_PARALLEL_PRIME_JOB_STATE=/var/lib/lbg/team_parallel_prime/state.json
+Environment=LBG_TEAM_PARALLEL_PRIME_JOB_ACTOR_ID=system:team_parallel_prime
+Environment=LBG_NEW_MMO_ROOT=/opt/new_mmo
+Environment=LBG_TEAM_CORE3_BUILD_REQUIRES_APPROVAL=1
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python -m lbg_agents.spawn_team_parallel_prime_job
+
+[Install]
+WantedBy=multi-user.target

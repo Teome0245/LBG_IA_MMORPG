@@ -67,9 +67,14 @@ def execute_core3_build_workflow(task: TeamTask, dispatch: Dispatcher) -> dict[s
         log_tail = check_build_log_tail()
 
     probes = [zb0, plan_probe]
+    if ctx.get("parallel_prime") or ctx.get("poll_build_log"):
+        polled = check_build_log_tail()
+        if polled:
+            log_tail = polled
+            probes.append({"track": "core3_build_log", **polled})
     if build_result:
         probes.append({"track": "core3_build_run", **build_result})
-    if log_tail:
+    if log_tail and not any(p.get("track") == "core3_build_log" for p in probes):
         probes.append({"track": "core3_build_log", **log_tail})
 
     brief = dispatch(

@@ -9,7 +9,7 @@ from services.action_proposal import propose_action_from_text
 
 from team.godot_soe_probe import probe_soe_m3_login, probe_soe_m3_zone, probe_soe_m5_play
 from team.human_summary import format_validation_summary
-from team.lbg_ws2_audit import audit_lbg_ws2_readiness, audit_zb0_readiness
+from team.lbg_ws2_audit import audit_lbg_ws2_readiness, audit_zb0_readiness, audit_zb1_readiness
 from team.models import TeamTask
 
 Dispatcher = Callable[..., dict[str, object]]
@@ -21,6 +21,8 @@ _TRACK_ALIASES = {
     "m5": "soe_m5",
     "zb0": "zb0",
     "zone_bridge": "zb0",
+    "zb1": "zb1",
+    "zone_bridge_live": "zb1",
     "client_live": "client_live",
 }
 
@@ -40,6 +42,8 @@ def _detect_track(task: TeamTask) -> str | None:
         return "soe_m5"
     if re.search(r"\b(soe.?m3|soe.?live|soe.?udp|soe_handshake)\b", text):
         return "soe_m3"
+    if re.search(r"\b(zb-?1|zone.?bridge.?live|json.?export.?20)\b", text):
+        return "zb1"
     if re.search(r"\b(zb-?0|zone.?bridge|lbgzonebridge)\b", text):
         return "zb0"
     if re.search(r"\b(client.?live|m3.?m5.?zb)\b", text):
@@ -54,12 +58,15 @@ def _run_track_probes(track: str) -> list[dict[str, object]]:
         return [probe_soe_m5_play()]
     if track == "zb0":
         return [audit_zb0_readiness()]
+    if track == "zb1":
+        return [audit_zb1_readiness(), audit_lbg_ws2_readiness()]
     if track == "client_live":
         return [
             probe_soe_m3_login(),
             probe_soe_m3_zone(),
             probe_soe_m5_play(),
             audit_zb0_readiness(),
+            audit_zb1_readiness(probe_live_feed=False),
             audit_lbg_ws2_readiness(),
         ]
     return [audit_lbg_ws2_readiness()]
@@ -81,6 +88,8 @@ def _forge_objective(task: TeamTask, track: str, probes: list[dict[str, object]]
         prefix = "prototype SOE M5 play ZQSD prime_controller"
     elif track == "zb0":
         prefix = "prototype ZB-0 LbgZoneBridge C++ hook ZoneServer lecture seule"
+    elif track == "zb1":
+        prefix = "prototype ZB-1 export JSON 20 Hz zone_bridge_live gateway lbg-ws/2"
     else:
         prefix = "prototype client Godot live M3/M5/ZB-0"
     if gaps:
@@ -155,4 +164,4 @@ def execute_godot_client_tracks_workflow(task: TeamTask, dispatch: Dispatcher) -
 
 def resolve_godot_client_tracks_workflow(task: TeamTask) -> bool:
     track = _detect_track(task)
-    return track in ("soe_m3", "soe_m5", "zb0", "client_live")
+    return track in ("soe_m3", "soe_m5", "zb0", "zb1", "client_live")
