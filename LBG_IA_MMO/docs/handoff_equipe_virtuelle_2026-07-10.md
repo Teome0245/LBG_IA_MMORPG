@@ -124,6 +124,12 @@ Ne pas toucher au gel sandbox mmmorpg (ADR 0005) sans demande explicite.
 3. [x] Playbooks ops disque (`spawn_team_ops_storage_job`) + Ollama (`spawn_team_ops_ollama_job`)
 4. [x] Activer timers ops sur 140 (`install_team_ops_jobs_vm.sh`)
 
+### Phase C (début — 2026-07-11)
+
+1. [x] QA échouée → suivi auto `pm` (+ `ops` si smoke KO) — `orchestrator/team/qa_followup.py`
+2. [x] UI `#/team` : filtres role/status/actor, L2 + token (repli `LBG_DEVOPS_APPROVAL_TOKEN`)
+3. [ ] Rôle `dev_game` / workflow dev complet
+
 ### Vérifications infra (quand LAN up)
 
 ```bash
@@ -138,7 +144,7 @@ bash LBG_IA_MMO/infra/scripts/smoke_vm_lan.sh
 
 - [x] Playbook B (code) : job quotidien smoke → tâche team `qa` (`spawn_team_qa_smoke_job`, timer systemd)
 - [x] Déploiement timer sur 140 en prod
-- `LBG_TEAM_APPROVAL_TOKEN` dans `lbg.env.example`
+- [x] `LBG_TEAM_APPROVAL_TOKEN` documenté (repli devops/jobs) dans `lbg.env.example`
 
 ---
 

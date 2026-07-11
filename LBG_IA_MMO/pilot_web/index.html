@@ -1508,12 +1508,40 @@
           <button type="button" id="btn-team-plan" style="margin-top:0.35rem;">Proposer des tâches</button>
           <pre id="team-plan-out" class="muted" style="font-size:0.82rem; max-height:8rem;">—</pre>
           <button type="button" id="btn-team-create" style="margin-top:0.5rem;">Créer la tâche</button>
+          <label style="display:inline-flex; align-items:center; gap:0.35rem; margin-left:0.6rem; font-size:0.88rem;">
+            <input type="checkbox" id="team-approval-required" /> L2 — approbation requise
+          </label>
+          <p class="muted" style="font-size:0.8rem; margin:0.35rem 0 0 0;">Token : <code>LBG_TEAM_APPROVAL_TOKEN</code> (repli <code>LBG_DEVOPS_APPROVAL_TOKEN</code>).</p>
           <span id="team-create-hint" class="muted" style="margin-left:0.6rem;">—</span>
         </section>
         <section>
           <div class="panel-title">
             <h2>Tâches récentes</h2>
             <button type="button" id="btn-team-refresh" style="margin:0; padding:0.2rem 0.6rem; font-size:0.8rem;">Rafraîchir</button>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-top:0.5rem; align-items:flex-end;">
+            <label style="margin:0;">Rôle
+              <select id="team-filter-role" style="margin:0;">
+                <option value="">tous</option>
+                <option value="qa">qa</option>
+                <option value="ops">ops</option>
+                <option value="pm">pm</option>
+              </select>
+            </label>
+            <label style="margin:0;">Statut
+              <select id="team-filter-status" style="margin:0;">
+                <option value="">tous</option>
+                <option value="queued">queued</option>
+                <option value="running">running</option>
+                <option value="review">review</option>
+                <option value="done">done</option>
+                <option value="failed">failed</option>
+                <option value="cancelled">cancelled</option>
+              </select>
+            </label>
+            <label style="margin:0;">actor_id
+              <input type="text" id="team-filter-actor" placeholder="ex. system:team_qa_smoke" style="margin:0; max-width:14rem;" />
+            </label>
           </div>
           <div id="team-list" style="margin-top:0.6rem;">—</div>
         </section>
@@ -5051,7 +5079,14 @@
     async function teamListRefresh() {
       const list = document.getElementById("team-list");
       if (!list) return;
-      const out = await jobsGet(getBase() + "/v1/pilot/team/tasks?limit=50");
+      const role = (document.getElementById("team-filter-role") || {}).value || "";
+      const status = (document.getElementById("team-filter-status") || {}).value || "";
+      const actor = (document.getElementById("team-filter-actor") || {}).value || "";
+      let url = getBase() + "/v1/pilot/team/tasks?limit=50";
+      if (role) url += "&role=" + encodeURIComponent(role);
+      if (status) url += "&status=" + encodeURIComponent(status);
+      if (actor.trim()) url += "&actor_id=" + encodeURIComponent(actor.trim());
+      const out = await jobsGet(url);
       const data = out.json || {};
       if (!data.ok && data.tasks === undefined) {
         list.textContent = data.error || "erreur chargement";
@@ -5061,9 +5096,10 @@
       if (!tasks.length) { list.textContent = "Aucune tâche."; return; }
       list.innerHTML = tasks.map(function (t) {
         const active = t.id === __teamSelectedId ? " jobs-card--active" : "";
+        const appr = t.approval_required ? " · L2" : "";
         return '<button type="button" class="jobs-card' + active + '" data-team-id="' + escapeHtmlPm(t.id) + '">' +
-          '<strong>' + escapeHtmlPm(t.role) + '</strong> · ' + escapeHtmlPm(t.status) +
-          '<br><span class="muted" style="font-size:0.82rem;">' + escapeHtmlPm(t.objective).slice(0, 80) + '</span></button>';
+          '<strong>' + escapeHtmlPm(t.role) + '</strong> · ' + escapeHtmlPm(t.status) + appr +
+          '<br><span class="muted" style="font-size:0.82rem;">' + escapeHtmlPm((t.actor_id || "") + " — " + (t.objective || "")).slice(0, 96) + '</span></button>';
       }).join("");
       list.querySelectorAll("[data-team-id]").forEach(function (btn) {
         btn.addEventListener("click", function () {
@@ -5090,7 +5126,14 @@
       const meta = document.getElementById("team-detail-meta");
       const res = document.getElementById("team-detail-result");
       if (obj) obj.textContent = t.objective || "";
-      if (meta) meta.textContent = "id=" + t.id + " · role=" + t.role + " · status=" + t.status + " · priority=" + (t.priority || "normal");
+      if (meta) {
+        let m = "id=" + t.id + " · role=" + t.role + " · status=" + t.status + " · actor=" + (t.actor_id || "");
+        if (t.approval_required) m += " · approbation L2 requise";
+        if (t.context && t.context._qa_followup_task_ids) {
+          m += " · suivi: " + t.context._qa_followup_task_ids.join(", ");
+        }
+        meta.textContent = m;
+      }
       if (res) res.textContent = JSON.stringify(t.result || {}, null, 2);
       await teamListRefresh();
     }
@@ -5105,6 +5148,7 @@
         role: role,
         objective: objective,
         actor_id: teamGetActor(),
+        approval_required: !!(document.getElementById("team-approval-required") || {}).checked,
       }, 60000);
       if (!out.ok && !out.id) { teamHint(out.error || "échec création", true); return; }
       teamHint("Tâche créée : " + (out.id || "?"), false);
@@ -5160,6 +5204,13 @@
       if (bCreate) bCreate.addEventListener("click", function () { teamCreate(); });
       if (bPlan) bPlan.addEventListener("click", function () { teamPlan(); });
       if (bRefresh) bRefresh.addEventListener("click", function () { teamListRefresh(); });
+      ["team-filter-role", "team-filter-status", "team-filter-actor"].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("change", function () { teamListRefresh(); });
+        if (el && el.tagName === "INPUT") el.addEventListener("keyup", function (ev) {
+          if (ev.key === "Enter") teamListRefresh();
+        });
+      });
       if (bRun) bRun.addEventListener("click", function () { teamRun(); });
       if (bApprove) bApprove.addEventListener("click", function () { teamApprove(); });
       if (bCancel) bCancel.addEventListener("click", function () { teamCancel(); });

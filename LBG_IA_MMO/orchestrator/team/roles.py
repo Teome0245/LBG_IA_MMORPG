@@ -13,6 +13,7 @@ from lbg_agents.dispatch import invoke_after_route
 
 from team import store as team_store
 from team.models import TeamTask
+from team.qa_followup import maybe_spawn_after_qa_failure
 
 Dispatcher = Callable[..., dict[str, object]]
 
@@ -59,6 +60,14 @@ def _trace_log(event: dict[str, object]) -> None:
 
 def approval_token_valid(token: str | None) -> bool:
     expected = os.environ.get("LBG_TEAM_APPROVAL_TOKEN", "").strip()
+    if not expected:
+        for fallback in (
+            "LBG_DEVOPS_APPROVAL_TOKEN",
+            "LBG_JOBS_APPROVAL_TOKEN",
+        ):
+            expected = os.environ.get(fallback, "").strip()
+            if expected:
+                break
     if not expected:
         return bool(token and str(token).strip())
     return bool(token and str(token).strip() == expected)
@@ -277,6 +286,19 @@ def run_task(task_id: str, *, approval_token: str | None = None) -> TeamTask | N
         status = "done" if ok else "failed"
         team_store.update_task(task_id, status=status, result=result)
         _trace_log({"event": "run_end", "task_id": task_id, "role": task.role, "ok": ok, "trace_id": trace_id})
+        if task.role == "qa" and status == "failed":
+            refreshed = team_store.get_task(task_id)
+            if refreshed is not None:
+                followups = maybe_spawn_after_qa_failure(refreshed)
+                if followups:
+                    _trace_log(
+                        {
+                            "event": "qa_followup_spawned",
+                            "task_id": task_id,
+                            "followup_ids": followups,
+                            "trace_id": trace_id,
+                        }
+                    )
     except Exception as e:
         team_store.update_task(task_id, status="failed", result={"error": str(e)})
         _trace_log({"event": "run_error", "task_id": task_id, "error": str(e), "trace_id": trace_id})
