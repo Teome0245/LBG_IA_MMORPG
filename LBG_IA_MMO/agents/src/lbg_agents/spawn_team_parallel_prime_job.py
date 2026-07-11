@@ -6,7 +6,6 @@ import json
 import os
 import time
 import urllib.error
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -112,17 +111,12 @@ def run_spawn(*, persist: bool = True) -> dict[str, Any]:
     tasks_out: list[dict[str, Any]] = []
     errors: list[str] = []
     try:
-        with ThreadPoolExecutor(max_workers=len(PARALLEL_SPECS)) as pool:
-            futures = {
-                pool.submit(_spawn_one, role, objective, dict(ctx)): objective
-                for role, objective, ctx in PARALLEL_SPECS
-            }
-            for fut in as_completed(futures):
-                objective = futures[fut]
-                try:
-                    tasks_out.append(fut.result())
-                except (urllib.error.URLError, OSError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
-                    errors.append(f"{objective}: {exc}")
+        # Séquentiel : évite race SQLite team_store (création tâches concurrentes).
+        for role, objective, ctx in PARALLEL_SPECS:
+            try:
+                tasks_out.append(_spawn_one(role, objective, ctx))
+            except (urllib.error.URLError, OSError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
+                errors.append(f"{objective}: {exc}")
 
         result["spawned"] = bool(tasks_out)
         result["tasks"] = tasks_out

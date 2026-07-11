@@ -163,8 +163,11 @@ def audit_zb1_readiness(*, probe_live_feed: bool = True) -> dict[str, Any]:
     code_ok = bool(checks.get("zb1_json_export_cpp")) and bool(checks.get("zb1_tick_publishes_json"))
     code_ok = code_ok and bool(checks.get("gateway_zone_bridge_feed"))
     ok = bool(checks.get("zb0_ok")) and code_ok
-    if probe_live_feed and live_probe is not None:
-        ok = ok and bool(live_probe.get("ok"))
+    if probe_live_feed:
+        if live_probe is not None:
+            ok = ok and bool(live_probe.get("ok"))
+        elif checks.get("live_feed_ok") is False:
+            ok = False
         checks["runtime_feed"] = live_probe.get("checks")
 
     next_actions: list[str] = []
