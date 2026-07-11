@@ -1105,6 +1105,20 @@ class TeamRunBody(BaseModel):
     approval_token: str | None = None
 
 
+@router.get("/team/meta", tags=["pilot"])
+async def pilot_team_meta() -> dict[str, object]:
+    """Proxy vers `GET orchestrator /v1/team/meta` (alias rôles + sous-projets)."""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            r = await client.get(f"{_orchestrator_base()}/v1/team/meta")
+        if r.status_code != 200:
+            return {"ok": False, "error": f"orchestrator HTTP {r.status_code}", "body": r.text[:500]}
+        data = r.json()
+        return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
 @router.post("/team/plan", tags=["pilot"])
 async def pilot_team_plan(payload: TeamPlanBody) -> dict[str, object]:
     """Proxy same-origin vers `POST orchestrator /v1/team/plan`."""

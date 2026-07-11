@@ -139,8 +139,9 @@ Ne pas toucher au gel sandbox mmmorpg (ADR 0005) sans demande explicite.
 1. [x] Rôle `player_ia` — sonde sidecar Prime **246** (`player_ia_probe.py`)
 2. [x] Playbook L1 `spawn_team_player_ia_job` + timer `lbg-team-player-ia-job`
 3. [x] Script test LAN `test_team_dev_game_workflow_lan.sh`
-4. [ ] Autonomie joueurs IA (think/tick) via équipe — L2+ avec approbation
-5. [ ] Client : **SWGEmu LBG** (launchpad) — cible prod ; Godot gelé (ADR sandbox archivé)
+5. [x] Client : **Godot LBG** + SWGEmu launchpad en parallèle (Godot **dégel** juil. 2026)
+6. [x] Autonomie think/tick L2 — `player_ia_think.py`, gate approbation auto
+7. [x] Alias personas équipe + `GET /v1/team/meta` + audit réunification
 
 ### Vérifications infra (quand LAN up)
 

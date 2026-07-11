@@ -1,6 +1,6 @@
 # Bac à sable MMO Python — archivé (gelé)
 
-**Statut** : **gelé** — juin 2026  
+**Statut** : **gelé** (bac à sable Python) — **amendement juil. 2026** : le client **Godot** (`lbg_client_godot/`) est **réactivé** comme cible client ; seuls `mmo_server`, `mmmorpg_server`, `web_client` restent gelés côté gameplay Python.  
 **Décision** : pivot produit vers **Core3 Prime** (serveur jeu) + **client SWGEmu personnalisé** (launchpad, patches `.tre`).  
 **Références** : ADR [`0005-new-mmo-core3-coexistence.md`](adr/0005-new-mmo-core3-coexistence.md) (amendement juin 2026), ADR [`0002-mmo-autorite-pont.md`](adr/0002-mmo-autorite-pont.md) (supersédé pour l’autorité jeu), carnet racine [`../../plan MMMORPG.md`](../../plan%20MMMORPG.md) § *Décision stratégique*.
 

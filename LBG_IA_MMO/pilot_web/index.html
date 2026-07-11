@@ -1486,7 +1486,7 @@
     <header>
       <h1>Équipe virtuelle <span class="muted" style="font-size:0.9rem;">(phase A — ops / qa / pm)</span></h1>
       <p class="muted">
-        File de tâches par rôle sur l'orchestrateur <strong>140</strong>. Autonomie max <strong>L1</strong> (read-only auto).
+        File de tâches par rôle sur l'orchestrateur <strong>140</strong>. Alias : Héphaïstos, Argus, Thémis, Dédale, Chœur du monde — voir <code>/v1/team/meta</code>.
         Endpoints proxifiés sous <code>/v1/pilot/team/*</code>.
       </p>
     </header>
@@ -1498,11 +1498,16 @@
           <input type="text" id="team-actor" value="pilot:team" />
           <label for="team-role">Rôle</label>
           <select id="team-role">
-            <option value="qa">qa — smoke / healthz</option>
-            <option value="ops">ops — sonde infra</option>
-            <option value="pm">pm — brief projet</option>
-            <option value="dev_game">dev_game — analyse gameplay / correctif</option>
-            <option value="player_ia">player_ia — joueurs IA Prime (246)</option>
+            <option value="qa">Argus (qa) — smoke / healthz</option>
+            <option value="ops">Héphaïstos (ops) — sonde infra</option>
+            <option value="pm">Thémis (pm) — brief projet</option>
+            <option value="dev_game">Dédale (dev_game) — Core3 / Godot / forge</option>
+            <option value="player_ia">Chœur du monde (player_ia) — joueurs IA 246</option>
+          </select>
+          <label for="team-player-ia-mode" style="margin-top:0.35rem;">Mode player_ia (si sélectionné)</label>
+          <select id="team-player-ia-mode" style="margin:0;">
+            <option value="probe">Sonde L1 (healthz + snapshots)</option>
+            <option value="think_tick">Think/tick L2 (approbation requise)</option>
           </select>
           <label for="team-objective">Objectif</label>
           <textarea id="team-objective" style="min-height:4rem;">smoke LAN read-only (healthz)</textarea>
@@ -5157,7 +5162,7 @@
         const active = t.id === __teamSelectedId ? " jobs-card--active" : "";
         const appr = t.approval_required ? " · L2" : "";
         return '<button type="button" class="jobs-card' + active + '" data-team-id="' + escapeHtmlPm(t.id) + '">' +
-          '<strong>' + escapeHtmlPm(t.role) + '</strong> · ' + escapeHtmlPm(t.status) + appr +
+          '<strong>' + escapeHtmlPm(t.role_label || t.role_alias || t.role) + '</strong> · ' + escapeHtmlPm(t.status) + appr +
           '<br><span class="muted" style="font-size:0.82rem;">' + escapeHtmlPm((t.actor_id || "") + " — " + (t.objective || "")).slice(0, 96) + '</span></button>';
       }).join("");
       list.querySelectorAll("[data-team-id]").forEach(function (btn) {
@@ -5186,7 +5191,7 @@
       const res = document.getElementById("team-detail-result");
       if (obj) obj.textContent = t.objective || "";
       if (meta) {
-        let m = "id=" + t.id + " · role=" + t.role + " · status=" + t.status + " · actor=" + (t.actor_id || "");
+        let m = (t.role_label || t.role) + " · id=" + t.id + " · status=" + t.status + " · actor=" + (t.actor_id || "");
         if (t.approval_required) m += " · approbation L2 requise";
         if (t.context && t.context._qa_followup_task_ids) {
           m += " · suivi: " + t.context._qa_followup_task_ids.join(", ");
@@ -5256,6 +5261,21 @@
         objective: objective,
         actor_id: teamGetActor(),
         approval_required: !!(document.getElementById("team-approval-required") || {}).checked,
+        context: (function () {
+          const ctx = {};
+          if (role === "player_ia") {
+            const modeEl = document.getElementById("team-player-ia-mode");
+            const mode = modeEl && modeEl.value ? String(modeEl.value) : "probe";
+            ctx.player_ia_mode = mode;
+            if (mode === "think_tick") {
+              const m = objective.toLowerCase();
+              ["lia", "nix", "mira", "kael"].forEach(function (p) {
+                if (m.indexOf(p) >= 0) ctx.player_id = p;
+              });
+            }
+          }
+          return ctx;
+        })(),
       }, 60000);
       if (!out.ok && !out.id) { teamHint(out.error || "échec création", true); return; }
       teamHint("Tâche créée : " + (out.id || "?"), false);

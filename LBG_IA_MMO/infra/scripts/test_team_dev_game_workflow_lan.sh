@@ -118,4 +118,23 @@ print("OK player_ia probe")
 PY
 
 echo ""
+echo "=== Test player_ia think L2 (approbation) ==="
+CREATE3=$(curl -sf -X POST "${ORCH}/v1/team/tasks" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "role": "player_ia",
+    "objective": "Tick autonomie Lia think",
+    "actor_id": "system:test_think",
+    "context": {"player_ia_mode": "think_tick", "player_id": "lia"}
+  }')
+echo "${CREATE3}" > /tmp/lbg_test_think_create.json
+python3 <<'PY'
+import json, os, subprocess
+with open("/tmp/lbg_test_think_create.json") as f:
+    c = json.load(f)
+assert c.get("approval_required") is True, c
+print("OK think task requires L2 approval:", c.get("id"))
+PY
+
+echo ""
 echo "Tout vert — voir #/team sur http://192.168.0.110:8080/#/team"

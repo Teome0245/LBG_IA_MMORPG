@@ -134,7 +134,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
-| 2026-07-11 | **Équipe virtuelle phase C (suite)** : rôle `dev_game`, auto-run PM followup, pont MMO assistant (`7a3fc59`) ; workflow `dev_game_workflow.py` + source `team_dev_game` dans `action_proposal` ; UI `#/team` bouton « Forge → Assistant ». |
+| 2026-07-11 | **Réunification + Phase D suite** : alias personas équipe (Héphaïstos, Argus, Thémis, Dédale, Chœur du monde) ; `GET /v1/team/meta` ; think/tick L2 `player_ia` ; Godot client **dégel** ; audit [`audit_reunification_projet_2026-07-11.md`](audit_reunification_projet_2026-07-11.md). |
 | 2026-07-11 | **Équipe virtuelle phase C (début)** : `team/qa_followup.py` — QA `failed` → tâches suivi `pm` (+ `ops` si smoke KO) ; token L2 repli `LBG_DEVOPS_APPROVAL_TOKEN` ; UI `#/team` filtres role/status/actor + checkbox L2 ; tests `test_team_qa_followup.py`. |
 | 2026-07-11 | **Équipe virtuelle phase B — playbooks ops** : `spawn_team_ops_storage_job` + `spawn_team_ops_ollama_job` ; `team_job_spawn.py` ; timers systemd + `install_team_ops_jobs_vm.sh` (12 tests OK). |
 | 2026-07-11 | **Équipe virtuelle — clôture phase A + début phase B** : deploy LAN 140/110 validé ; smoke QA via `POST /v1/team/tasks` + `run` **vert** ; fix `smoke_vm_lan.sh` (`LBG_LAN_HOST_MMO_SERVER`, sonde core locale) + `/var/lib/lbg-ia-mmo` au deploy (`6c04082`) ; playbook **`spawn_team_qa_smoke_job`** + timer `lbg-team-qa-smoke-job`. **Assistant Core Jalon 6 suite** : `#/assistant` enrichi ; `POST /v1/pilot/assistant/session-summary/export`. |

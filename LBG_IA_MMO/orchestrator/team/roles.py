@@ -14,8 +14,9 @@ from lbg_agents.dispatch import invoke_after_route
 from team import store as team_store
 from team.models import TeamTask
 from team.dev_game_workflow import execute_dev_game_workflow
-from team.player_ia_probe import probe_player_ia
+from team.player_ia_exec import execute_player_ia
 from team.qa_followup import auto_run_followup_tasks, maybe_spawn_after_qa_failure
+from team.role_aliases import role_display
 
 Dispatcher = Callable[..., dict[str, object]]
 
@@ -229,7 +230,7 @@ def _execute_dev_game(task: TeamTask) -> dict[str, object]:
 
 
 def _execute_player_ia(task: TeamTask) -> dict[str, object]:
-    return probe_player_ia(task)
+    return execute_player_ia(task)
 
 
 _EXECUTORS: dict[str, Callable[[TeamTask], dict[str, object]]] = {
@@ -256,6 +257,7 @@ def plan_from_objective(objective: str, *, actor_id: str = "system:team") -> lis
                 "approval_required": False,
                 "actor_id": actor_id,
                 "capability": spec["capability"],
+                **{k: v for k, v in role_display(role).items() if k in ("alias", "title", "label")},
             }
         )
 
