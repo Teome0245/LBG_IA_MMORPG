@@ -165,4 +165,30 @@ print("OK pm_brief réunification —", len(subs), "sous-projets")
 PY
 
 echo ""
+echo "=== Test godot supervisor (équipe autonome) ==="
+CREATE5=$(curl -sf -X POST "${ORCH}/v1/team/tasks" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "role": "qa",
+    "objective": "Supervise client Godot — sidecar 246 + lbg-ws/2",
+    "actor_id": "system:test_godot_supervisor",
+    "context": {"godot_supervisor": true, "godot_mode": "full"}
+  }')
+TASK5=$(python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" <<<"${CREATE5}")
+RUN5=$(curl -sf -X POST "${ORCH}/v1/team/tasks/${TASK5}/run" -H 'Content-Type: application/json' -d '{}')
+echo "${RUN5}" > /tmp/lbg_test_godot_supervisor_run.json
+python3 <<'PY'
+import json
+with open("/tmp/lbg_test_godot_supervisor_run.json", encoding="utf-8") as f:
+    run = json.load(f)
+assert run.get("status") == "done", run
+res = run.get("result") or {}
+assert res.get("kind") == "godot_supervisor", res
+assert res.get("ok") is True, res
+tracks = {t.get("track") for t in (res.get("tracks") or []) if isinstance(t, dict)}
+assert "sidecar_m1" in tracks and "lbg_ws2_readiness" in tracks, tracks
+print("OK godot_supervisor — tracks:", sorted(tracks))
+PY
+
+echo ""
 echo "Tout vert — voir #/team sur http://192.168.0.110:8080/#/team"

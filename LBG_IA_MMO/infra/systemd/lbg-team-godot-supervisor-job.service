@@ -1,0 +1,22 @@
+[Unit]
+Description=LBG équipe virtuelle — superviseur Godot autonome (sidecar 246 + lbg-ws/2)
+After=network-online.target lbg-orchestrator.service
+Wants=lbg-orchestrator.service
+
+[Service]
+Type=oneshot
+User=lbg
+Group=lbg
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+Environment=LBG_TEAM_GODOT_SUPERVISOR_JOB_ENABLED=1
+Environment=LBG_ORCHESTRATOR_URL=http://127.0.0.1:8010
+Environment=LBG_TEAM_GODOT_SUPERVISOR_JOB_STATE=/var/lib/lbg/team_godot_supervisor/state.json
+Environment=LBG_TEAM_GODOT_SUPERVISOR_JOB_ACTOR_ID=system:team_godot_supervisor
+Environment=LBG_CORE3_SIDECAR_URL=http://192.168.0.246:8791
+Environment=LBG_TEAM_GODOT_FOLLOWUP_ENABLED=1
+Environment=LBG_TEAM_GODOT_FOLLOWUP_AUTO_RUN=1
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python -m lbg_agents.spawn_team_godot_supervisor_job
+
+[Install]
+WantedBy=multi-user.target

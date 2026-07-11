@@ -39,6 +39,7 @@ try:
     )
     from services.lbg_gateway.roster_filter import allow_roster_npc, roster_policies_from_catalog
     from services.lbg_gateway.zone_players import build_zone_player_entities
+    from services.lbg_gateway.lbg_ws2 import build_zone_state_v2, enter_world_v2, normalize_proto, supported_protos
 except ImportError:
     from catalog_context import build_dialogue_context  # type: ignore[no-redef]
     from dialogue_ia import (  # type: ignore[no-redef]
@@ -61,6 +62,7 @@ except ImportError:
     )
     from roster_filter import allow_roster_npc, roster_policies_from_catalog  # type: ignore[no-redef]
     from zone_players import build_zone_player_entities  # type: ignore[no-redef]
+    from lbg_ws2 import build_zone_state_v2, enter_world_v2, normalize_proto, supported_protos  # type: ignore[no-redef]
 
 LOG = logging.getLogger("lbg_gateway")
 HOST = os.environ.get("LBG_GATEWAY_HOST", "0.0.0.0")
@@ -260,6 +262,25 @@ def _build_entities(player_pos: list[float]) -> list[dict[str, Any]]:
     return entities
 
 
+def _entities_ws2(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for ent in raw:
+        if not isinstance(ent, dict):
+            continue
+        eid = ent.get("id")
+        kind = str(ent.get("kind", "npc"))
+        name = str(ent.get("name", eid))
+        if isinstance(eid, int):
+            sid = f"player:{name}" if kind == "player" else f"npc:{name}"
+        else:
+            sid = str(eid)
+        pos = ent.get("pos")
+        if not isinstance(pos, list):
+            pos = [float(ent.get("x", 0)), float(ent.get("y", 0)), float(ent.get("z", 0))]
+        out.append({**ent, "id": sid, "kind": kind, "name": name, "pos": pos})
+    return out
+
+
 class Session:
     def __init__(self) -> None:
         self.logged_in = False
@@ -267,10 +288,15 @@ class Session:
         self.in_world = False
         self.player_pos = _default_player_spawn()
         self.tick = 0
+        self.proto = "lbg-ws/1"
 
 
-async def _send(ws: Any, payload: dict[str, Any]) -> None:
-    payload.setdefault("proto", "lbg-ws/1")
+async def _send(ws: Any, payload: dict[str, Any], sess: Session | None = None) -> None:
+    proto = normalize_proto(sess.proto if sess else payload.get("proto"))
+    if proto == "lbg-ws/2" and payload.get("type") not in ("zone_state", "enter_world"):
+        payload.setdefault("proto", "lbg-ws/2")
+    else:
+        payload.setdefault("proto", sess.proto if sess else "lbg-ws/1")
     await ws.send(json.dumps(payload, ensure_ascii=False))
 
 
@@ -298,10 +324,10 @@ async def _handle_interact(
     target = str(data.get("target_id", "")).strip()
     world_npc_id, npc_name = _resolve_world_npc_id(target, pilots)
     if not msg:
-        await _send(ws, {"type": "error", "message": "message vide"})
+        await _send(ws, {"type": "error", "message": "message vide"}, sess)
         return
     if not world_npc_id:
-        await _send(ws, {"type": "error", "message": "cible PNJ invalide"})
+        await _send(ws, {"type": "error", "message": "cible PNJ invalide"}, sess)
         return
 
     actor_id = f"player:prime:{sess.character_id or 1}"
@@ -315,6 +341,7 @@ async def _handle_interact(
                 "message": placeholder_reply(npc_name),
                 "trace_id": "prime-ph",
             },
+            sess,
         )
 
     ia_ctx = build_dialogue_context(
@@ -338,6 +365,7 @@ async def _handle_interact(
             "message": reply,
             "trace_id": trace_id,
         },
+        sess,
     )
 
 
@@ -350,14 +378,28 @@ async def _broadcast_loop(clients: set[Any]) -> None:
                 continue
             sess.tick += 1
             try:
-                await _send(
-                    ws,
-                    {
-                        "type": "world_state",
-                        "tick": sess.tick,
-                        "entities": _build_entities(sess.player_pos),
-                    },
-                )
+                entities = _build_entities(sess.player_pos)
+                if normalize_proto(sess.proto) == "lbg-ws/2":
+                    await _send(
+                        ws,
+                        build_zone_state_v2(
+                            zone="tatooine",
+                            tick=sess.tick,
+                            entities=_entities_ws2(entities),
+                            your_character_id=sess.character_id or 1,
+                        ),
+                        sess,
+                    )
+                else:
+                    await _send(
+                        ws,
+                        {
+                            "type": "world_state",
+                            "tick": sess.tick,
+                            "entities": entities,
+                        },
+                        sess,
+                    )
             except ConnectionClosedOK:
                 clients.discard(ws)
             except Exception:
@@ -375,14 +417,24 @@ async def _handler(ws: Any) -> None:
             try:
                 data = json.loads(raw)
             except json.JSONDecodeError:
-                await _send(ws, {"type": "error", "message": "JSON invalide"})
+                await _send(ws, {"type": "error", "message": "JSON invalide"}, sess)
                 continue
             if not isinstance(data, dict):
                 continue
             t = data.get("type")
-            if t == "login":
+            if t in ("login", "hello"):
                 sess.logged_in = True
-                await _send(ws, {"type": "login_result", "success": True, "reason": None})
+                sess.proto = normalize_proto(str(data.get("proto", "")))
+                await _send(
+                    ws,
+                    {
+                        "type": "login_result",
+                        "success": True,
+                        "reason": None,
+                        "supported_protos": supported_protos(),
+                    },
+                    sess,
+                )
             elif t == "get_characters" and sess.logged_in:
                 await _send(
                     ws,
@@ -392,32 +444,61 @@ async def _handler(ws: Any) -> None:
                             {"id": 1, "name": "Teome", "race": "Wookiee", "profession": "entertainer"}
                         ],
                     },
+                    sess,
                 )
             elif t == "select_character" and sess.logged_in:
                 sess.character_id = int(data.get("character_id", 1))
                 sess.in_world = True
-                await _send(
-                    ws,
-                    {
-                        "type": "enter_world",
-                        "map": "tatooine",
-                        "zone": "tatooine",
-                        "position": sess.player_pos,
-                        "entities": _build_entities(sess.player_pos),
-                    },
-                )
+                entities = _build_entities(sess.player_pos)
+                if normalize_proto(sess.proto) == "lbg-ws/2":
+                    await _send(
+                        ws,
+                        enter_world_v2(
+                            zone="tatooine",
+                            entities=_entities_ws2(entities),
+                            your_character_id=sess.character_id,
+                            position=sess.player_pos,
+                        ),
+                        sess,
+                    )
+                else:
+                    await _send(
+                        ws,
+                        {
+                            "type": "enter_world",
+                            "map": "tatooine",
+                            "zone": "tatooine",
+                            "position": sess.player_pos,
+                            "entities": entities,
+                        },
+                        sess,
+                    )
             elif t == "enter_world" and sess.logged_in:
                 sess.in_world = True
-                await _send(
-                    ws,
-                    {
-                        "type": "enter_world",
-                        "map": "tatooine",
-                        "zone": "tatooine",
-                        "position": sess.player_pos,
-                        "entities": _build_entities(sess.player_pos),
-                    },
-                )
+                entities = _build_entities(sess.player_pos)
+                if normalize_proto(sess.proto) == "lbg-ws/2":
+                    await _send(
+                        ws,
+                        enter_world_v2(
+                            zone="tatooine",
+                            entities=_entities_ws2(entities),
+                            your_character_id=sess.character_id or 1,
+                            position=sess.player_pos,
+                        ),
+                        sess,
+                    )
+                else:
+                    await _send(
+                        ws,
+                        {
+                            "type": "enter_world",
+                            "map": "tatooine",
+                            "zone": "tatooine",
+                            "position": sess.player_pos,
+                            "entities": entities,
+                        },
+                        sess,
+                    )
             elif t == "move" and sess.in_world:
                 pos = data.get("pos")
                 if isinstance(pos, list) and len(pos) >= 3:
@@ -432,7 +513,7 @@ async def _handler(ws: Any) -> None:
             elif t == "interact" and sess.in_world:
                 await _handle_interact(ws, sess, data, pilots)
             else:
-                await _send(ws, {"type": "error", "message": f"type inconnu ou session: {t}"})
+                await _send(ws, {"type": "error", "message": f"type inconnu ou session: {t}"}, sess)
     finally:
         clients.discard(ws)
 
@@ -447,7 +528,7 @@ async def _main() -> None:
 
     async with serve(handler, HOST, PORT):
         LOG.info(
-            "lbg_gateway lbg-ws/1 on ws://%s:%s snapshots=%s ia=%s",
+            "lbg_gateway lbg-ws/1+2-preview on ws://%s:%s snapshots=%s ia=%s",
             HOST,
             PORT,
             SNAPSHOTS,

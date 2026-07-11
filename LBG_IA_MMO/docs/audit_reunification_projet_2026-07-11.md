@@ -80,7 +80,8 @@ Registre machine : `orchestrator/team/subprojects.py` — exposé via `GET /v1/t
 3. [x] PM périodique : brief réunification (tâche `pm` + timer `lbg-team-pm-reunification-job`)
 4. [x] Promotion prototype → Core3 — [`runbook_promotion_prototype_core3.md`](runbook_promotion_prototype_core3.md)
 5. [x] Godot jalon M1 : miroir sidecar 246 — [`jalon_client_godot_sidecar_246.md`](jalon_client_godot_sidecar_246.md)
-6. [ ] Godot M3/M5 : SOE live + `lbg-ws/2` (client autoritaire)
+6. [ ] Godot M3/M5 : SOE live + `lbg-ws/2` C++ (client autoritaire)
+7. [x] Équipe autonome Godot — superviseur 6h + followups — [`equipe_autonome_godot.md`](equipe_autonome_godot.md)
 
 ---
 

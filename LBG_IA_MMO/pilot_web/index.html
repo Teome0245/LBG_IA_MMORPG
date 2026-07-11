@@ -1499,6 +1499,8 @@
             <button type="button" class="preset" data-team-preset="smoke_lan" title="Clic : configurer · double-clic : lancer">Smoke LAN</button>
             <button type="button" class="preset" data-team-preset="probe_ia" title="Clic : configurer · double-clic : lancer">Sonde joueurs IA</button>
             <button type="button" class="preset" data-team-preset="brief_reunif" title="Clic : configurer · double-clic : lancer">Brief réunification</button>
+            <button type="button" class="preset" data-team-preset="godot_supervise" title="Superviseur autonome Godot + sidecar 246">Supervise Godot</button>
+            <button type="button" class="preset" data-team-preset="godot_lbg_ws2" title="Audit lbg-ws/2 + forge Dédale">Audit lbg-ws/2</button>
             <button type="button" class="preset" data-team-preset="think_lia" title="Clic : configurer · double-clic : créer (L2)">Think Lia</button>
           </div>
           <label for="team-role">Rôle</label>
@@ -5158,12 +5160,16 @@
     let __teamObjectiveCustom = false;
     let __teamMetaRoles = null;
     let __teamReunificationBrief = false;
+    let __teamGodotSupervisor = false;
+    let __teamGodotTrack = false;
 
     const TEAM_ROLE_DEFAULTS = {
       qa: "Smoke LAN read-only (healthz + systemd via script si configuré)",
       ops: "Sonde santé orchestrateur et backend (read-only)",
       pm: "Brief jalons et prochaines tâches projet",
       pm_reunif: "Brief réunification sous-projets — jalons, statuts et prochaines actions (Thémis)",
+      godot_supervise: "Supervise client Godot — sidecar 246, miroir M1, readiness lbg-ws/2",
+      godot_lbg_ws2: "Audit lbg-ws/2 gateway Godot Prime — gaps et proposition forge",
       dev_game: "Analyser bug gameplay / correctif proposé (hors sandbox mmmorpg gelé)",
       player_ia_probe: "Sonde joueurs IA Core3 Prime (246) — sidecar + snapshots Lia/Nix",
       player_ia_think: "Think/tick joueur IA Lia",
@@ -5173,6 +5179,8 @@
       smoke_lan: { role: "qa", objectiveKey: "qa", autoRun: true },
       probe_ia: { role: "player_ia", player_ia_mode: "probe", objectiveKey: "player_ia_probe", autoRun: true },
       brief_reunif: { role: "pm", objectiveKey: "pm_reunif", reunification: true, autoRun: true },
+      godot_supervise: { role: "qa", objectiveKey: "godot_supervise", godotSupervisor: true, autoRun: true },
+      godot_lbg_ws2: { role: "dev_game", objectiveKey: "godot_lbg_ws2", godotTrack: true, autoRun: true },
       think_lia: { role: "player_ia", player_ia_mode: "think_tick", player_id: "lia", objectiveKey: "player_ia_think", autoRun: false },
     };
 
@@ -5239,6 +5247,8 @@
       if (!preset) return;
       __teamObjectiveCustom = false;
       __teamReunificationBrief = !!preset.reunification;
+      __teamGodotSupervisor = !!preset.godotSupervisor;
+      __teamGodotTrack = !!preset.godotTrack;
       const roleEl = document.getElementById("team-role");
       if (roleEl) roleEl.value = preset.role;
       const modeEl = document.getElementById("team-player-ia-mode");
@@ -5287,6 +5297,13 @@
         ctx.reunification_brief = true;
         ctx.pm_include_plan = true;
         ctx.pm_include_structure = true;
+      }
+      if (__teamGodotSupervisor || /supervise.*godot|godot.*supervise/i.test(objective)) {
+        ctx.godot_supervisor = true;
+        ctx.godot_mode = "full";
+      }
+      if (__teamGodotTrack || role === "dev_game" && /lbg-ws|lbg_ws|godot|gateway|zone.bridge/i.test(objective)) {
+        ctx.godot_track = "lbg_ws2";
       }
       const payload = {
         role: role,
@@ -5590,7 +5607,13 @@
           teamApplyPreset(btn.getAttribute("data-team-preset"), true);
         });
       });
-      if (roleEl) roleEl.addEventListener("change", function () { __teamObjectiveCustom = false; __teamReunificationBrief = false; teamSyncFormUi(); });
+      if (roleEl) roleEl.addEventListener("change", function () {
+        __teamObjectiveCustom = false;
+        __teamReunificationBrief = false;
+        __teamGodotSupervisor = false;
+        __teamGodotTrack = false;
+        teamSyncFormUi();
+      });
       if (modeEl) modeEl.addEventListener("change", function () { __teamObjectiveCustom = false; teamSyncFormUi(); });
       if (pidEl) pidEl.addEventListener("change", function () { __teamObjectiveCustom = false; teamSyncFormUi(); });
       if (objEl) objEl.addEventListener("input", function () { __teamObjectiveCustom = true; });
