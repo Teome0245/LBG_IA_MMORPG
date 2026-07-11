@@ -231,3 +231,32 @@ def test_team_ops_ollama_context(monkeypatch: pytest.MonkeyPatch) -> None:
     assert ran["status"] == "done"
     assert ran["result"]["kind"] == "ops_ollama"
     assert ran["result"]["ok"] is True
+
+
+def test_team_run_pm_reunification_injects_subprojects() -> None:
+    captured: dict[str, object] = {}
+
+    def fake_dispatch(routed_to, *, actor_id, text, context):  # noqa: ANN001
+        captured["context"] = context
+        return {"ok": True, "agent": routed_to, "brief": {"reunification": True}}
+
+    team_roles.set_dispatch_for_tests(fake_dispatch)
+    client = TestClient(app)
+    created = client.post(
+        "/v1/team/tasks",
+        json={
+            "role": "pm",
+            "objective": "Brief réunification sous-projets",
+            "actor_id": "u:pm-reunif",
+            "context": {"reunification_brief": True},
+        },
+    ).json()
+    ran = client.post(f"/v1/team/tasks/{created['id']}/run").json()
+    assert ran["status"] == "done"
+    assert ran["result"]["kind"] == "pm_brief"
+    assert ran["result"].get("reunification") is True
+    ctx = captured.get("context")
+    assert isinstance(ctx, dict)
+    assert ctx.get("reunification_brief") is True
+    subs = ctx.get("subprojects")
+    assert isinstance(subs, list) and len(subs) >= 5

@@ -189,6 +189,8 @@ def run_pm_stub(*, actor_id: str, text: str, context: dict[str, Any]) -> dict[st
         or context.get("pm_include_tasks") is True
         or context.get("pm_include_milestones") is True
     )
+    if re.search(r"\b(réunification|reunification|sous-projets?|thémis|themis)\b", tl):
+        hints.append("Consolider les fils parallèles : un sous-projet = un owner rôle + statut + prochaine action.")
     if re.search(r"\b(risque|blocage|dépendance)\b", tl):
         hints.append("Lister les dépendances externes (LLM, VM, secrets) et un plan de contournement.")
     if re.search(r"\bjalon|milestone|release\b", tl):
@@ -250,4 +252,28 @@ def run_pm_stub(*, actor_id: str, text: str, context: dict[str, Any]) -> dict[st
             out["brief"]["file_attente_found"] = False
     if site:
         out["agent_site"] = site
+
+    subprojects = context.get("subprojects")
+    if reunification := (
+        context.get("reunification_brief") is True
+        or context.get("_team_pm_reunification_spawn") is True
+        or bool(re.search(r"\b(réunification|reunification|sous-projets?)\b", tl))
+    ):
+        out["brief"]["reunification"] = True
+        if isinstance(subprojects, list) and subprojects:
+            out["brief"]["subprojects"] = [
+                {
+                    "id": sp.get("id"),
+                    "label": sp.get("label"),
+                    "owner_role": sp.get("owner_role"),
+                    "status": sp.get("status", "actif"),
+                }
+                for sp in subprojects
+                if isinstance(sp, dict) and sp.get("id")
+            ]
+            out["brief"]["subprojects_count"] = len(out["brief"]["subprojects"])
+        else:
+            out["brief"]["subprojects"] = []
+            out["brief"]["subprojects_count"] = 0
+
     return out

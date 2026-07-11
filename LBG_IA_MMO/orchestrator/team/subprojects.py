@@ -15,8 +15,16 @@ SUBPROJECTS: list[dict[str, object]] = [
         "label": "Client Godot LBG",
         "owner_role": "dev_game",
         "paths": ["lbg_client_godot/", "docs/plan_client_lbg_godot.md"],
-        "docs": ["docs/plan_client_lbg_godot.md"],
+        "docs": [
+            "docs/plan_client_lbg_godot.md",
+            "docs/jalon_client_godot_sidecar_246.md",
+            "docs/plan_client_godot_prime_rendu.md",
+        ],
         "status": "actif",
+        "external_paths": [
+            "/home/sdesh/projects/new_mmo/prime-client/",
+            "/home/sdesh/projects/new_mmo/client-prime-lbg/",
+        ],
     },
     {
         "id": "client_swgemu",

@@ -137,4 +137,32 @@ print("OK think task requires L2 approval:", c.get("id"))
 PY
 
 echo ""
+echo "=== Test pm brief réunification ==="
+CREATE4=$(curl -sf -X POST "${ORCH}/v1/team/tasks" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "role": "pm",
+    "objective": "Brief réunification sous-projets",
+    "actor_id": "system:test_pm_reunif",
+    "context": {"reunification_brief": true}
+  }')
+TASK4=$(python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" <<<"${CREATE4}")
+RUN4=$(curl -sf -X POST "${ORCH}/v1/team/tasks/${TASK4}/run" -H 'Content-Type: application/json' -d '{}')
+echo "${RUN4}" > /tmp/lbg_test_pm_reunif_run.json
+python3 <<'PY'
+import json
+with open("/tmp/lbg_test_pm_reunif_run.json", encoding="utf-8") as f:
+    run = json.load(f)
+assert run.get("status") == "done", run
+res = run.get("result") or {}
+assert res.get("kind") == "pm_brief", res
+assert res.get("reunification") is True, res
+out = res.get("output") or {}
+brief = out.get("brief") or {}
+subs = brief.get("subprojects") or []
+assert len(subs) >= 5, subs
+print("OK pm_brief réunification —", len(subs), "sous-projets")
+PY
+
+echo ""
 echo "Tout vert — voir #/team sur http://192.168.0.110:8080/#/team"

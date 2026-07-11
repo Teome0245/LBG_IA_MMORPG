@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import time
 import uuid
@@ -213,16 +214,32 @@ def _execute_qa(task: TeamTask) -> dict[str, object]:
 
 
 def _execute_pm(task: TeamTask) -> dict[str, object]:
+    from team.subprojects import list_subprojects
+
     ctx = dict(task.context)
     ctx.setdefault("pm_focus", True)
     ctx.setdefault("project_pm", {"include_plan": True, "include_structure": True})
+    reunification = bool(
+        ctx.get("reunification_brief")
+        or ctx.get("_team_pm_reunification_spawn")
+        or re.search(r"\b(réunification|reunification|sous-projets?|thémis)\b", task.objective, re.I)
+    )
+    if reunification:
+        ctx.setdefault("pm_include_plan", True)
+        ctx.setdefault("pm_include_structure", True)
+        ctx["reunification_brief"] = True
+        ctx["subprojects"] = list_subprojects()
     out = _dispatch(
         "agent.pm",
         actor_id=task.actor_id,
         text=task.objective,
         context=ctx,
     )
-    return {"kind": "pm_brief", "output": out, "ok": True}
+    result: dict[str, object] = {"kind": "pm_brief", "output": out, "ok": True}
+    if reunification:
+        result["reunification"] = True
+        result["subprojects_count"] = len(ctx.get("subprojects") or [])
+    return result
 
 
 def _execute_dev_game(task: TeamTask) -> dict[str, object]:
@@ -267,8 +284,8 @@ def plan_from_objective(objective: str, *, actor_id: str = "system:team") -> lis
     if any(k in text for k in ("qa", "smoke", "test", "valide", "vérif", "verif", "lan")):
         obj = objective if "qa" in text else str(ROLE_SPECS["qa"]["default_objective"])
         _add("qa", obj)
-    if any(k in text for k in ("pm", "jalon", "roadmap", "plan", "projet", "tâche", "tache")):
-        obj = objective if "pm" in text else str(ROLE_SPECS["pm"]["default_objective"])
+    if any(k in text for k in ("pm", "jalon", "roadmap", "plan", "projet", "tâche", "tache", "réunification", "reunification", "sous-projet")):
+        obj = objective if "pm" in text or "réunification" in text or "reunification" in text else str(ROLE_SPECS["pm"]["default_objective"])
         _add("pm", obj)
     if any(k in text for k in ("dev", "game", "gameplay", "bug", "correctif", "mmo", "core3")):
         obj = objective if any(k in text for k in ("dev", "bug", "game")) else str(ROLE_SPECS["dev_game"]["default_objective"])

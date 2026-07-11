@@ -1494,8 +1494,13 @@
       <div class="col">
         <section>
           <div class="panel-title"><h2>Nouvelle tâche</h2></div>
-          <label for="team-actor">actor_id</label>
-          <input type="text" id="team-actor" value="pilot:team" />
+          <p class="muted" style="font-size:0.85rem; margin:0 0 0.45rem 0;">Raccourcis (configurent le formulaire) :</p>
+          <div id="team-presets" style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-bottom:0.65rem;">
+            <button type="button" class="preset" data-team-preset="smoke_lan" title="Clic : configurer · double-clic : lancer">Smoke LAN</button>
+            <button type="button" class="preset" data-team-preset="probe_ia" title="Clic : configurer · double-clic : lancer">Sonde joueurs IA</button>
+            <button type="button" class="preset" data-team-preset="brief_reunif" title="Clic : configurer · double-clic : lancer">Brief réunification</button>
+            <button type="button" class="preset" data-team-preset="think_lia" title="Clic : configurer · double-clic : créer (L2)">Think Lia</button>
+          </div>
           <label for="team-role">Rôle</label>
           <select id="team-role">
             <option value="qa">Argus (qa) — smoke / healthz</option>
@@ -1504,23 +1509,43 @@
             <option value="dev_game">Dédale (dev_game) — Core3 / Godot / forge</option>
             <option value="player_ia">Chœur du monde (player_ia) — joueurs IA 246</option>
           </select>
-          <label for="team-player-ia-mode" style="margin-top:0.35rem;">Mode player_ia (si sélectionné)</label>
-          <select id="team-player-ia-mode" style="margin:0;">
-            <option value="probe">Sonde L1 (healthz + snapshots)</option>
-            <option value="think_tick">Think/tick L2 (approbation requise)</option>
-          </select>
+          <div id="team-player-ia-wrap" hidden>
+            <label for="team-player-ia-mode" style="margin-top:0.35rem;">Mode joueurs IA</label>
+            <select id="team-player-ia-mode" style="margin:0;">
+              <option value="probe">Sonde L1 (healthz + snapshots)</option>
+              <option value="think_tick">Think/tick L2 (approbation requise)</option>
+            </select>
+            <div id="team-player-id-wrap" hidden>
+              <label for="team-player-id" style="margin-top:0.35rem;">Persona</label>
+              <select id="team-player-id" style="margin:0;">
+                <option value="lia">Lia</option>
+                <option value="nix">Nix</option>
+                <option value="mira">Mira</option>
+                <option value="kael">Kael</option>
+              </select>
+            </div>
+          </div>
           <label for="team-objective">Objectif</label>
-          <textarea id="team-objective" style="min-height:4rem;">smoke LAN read-only (healthz)</textarea>
-          <label for="team-plan-objective">Planifier depuis un objectif NL (optionnel)</label>
-          <textarea id="team-plan-objective" style="min-height:3rem;" placeholder="ex. valide le LAN et brief PM"></textarea>
-          <button type="button" id="btn-team-plan" style="margin-top:0.35rem;">Proposer des tâches</button>
-          <pre id="team-plan-out" class="muted" style="font-size:0.82rem; max-height:8rem;">—</pre>
-          <button type="button" id="btn-team-create" style="margin-top:0.5rem;">Créer la tâche</button>
-          <label style="display:inline-flex; align-items:center; gap:0.35rem; margin-left:0.6rem; font-size:0.88rem;">
-            <input type="checkbox" id="team-approval-required" /> L2 — approbation requise
-          </label>
-          <p class="muted" style="font-size:0.8rem; margin:0.35rem 0 0 0;">Token : <code>LBG_TEAM_APPROVAL_TOKEN</code> (repli <code>LBG_DEVOPS_APPROVAL_TOKEN</code>).</p>
-          <span id="team-create-hint" class="muted" style="margin-left:0.6rem;">—</span>
+          <textarea id="team-objective" style="min-height:3.2rem;">Smoke LAN read-only (healthz + systemd via script si configuré)</textarea>
+          <p style="margin:0.55rem 0 0.25rem 0; display:flex; flex-wrap:wrap; gap:0.45rem; align-items:center;">
+            <button type="button" id="btn-team-launch" style="margin:0;">Lancer</button>
+            <button type="button" id="btn-team-create" style="margin:0; font-size:0.88rem;">Créer seulement</button>
+            <span id="team-create-hint" class="muted" style="font-size:0.85rem;">—</span>
+          </p>
+          <details id="team-advanced" style="margin-top:0.55rem;">
+            <summary class="muted" style="cursor:pointer; font-size:0.88rem;">Options avancées</summary>
+            <label for="team-actor" style="margin-top:0.45rem;">actor_id</label>
+            <input type="text" id="team-actor" value="pilot:team" />
+            <label for="team-create-token" title="Pré-autorise L2 à la création (LBG_TEAM_APPROVAL_TOKEN ou repli LBG_DEVOPS_APPROVAL_TOKEN)">Token approbation (création)</label>
+            <input type="text" id="team-create-token" placeholder="optionnel — même valeur que sur l'orchestrateur" />
+            <label style="display:inline-flex; align-items:center; gap:0.35rem; margin-top:0.35rem; font-size:0.88rem;">
+              <input type="checkbox" id="team-approval-required" /> Forcer L2 — approbation requise
+            </label>
+            <label for="team-plan-objective" style="margin-top:0.45rem;">Planifier depuis un objectif NL</label>
+            <textarea id="team-plan-objective" style="min-height:3rem;" placeholder="ex. valide le LAN et brief PM"></textarea>
+            <button type="button" id="btn-team-plan" style="margin-top:0.35rem;">Proposer des tâches</button>
+            <pre id="team-plan-out" class="muted" style="font-size:0.82rem; max-height:8rem;">—</pre>
+          </details>
         </section>
         <section>
           <div class="panel-title">
@@ -5130,6 +5155,26 @@
     let __teamSelectedId = null;
     let __teamBound = false;
     let __teamLastForgePatch = null;
+    let __teamObjectiveCustom = false;
+    let __teamMetaRoles = null;
+    let __teamReunificationBrief = false;
+
+    const TEAM_ROLE_DEFAULTS = {
+      qa: "Smoke LAN read-only (healthz + systemd via script si configuré)",
+      ops: "Sonde santé orchestrateur et backend (read-only)",
+      pm: "Brief jalons et prochaines tâches projet",
+      pm_reunif: "Brief réunification sous-projets — jalons, statuts et prochaines actions (Thémis)",
+      dev_game: "Analyser bug gameplay / correctif proposé (hors sandbox mmmorpg gelé)",
+      player_ia_probe: "Sonde joueurs IA Core3 Prime (246) — sidecar + snapshots Lia/Nix",
+      player_ia_think: "Think/tick joueur IA Lia",
+    };
+
+    const TEAM_PRESETS = {
+      smoke_lan: { role: "qa", objectiveKey: "qa", autoRun: true },
+      probe_ia: { role: "player_ia", player_ia_mode: "probe", objectiveKey: "player_ia_probe", autoRun: true },
+      brief_reunif: { role: "pm", objectiveKey: "pm_reunif", reunification: true, autoRun: true },
+      think_lia: { role: "player_ia", player_ia_mode: "think_tick", player_id: "lia", objectiveKey: "player_ia_think", autoRun: false },
+    };
 
     function teamGetActor() {
       const el = document.getElementById("team-actor");
@@ -5138,6 +5183,146 @@
 
     function teamHint(msg, isError) {
       pilotInlineHint("team-create-hint", msg || "—", !!isError);
+    }
+
+    function teamApiError(out) {
+      const j = out && out.json ? out.json : {};
+      if (out && out.status === 0) return j.error || "réseau indisponible";
+      if (j.detail) return typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail);
+      if (j.error) return String(j.error);
+      if (j.body) return String(j.body).slice(0, 240);
+      return "HTTP " + (out && out.status ? out.status : "?");
+    }
+
+    function teamResponseOk(out) {
+      return !!(out && out.status === 200 && out.json && out.json.ok !== false);
+    }
+
+    function teamDefaultObjective(role, mode) {
+      if (__teamMetaRoles && __teamMetaRoles[role]) return __teamMetaRoles[role];
+      if (role === "player_ia") {
+        return mode === "think_tick" ? TEAM_ROLE_DEFAULTS.player_ia_think : TEAM_ROLE_DEFAULTS.player_ia_probe;
+      }
+      return TEAM_ROLE_DEFAULTS[role] || "";
+    }
+
+    function teamThinkObjective(playerId) {
+      const p = (playerId || "lia").trim() || "lia";
+      const cap = p.charAt(0).toUpperCase() + p.slice(1);
+      return "Think/tick joueur IA " + cap;
+    }
+
+    function teamSyncFormUi() {
+      const roleEl = document.getElementById("team-role");
+      const role = roleEl ? roleEl.value : "qa";
+      const wrap = document.getElementById("team-player-ia-wrap");
+      const modeEl = document.getElementById("team-player-ia-mode");
+      const mode = modeEl && modeEl.value ? String(modeEl.value) : "probe";
+      const playerWrap = document.getElementById("team-player-id-wrap");
+      if (wrap) wrap.hidden = role !== "player_ia";
+      if (playerWrap) playerWrap.hidden = role !== "player_ia" || mode !== "think_tick";
+      if (!__teamObjectiveCustom) {
+        const objEl = document.getElementById("team-objective");
+        if (objEl) {
+          if (role === "player_ia" && mode === "think_tick") {
+            const pidEl = document.getElementById("team-player-id");
+            objEl.value = teamThinkObjective(pidEl ? pidEl.value : "lia");
+          } else {
+            objEl.value = teamDefaultObjective(role, mode);
+          }
+        }
+      }
+    }
+
+    function teamApplyPreset(key, launch) {
+      const preset = TEAM_PRESETS[key];
+      if (!preset) return;
+      __teamObjectiveCustom = false;
+      __teamReunificationBrief = !!preset.reunification;
+      const roleEl = document.getElementById("team-role");
+      if (roleEl) roleEl.value = preset.role;
+      const modeEl = document.getElementById("team-player-ia-mode");
+      if (modeEl && preset.player_ia_mode) modeEl.value = preset.player_ia_mode;
+      const pidEl = document.getElementById("team-player-id");
+      if (pidEl && preset.player_id) pidEl.value = preset.player_id;
+      const apprEl = document.getElementById("team-approval-required");
+      if (apprEl) apprEl.checked = preset.player_ia_mode === "think_tick";
+      teamSyncFormUi();
+      if (preset.objectiveKey) {
+        const def = TEAM_ROLE_DEFAULTS[preset.objectiveKey];
+        const objEl = document.getElementById("team-objective");
+        if (def && objEl) objEl.value = def;
+      }
+      document.querySelectorAll("[data-team-preset]").forEach(function (btn) {
+        btn.classList.toggle("preset--active", btn.getAttribute("data-team-preset") === key);
+      });
+      if (launch) {
+        teamCreate({ autoRun: true }).catch(function () {});
+      }
+    }
+
+    function teamBuildPayload() {
+      const roleEl = document.getElementById("team-role");
+      const objEl = document.getElementById("team-objective");
+      const role = roleEl ? roleEl.value : "qa";
+      const objective = objEl && objEl.value ? objEl.value.trim() : "";
+      const ctx = {};
+      if (role === "player_ia") {
+        const modeEl = document.getElementById("team-player-ia-mode");
+        const mode = modeEl && modeEl.value ? String(modeEl.value) : "probe";
+        ctx.player_ia_mode = mode;
+        if (mode === "think_tick") {
+          const pidEl = document.getElementById("team-player-id");
+          const pid = pidEl && pidEl.value ? String(pidEl.value).trim() : "";
+          if (pid) ctx.player_id = pid;
+          else {
+            const m = objective.toLowerCase();
+            ["lia", "nix", "mira", "kael"].forEach(function (p) {
+              if (m.indexOf(p) >= 0) ctx.player_id = p;
+            });
+          }
+        }
+      }
+      if (__teamReunificationBrief || /réunification|reunification/i.test(objective)) {
+        ctx.reunification_brief = true;
+        ctx.pm_include_plan = true;
+        ctx.pm_include_structure = true;
+      }
+      const payload = {
+        role: role,
+        objective: objective,
+        actor_id: teamGetActor(),
+        context: ctx,
+      };
+      const apprEl = document.getElementById("team-approval-required");
+      if (apprEl && apprEl.checked) payload.approval_required = true;
+      const tokEl = document.getElementById("team-create-token");
+      const tok = tokEl && tokEl.value ? tokEl.value.trim() : "";
+      if (tok) payload.approval_token = tok;
+      return payload;
+    }
+
+    function teamLikelyNeedsApproval(payload) {
+      if (payload.approval_required === true) return true;
+      if (payload.role === "player_ia" && payload.context && payload.context.player_ia_mode === "think_tick") return true;
+      return false;
+    }
+
+    function teamCanAutoRun(payload) {
+      if (!teamLikelyNeedsApproval(payload)) return true;
+      return !!payload.approval_token;
+    }
+
+    async function teamLoadMeta() {
+      const out = await jobsGet(getBase() + "/v1/pilot/team/meta");
+      if (!teamResponseOk(out)) return;
+      const roles = (out.json && out.json.roles) || [];
+      const map = {};
+      roles.forEach(function (r) {
+        if (r.role && r.default_objective) map[r.role] = String(r.default_objective);
+      });
+      __teamMetaRoles = map;
+      teamSyncFormUi();
     }
 
     async function teamListRefresh() {
@@ -5250,87 +5435,165 @@
       location.hash = "#/assistant";
     }
 
-    async function teamCreate() {
-      const roleEl = document.getElementById("team-role");
-      const objEl = document.getElementById("team-objective");
-      const role = roleEl ? roleEl.value : "qa";
-      const objective = objEl && objEl.value ? objEl.value.trim() : "";
-      if (!objective) { teamHint("Objectif vide.", true); return; }
-      const out = await postJson(getBase() + "/v1/pilot/team/tasks", {
-        role: role,
-        objective: objective,
-        actor_id: teamGetActor(),
-        approval_required: !!(document.getElementById("team-approval-required") || {}).checked,
-        context: (function () {
-          const ctx = {};
-          if (role === "player_ia") {
-            const modeEl = document.getElementById("team-player-ia-mode");
-            const mode = modeEl && modeEl.value ? String(modeEl.value) : "probe";
-            ctx.player_ia_mode = mode;
-            if (mode === "think_tick") {
-              const m = objective.toLowerCase();
-              ["lia", "nix", "mira", "kael"].forEach(function (p) {
-                if (m.indexOf(p) >= 0) ctx.player_id = p;
-              });
-            }
-          }
-          return ctx;
-        })(),
-      }, 60000);
-      if (!out.ok && !out.id) { teamHint(out.error || "échec création", true); return; }
-      teamHint("Tâche créée : " + (out.id || "?"), false);
-      __teamSelectedId = out.id || null;
+    async function teamCreate(opts) {
+      const options = opts || {};
+      const payload = teamBuildPayload();
+      if (!payload.objective) { teamHint("Objectif vide.", true); return null; }
+      const needsApproval = teamLikelyNeedsApproval(payload);
+      const autoRun = options.autoRun === true && teamCanAutoRun(payload);
+      teamHint(autoRun ? "Création et exécution…" : "Création…");
+      const out = await postJson(getBase() + "/v1/pilot/team/tasks", payload, 60000);
+      if (!teamResponseOk(out) || !out.json.id) {
+        teamHint("Échec création : " + teamApiError(out), true);
+        return null;
+      }
+      const task = out.json;
+      __teamSelectedId = task.id || null;
+      if (autoRun) {
+        teamHint("Exécution…");
+        const runOut = await postJson(
+          getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(task.id) + "/run",
+          payload.approval_token ? { approval_token: payload.approval_token } : {},
+          300000
+        );
+        if (!teamResponseOk(runOut)) {
+          teamHint("Créée mais exécution échouée : " + teamApiError(runOut), true);
+          await teamListRefresh();
+          await teamSelect(task.id);
+          return task;
+        }
+        const ran = runOut.json || {};
+        const st = ran.status || "";
+        if (st === "review" || ran.approval_required) {
+          teamHint("Tâche créée — approbation L2 requise (détail → Approuver → Exécuter).", false);
+        } else {
+          teamHint(st === "done" ? "Terminé (" + task.id + ")" : "Statut : " + (st || "?"), st === "failed");
+        }
+        await teamSelect(task.id);
+        return ran;
+      }
+      if (needsApproval) {
+        teamHint("Tâche créée (" + task.id + ") — approbation L2 : détail → token → Approuver → Exécuter.", false);
+      } else {
+        teamHint("Tâche créée (" + task.id + "). Cliquez Lancer ou Exécuter dans le détail.", false);
+      }
       await teamListRefresh();
-      if (out.id) await teamSelect(out.id);
+      await teamSelect(task.id);
+      return task;
     }
 
     async function teamPlan() {
       const el = document.getElementById("team-plan-objective");
       const objective = el && el.value ? el.value.trim() : "";
-      if (!objective) return;
+      if (!objective) { teamHint("Objectif NL vide.", true); return; }
+      teamHint("Planification…");
       const out = await postJson(getBase() + "/v1/pilot/team/plan", {
         objective: objective,
         actor_id: teamGetActor(),
       }, 30000);
       const pre = document.getElementById("team-plan-out");
-      if (pre) pre.textContent = JSON.stringify(out.proposals || out, null, 2);
+      if (!teamResponseOk(out)) {
+        if (pre) pre.textContent = teamApiError(out);
+        teamHint("Échec plan : " + teamApiError(out), true);
+        return;
+      }
+      const data = out.json || {};
+      if (pre) pre.textContent = JSON.stringify(data.proposals || [], null, 2);
+      teamHint((data.proposals || []).length + " proposition(s).", false);
     }
 
     async function teamRun() {
       if (!__teamSelectedId) return;
       const tok = (document.getElementById("team-approve-token") || {}).value || "";
-      const body = tok.trim() ? { approval_token: tok.trim() } : {};
-      const out = await postJson(getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(__teamSelectedId) + "/run", body, 300000);
+      const createTok = (document.getElementById("team-create-token") || {}).value || "";
+      const token = tok.trim() || createTok.trim();
+      const body = token ? { approval_token: token } : {};
+      teamHint("Exécution…");
+      const out = await postJson(
+        getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(__teamSelectedId) + "/run",
+        body,
+        300000
+      );
+      if (!teamResponseOk(out)) {
+        teamHint("Échec exécution : " + teamApiError(out), true);
+        return;
+      }
+      const data = out.json || {};
       await teamSelect(__teamSelectedId);
-      teamHint(out.status === "done" ? "Terminé" : (out.status || out.error || "—"), out.status === "failed");
+      const st = data.status || "";
+      if (st === "review") teamHint("En attente d'approbation L2.", false);
+      else teamHint(st === "done" ? "Terminé" : ("Statut : " + (st || "—")), st === "failed");
     }
 
     async function teamApprove() {
       if (!__teamSelectedId) return;
       const tok = (document.getElementById("team-approve-token") || {}).value || "";
-      if (!tok.trim()) { teamHint("Token requis.", true); return; }
-      await postJson(getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(__teamSelectedId) + "/approve", { token: tok.trim() }, 30000);
+      const createTok = (document.getElementById("team-create-token") || {}).value || "";
+      const token = tok.trim() || createTok.trim();
+      if (!token) { teamHint("Token requis (détail ou options avancées).", true); return; }
+      teamHint("Approbation…");
+      const out = await postJson(
+        getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(__teamSelectedId) + "/approve",
+        { token: token },
+        30000
+      );
+      if (!teamResponseOk(out)) {
+        teamHint("Échec approbation : " + teamApiError(out), true);
+        return;
+      }
+      teamHint("Approuvée — vous pouvez Exécuter.", false);
       await teamSelect(__teamSelectedId);
     }
 
     async function teamCancel() {
       if (!__teamSelectedId) return;
-      await postJson(getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(__teamSelectedId) + "/cancel", {}, 30000);
+      teamHint("Annulation…");
+      const out = await postJson(
+        getBase() + "/v1/pilot/team/tasks/" + encodeURIComponent(__teamSelectedId) + "/cancel",
+        {},
+        30000
+      );
+      if (!teamResponseOk(out)) {
+        teamHint("Échec annulation : " + teamApiError(out), true);
+        return;
+      }
+      teamHint("Annulée.", false);
       await teamSelect(__teamSelectedId);
     }
 
     function teamBindPage() {
       if (__teamBound) return;
       __teamBound = true;
+      const bLaunch = document.getElementById("btn-team-launch");
       const bCreate = document.getElementById("btn-team-create");
       const bPlan = document.getElementById("btn-team-plan");
       const bRefresh = document.getElementById("btn-team-refresh");
       const bRun = document.getElementById("btn-team-run");
       const bApprove = document.getElementById("btn-team-approve");
       const bCancel = document.getElementById("btn-team-cancel");
-      if (bCreate) bCreate.addEventListener("click", function () { teamCreate(); });
-      if (bPlan) bPlan.addEventListener("click", function () { teamPlan(); });
+      const roleEl = document.getElementById("team-role");
+      const modeEl = document.getElementById("team-player-ia-mode");
+      const pidEl = document.getElementById("team-player-id");
+      const objEl = document.getElementById("team-objective");
+      if (bLaunch) bLaunch.addEventListener("click", function () {
+        const payload = teamBuildPayload();
+        teamCreate({ autoRun: teamCanAutoRun(payload) }).catch(function () {});
+      });
+      if (bCreate) bCreate.addEventListener("click", function () { teamCreate({ autoRun: false }).catch(function () {}); });
+      if (bPlan) bPlan.addEventListener("click", function () { teamPlan().catch(function () {}); });
       if (bRefresh) bRefresh.addEventListener("click", function () { teamListRefresh(); });
+      document.querySelectorAll("[data-team-preset]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          teamApplyPreset(btn.getAttribute("data-team-preset"), false);
+        });
+        btn.addEventListener("dblclick", function () {
+          teamApplyPreset(btn.getAttribute("data-team-preset"), true);
+        });
+      });
+      if (roleEl) roleEl.addEventListener("change", function () { __teamObjectiveCustom = false; __teamReunificationBrief = false; teamSyncFormUi(); });
+      if (modeEl) modeEl.addEventListener("change", function () { __teamObjectiveCustom = false; teamSyncFormUi(); });
+      if (pidEl) pidEl.addEventListener("change", function () { __teamObjectiveCustom = false; teamSyncFormUi(); });
+      if (objEl) objEl.addEventListener("input", function () { __teamObjectiveCustom = true; });
       ["team-filter-role", "team-filter-status", "team-filter-actor"].forEach(function (id) {
         const el = document.getElementById(id);
         if (el) el.addEventListener("change", function () { teamListRefresh(); });
@@ -5338,11 +5601,13 @@
           if (ev.key === "Enter") teamListRefresh();
         });
       });
-      if (bRun) bRun.addEventListener("click", function () { teamRun(); });
-      if (bApprove) bApprove.addEventListener("click", function () { teamApprove(); });
-      if (bCancel) bCancel.addEventListener("click", function () { teamCancel(); });
+      if (bRun) bRun.addEventListener("click", function () { teamRun().catch(function () {}); });
+      if (bApprove) bApprove.addEventListener("click", function () { teamApprove().catch(function () {}); });
+      if (bCancel) bCancel.addEventListener("click", function () { teamCancel().catch(function () {}); });
       const bForge = document.getElementById("btn-team-forge-assistant");
       if (bForge) bForge.addEventListener("click", function () { teamForgeToAssistant(); });
+      teamSyncFormUi();
+      teamLoadMeta().catch(function () {});
     }
 
     /* ===================== Jobs autonomes ("type Cowork") ===================== */

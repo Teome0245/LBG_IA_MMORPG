@@ -112,3 +112,23 @@ def test_dispatch_pm_http_ok(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(dispatch_mod.httpx, "Client", lambda **kw: _ClientCtx())
     out = invoke_after_route("agent.pm", actor_id="p:1", text="roadmap", context={})
     assert out.get("agent") == "pm_remote"
+
+
+def test_dispatch_pm_stub_reunification_subprojects() -> None:
+    out = invoke_after_route(
+        "agent.pm",
+        actor_id="p:1",
+        text="Brief réunification sous-projets",
+        context={
+            "reunification_brief": True,
+            "subprojects": [
+                {"id": "core3_prime", "label": "Core3", "owner_role": "player_ia", "status": "prod"},
+                {"id": "client_godot", "label": "Godot", "owner_role": "dev_game", "status": "actif"},
+            ],
+        },
+    )
+    brief = out.get("brief") or {}
+    assert brief.get("reunification") is True
+    subs = brief.get("subprojects") or []
+    assert len(subs) == 2
+    assert subs[0]["id"] == "core3_prime"

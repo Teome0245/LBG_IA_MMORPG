@@ -134,6 +134,8 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-07-11 | **Phase D clôture partielle** : UI `#/team` simplifiée + fix parsing API ; playbook PM réunification ; jalon Godot M1 (`sidecar_mirror` + smoke) ; runbook promotion prototype→Core3. |
+| 2026-07-11 | **Phase D — PM réunification** : playbook `spawn_team_pm_reunification_job` + timer `lbg-team-pm-reunification-job` ; brief pm enrichi (sous-projets via `subprojects.py`) ; preset Pilot **Brief réunification** ; fix UI `#/team` (parsing `out.json`, bouton Lancer). |
 | 2026-07-11 | **Réunification + Phase D suite** : alias personas équipe (Héphaïstos, Argus, Thémis, Dédale, Chœur du monde) ; `GET /v1/team/meta` ; think/tick L2 `player_ia` ; Godot client **dégel** ; audit [`audit_reunification_projet_2026-07-11.md`](audit_reunification_projet_2026-07-11.md). |
 | 2026-07-11 | **Équipe virtuelle phase C (début)** : `team/qa_followup.py` — QA `failed` → tâches suivi `pm` (+ `ops` si smoke KO) ; token L2 repli `LBG_DEVOPS_APPROVAL_TOKEN` ; UI `#/team` filtres role/status/actor + checkbox L2 ; tests `test_team_qa_followup.py`. |
 | 2026-07-11 | **Équipe virtuelle phase B — playbooks ops** : `spawn_team_ops_storage_job` + `spawn_team_ops_ollama_job` ; `team_job_spawn.py` ; timers systemd + `install_team_ops_jobs_vm.sh` (12 tests OK). |

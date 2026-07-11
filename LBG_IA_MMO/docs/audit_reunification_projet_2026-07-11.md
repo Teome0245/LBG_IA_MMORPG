@@ -77,9 +77,10 @@ Registre machine : `orchestrator/team/subprojects.py` — exposé via `GET /v1/t
 
 1. [x] Alias rôles + `/v1/team/meta`
 2. [x] Think/tick L2 via équipe
-3. [ ] PM périodique : brief réunification (tâche `pm` + plan NL)
-4. [ ] Promotion prototype → Core3 (process humain)
-5. [ ] Godot : jalon client reconnecté au sidecar / contrats Core3
+3. [x] PM périodique : brief réunification (tâche `pm` + timer `lbg-team-pm-reunification-job`)
+4. [x] Promotion prototype → Core3 — [`runbook_promotion_prototype_core3.md`](runbook_promotion_prototype_core3.md)
+5. [x] Godot jalon M1 : miroir sidecar 246 — [`jalon_client_godot_sidecar_246.md`](jalon_client_godot_sidecar_246.md)
+6. [ ] Godot M3/M5 : SOE live + `lbg-ws/2` (client autoritaire)
 
 ---
 

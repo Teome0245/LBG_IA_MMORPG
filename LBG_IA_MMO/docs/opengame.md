@@ -240,4 +240,4 @@ Les warnings connus concernent `FastAPI on_event` et ne sont pas liés à OpenGa
 - Ajouter un smoke LAN dédié une fois la CLI disponible.
 - Ajouter une vue `/pilot/` pour lister les prototypes générés.
 - Ajouter éventuellement un nettoyage/archivage des prototypes anciens.
-- Documenter la procédure de promotion d'un prototype vers une feature MMO.
+- Documenter la procédure de promotion d'un prototype vers une feature MMO. → **fait** : [`runbook_promotion_prototype_core3.md`](runbook_promotion_prototype_core3.md)
