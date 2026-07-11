@@ -179,7 +179,8 @@ Token : `LBG_TEAM_APPROVAL_TOKEN` (aligné tokens Pilot / opengame).
 - [x] Proxy backend `/v1/pilot/team/*` (miroir jobs)
 - [x] Pilot `#/team` (liste, approve, run)
 - [x] `lbg.env.example` : `LBG_TEAM_*`
-- [ ] Playbook L1 : smoke LAN → tâche `qa` auto (nécessite déploiement LAN)
+- [x] Playbook L1 (code) : smoke LAN → tâche `qa` auto (`spawn_team_qa_smoke_job`, timer `lbg-team-qa-smoke-job`)
+- [x] Timer activé sur 140 en prod
 
 ---
 

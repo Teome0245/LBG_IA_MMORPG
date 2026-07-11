@@ -1,0 +1,21 @@
+[Unit]
+Description=LBG équipe virtuelle — smoke LAN quotidien (tâche qa L1)
+After=network-online.target lbg-orchestrator.service
+Wants=lbg-orchestrator.service
+
+[Service]
+Type=oneshot
+User=lbg
+Group=lbg
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+Environment=LBG_TEAM_QA_SMOKE_JOB_ENABLED=1
+Environment=LBG_ORCHESTRATOR_URL=http://127.0.0.1:8010
+Environment=LBG_TEAM_QA_SMOKE_JOB_STATE=/var/lib/lbg/team_qa_smoke/state.json
+Environment=LBG_TEAM_QA_SMOKE_JOB_ACTOR_ID=system:team_qa_smoke
+# Prérequis orchestrateur : LBG_TEAM_ENABLED=1, LBG_TEAM_QA_SMOKE_SCRIPT=/opt/LBG_IA_MMO/infra/scripts/smoke_vm_lan.sh
+# Tâches visibles : http://192.168.0.110:8080/#/team (filtrer actor: system:team_qa_smoke)
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python -m lbg_agents.spawn_team_qa_smoke_job
+
+[Install]
+WantedBy=multi-user.target

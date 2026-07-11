@@ -17,6 +17,7 @@ from services import metrics as svc_metrics
 from services.mmo_lyra_sync import merge_mmo_lyra_if_configured
 from services.mmmorpg_commit import try_commit_dialogue
 from services.orchestrator_client import OrchestratorClient, OrchestratorError
+from services.session_summary_export import build_assistant_session_export
 
 router = APIRouter()
 LOG = logging.getLogger("pilot")
@@ -653,6 +654,15 @@ class ActionProposalBody(BaseModel):
     context: dict[str, object] = Field(default_factory=dict)
 
 
+class AssistantSessionExportBody(BaseModel):
+    """Corps pour export borné de résumé session (validation serveur, sans persistance)."""
+
+    notes: str | None = None
+    history: list[dict[str, object]] | None = None
+    session_summary: dict[str, object] | None = None
+    mmo_bridge: dict[str, object] | None = None
+
+
 @router.post("/agent-dialogue/invoke", tags=["pilot"])
 async def pilot_proxy_agent_dialogue_invoke(body: AgentDialogueInvokeBody) -> dict[str, object]:
     """
@@ -849,6 +859,25 @@ async def pilot_action_proposal(payload: ActionProposalBody) -> dict[str, object
         return {"ok": True, **data} if isinstance(data, dict) else {"ok": True, "payload": data}
     except Exception as e:
         return {"ok": False, "error": str(e)}
+
+
+@router.post("/assistant/session-summary/export", tags=["pilot"])
+async def pilot_assistant_session_summary_export(body: AssistantSessionExportBody) -> dict[str, object]:
+    """
+    Valide et tronque un résumé volontaire (notes, historique court, session_summary MMO).
+    Ne stocke rien côté serveur — complète l’export 100 % navigateur du Pilot `#/assistant`.
+    """
+    payload: dict[str, object] = {}
+    if body.notes is not None:
+        payload["notes"] = body.notes
+    if body.history is not None:
+        payload["history"] = body.history
+    if body.session_summary is not None:
+        payload["session_summary"] = body.session_summary
+    if body.mmo_bridge is not None:
+        payload["mmo_bridge"] = body.mmo_bridge
+    export = build_assistant_session_export(payload)
+    return {"ok": True, "export": export}
 
 
 @router.get("/orchestrator/brain/status", tags=["pilot"])

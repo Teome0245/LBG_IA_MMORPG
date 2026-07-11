@@ -446,6 +446,47 @@ En cas d’erreur HTTP ou réseau, `dispatch` renvoie `agent: http_dialogue`, un
 - Dépendance runtime : **`httpx`** (appels depuis `dispatch`).
 - Extras : **`dialogue_http_service`**, **`quests_http_service`**, **`combat_http_service`** (`fastapi`, `uvicorn`) — install via `pip install -e ".[dialogue_http_service,quests_http_service,combat_http_service]"` depuis `agents/`, ou via `install_local.sh` du monorepo.
 
+### Équipe virtuelle — smoke LAN quotidien (`spawn_team_qa_smoke_job`)
+
+Playbook **L1** (phase B) : timer systemd sur le **core 140** qui crée et exécute une tâche équipe **`qa`** via l'API orchestrateur (`POST /v1/team/tasks` puis `.../run`). L'exécution QA lance `smoke_vm_lan.sh` si `LBG_TEAM_QA_SMOKE_SCRIPT` est configuré côté orchestrateur.
+
+| Variable | Effet |
+|----------|--------|
+| `LBG_TEAM_QA_SMOKE_JOB_ENABLED` | `1` par défaut ; `0` désactive le spawn |
+| `LBG_TEAM_QA_SMOKE_JOB_OBJECTIVE` | Objectif de la tâche `qa` créée |
+| `LBG_TEAM_QA_SMOKE_JOB_ACTOR_ID` | Défaut `system:team_qa_smoke` (filtre Pilot `#/team`) |
+| `LBG_TEAM_QA_SMOKE_JOB_STATE` | Fichier JSON cooldown (défaut `/var/lib/lbg/team_qa_smoke/state.json`) |
+| `LBG_TEAM_QA_SMOKE_JOB_COOLDOWN_S` | Intervalle min entre deux runs (défaut **86400** = 24 h) |
+| `LBG_ORCHESTRATOR_URL` | Base API (défaut `http://127.0.0.1:8010`) |
+| `LBG_TEAM_QA_SMOKE_SCRIPT` | **Orchestrateur** — chemin absolu vers `smoke_vm_lan.sh` sur 140 |
+| `LBG_TEAM_QA_SMOKE_TIMEOUT_S` | Timeout bash smoke (défaut 300 s en prod recommandé) |
+
+Installation timer (depuis poste dev) :
+
+```bash
+bash infra/scripts/install_team_qa_smoke_job_vm.sh
+```
+
+Test manuel sur 140 :
+
+```bash
+sudo systemctl start lbg-team-qa-smoke-job.service
+journalctl -u lbg-team-qa-smoke-job -n 30 --no-pager
+```
+
+Validation LAN (script smoke direct, sans passer par l'équipe) :
+
+```bash
+bash infra/scripts/smoke_vm_lan.sh
+```
+
+Tests unitaires :
+
+```bash
+cd agents
+PYTHONPATH=src uv run --with pytest python -m pytest tests/test_spawn_team_qa_smoke_job.py -q
+```
+
 ## Évolution
 
 Ajouter d’autres URLs ou une découverte par registry ; garder `invoke_after_route` comme point d’entrée unique.

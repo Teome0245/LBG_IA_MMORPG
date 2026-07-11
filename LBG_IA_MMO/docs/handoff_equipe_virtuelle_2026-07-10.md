@@ -115,7 +115,13 @@ Ne pas toucher au gel sandbox mmmorpg (ADR 0005) sans demande explicite.
 3. [x] `orchestrator/router/routes/team.py` — endpoints § API
 4. [x] `orchestrator/tests/test_team.py`
 5. [x] Backend proxy `pilot.py` + vue `#/team` (minimal)
-6. [ ] Smoke LAN : créer tâche `qa` + `POST .../run` → `smoke_vm_lan.sh` (nécessite LAN + SSH)
+6. [x] Smoke LAN : créer tâche `qa` + `POST .../run` → `smoke_vm_lan.sh` (validé LAN 2026-07-11)
+
+### Phase B (en cours — 2026-07-11)
+
+1. [x] Playbook L1 : `spawn_team_qa_smoke_job` + timer systemd `lbg-team-qa-smoke-job`
+2. [x] Activer timer sur 140 (`install_team_qa_smoke_job_vm.sh` + vars `LBG_TEAM_QA_SMOKE_JOB_*`)
+3. [ ] Playbooks ops disque / Ollama (prochain sprint B)
 
 ### Vérifications infra (quand LAN up)
 
@@ -129,7 +135,8 @@ bash LBG_IA_MMO/infra/scripts/smoke_vm_lan.sh
 
 ### Optionnel infra
 
-- Playbook B : job quotidien smoke → tâche team `qa`
+- [x] Playbook B (code) : job quotidien smoke → tâche team `qa` (`spawn_team_qa_smoke_job`, timer systemd)
+- [x] Déploiement timer sur 140 en prod
 - `LBG_TEAM_APPROVAL_TOKEN` dans `lbg.env.example`
 
 ---
@@ -150,4 +157,4 @@ bash LBG_IA_MMO/infra/scripts/smoke_vm_lan.sh
 
 ---
 
-*Dernière mise à jour : 2026-07-10 — session cloud agent.*
+*Dernière mise à jour : 2026-07-11 — phase A validée LAN, phase B smoke quotidien codé.*

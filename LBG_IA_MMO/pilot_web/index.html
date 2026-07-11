@@ -861,6 +861,24 @@
     #assistant-suggestions ul { margin: 0; padding-left: 1rem; color: #cbd5e1; }
     #assistant-suggestions li { margin-bottom: 0.3rem; }
     .assistant-sidebar a { color: #5eead4; }
+    .assistant-cap-table { width: 100%; border-collapse: collapse; font-size: 0.76rem; margin-top: 0.35rem; }
+    .assistant-cap-table th, .assistant-cap-table td { border: 1px solid rgba(148, 163, 184, 0.28); padding: 0.22rem 0.38rem; text-align: left; vertical-align: top; }
+    .assistant-cap-table th { background: rgba(30, 41, 59, 0.85); color: #94a3b8; font-weight: 600; }
+    .assistant-cap-table code { font-size: 0.72rem; color: #cbd5e1; }
+    .assistant-cap-risk--high { color: #fca5a5; }
+    .assistant-cap-risk--medium { color: #fcd34d; }
+    .assistant-cap-risk--low { color: #6ee7b7; }
+    .assistant-doc-list { margin: 0.35rem 0 0; padding-left: 1.1rem; color: #cbd5e1; font-size: 0.82rem; }
+    .assistant-doc-list li { margin-bottom: 0.35rem; }
+    .assistant-doc-chip {
+      display: inline-block; margin-left: 0.35rem; padding: 0.08rem 0.4rem; border-radius: 4px;
+      border: 1px dashed rgba(94, 234, 212, 0.45); background: rgba(15, 23, 42, 0.6);
+      color: #5eead4; font-size: 0.72rem; cursor: pointer; font-family: ui-monospace, monospace;
+    }
+    .assistant-doc-chip:hover { background: rgba(13, 148, 136, 0.25); }
+    .assistant-session-kv { margin: 0.25rem 0 0; font-size: 0.82rem; line-height: 1.45; }
+    .assistant-session-kv dt { color: #94a3b8; display: inline; }
+    .assistant-session-kv dd { display: inline; margin: 0 0 0 0.25rem; color: #e2e8f0; }
   </style>
 </head>
 <body>
@@ -1095,6 +1113,7 @@
           <p class="assistant-lead">
             <strong>Dialoguer</strong> : conversation texte avec l’agent (historique dans le contexte JSON).
             <strong>Proposer une action</strong> : proposition structurée, puis exécution (dry-run ou réel selon le switch) avec jeton d’approbation si besoin.
+            Panneau latéral : <strong>capabilities</strong> du registry, rappels <strong>ADR</strong>, état de session.
           </p>
         </div>
 
@@ -1171,6 +1190,22 @@
           <div id="assistant-lbgia-body" aria-live="polite"></div>
         </div>
 
+        <div class="assistant-card" id="assistant-card-caps">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:0.5rem;flex-wrap:wrap">
+            <h2 style="margin:0">Capabilities connues</h2>
+            <button type="button" id="btn-assistant-caps-refresh" class="assistant-linkish" style="padding:0;margin:0;font-size:0.78rem">Rafraîchir</button>
+          </div>
+          <p class="assistant-muted"><code>GET /v1/pilot/capabilities</code> — registry orchestrateur (mode, risque).</p>
+          <p class="assistant-muted" id="assistant-caps-hint">—</p>
+          <div id="assistant-caps-body" aria-live="polite"></div>
+        </div>
+
+        <div class="assistant-card" id="assistant-card-docs">
+          <h2>Références ADR / docs</h2>
+          <p class="assistant-muted">Rappels de cadrage — chemins copiables (repo <code>LBG_IA_MMO</code>).</p>
+          <ul id="assistant-doc-refs" class="assistant-doc-list"></ul>
+        </div>
+
         <div class="assistant-card">
           <h2>Options</h2>
           <label class="assistant-check">
@@ -1214,9 +1249,11 @@
 
         <div class="assistant-card">
           <h2>Historique &amp; exports</h2>
-          <p class="assistant-muted">Données uniquement dans ce navigateur.</p>
+          <p class="assistant-muted">Données uniquement dans ce navigateur (sauf validation export via API).</p>
+          <div id="assistant-session-state" class="assistant-session-kv assistant-muted">—</div>
           <p class="assistant-chip-row" style="margin:0.35rem 0">
             <button type="button" id="btn-assistant-history-clear">Vider le fil</button>
+            <button type="button" id="btn-assistant-session-state-refresh" class="assistant-linkish" style="padding:0.2rem 0.5rem">Actualiser état</button>
           </p>
           <span class="assistant-muted" id="assistant-history-hint">—</span>
           <div id="assistant-history" hidden aria-hidden="true"></div>
@@ -1227,6 +1264,7 @@
             <p style="display:flex;gap:0.45rem;flex-wrap:wrap;margin:0.4rem 0 0;">
               <button type="button" id="btn-assistant-session-build">Générer</button>
               <button type="button" id="btn-assistant-session-copy">Copier JSON</button>
+              <button type="button" id="btn-assistant-session-export-server" title="POST /v1/pilot/assistant/session-summary/export">Valider (API)</button>
               <span class="assistant-muted" id="assistant-session-hint">—</span>
             </p>
             <pre id="assistant-session-summary-out" class="assistant-raw-collapsed" style="max-height:10rem;margin-top:0.35rem">—</pre>
@@ -3207,6 +3245,13 @@
     try { document.getElementById("btn-assistant-history-clear").addEventListener("click", assistantHistoryClear); } catch (_) {}
     try { document.getElementById("btn-assistant-session-build").addEventListener("click", assistantSessionBuildSummary); } catch (_) {}
     try { document.getElementById("btn-assistant-session-copy").addEventListener("click", assistantSessionCopySummary); } catch (_) {}
+    try { document.getElementById("btn-assistant-session-export-server").addEventListener("click", function () {
+      assistantSessionExportViaServer().catch(function (e) { pilotInlineHint("assistant-session-hint", String(e), true); });
+    }); } catch (_) {}
+    try { document.getElementById("btn-assistant-caps-refresh").addEventListener("click", function () {
+      assistantCapsRefresh().catch(function () {});
+    }); } catch (_) {}
+    try { document.getElementById("btn-assistant-session-state-refresh").addEventListener("click", assistantRenderSessionState); } catch (_) {}
     try { document.getElementById("btn-assistant-mmo-merge").addEventListener("click", assistantMmoMergeIntoContext); } catch (_) {}
     try { document.getElementById("btn-assistant-mmo-load-desktop-key").addEventListener("click", assistantMmoLoadFromSharedStorage); } catch (_) {}
     try { document.getElementById("btn-assistant-mmo-save-desktop-key").addEventListener("click", assistantMmoSaveToSharedStorage); } catch (_) {}
@@ -3968,6 +4013,251 @@
       }
       stream.innerHTML = parts.join("");
       assistantChatScrollToEnd();
+      try { assistantRenderSessionState(); } catch (_) {}
+    }
+
+    const ASSISTANT_CAP_DOC_MAP = {
+      desktop_control: "docs/desktop_hybride.md",
+      devops_probe: "docs/fusion_env_lan.md",
+      prototype_game: "docs/adr/0003-opengame-forge-prototypes.md",
+      npc_dialogue: "docs/adr/0004-assistant-local-vs-persona-mmo.md",
+      project_pm: "docs/plan_de_route.md",
+      network_inventory: "docs/fusion_env_lan.md",
+    };
+
+    const ASSISTANT_DOC_REFS = [
+      { label: "Plan Assistant Core", path: "docs/assistant_core_plan.md" },
+      { label: "ADR 0004 — local vs persona MMO", path: "docs/adr/0004-assistant-local-vs-persona-mmo.md" },
+      { label: "ADR 0003 — forge OpenGame", path: "docs/adr/0003-opengame-forge-prototypes.md" },
+      { label: "Desktop hybride", path: "docs/desktop_hybride.md" },
+      { label: "Fusion protocole agents", path: "docs/fusion_spec_agents.md" },
+      { label: "Protocole MMO (session_summary)", path: "docs/mmmorpg_PROTOCOL.md" },
+    ];
+
+    function assistantDocChipHtml(path) {
+      const p = String(path || "").trim();
+      if (!p) return "";
+      return (
+        '<button type="button" class="assistant-doc-chip" data-copy="' +
+        escapeHtml(p) +
+        '" title="Copier le chemin">' +
+        escapeHtml(p) +
+        "</button>"
+      );
+    }
+
+    function assistantBindDocChips(root) {
+      if (!root) return;
+      root.querySelectorAll(".assistant-doc-chip[data-copy]").forEach(function (btn) {
+        if (btn.dataset.lbgBound) return;
+        btn.dataset.lbgBound = "1";
+        btn.addEventListener("click", function () {
+          const p = btn.getAttribute("data-copy") || "";
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(p).catch(function () {});
+          }
+        });
+      });
+    }
+
+    function assistantRenderDocRefs() {
+      const ul = document.getElementById("assistant-doc-refs");
+      if (!ul) return;
+      ul.innerHTML = ASSISTANT_DOC_REFS.map(function (ref) {
+        return "<li>" + escapeHtml(ref.label) + assistantDocChipHtml(ref.path) + "</li>";
+      }).join("");
+      assistantBindDocChips(ul);
+    }
+
+    function assistantCapDocLink(name) {
+      const p = ASSISTANT_CAP_DOC_MAP[name];
+      return p ? assistantDocChipHtml(p) : "";
+    }
+
+    function assistantBuildCapsTableHtml(caps) {
+      if (!Array.isArray(caps) || !caps.length) return '<p class="assistant-muted">Aucune capability.</p>';
+      const sorted = caps.slice().sort(function (a, b) {
+        const ma = (a && a.mode) || "";
+        const mb = (b && b.mode) || "";
+        if (ma !== mb) {
+          if (ma === "local_assistant") return -1;
+          if (mb === "local_assistant") return 1;
+          if (ma === "mixed") return -1;
+          if (mb === "mixed") return 1;
+        }
+        return String((a && a.name) || "").localeCompare(String((b && b.name) || ""));
+      });
+      let html =
+        '<table class="assistant-cap-table"><thead><tr>' +
+        "<th>Capability</th><th>Mode</th><th>Risque</th><th>Agent</th><th>Doc</th>" +
+        "</tr></thead><tbody>";
+      for (let i = 0; i < sorted.length; i++) {
+        const c = sorted[i];
+        if (!c || typeof c !== "object") continue;
+        const name = String(c.name || "");
+        const risk = String(c.risk_level || "—");
+        const riskCls =
+          risk === "high" ? "assistant-cap-risk--high" : risk === "medium" ? "assistant-cap-risk--medium" : "assistant-cap-risk--low";
+        html +=
+          "<tr><td><code>" +
+          escapeHtml(name) +
+          "</code></td>" +
+          "<td>" +
+          escapeHtml(String(c.mode || "—")) +
+          "</td>" +
+          '<td class="' +
+          riskCls +
+          '">' +
+          escapeHtml(risk) +
+          "</td>" +
+          "<td><code>" +
+          escapeHtml(String(c.routed_to || "—")) +
+          "</code></td>" +
+          "<td>" +
+          (assistantCapDocLink(name) || '<span class="assistant-muted">—</span>') +
+          "</td></tr>";
+      }
+      html += "</tbody></table>";
+      return html;
+    }
+
+    async function assistantCapsRefresh() {
+      const hint = document.getElementById("assistant-caps-hint");
+      const body = document.getElementById("assistant-caps-body");
+      if (!body) return;
+      if (hint) hint.textContent = "Chargement…";
+      body.innerHTML = "";
+      try {
+        const base = getBase();
+        const r = await fetch(base + "/v1/pilot/capabilities");
+        const j = await r.json();
+        if (!j.ok) {
+          if (hint) hint.textContent = "Erreur : " + (j.error || "proxy");
+          body.innerHTML = '<p class="assistant-lbgia-muted">' + escapeHtml(JSON.stringify(j).slice(0, 280)) + "</p>";
+          return;
+        }
+        const caps = j.capabilities || [];
+        const localN = caps.filter(function (c) {
+          return c && (c.mode === "local_assistant" || c.mode === "mixed" || c.mode === "system");
+        }).length;
+        if (hint) {
+          hint.textContent =
+            caps.length + " entrée(s) — " + localN + " orientées assistant local / système.";
+        }
+        body.innerHTML = assistantBuildCapsTableHtml(caps);
+        assistantBindDocChips(body);
+      } catch (e) {
+        if (hint) hint.textContent = "Erreur réseau.";
+        body.innerHTML = '<p class="assistant-lbgia-muted">' + escapeHtml(String(e)) + "</p>";
+      }
+    }
+
+    function assistantCollectSessionPayloadForExport() {
+      assistantSessionNotesPersist();
+      const notesEl = document.getElementById("assistant-session-notes");
+      const notes = notesEl && notesEl.value ? String(notesEl.value).trim() : "";
+      const hist = assistantHistoryLoad();
+      let sessionSummary = null;
+      let mmoBridge = null;
+      try {
+        const ctx = assistantParseJsonTextarea("assistant-context", {});
+        if (ctx && typeof ctx === "object") {
+          if (ctx.session_summary && typeof ctx.session_summary === "object") sessionSummary = ctx.session_summary;
+          if (ctx.mmo_bridge && typeof ctx.mmo_bridge === "object") mmoBridge = ctx.mmo_bridge;
+        }
+      } catch (_) {}
+      if (!sessionSummary) {
+        try {
+          const raw = localStorage.getItem(LBG_PILOT_MMO_SESSION_SUMMARY_STORAGE);
+          if (raw && raw.trim()) sessionSummary = JSON.parse(raw);
+        } catch (_) {}
+      }
+      return {
+        notes: notes || undefined,
+        history: hist.map(function (x) {
+          return {
+            ts: x.ts,
+            kind: x.kind,
+            capability: x.capability,
+            policy_decision: x.policy_decision,
+            text: (x.text || x.summary || "").slice(0, 500),
+          };
+        }),
+        session_summary: sessionSummary || undefined,
+        mmo_bridge: mmoBridge || undefined,
+      };
+    }
+
+    function assistantRenderSessionState() {
+      const el = document.getElementById("assistant-session-state");
+      if (!el) return;
+      const hist = assistantHistoryLoad();
+      let notesLen = 0;
+      try {
+        const n = localStorage.getItem(STORAGE_ASSISTANT_SESSION_NOTES_KEY);
+        notesLen = n ? String(n).trim().length : 0;
+      } catch (_) {}
+      let mmoStored = false;
+      let mmoKeys = [];
+      try {
+        const raw = localStorage.getItem(LBG_PILOT_MMO_SESSION_SUMMARY_STORAGE);
+        if (raw && raw.trim()) {
+          mmoStored = true;
+          const o = JSON.parse(raw);
+          if (o && typeof o === "object" && !Array.isArray(o)) {
+            mmoKeys = Object.keys(o).slice(0, 8);
+          }
+        }
+      } catch (_) {}
+      let ctxSs = false;
+      let bridgeSrc = "";
+      try {
+        const ctx = assistantParseJsonTextarea("assistant-context", {});
+        if (ctx && ctx.session_summary && typeof ctx.session_summary === "object") ctxSs = true;
+        if (ctx && ctx.mmo_bridge && typeof ctx.mmo_bridge === "object") {
+          bridgeSrc = String(ctx.mmo_bridge.source || "").trim();
+        }
+      } catch (_) {}
+      el.innerHTML =
+        "<div><dt>Fil local :</dt><dd>" +
+        escapeHtml(String(hist.length)) +
+        " entrée(s)</dd></div>" +
+        "<div><dt>Notes :</dt><dd>" +
+        (notesLen ? escapeHtml(String(notesLen) + " car.") : "—") +
+        "</dd></div>" +
+        "<div><dt>MMO stocké :</dt><dd>" +
+        (mmoStored ? "oui" + (mmoKeys.length ? " (" + escapeHtml(mmoKeys.join(", ")) + ")" : "") : "non") +
+        "</dd></div>" +
+        "<div><dt>Contexte session_summary :</dt><dd>" +
+        (ctxSs ? "présent" : "absent") +
+        "</dd></div>" +
+        "<div><dt>mmo_bridge :</dt><dd>" +
+        (bridgeSrc ? escapeHtml(bridgeSrc) : "—") +
+        "</dd></div>";
+    }
+
+    async function assistantSessionExportViaServer() {
+      const outEl = document.getElementById("assistant-session-summary-out");
+      pilotInlineHint("assistant-session-hint", "Validation serveur…", false);
+      const payload = assistantCollectSessionPayloadForExport();
+      try {
+        const base = getBase();
+        const out = await postJson(base + "/v1/pilot/assistant/session-summary/export", payload);
+        if (out.status !== 200 || !out.json || out.json.ok !== true) {
+          pilotInlineHint(
+            "assistant-session-hint",
+            "API export HTTP " + out.status + (out.json && out.json.error ? " — " + out.json.error : ""),
+            true
+          );
+          return;
+        }
+        const exportObj = out.json.export || {};
+        assistantLastVoluntarySummaryJson = JSON.stringify(exportObj, null, 2);
+        if (outEl) outEl.textContent = assistantLastVoluntarySummaryJson;
+        pilotInlineHint("assistant-session-hint", "Export validé (sanitisé, non persisté serveur).", false);
+      } catch (e) {
+        pilotInlineHint("assistant-session-hint", "Erreur : " + e, true);
+      }
     }
 
     let __assistantLbgiaPoll = null;
@@ -4176,6 +4466,7 @@
       assistantLastVoluntarySummaryJson = JSON.stringify(payload, null, 2);
       if (outEl) outEl.textContent = assistantLastVoluntarySummaryJson;
       pilotInlineHint("assistant-session-hint", "Résumé généré (local uniquement).", false);
+      try { assistantRenderSessionState(); } catch (_) {}
     }
 
     function assistantSessionCopySummary() {
@@ -4232,6 +4523,7 @@
       } catch (_) {}
       pilotInlineHint("assistant-mmo-hint", "Context mis à jour + trace mmo_bridge (import volontaire).", false);
       assistantUiHint("session_summary fusionné — vous pouvez Proposer (ex. forge prototype)", false);
+      try { assistantRenderSessionState(); } catch (_) {}
     }
 
     function assistantMmoImportSilentLoad() {
@@ -5700,6 +5992,9 @@
         try { assistantRenderLyraPanel(); } catch (_) {}
         try { assistantHistoryRender(); } catch (_) {}
         try { assistantRenderSuggestions([]); } catch (_) {}
+        try { assistantRenderDocRefs(); } catch (_) {}
+        try { assistantRenderSessionState(); } catch (_) {}
+        try { assistantCapsRefresh(); } catch (_) {}
         try {
           assistantLbgiaRefresh();
           __assistantLbgiaPoll = window.setInterval(assistantLbgiaRefresh, 2800);
