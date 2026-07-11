@@ -47,6 +47,12 @@ SUBPROJECT_PERSONAS: dict[str, dict[str, str]] = {
         "tagline": "Prime, gateway, sidecar",
         "owner_role": "dev_game",
     },
+    "core3_build": {
+        "alias": "Vulcan",
+        "title": "Forge Core3",
+        "tagline": "Build Antigravity, ZB-0, déploiement Prime",
+        "owner_role": "dev_game",
+    },
 }
 
 
@@ -81,6 +87,8 @@ def enrich_task_view(data: dict[str, object]) -> dict[str, object]:
     sub = str(ctx.get("subproject") or "")
     if ctx.get("infographiste_ia") and not sub:
         sub = "infographiste_ia"
+    if ctx.get("core3_build") and not sub:
+        sub = "core3_build"
     if sub and sub in SUBPROJECT_PERSONAS:
         persona = SUBPROJECT_PERSONAS[sub]
         alias = persona.get("alias") or role

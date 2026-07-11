@@ -23,6 +23,7 @@ flowchart TD
 |-------|-------|------|---------|
 | `lbg-team-godot-supervisor-job` | `system:team_godot_supervisor` | qa (godot_supervisor) | **6 h** |
 | `lbg-team-infographiste-job` | `system:team_infographiste` | dev_game (infographiste_ia) | **12 h** |
+| `lbg-team-godot-client-tracks-job` | `system:team_godot_client_tracks` | dev_game M3/M5/ZB-0 | **8 h** |
 | `lbg-team-player-ia-job` | `system:team_player_ia` | player_ia probe | 12 h |
 | `lbg-team-pm-reunification-job` | `system:team_pm_reunification` | pm brief | 24 h |
 | `lbg-team-qa-smoke-job` | `system:team_qa_smoke` | qa smoke LAN | 24 h |
@@ -31,6 +32,7 @@ Installation :
 ```bash
 bash infra/scripts/install_team_godot_supervisor_job_vm.sh
 bash infra/scripts/install_team_infographiste_job_vm.sh
+bash infra/scripts/install_team_godot_client_tracks_job_vm.sh
 ```
 
 ---
@@ -45,6 +47,10 @@ LBG_CORE3_SIDECAR_URL=http://192.168.0.246:8791
 LBG_TEAM_GODOT_GATEWAY_SMOKE=0              # 1 quand gateway :50000 actif sur 246
 LBG_TEAM_GODOT_GATEWAY_HOST=192.168.0.246
 LBG_GATEWAY_WS2_PREVIEW=1                   # négociation lbg-ws/2 sur gateway
+LBG_TEAM_GODOT_SOE_M3=1                     # sonde SOE login+zone dans superviseur
+LBG_TEAM_GODOT_SOE_M5=0                     # 1 quand M3 stable
+LBG_CLIENT_PRIME_LBG_DIR=/home/sdesh/projects/new_mmo/client-prime-lbg
+LBG_NEW_MMO_ROOT=/home/sdesh/projects/new_mmo
 ```
 
 ---
@@ -56,6 +62,7 @@ LBG_GATEWAY_WS2_PREVIEW=1                   # négociation lbg-ws/2 sur gateway
 | **Supervise Godot** | qa godot_supervisor full → Lancer |
 | **Audit lbg-ws/2** | dev_game piste gateway → Lancer |
 | **Infographiste IA** | dev_game Pygmalion — manifest GLB → Lancer |
+| **SOE M3** / **SOE M5** / **Audit ZB-0** / **Client live** | dev_game pistes M3/M5/ZB-0 |
 | **Brief réunification** | pm sous-projets |
 | **Sonde joueurs IA** | player_ia probe |
 
@@ -91,3 +98,4 @@ Plan NL exemple : *« supervise godot et lbg-ws/2 sur Prime »* → propose qa +
 - [`runbook_promotion_prototype_core3.md`](runbook_promotion_prototype_core3.md)
 - [`core3_zone_bridge_spec.md`](core3_zone_bridge_spec.md)
 - [`jalon_infographiste_ia.md`](jalon_infographiste_ia.md)
+- [`jalon_godot_client_live_team.md`](jalon_godot_client_live_team.md)

@@ -58,18 +58,30 @@ def maybe_spawn_after_godot_failure(task: TeamTask) -> list[str]:
     if task.context.get("_godot_followup_spawned"):
         return []
     result = task.result if isinstance(task.result, dict) else {}
-    if result.get("kind") not in ("godot_supervisor", "godot_client_workflow"):
+    if result.get("kind") not in ("godot_supervisor", "godot_client_workflow", "godot_client_tracks_workflow"):
         return []
 
     tracks = result.get("tracks") if isinstance(result.get("tracks"), list) else []
+    probes = result.get("probes") if isinstance(result.get("probes"), list) else []
+    combined = tracks + probes
     sidecar_failed = any(
         isinstance(t, dict) and t.get("track") in ("sidecar_m1", "godot_mirror_m1") and not t.get("ok")
-        for t in tracks
+        for t in combined
+    )
+    soe_failed = any(
+        isinstance(t, dict) and str(t.get("track", "")).startswith("soe_") and not t.get("ok") and not t.get("skipped")
+        for t in combined
+    )
+    zb_failed = any(
+        isinstance(t, dict) and t.get("track") == "zb0_readiness" and not t.get("ok")
+        for t in combined
     )
     ws2_gaps = []
-    for t in tracks:
+    for t in combined:
         if isinstance(t, dict) and t.get("track") == "lbg_ws2_readiness":
             ws2_gaps = list(t.get("gaps") or [])
+        if isinstance(t, dict) and t.get("track") == "zb0_readiness":
+            ws2_gaps.extend(list(t.get("gaps") or [])[:2])
 
     created_ids: list[str] = []
     parent_ref = {"parent_task_id": task.id, "parent_trace_id": task.trace_id}
@@ -95,21 +107,31 @@ def maybe_spawn_after_godot_failure(task: TeamTask) -> list[str]:
     dev_obj = os.environ.get(
         "LBG_TEAM_GODOT_FOLLOWUP_DEV_OBJECTIVE",
         (
-            f"Godot — corriger lacunes lbg-ws/2 ou sidecar (parent {task.id})"
+            f"Godot — corriger lacunes client live M3/M5/ZB-0 (parent {task.id})"
             + (f" — gaps: {', '.join(ws2_gaps[:3])}" if ws2_gaps else "")
+            + (" — SOE KO" if soe_failed else "")
+            + (" — ZB-0 KO" if zb_failed else "")
         ),
     ).strip()
+    dev_ctx: dict[str, object] = {
+        **parent_ref,
+        "_godot_followup": True,
+        "godot_failure_summary": _summarize(result),
+    }
+    if soe_failed and not zb_failed:
+        dev_ctx["godot_track"] = "soe_m3" if any(
+            isinstance(t, dict) and t.get("track") == "soe_m3_zone" and not t.get("ok") for t in combined
+        ) else "soe_m5"
+    elif zb_failed:
+        dev_ctx["godot_track"] = "zb0"
+    else:
+        dev_ctx["godot_track"] = "client_live"
     dev = team_store.create_task(
         role="dev_game",
         objective=dev_obj,
         actor_id=followup_actor_id(),
         priority="high",
-        context={
-            **parent_ref,
-            "_godot_followup": True,
-            "godot_track": "lbg_ws2",
-            "godot_failure_summary": _summarize(result),
-        },
+        context=dev_ctx,
     )
     created_ids.append(dev.id)
 
@@ -136,9 +158,12 @@ def maybe_spawn_after_godot_failure(task: TeamTask) -> list[str]:
 
 def _summarize(result: dict[str, Any]) -> dict[str, Any]:
     tracks = result.get("tracks") if isinstance(result.get("tracks"), list) else []
-    failed = [t.get("track") for t in tracks if isinstance(t, dict) and not t.get("ok") and not t.get("skipped")]
+    probes = result.get("probes") if isinstance(result.get("probes"), list) else []
+    combined = tracks + probes
+    failed = [t.get("track") for t in combined if isinstance(t, dict) and not t.get("ok") and not t.get("skipped")]
     return {
         "kind": result.get("kind"),
+        "track": result.get("track"),
         "failed_tracks": failed,
         "sidecar_ok": result.get("sidecar_ok"),
     }

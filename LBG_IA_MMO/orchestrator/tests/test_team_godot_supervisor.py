@@ -17,9 +17,11 @@ from team.lbg_ws2_audit import audit_lbg_ws2_readiness  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
-def _reset_team_db() -> None:
+def _reset_team_db(monkeypatch: pytest.MonkeyPatch) -> None:
     team_store._conn = None  # type: ignore[attr-defined]
     team_roles.set_dispatch_for_tests(None)
+    monkeypatch.setenv("LBG_TEAM_GODOT_SOE_M3", "0")
+    monkeypatch.setenv("LBG_TEAM_GODOT_SOE_M5", "0")
 
 
 def test_lbg_ws2_audit_has_module() -> None:

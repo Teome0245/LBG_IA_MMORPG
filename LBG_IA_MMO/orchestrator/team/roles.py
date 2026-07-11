@@ -14,11 +14,17 @@ from lbg_agents.dispatch import invoke_after_route
 
 from team import store as team_store
 from team.models import TeamTask
+from team.core3_build_workflow import execute_core3_build_workflow, resolve_core3_build_workflow
 from team.dev_game_workflow import execute_dev_game_workflow
+from team.godot_client_tracks_workflow import (
+    execute_godot_client_tracks_workflow,
+    resolve_godot_client_tracks_workflow,
+)
 from team.godot_client_workflow import execute_godot_client_workflow, resolve_godot_client_workflow
 from team.godot_followup import auto_run_followup_tasks as godot_auto_run_followup
 from team.godot_followup import maybe_spawn_after_godot_failure
 from team.godot_supervisor import execute_godot_supervisor
+from team.godot_validation_workflow import execute_godot_validation_workflow, resolve_godot_validation_workflow
 from team.infographiste_workflow import execute_infographiste_workflow, resolve_infographiste_workflow
 from team.player_ia_exec import execute_player_ia
 from team.qa_followup import auto_run_followup_tasks, maybe_spawn_after_qa_failure
@@ -190,6 +196,8 @@ def _execute_ops(task: TeamTask) -> dict[str, object]:
 
 
 def _execute_qa(task: TeamTask) -> dict[str, object]:
+    if resolve_godot_validation_workflow(task):
+        return execute_godot_validation_workflow(task)
     if task.context.get("godot_supervisor") or str(task.context.get("godot_mode", "")).strip().lower() in (
         "full",
         "supervisor",
@@ -259,6 +267,10 @@ def _execute_pm(task: TeamTask) -> dict[str, object]:
 def _execute_dev_game(task: TeamTask) -> dict[str, object]:
     if resolve_infographiste_workflow(task):
         return execute_infographiste_workflow(task, _dispatch)
+    if resolve_core3_build_workflow(task):
+        return execute_core3_build_workflow(task, _dispatch)
+    if resolve_godot_client_tracks_workflow(task):
+        return execute_godot_client_tracks_workflow(task, _dispatch)
     if resolve_godot_client_workflow(task):
         return execute_godot_client_workflow(task, _dispatch)
     return execute_dev_game_workflow(task, _dispatch)
@@ -352,6 +364,84 @@ def plan_from_objective(objective: str, *, actor_id: str = "system:team") -> lis
                 **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
             }
         )
+    if any(k in text for k in ("soe m3", "soe_m3", "soe live", "soe udp", "soe_handshake")):
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": objective if "soe" in text else "Audit SOE M3 — login + zone Godot Prime UDP",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"godot_track": "soe_m3", "subproject": "client_godot"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("soe m5", "soe_m5", "m5 play", "zqsd", "prime_controller")):
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": objective if "m5" in text or "play" in text else "Audit SOE M5 — play ZQSD prime_controller",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"godot_track": "soe_m5", "subproject": "client_godot"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("zb-0", "zb0", "zone bridge", "lbgzonebridge", "zone_bridge")):
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": objective if "zb" in text or "bridge" in text else "Audit ZB-0 LbgZoneBridge C++ readiness",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"godot_track": "zb0", "subproject": "client_godot"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("client live", "m3 m5", "godot live")):
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": objective,
+                "priority": "high",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"godot_track": "client_live", "subproject": "client_godot"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("valider godot", "validation godot", "validation client")):
+        proposals.append(
+            {
+                "role": "qa",
+                "objective": objective if "valider" in text else "Valider client Godot — smokes + checklist humain",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["qa"]["capability"],
+                "context": {"godot_validation": True},
+                **{k: v for k, v in role_display("qa").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("plan build", "build zb", "core3 build")) and "compiler" not in text:
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": objective if "build" in text else "Plan build Core3 ZB-0 (dry-run)",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"core3_build": True, "subproject": "core3_build"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
 
     if not proposals:
         _add("pm", objective)
@@ -426,7 +516,7 @@ def run_task(task_id: str, *, approval_token: str | None = None) -> TeamTask | N
             refreshed = team_store.get_task(task_id)
             if refreshed is not None:
                 res = refreshed.result if isinstance(refreshed.result, dict) else {}
-                if res.get("kind") == "godot_client_workflow":
+                if res.get("kind") in ("godot_client_workflow", "godot_client_tracks_workflow"):
                     followups = maybe_spawn_after_godot_failure(refreshed)
                     if followups:
                         godot_auto_run_followup(followups)

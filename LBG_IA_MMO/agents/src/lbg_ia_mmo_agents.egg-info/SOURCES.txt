@@ -46,8 +46,8 @@ src/lbg_agents/quests_stub.py
 src/lbg_agents/remediation.py
 src/lbg_agents/remote_targets.py
 src/lbg_agents/spawn_infra_storage_watchdog_job.py
-src/lbg_agents/spawn_team_infographiste_job.py
-src/lbg_agents/spawn_team_qa_smoke_job.py
+src/lbg_agents/spawn_team_godot_client_tracks_job.py
+src/lbg_agents/spawn_team_infographiste_job.pysrc/lbg_agents/spawn_team_qa_smoke_job.py
 src/lbg_agents/ssh_client.py
 src/lbg_agents/ssh_mcp_tools.py
 src/lbg_agents/vm_memory_probe.py
@@ -108,6 +108,7 @@ tests/test_proxmox_storage_probe.py
 tests/test_quests_http_app.py
 tests/test_remediation.py
 tests/test_spawn_infra_storage_watchdog_job.py
+tests/test_spawn_team_godot_client_tracks_job.py
 tests/test_spawn_team_infographiste_job.py
 tests/test_spawn_team_qa_smoke_job.py
 tests/test_ssh_run.py

@@ -188,6 +188,7 @@ assert res.get("ok") is True, res
 tracks = {t.get("track") for t in (res.get("tracks") or []) if isinstance(t, dict)}
 assert "sidecar_m1" in tracks and "lbg_ws2_readiness" in tracks, tracks
 assert "infographiste_assets" in tracks, tracks
+assert "zb0_readiness" in tracks, tracks
 print("OK godot_supervisor — tracks:", sorted(tracks))
 PY
 
@@ -218,6 +219,32 @@ assert probe.get("kind") == "infographiste_probe", probe
 prop = res.get("action_proposal") or {}
 assert prop.get("source") == "team_infographiste_ia", prop
 print("OK infographiste_workflow — glb_expected:", probe.get("glb_expected"))
+PY
+
+echo ""
+echo "=== Test godot client track ZB-0 (équipe) ==="
+CREATE7=$(curl -sf -X POST "${ORCH}/v1/team/tasks" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "role": "dev_game",
+    "objective": "Audit ZB-0 LbgZoneBridge C++",
+    "actor_id": "system:test_zb0",
+    "context": {"godot_track": "zb0", "subproject": "client_godot"}
+  }')
+TASK7=$(python3 -c "import json,sys; print(json.load(sys.stdin)['id'])" <<<"${CREATE7}")
+RUN7=$(curl -sf -X POST "${ORCH}/v1/team/tasks/${TASK7}/run" -H 'Content-Type: application/json' -d '{}')
+echo "${RUN7}" > /tmp/lbg_test_zb0_run.json
+python3 <<'PY'
+import json
+with open("/tmp/lbg_test_zb0_run.json", encoding="utf-8") as f:
+    run = json.load(f)
+assert run.get("status") == "done", run
+res = run.get("result") or {}
+assert res.get("kind") == "godot_client_tracks_workflow", res
+assert res.get("track") == "zb0", res
+probes = res.get("probes") or []
+assert any(p.get("track") == "zb0_readiness" for p in probes), probes
+print("OK zb0 track — header:", (probes[0].get("checks") or {}).get("zb0_header"))
 PY
 
 echo ""

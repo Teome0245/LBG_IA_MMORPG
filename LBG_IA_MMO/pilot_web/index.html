@@ -1502,6 +1502,13 @@
             <button type="button" class="preset" data-team-preset="godot_supervise" title="Superviseur autonome Godot + sidecar 246">Supervise Godot</button>
             <button type="button" class="preset" data-team-preset="godot_lbg_ws2" title="Audit lbg-ws/2 + forge Dédale">Audit lbg-ws/2</button>
             <button type="button" class="preset" data-team-preset="infographiste_ia" title="Pygmalion — manifest GLB Godot + pipeline assets">Infographiste IA</button>
+            <button type="button" class="preset" data-team-preset="soe_m3" title="SOE M3 — login + zone UDP Prime">SOE M3</button>
+            <button type="button" class="preset" data-team-preset="soe_m5" title="SOE M5 — play ZQSD prime_controller">SOE M5</button>
+            <button type="button" class="preset" data-team-preset="zb0_audit" title="Audit ZB-0 LbgZoneBridge C++">Audit ZB-0</button>
+            <button type="button" class="preset" data-team-preset="client_live" title="M3 + M5 + ZB-0 + lbg-ws/2">Client live</button>
+            <button type="button" class="preset" data-team-preset="validate_godot" title="Smokes + checklist lancement Godot">Valider client</button>
+            <button type="button" class="preset" data-team-preset="core3_build_plan" title="Plan build ZB-0 dry-run (Vulcan)">Plan build ZB-0</button>
+            <button type="button" class="preset" data-team-preset="core3_build_compile" title="Compiler Core3 — L2 requis">Compiler Core3</button>
             <button type="button" class="preset" data-team-preset="think_lia" title="Clic : configurer · double-clic : créer (L2)">Think Lia</button>
           </div>
           <label for="team-role">Rôle</label>
@@ -1599,6 +1606,7 @@
               <button type="button" id="btn-team-forge-assistant" style="margin:0;" hidden title="Copie context_patch forge vers #/assistant">Forge → Assistant</button>
             </p>
             <p id="team-forge-hint" class="muted" style="font-size:0.82rem; margin:0.25rem 0 0.5rem 0;" hidden></p>
+            <pre id="team-detail-summary" class="muted" style="font-size:0.88rem; white-space:pre-wrap; margin:0 0 0.5rem 0; padding:0.5rem; background:var(--panel-bg,#1a1d24); border-radius:4px; max-height:14rem; overflow:auto;">—</pre>
             <pre id="team-detail-result" class="muted" style="font-size:0.78rem; max-height:22rem;">—</pre>
           </div>
         </section>
@@ -5164,6 +5172,10 @@
     let __teamGodotSupervisor = false;
     let __teamGodotTrack = false;
     let __teamInfographiste = false;
+    let __teamGodotTrackKey = "";
+    let __teamCore3Build = false;
+    let __teamCore3BuildExecute = false;
+    let __teamGodotValidation = false;
 
     const TEAM_ROLE_DEFAULTS = {
       qa: "Smoke LAN read-only (healthz + systemd via script si configuré)",
@@ -5173,6 +5185,13 @@
       godot_supervise: "Supervise client Godot — sidecar 246, miroir M1, readiness lbg-ws/2",
       godot_lbg_ws2: "Audit lbg-ws/2 gateway Godot Prime — gaps et proposition forge",
       infographiste_ia: "Audit pipeline assets Infographiste IA — manifest GLB Godot et prochain export Blender",
+      soe_m3: "Audit SOE M3 — login + zone UDP Godot Prime (soe_handshake)",
+      soe_m5: "Audit SOE M5 — play ZQSD prime_controller sur Prime",
+      zb0_audit: "Audit ZB-0 LbgZoneBridge C++ — header et hook ZoneServer",
+      client_live: "Audit client Godot live — M3 SOE + M5 play + ZB-0 + lbg-ws/2",
+      validate_godot: "Valider client Godot — smokes LAN + checklist lancement Godot",
+      core3_build_plan: "Plan build Core3 ZB-0 Antigravity (dry-run, Vulcan)",
+      core3_build_compile: "Compiler Core3 ZB-0 sur Prime 246 — rsync + cmake (L2)",
       dev_game: "Analyser bug gameplay / correctif proposé (hors sandbox mmmorpg gelé)",
       player_ia_probe: "Sonde joueurs IA Core3 Prime (246) — sidecar + snapshots Lia/Nix",
       player_ia_think: "Think/tick joueur IA Lia",
@@ -5185,6 +5204,13 @@
       godot_supervise: { role: "qa", objectiveKey: "godot_supervise", godotSupervisor: true, autoRun: true },
       godot_lbg_ws2: { role: "dev_game", objectiveKey: "godot_lbg_ws2", godotTrack: true, autoRun: true },
       infographiste_ia: { role: "dev_game", objectiveKey: "infographiste_ia", infographiste: true, autoRun: true },
+      soe_m3: { role: "dev_game", objectiveKey: "soe_m3", godotTrackKey: "soe_m3", autoRun: true },
+      soe_m5: { role: "dev_game", objectiveKey: "soe_m5", godotTrackKey: "soe_m5", autoRun: true },
+      zb0_audit: { role: "dev_game", objectiveKey: "zb0_audit", godotTrackKey: "zb0", autoRun: true },
+      client_live: { role: "dev_game", objectiveKey: "client_live", godotTrackKey: "client_live", autoRun: true },
+      validate_godot: { role: "qa", objectiveKey: "validate_godot", godotValidation: true, autoRun: true },
+      core3_build_plan: { role: "dev_game", objectiveKey: "core3_build_plan", core3Build: true, autoRun: true },
+      core3_build_compile: { role: "dev_game", objectiveKey: "core3_build_compile", core3BuildExecute: true, approvalRequired: true, autoRun: false },
       think_lia: { role: "player_ia", player_ia_mode: "think_tick", player_id: "lia", objectiveKey: "player_ia_think", autoRun: false },
     };
 
@@ -5254,14 +5280,20 @@
       __teamGodotSupervisor = !!preset.godotSupervisor;
       __teamGodotTrack = !!preset.godotTrack;
       __teamInfographiste = !!preset.infographiste;
+      __teamGodotTrackKey = preset.godotTrackKey ? String(preset.godotTrackKey) : "";
+      __teamCore3Build = !!preset.core3Build;
+      __teamCore3BuildExecute = !!preset.core3BuildExecute;
+      __teamGodotValidation = !!preset.godotValidation;
+      const apprEl = document.getElementById("team-approval-required");
+      if (apprEl) {
+        apprEl.checked = !!preset.approvalRequired || preset.player_ia_mode === "think_tick";
+      }
       const roleEl = document.getElementById("team-role");
       if (roleEl) roleEl.value = preset.role;
       const modeEl = document.getElementById("team-player-ia-mode");
       if (modeEl && preset.player_ia_mode) modeEl.value = preset.player_ia_mode;
       const pidEl = document.getElementById("team-player-id");
       if (pidEl && preset.player_id) pidEl.value = preset.player_id;
-      const apprEl = document.getElementById("team-approval-required");
-      if (apprEl) apprEl.checked = preset.player_ia_mode === "think_tick";
       teamSyncFormUi();
       if (preset.objectiveKey) {
         const def = TEAM_ROLE_DEFAULTS[preset.objectiveKey];
@@ -5309,6 +5341,22 @@
       }
       if (__teamGodotTrack || role === "dev_game" && /lbg-ws|lbg_ws|godot|gateway|zone.bridge/i.test(objective)) {
         ctx.godot_track = "lbg_ws2";
+      }
+      if (__teamGodotValidation || /valider.*godot|validation.*client/i.test(objective)) {
+        ctx.godot_validation = true;
+      }
+      if (__teamCore3Build || __teamCore3BuildExecute || /build.*core3|plan build.*zb/i.test(objective)) {
+        ctx.core3_build = true;
+        ctx.subproject = "core3_build";
+        ctx.dev_game_focus = true;
+        if (__teamCore3BuildExecute || /compiler core3|build réel/i.test(objective)) {
+          ctx.core3_build_execute = true;
+        }
+      }
+      if (__teamGodotTrackKey) {
+        ctx.godot_track = __teamGodotTrackKey;
+        ctx.subproject = "client_godot";
+        ctx.dev_game_focus = true;
       }
       if (__teamInfographiste || /infographiste|infograph|pipeline.?assets|\.glb|blender|assets? 3d/i.test(objective)) {
         ctx.infographiste_ia = true;
@@ -5401,6 +5449,7 @@
       const obj = document.getElementById("team-detail-objective");
       const meta = document.getElementById("team-detail-meta");
       const res = document.getElementById("team-detail-result");
+      const sum = document.getElementById("team-detail-summary");
       if (obj) obj.textContent = t.objective || "";
       if (meta) {
         let m = (t.role_label || t.role) + " · id=" + t.id + " · status=" + t.status + " · actor=" + (t.actor_id || "");
@@ -5409,6 +5458,11 @@
           m += " · suivi: " + t.context._qa_followup_task_ids.join(", ");
         }
         meta.textContent = m;
+      }
+      if (sum) {
+        const hs = t.result && t.result.human_summary ? String(t.result.human_summary) : "";
+        sum.textContent = hs || "—";
+        sum.hidden = !hs;
       }
       if (res) res.textContent = JSON.stringify(t.result || {}, null, 2);
       __teamLastForgePatch = null;
@@ -5623,6 +5677,10 @@
         __teamGodotSupervisor = false;
         __teamGodotTrack = false;
         __teamInfographiste = false;
+        __teamGodotTrackKey = "";
+        __teamCore3Build = false;
+        __teamCore3BuildExecute = false;
+        __teamGodotValidation = false;
         teamSyncFormUi();
       });
       if (modeEl) modeEl.addEventListener("change", function () { __teamObjectiveCustom = false; teamSyncFormUi(); });

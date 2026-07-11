@@ -11,6 +11,8 @@ from typing import Any
 
 import httpx
 
+from team.godot_soe_probe import probe_soe_m3_login, probe_soe_m3_zone, probe_soe_m5_play, soe_m3_enabled, soe_m5_enabled
+from team.lbg_ws2_audit import audit_zb0_readiness
 from team.models import TeamTask
 from team.player_ia_probe import managed_bot_ids, probe_player_ia, required_bot_ids, sidecar_base_url
 
@@ -175,6 +177,13 @@ def execute_godot_supervisor(task: TeamTask) -> dict[str, object]:
         tracks.append(_check_lbg_ws2_readiness())
     if mode in ("full", "supervisor", "infographiste", "assets"):
         tracks.append(_check_infographiste_track())
+    if mode in ("soe_m3", "soe", "client_live") and soe_m3_enabled():
+        tracks.append(probe_soe_m3_login())
+        tracks.append(probe_soe_m3_zone())
+    if mode in ("soe_m5", "m5", "client_live") and soe_m5_enabled():
+        tracks.append(probe_soe_m5_play())
+    if mode in ("full", "supervisor", "zb0", "zone_bridge", "client_live", "lbg_ws2", "audit"):
+        tracks.append(audit_zb0_readiness())
 
     required = [t for t in tracks if not t.get("skipped")]
     sidecar_tracks = [t for t in required if t.get("track") in ("sidecar_m1", "godot_mirror_m1")]
