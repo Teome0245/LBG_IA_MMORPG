@@ -16,6 +16,8 @@ scp -q "${ROOT}/services/lbg_gateway/world_coords.py" "${USER}@${HOST}:${REMOTE_
 scp -q "${ROOT}/services/lbg_gateway/zone_players.py" "${USER}@${HOST}:${REMOTE_DIR}/zone_players.py"
 scp -q "${ROOT}/services/lbg_gateway/pending_bridge.py" "${USER}@${HOST}:${REMOTE_DIR}/pending_bridge.py"
 scp -q "${ROOT}/services/lbg_gateway/roster_filter.py" "${USER}@${HOST}:${REMOTE_DIR}/roster_filter.py"
+scp -q "${ROOT}/services/lbg_gateway/lbg_ws2.py" "${USER}@${HOST}:${REMOTE_DIR}/lbg_ws2.py"
+scp -q "${ROOT}/services/lbg_gateway/zone_bridge_feed.py" "${USER}@${HOST}:${REMOTE_DIR}/zone_bridge_feed.py"
 scp -q "${ROOT}/content/core3/core3_npc_catalog.json" "${USER}@${HOST}:${REMOTE_DIR}/core3_npc_catalog.json"
 ssh "${USER}@${HOST}" "mkdir -p ${REMOTE_DIR}/locations"
 scp -q "${ROOT}"/content/core3/locations/*.json "${USER}@${HOST}:${REMOTE_DIR}/locations/"
@@ -29,6 +31,9 @@ export LBG_GATEWAY_PLAYER_SNAPSHOTS=/opt/lbg-new-mmo-clean/MMOCoreORB/bin/ia_bri
 export LBG_GATEWAY_TRACK_PLAYERS="${LBG_GATEWAY_TRACK_PLAYERS:-Teome,Lia,Nix}"
 export LBG_GATEWAY_CATALOG="${REMOTE_DIR}/core3_npc_catalog.json"
 export LBG_GATEWAY_LOCATIONS="${REMOTE_DIR}/locations"
+export LBG_GATEWAY_ZONE_BRIDGE_LIVE=1
+export LBG_GATEWAY_ZONE_BRIDGE_JSON=/opt/lbg-new-mmo-clean/MMOCoreORB/bin/ia_bridge/zone_bridge_live.json
+export LBG_GATEWAY_TICK_LIVE_S=0.05
 # Pont IA : mêmes variables que mmmorpg si présentes sur la VM
 if [ -f /etc/lbg-ia-mmo.env ]; then
   set -a

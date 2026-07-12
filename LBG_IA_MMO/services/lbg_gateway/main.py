@@ -26,6 +26,7 @@ try:
         placeholder_reply,
     )
     from services.lbg_gateway.world_coords import (
+        cell_to_world,
         infer_location_id,
         load_location_anchors,
         local_pos_for_interior,
@@ -54,6 +55,7 @@ except ImportError:
         placeholder_reply,
     )
     from world_coords import (  # type: ignore[no-redef]
+        cell_to_world,
         infer_location_id,
         load_location_anchors,
         local_pos_for_interior,

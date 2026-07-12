@@ -106,6 +106,52 @@ def audit_zb0_readiness() -> dict[str, Any]:
     }
 
 
+def _probe_zone_bridge_feed_ssh(host: str) -> dict[str, Any]:
+    """Sonde feed ZB-1 sur Prime via SSH (orchestrateur 140 → VM 246)."""
+    import json
+    import subprocess
+
+    user = os.environ.get("LBG_ZONE_BRIDGE_PROBE_USER", "lbg").strip()
+    json_path = os.environ.get(
+        "LBG_ZONE_BRIDGE_JSON_PATH",
+        "/opt/lbg-new-mmo-clean/MMOCoreORB/bin/ia_bridge/zone_bridge_live.json",
+    )
+    cmd = (
+        f"python3 -c \"import json,time,os;"
+        f"p='{json_path}';"
+        f"out={{'track':'zb1_live_feed','ok':False,'checks':{{'json_path':p,'remote':True}}}};"
+        f"import pathlib; p=pathlib.Path(p);"
+        f"out['checks']['file_exists']=p.is_file();"
+        f"out['checks']['live_enabled']=True;"
+        f"import time as t;"
+        f"out['checks']['mtime_age_s']=round(t.time()-p.stat().st_mtime,3) if p.is_file() else None;"
+        f"data=json.loads(p.read_text()) if p.is_file() else None;"
+        f"out['ok']=isinstance(data,dict) and data.get('type')=='zone_state';"
+        f"out['checks']['tick']=data.get('tick') if isinstance(data,dict) else None;"
+        f"out['checks']['zone']=data.get('zone') if isinstance(data,dict) else None;"
+        f"print(json.dumps(out))\""
+    )
+    try:
+        proc = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", f"{user}@{host}", cmd],
+            capture_output=True,
+            text=True,
+            timeout=20.0,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            data = json.loads(proc.stdout.strip().splitlines()[-1])
+            if isinstance(data, dict):
+                return data
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError, ValueError):
+        pass
+    return {
+        "track": "zb1_live_feed",
+        "ok": False,
+        "checks": {"json_path": json_path, "remote_host": host},
+        "gaps": ["sonde SSH feed ZB-1 échouée"],
+    }
+
+
 def _zb1_export_paths() -> list[Path]:
     root = _new_mmo_root()
     return [
@@ -152,7 +198,11 @@ def audit_zb1_readiness(*, probe_live_feed: bool = True) -> dict[str, Any]:
                 sys.path.insert(0, root_s)
             from services.lbg_gateway.zone_bridge_feed import probe_zone_bridge_feed
 
-            live_probe = probe_zone_bridge_feed()
+            remote_host = os.environ.get("LBG_ZONE_BRIDGE_PROBE_HOST", "").strip()
+            if remote_host:
+                live_probe = _probe_zone_bridge_feed_ssh(remote_host)
+            else:
+                live_probe = probe_zone_bridge_feed()
             checks["live_feed_ok"] = bool(live_probe.get("ok"))
             if not live_probe.get("ok"):
                 gaps.append("feed live JSON absent ou périmé (compile + Prime requis)")
@@ -166,9 +216,9 @@ def audit_zb1_readiness(*, probe_live_feed: bool = True) -> dict[str, Any]:
     if probe_live_feed:
         if live_probe is not None:
             ok = ok and bool(live_probe.get("ok"))
+            checks["runtime_feed"] = live_probe.get("checks")
         elif checks.get("live_feed_ok") is False:
             ok = False
-        checks["runtime_feed"] = live_probe.get("checks")
 
     next_actions: list[str] = []
     if not checks.get("zb0_ok"):

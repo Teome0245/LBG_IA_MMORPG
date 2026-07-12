@@ -8,6 +8,9 @@ VM_USER="${LBG_NEW_MMO_VM_USER:-lbg}"
 REMOTE_DIR="/home/lbg/lbg-gateway"
 BIN="/opt/lbg-new-mmo-clean/MMOCoreORB/bin"
 
+export LBG_GATEWAY_SSH_HOST="${LBG_GATEWAY_SSH_HOST:-${VM_HOST}}"
+export LBG_GATEWAY_SSH_USER="${LBG_GATEWAY_SSH_USER:-${VM_USER}}"
+
 echo "=== Install lbg-gateway systemd (${VM_USER}@${VM_HOST}) ==="
 bash "${ROOT_DIR}/infra/scripts/run_lbg_gateway_vm.sh"
 
