@@ -7,6 +7,7 @@ HOST="${LBG_SOE_HOST:-192.168.0.246}"
 PORT="${LBG_SOE_LOGIN_PORT:-44553}"
 USER="${LBG_SOE_USER:-Bot_IA}"
 PASS="${LBG_SOE_PASSWORD:-lbgiabot}"
+CHAR_NAME="${LBG_SOE_CHAR_NAME:-Lia}"
 TIMEOUT="${LBG_SOE_M3_LOGIN_TIMEOUT_S:-95}"
 
 echo "=== Smoke SOE M3 login (${HOST}:${PORT}) ==="
@@ -14,11 +15,12 @@ echo "=== Smoke SOE M3 login (${HOST}:${PORT}) ==="
 
 set +e
 OUT=$(timeout "${TIMEOUT}" python3 "${CLIENT_PRIME}/soe_handshake.py" \
-  --host "${HOST}" --port "${PORT}" --user "${USER}" --password "${PASS}" --no-zone 2>&1)
+  --host "${HOST}" --port "${PORT}" --user "${USER}" --password "${PASS}" \
+  --char-name "${CHAR_NAME}" --no-zone 2>&1)
 RC=$?
 set -e
 echo "${OUT}" | tail -20
-echo "${OUT}" | grep -qE "\[Login\] OK connexion LoginServer terminee|\[LoginClientToken\]" || {
+echo "${OUT}" | grep -qE "\[Login\] OK connexion LoginServer terminee|\[LoginClientToken\]|\[EnumerateCharacterId\] [1-9]" || {
   echo "ECHEC login SOE (rc=${RC})" >&2
   exit 1
 }

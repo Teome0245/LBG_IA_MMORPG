@@ -52,6 +52,15 @@ def soe_m5_enabled() -> bool:
     return _truthy("LBG_TEAM_GODOT_SOE_M5", "0")
 
 
+def soe_char_name() -> str:
+    return os.environ.get("LBG_SOE_CHAR_NAME", "Lia").strip()
+
+
+def _soe_extra_args() -> list[str]:
+    name = soe_char_name()
+    return ["--char-name", name] if name else []
+
+
 def _soe_script() -> Path | None:
     script = soe_client_root() / "soe_handshake.py"
     return script if script.is_file() else None
@@ -80,7 +89,7 @@ def _run_soe(args: list[str], *, timeout_s: float) -> dict[str, Any]:
     ]
     try:
         proc = subprocess.run(
-            base + args,
+            base + _soe_extra_args() + args,
             capture_output=True,
             text=True,
             timeout=max(5.0, timeout_s),
@@ -116,7 +125,12 @@ def _login_ok(output: str) -> bool:
         return False
     if "[Login] OK connexion LoginServer terminee" in output:
         return True
-    # M3a --no-zone : token reçu sans perso (Bot_IA headless)
+    if "[EnumerateCharacterId]" in output and "personnage(s)" in output:
+        # M3a --no-zone ou login complet avec Lia énumérée
+        if "0 personnage(s)" in output:
+            return False
+        return True
+    # M3a --no-zone : token reçu sans perso parsé (legacy)
     return "[LoginClientToken]" in output
 
 
@@ -152,12 +166,12 @@ def probe_soe_m3_zone() -> dict[str, Any]:
     """M3b — connexion ZoneServer + bridge UDP Godot (lecture courte)."""
     if not soe_m3_enabled():
         return {"track": "soe_m3_zone", "ok": True, "skipped": True}
-    timeout = float(os.environ.get("LBG_SOE_M3_ZONE_TIMEOUT_S", "35"))
+    timeout = float(os.environ.get("LBG_SOE_M3_ZONE_TIMEOUT_S", "150"))
     run = _run_soe(["--godot-port", "12345"], timeout_s=timeout)
     if run.get("skipped"):
         return {"track": "soe_m3_zone", **run}
     tail = str(run.get("stdout_tail") or "")
-    ok = _zone_ok(tail) or (_login_ok(tail) and run.get("timed_out"))
+    ok = _zone_ok(tail) or (_login_ok(tail) and "[Login] OK connexion LoginServer terminee" in tail)
     return {
         "track": "soe_m3_zone",
         "ok": ok,

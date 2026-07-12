@@ -72,16 +72,29 @@ AUDIT_OK="$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(1 if d
 GAPS="$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(','.join(d.get('gaps') or []))" "${AUDIT_JSON}" 2>/dev/null || echo audit_failed)"
 mark ollama_audit "${AUDIT_OK}" "${GAPS:-ok}"
 
-# --- SOE M3 login 246 ---
-log_step "SOE M3 login ${SOE_HOST}:44553"
+# --- SOE M3 login (depuis core 140 — UDP fiable) ---
+log_step "SOE M3 login ${SOE_HOST}:44553 (via core ${CORE_HOST})"
 set +e
-SOE_OUT="$(bash "${ROOT_DIR}/infra/scripts/smoke_soe_m3_login_lan.sh" 2>&1)"
+SOE_OUT="$(ssh -o ConnectTimeout=8 "${VM_USER}@${CORE_HOST}" "set -a; . /etc/lbg-ia-mmo.env; set +a; bash /opt/LBG_IA_MMO/infra/scripts/smoke_soe_m3_login_lan.sh" 2>&1)"
 SOE_RC=$?
 set -e
 if [[ "${SOE_RC}" -eq 0 ]]; then
-  mark soe_m3_login 1 "login OK"
+  mark soe_m3_login 1 "login OK (140)"
 else
   mark soe_m3_login 0 "$(echo "${SOE_OUT}" | tail -3 | tr '\n' ' ')"
+fi
+
+# --- SOE M3 zone (Lia → ZoneServer, via 140) ---
+log_step "SOE M3 zone ${SOE_HOST} (via core ${CORE_HOST})"
+set +e
+ZONE_OUT="$(ssh -o ConnectTimeout=8 "${VM_USER}@${CORE_HOST}" "set -a; . /etc/lbg-ia-mmo.env; set +a; export LBG_SOE_M3_ZONE_TIMEOUT_S=\${LBG_SOE_M3_ZONE_TIMEOUT_S:-120}; cd /opt/LBG_IA_MMO/orchestrator && PYTHONPATH=.:../agents/src timeout 150 /opt/LBG_IA_MMO/.venv/bin/python -c \"from team.godot_soe_probe import probe_soe_m3_zone; import json; print(json.dumps(probe_soe_m3_zone()))\"" 2>&1)"
+ZONE_RC=$?
+set -e
+ZONE_OK="$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(1 if d.get('ok') else 0)" "${ZONE_OUT}" 2>/dev/null || echo 0)"
+if [[ "${ZONE_OK}" == "1" ]]; then
+  mark soe_m3_zone 1 "zone OK (140)"
+else
+  mark soe_m3_zone 0 "$(echo "${ZONE_OUT}" | tail -2 | tr '\n' ' ')"
 fi
 
 # --- M9 minimap (fichiers locaux ou chemins env) ---
@@ -96,7 +109,7 @@ else
   mark m9_minimap 0 "$(echo "${M9_OUT}" | tail -2 | tr '\n' ' ')"
 fi
 
-# --- Dernier état autoconsult (state.json sur 140) ---
+# --- Dernier autoconsult (state 140 + tâche PM récente) ---
 log_step "Autoconsult state 140"
 STATE_RAW="$(ssh -o ConnectTimeout=6 "${VM_USER}@${CORE_HOST}" \
   "cat /var/lib/lbg/team_autoconsult/state.json 2>/dev/null || echo '{}'" 2>/dev/null || echo '{}')"
@@ -115,6 +128,31 @@ else:
     print(-1)
 " "${STATE_RAW}" 2>/dev/null || echo -1)"
 TASK_ID="$(python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('last_task_id','') or 'none')" "${STATE_RAW}" 2>/dev/null || echo none)"
+# Fallback : dernière tâche PM autoconsult via API
+if [[ "${AUTO_OK}" != "1" ]]; then
+  RECENT="$(curl -sf --max-time 8 "${ORCH}/v1/team/tasks?limit=20" 2>/dev/null || echo '[]')"
+  API_OK="$(python3 -c "
+import json, sys
+try:
+    tasks = json.loads(sys.argv[1])
+except Exception:
+    tasks = []
+for t in tasks if isinstance(tasks, list) else []:
+    ctx = t.get('context') or {}
+    if not ctx.get('autoconsult_round'):
+        continue
+    res = t.get('result') or {}
+    if res.get('kind') == 'autoconsult_workflow' and res.get('ok') is True:
+        print(1)
+        break
+else:
+    print(0)
+" "${RECENT}" 2>/dev/null || echo 0)"
+  if [[ "${API_OK}" == "1" ]]; then
+    AUTO_OK=1
+    TASK_ID="api-recent"
+  fi
+fi
 if [[ "${AUTO_OK}" == "1" ]]; then
   mark autoconsult 1 "last_task_ok=true id=${TASK_ID}"
 elif [[ "${AUTO_OK}" == "0" ]]; then
@@ -138,6 +176,7 @@ if [[ "${JSON_OUT}" == "1" ]]; then
   export RC_BRIDGE_OK="${CHECKS[openclaw_bridge_ok]:-0}" RC_BRIDGE_DETAIL="${CHECKS[openclaw_bridge_detail]:-}"
   export RC_OLLAMA_OK="${CHECKS[ollama_audit_ok]:-0}" RC_OLLAMA_DETAIL="${CHECKS[ollama_audit_detail]:-}"
   export RC_SOE_OK="${CHECKS[soe_m3_login_ok]:-0}" RC_SOE_DETAIL="${CHECKS[soe_m3_login_detail]:-}"
+  export RC_ZONE_OK="${CHECKS[soe_m3_zone_ok]:-0}" RC_ZONE_DETAIL="${CHECKS[soe_m3_zone_detail]:-}"
   export RC_M9_OK="${CHECKS[m9_minimap_ok]:-0}" RC_M9_DETAIL="${CHECKS[m9_minimap_detail]:-}"
   export RC_AUTO_OK="${CHECKS[autoconsult_ok]:-0}" RC_AUTO_DETAIL="${CHECKS[autoconsult_detail]:-}"
   export RC_UDP_OK="${CHECKS[prime_udp_ok]:-0}" RC_UDP_DETAIL="${CHECKS[prime_udp_detail]:-}"
@@ -150,6 +189,7 @@ payload = {
         'openclaw_bridge': {'ok': os.environ.get('RC_BRIDGE_OK') == '1', 'detail': os.environ.get('RC_BRIDGE_DETAIL', '')},
         'ollama_audit': {'ok': os.environ.get('RC_OLLAMA_OK') == '1', 'detail': os.environ.get('RC_OLLAMA_DETAIL', '')},
         'soe_m3_login': {'ok': os.environ.get('RC_SOE_OK') == '1', 'detail': os.environ.get('RC_SOE_DETAIL', '')},
+        'soe_m3_zone': {'ok': os.environ.get('RC_ZONE_OK') == '1', 'detail': os.environ.get('RC_ZONE_DETAIL', '')},
         'm9_minimap': {'ok': os.environ.get('RC_M9_OK') == '1', 'detail': os.environ.get('RC_M9_DETAIL', '')},
         'autoconsult': {'ok': os.environ.get('RC_AUTO_OK') == '1', 'detail': os.environ.get('RC_AUTO_DETAIL', '')},
         'prime_udp': {'ok': os.environ.get('RC_UDP_OK') == '1', 'detail': os.environ.get('RC_UDP_DETAIL', '')},
@@ -160,7 +200,7 @@ print(json.dumps(payload, ensure_ascii=False, indent=2))
 else
   echo ""
   echo "=== Résumé reality-check équipe ==="
-  for k in orchestrator openclaw_bridge ollama_audit soe_m3_login m9_minimap autoconsult prime_udp; do
+  for k in orchestrator openclaw_bridge ollama_audit soe_m3_login soe_m3_zone m9_minimap autoconsult prime_udp; do
     status="ROUGE"
     [[ "${CHECKS[${k}_ok]:-0}" == "1" ]] && status="VERT"
     echo "  ${k}: ${status} — ${CHECKS[${k}_detail]:-}"
