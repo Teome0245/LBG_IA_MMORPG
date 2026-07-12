@@ -379,15 +379,23 @@ def remote_ssh_status(
     process: str,
     log_path: str,
     *,
+    login_port: int = 0,
     user: str | None = None,
 ) -> tuple[int | None, bool, bool]:
-    """Retourne (pid, login_udp_proxy, ready) via SSH — évite les sondes UDP invalides."""
+    """Retourne (pid, login_udp, ready) via SSH + sonde UDP locale sur la VM distante."""
     ssh_user = user or env("CORE3_STATUS_SSH_USER", "lbg")
+    udp_probe = ""
+    if login_port:
+        udp_probe = (
+            f"udp=0; if ss -H -uln sport = :{login_port} 2>/dev/null | grep -q ':{login_port}'; "
+            f"then udp=1; fi; echo UDP:$udp; "
+        )
     script = (
         f"pid=$(pgrep -x {process} 2>/dev/null | head -1); "
         f"ready=0; "
         f"if [ -f {log_path} ] && tail -c 65536 {log_path} | grep -q READY; then ready=1; fi; "
-        f"echo PID:${{pid:-}}; echo READY:$ready"
+        f"echo PID:${{pid:-}}; echo READY:$ready; "
+        f"{udp_probe}"
     )
     out = _run_text(
         [
@@ -405,6 +413,7 @@ def remote_ssh_status(
     )
     pid: int | None = None
     ready = False
+    login_udp = False
     for line in out.splitlines():
         line = line.strip()
         if line.startswith("PID:") and line != "PID:":
@@ -414,9 +423,15 @@ def remote_ssh_status(
                 pid = None
         elif line == "READY:1":
             ready = True
-    if pid is None and not ready:
+        elif line == "UDP:1":
+            login_udp = True
+    if login_port and not login_udp:
+        login_udp = udp_port_open_remote(host, login_port)
+    if pid is None and not ready and not login_udp:
         return None, False, False
-    return pid, True, ready
+    if login_udp and not ready:
+        ready = True
+    return pid, login_udp, ready
 
 
 def status_label(online: bool, ready: bool) -> str:
@@ -444,16 +459,13 @@ def probe_core3_instance(inst: dict[str, Any]) -> dict[str, Any]:
     remote = not is_local_host(host)
 
     if remote:
-        pid, login_udp, ready = remote_ssh_status(host, proc, log_path)
-        if pid is None and not ready:
-            login_udp = udp_port_open_remote(host, login_port) if login_port else False
-            pid = None
-            online = login_udp
+        pid, login_udp, ready = remote_ssh_status(
+            host, proc, log_path, login_port=login_port
+        )
+        online = pid is not None or login_udp or ready
+        if online and not ready and login_port and not login_udp:
+            login_udp = udp_port_open_remote(host, login_port)
             ready = login_udp
-        else:
-            online = pid is not None or ready
-            if online and not ready and login_port:
-                ready = udp_port_open_remote(host, login_port)
     else:
         pid = process_pid(proc) if proc else None
         online = pid is not None
@@ -462,10 +474,12 @@ def probe_core3_instance(inst: dict[str, Any]) -> dict[str, Any]:
         if online and not ready and login_udp:
             ready = True
 
-    client_ip = str(
-        inst.get("client_ip")
-        or (host if not is_local_host(host) else env("CORE3_PRECU_CLIENT_IP", "192.168.0.245"))
-    )
+    client_ip = str(inst.get("client_ip") or "").strip()
+    if not client_ip:
+        if inst.get("id") == "prime":
+            client_ip = env("CORE3_PRIME_CLIENT_IP", "192.168.0.246")
+        else:
+            client_ip = env("CORE3_PRECU_CLIENT_IP", "192.168.0.245")
     return {
         "id": inst.get("id", proc),
         "label": inst.get("label", proc),
@@ -845,12 +859,13 @@ PAGE_HTML = """<!DOCTYPE html>
         const pills = rows.map(s => {
           const st = s.status || "offline";
           const label = SERVER_STATUS_FR[st] || st;
-          const pid = s.pid ? `PID ${s.pid}` : (s.remote ? "distant" : "—");
-          const ip = s.client_ip || s.host || "—";
+          const ip = s.client_ip || "—";
           const port = s.login_port ? `:${s.login_port}` : "";
+          const endpoint = `${ip}${port}`;
+          const detail = s.pid ? `PID ${s.pid}` : (s.remote ? `SSH ${s.host || "?"}` : "—");
           return `<div class="server-pill ${escapeHtml(st)}" title="${escapeHtml(s.process || "")}">
             <span class="dot"></span>
-            <span><strong>${escapeHtml(s.label)}</strong><br><span class="meta">${escapeHtml(label)} · <strong>${escapeHtml(ip)}</strong>${escapeHtml(port)} · ${escapeHtml(pid)}</span></span>
+            <span><strong>${escapeHtml(s.label)}</strong><br><span class="meta">${escapeHtml(label)} · <strong>${escapeHtml(endpoint)}</strong> · ${escapeHtml(detail)}</span></span>
           </div>`;
         }).join("");
         bar.innerHTML = '<span style="color:var(--muted);font-size:.8rem">Serveurs :</span>' + pills;

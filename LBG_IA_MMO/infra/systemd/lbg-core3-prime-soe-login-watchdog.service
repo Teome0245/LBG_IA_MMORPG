@@ -1,0 +1,13 @@
+[Unit]
+Description=Watchdog SOE login Prime (Bot_IA/Lia via soe_handshake)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+ExecStart=/opt/LBG_IA_MMO/infra/scripts/watch_core3_prime_soe_login_health.sh
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

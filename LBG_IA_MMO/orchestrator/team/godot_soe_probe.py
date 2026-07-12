@@ -135,7 +135,13 @@ def _login_ok(output: str) -> bool:
 
 
 def _zone_ok(output: str) -> bool:
-    return "[Zone] OK connexion ZoneServer etablie" in output or "SceneCreateObjectByName" in output
+    if "SceneCreateObjectByName non recu" in output or "[Zone] ECHEC" in output:
+        return False
+    return (
+        "[Zone] OK connexion ZoneServer etablie" in output
+        or "[Zone] CmdStartScene" in output
+        or "CmdStartScene  obj=" in output
+    )
 
 
 def _play_ok(output: str) -> bool:
@@ -171,7 +177,7 @@ def probe_soe_m3_zone() -> dict[str, Any]:
     if run.get("skipped"):
         return {"track": "soe_m3_zone", **run}
     tail = str(run.get("stdout_tail") or "")
-    ok = _zone_ok(tail) or (_login_ok(tail) and "[Login] OK connexion LoginServer terminee" in tail)
+    ok = bool(run.get("ok")) and _zone_ok(tail)
     return {
         "track": "soe_m3_zone",
         "ok": ok,
@@ -179,7 +185,7 @@ def probe_soe_m3_zone() -> dict[str, Any]:
         "zone_ok": _zone_ok(tail),
         "timed_out": bool(run.get("timed_out")),
         "stdout_tail": tail[-500:],
-        "hint": None if ok else "ZoneServer :44563 ou SceneCreate — voir jalon_client_godot_sidecar_246.md",
+        "hint": None if ok else "ZoneServer :44563 — CmdStartScene/CmdSceneReady Core3",
     }
 
 
