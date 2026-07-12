@@ -1,38 +1,34 @@
-# LBG Client Godot
+# Prime Client 3D (Godot)
 
-Client **Godot 4.2+** — cible : **même Core3 Prime** que lbgemu, monde 3D habillé, avatars détaillés.
+Client **Godot 4.6** — **Core3 Prime uniquement** (gateway `lbg-ws/1`, port **50000**).  
+Dossier historique : `lbg_client_godot`. Monde 3D, avatars GLB, assets Infographiste_IA.
 
 | Document | Contenu |
 |----------|---------|
+| [`../docs/clients_2d_3d.md`](../docs/clients_2d_3d.md) | **2D Prime vs 3D LBG** — stratégie parallèle |
 | [`../docs/plan_client_godot_prime_rendu.md`](../docs/plan_client_godot_prime_rendu.md) | **Objectif produit** (monde + joueur + serveur) |
 | [`../docs/plan_client_lbg_godot.md`](../docs/plan_client_lbg_godot.md) | POC réseau, options gateway |
 
 ## État actuel (POC)
 
-Connexion **Terre1** (7733) ou **gateway observateur** Prime (50000) — capsules debug, plan vert / cantina non modélisée.
+Connexion **gateway Core3 Prime** (50000) — mode observateur / capsules, cantina placeholder 3D.
 
 ## Prérequis
 
-- [Godot 4.2+](https://godotengine.org/download)
-- Serveur WS actif sur la VM MMO (port **7733** par défaut)
+- Godot **4.6.1** : `J:\mmmorpg\Godot_v4.6.1-stable_win64\Godot_v4.6.1-stable_win64.exe`
+- Gateway Prime actif (VM **246**, port **50000**)
 
 ```bash
-# Depuis LBG_IA_MMO (si service systemd déjà installé)
-ssh lbg@192.168.0.245 'systemctl status lbg-mmmorpg-ws'
-
-# Ou lancer en local pour test
-cd LBG_IA_MMO
-python -m mmmorpg_server
+bash infra/scripts/run_lbg_gateway_vm.sh
 ```
 
 ## Lancer le client
 
 1. Ouvrir ce dossier dans Godot : **Importer** → `lbg_client_godot/project.godot`
 2. **F5** (scène principale `Login.tscn`)
-3. Choisir le serveur :
-   - **Terre1 — mmmorpg (7733)** : bac à sable + **dialogue PNJ** (si `MMMORPG_IA_BACKEND_URL` actif sur la VM)
-   - **Tatooine Prime — gateway (50000)** : snapshots + **dialogue IA** + **joueurs zone** (Teome/Lia/Nix via `lbgemu` si connectés — capsules turquoise `[lbgemu]`)
-4. Hôte `192.168.0.245`, nom joueur → **Connexion**
+3. Hôte **`192.168.0.246`**, port **50000**, nom joueur → **Connexion**
+   - Snapshots Prime + dialogue IA + joueurs zone (Teome/Lia/Nix via `lbgemu` — capsules turquoise `[lbgemu]`)
+4. **F6** `scenes/dev/Robot01Preview.tscn` pour tester un GLB sans réseau
 5. En monde : **ZQSD/WASD** — **Tab** = changer de PNJ cible — **Entrée** dans le chat = parler au PNJ
 
 ### Gateway Prime (port 50000)
@@ -55,6 +51,9 @@ PYTHONPATH=. python3 services/lbg_gateway/main.py
 | `scenes/World.tscn` | Monde 3D + entités |
 | `scenes/EntityView.tscn` | Humanoïde (GLB / placeholder) ou capsule secours |
 | `scenes/avatars/` | `AvatarLibrary`, `BaseHumanoid`, `PlaceholderHumanoid` |
+| `scenes/props/Robot01Drone.tscn` | Drone steampunk IA (pivot sol + vol) |
+| `scenes/dev/Robot01Preview.tscn` | Prévisualisation échelle vs humain 1,6 m |
+| `assets/props/drones/` | GLB props (robot01) |
 | `assets/avatars/manifest.json` | Mapping espèce / template → GLB |
 
 ## Smoke sans Godot
@@ -76,6 +75,15 @@ Par défaut : **silhouette humanoïde** (`PlaceholderHumanoid.tscn`). Dès qu’
 2. Relancer Godot — `AvatarLibrary` le détecte via `manifest.json`
 
 Guide : [`../docs/pipeline_assets_swg_godot.md`](../docs/pipeline_assets_swg_godot.md).
+
+### Drone steampunk (Infographiste_IA)
+
+1. GLB : `assets/props/drones/robot01_round_godot.glb` (déjà copié)
+2. Ouvrir le projet → laisser Godot importer le GLB
+3. **F6** sur `scenes/dev/Robot01Preview.tscn` pour valider échelle (~0,55 m) et pivot
+4. Décor cantina : instance auto dans `CantinaInterior` (activer la cantina dans `World` si besoin)
+
+Détails pivot/vol : [`assets/props/README.md`](assets/props/README.md).
 
 ## Suite (Phase 3)
 

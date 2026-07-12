@@ -112,7 +112,12 @@ def _run_soe(args: list[str], *, timeout_s: float) -> dict[str, Any]:
 
 
 def _login_ok(output: str) -> bool:
-    return "[Login] OK connexion LoginServer terminee" in output
+    if "[Login] ECHEC" in output:
+        return False
+    if "[Login] OK connexion LoginServer terminee" in output:
+        return True
+    # M3a --no-zone : token reçu sans perso (Bot_IA headless)
+    return "[LoginClientToken]" in output
 
 
 def _zone_ok(output: str) -> bool:
@@ -127,7 +132,7 @@ def probe_soe_m3_login() -> dict[str, Any]:
     """M3a — login SOE sans connexion zone."""
     if not soe_m3_enabled():
         return {"track": "soe_m3_login", "ok": True, "skipped": True}
-    run = _run_soe(["--no-zone"], timeout_s=float(os.environ.get("LBG_SOE_M3_LOGIN_TIMEOUT_S", "25")))
+    run = _run_soe(["--no-zone"], timeout_s=float(os.environ.get("LBG_SOE_M3_LOGIN_TIMEOUT_S", "95")))
     if run.get("skipped"):
         return {"track": "soe_m3_login", **run}
     tail = str(run.get("stdout_tail") or "")

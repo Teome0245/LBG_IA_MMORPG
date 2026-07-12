@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "agent_id": "studio_qa_argus",
+  "display_name": "Argus",
+  "role": "qa",
+  "persona": "argus",
+  "description": "Qualité — smokes LAN, validation Godot, followup PM/ops",
+  "capabilities": [
+    {"id": "smoke_lan", "script": "infra/scripts/smoke_vm_lan.sh"},
+    {"id": "godot_validation", "workflow": "godot_validation_workflow"},
+    {"id": "qa_followup", "description": "Spawn PM + ops + dev sur échec smoke"}
+  ],
+  "constraints": ["read_only", "l1_autonomy"],
+  "owner_timer": "lbg-team-qa-smoke-job"
+}

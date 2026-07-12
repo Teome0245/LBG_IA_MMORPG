@@ -1,0 +1,20 @@
+[gd_scene load_steps=4 format=3 uid="uid://robot01_drone01"]
+
+[ext_resource type="Script" path="res://scenes/props/Robot01Drone.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://assets/props/drones/robot01_round_godot.glb" id="2_glb"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_body"]
+radius = 0.28
+
+[node name="Robot01Drone" type="Node3D"]
+script = ExtResource("1_script")
+
+[node name="HoverOffset" type="Node3D" parent="."]
+
+[node name="ModelPivot" type="Node3D" parent="HoverOffset"]
+
+[node name="Model" parent="HoverOffset/ModelPivot" instance=ExtResource("2_glb")]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HoverOffset"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+shape = SubResource("SphereShape3D_body")

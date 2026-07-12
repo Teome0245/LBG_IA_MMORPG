@@ -20,7 +20,13 @@ from team.godot_client_tracks_workflow import (
     execute_godot_client_tracks_workflow,
     resolve_godot_client_tracks_workflow,
 )
+from team.m9_map_workflow import execute_m9_map_workflow, resolve_m9_map_workflow
+from team.m9_map_followup import (
+    auto_run_followup_tasks as m9_auto_run_followup,
+    maybe_spawn_after_m9_failure,
+)
 from team.godot_client_workflow import execute_godot_client_workflow, resolve_godot_client_workflow
+from team.godot_dev_workflow import execute_godot_dev_workflow, resolve_godot_dev_workflow
 from team.godot_followup import auto_run_followup_tasks as godot_auto_run_followup
 from team.godot_followup import maybe_spawn_after_godot_failure
 from team.godot_supervisor import execute_godot_supervisor
@@ -28,6 +34,7 @@ from team.godot_validation_workflow import execute_godot_validation_workflow, re
 from team.infographiste_workflow import execute_infographiste_workflow, resolve_infographiste_workflow
 from team.player_ia_exec import execute_player_ia
 from team.qa_followup import auto_run_followup_tasks, maybe_spawn_after_qa_failure
+from team.autoconsult_workflow import execute_autoconsult_workflow, resolve_autoconsult_workflow
 from team.role_aliases import role_display
 
 Dispatcher = Callable[..., dict[str, object]]
@@ -58,6 +65,12 @@ ROLE_SPECS: dict[str, dict[str, object]] = {
         "routed_to": "agent.pm",
         "autonomy": "L0-L1",
         "default_objective": "Analyser bug gameplay / correctif proposé (hors sandbox mmmorpg gelé)",
+    },
+    "dev_godot": {
+        "capability": "godot_dev_ia",
+        "routed_to": "agent.pm",
+        "autonomy": "L0-L1",
+        "default_objective": "Audit / prototype Godot Prime — Iris (2D UI) ou Hermès (SOE/gateway)",
     },
     "player_ia": {
         "capability": "core3_bot_action",
@@ -151,34 +164,43 @@ def _execute_ops(task: TeamTask) -> dict[str, object]:
         ok = outcome != "critical"
         return {"kind": "ops_storage", "storage": storage, "outcome": outcome, "ok": ok}
 
-    if ops_kind == "ollama":
-        import httpx
+    if ctx.get("m9_ops_sync") or ops_kind == "m9_prime_sync":
+        if os.environ.get("LBG_TEAM_OPS_USE_OPENCLAW", "1").strip().lower() in ("1", "true", "yes", "on"):
+            from team.openclaw_adapter import run_ops_playbook
 
-        url = str(ctx.get("ollama_tags_url") or "").strip()
-        if not url:
-            base = os.environ.get("LBG_TEAM_OPS_OLLAMA_URL", os.environ.get("OLLAMA_BASE_URL", "http://192.168.0.110:11434"))
-            url = base.strip().rstrip("/") + "/api/tags"
+            out = run_ops_playbook("m9_prime_sync")
+            out["kind"] = "ops_m9_sync"
+            return out
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2]
+        script = root / "infra/scripts/sync_prime_client_assets_vm.sh"
+        if not script.is_file():
+            return {"kind": "ops_m9_sync", "ok": False, "error": f"script absent: {script}"}
         try:
-            timeout = float(os.environ.get("LBG_TEAM_OPS_OLLAMA_TIMEOUT_S", "8"))
-            resp = httpx.get(url, timeout=timeout)
-            ok = resp.status_code == 200
-            body: dict[str, object] = {}
-            try:
-                parsed = resp.json()
-                if isinstance(parsed, dict):
-                    models = parsed.get("models")
-                    body["model_count"] = len(models) if isinstance(models, list) else 0
-            except Exception:
-                pass
+            proc = subprocess.run(
+                ["bash", str(script)],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                timeout=180,
+                check=False,
+            )
+            ok = proc.returncode == 0
             return {
-                "kind": "ops_ollama",
-                "url": url,
-                "status_code": resp.status_code,
-                "body": body,
+                "kind": "ops_m9_sync",
                 "ok": ok,
+                "returncode": proc.returncode,
+                "stdout_tail": (proc.stdout or "")[-500:],
+                "stderr_tail": (proc.stderr or "")[-500:],
             }
-        except Exception as e:
-            return {"kind": "ops_ollama", "url": url, "ok": False, "error": str(e)}
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return {"kind": "ops_m9_sync", "ok": False, "error": str(exc)}
+
+    if ops_kind in ("ollama", "ollama_audit") or ctx.get("ollama_audit"):
+        from team.ollama_audit import audit_ollama_lan
+
+        return {"kind": "ops_ollama_audit", **audit_ollama_lan()}
 
     orch = _orchestrator_url()
     action = ctx.get("devops_action")
@@ -236,6 +258,9 @@ def _execute_qa(task: TeamTask) -> dict[str, object]:
 
 
 def _execute_pm(task: TeamTask) -> dict[str, object]:
+    if resolve_autoconsult_workflow(task):
+        return execute_autoconsult_workflow(task, _dispatch)
+
     from team.subprojects import list_subprojects
 
     ctx = dict(task.context)
@@ -264,11 +289,19 @@ def _execute_pm(task: TeamTask) -> dict[str, object]:
     return result
 
 
+def _execute_dev_godot(task: TeamTask) -> dict[str, object]:
+    if resolve_godot_dev_workflow(task):
+        return execute_godot_dev_workflow(task, _dispatch)
+    return execute_godot_dev_workflow(task, _dispatch)
+
+
 def _execute_dev_game(task: TeamTask) -> dict[str, object]:
     if resolve_infographiste_workflow(task):
         return execute_infographiste_workflow(task, _dispatch)
     if resolve_core3_build_workflow(task):
         return execute_core3_build_workflow(task, _dispatch)
+    if resolve_m9_map_workflow(task):
+        return execute_m9_map_workflow(task, _dispatch)
     if resolve_godot_client_tracks_workflow(task):
         return execute_godot_client_tracks_workflow(task, _dispatch)
     if resolve_godot_client_workflow(task):
@@ -285,6 +318,7 @@ _EXECUTORS: dict[str, Callable[[TeamTask], dict[str, object]]] = {
     "qa": _execute_qa,
     "pm": _execute_pm,
     "dev_game": _execute_dev_game,
+    "dev_godot": _execute_dev_godot,
     "player_ia": _execute_player_ia,
 }
 
@@ -416,6 +450,97 @@ def plan_from_objective(objective: str, *, actor_id: str = "system:team") -> lis
                 **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
             }
         )
+    if any(k in text for k in ("m9c", "carte m", "planet map", "waypoint", "locations tree")):
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": objective if "m9" in text or "carte" in text else "Audit M9c carte planétaire M + waypoints",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"m9_track": "m9c", "subproject": "prime_client_2d"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("m9b", "minimap", "mini map", "mini-map")):
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": objective if "minimap" in text else "Audit M9b minimap HUD style SWG",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"m9_track": "m9b", "subproject": "prime_client_2d"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("m9a", "scrapaltai", "planète scrapaltai", "planete scrapaltai")):
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": objective if "scrapaltai" in text else "Audit M9a Scrapaltai — texture planète + POI sync",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"m9_track": "m9a", "subproject": "prime_client_2d"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("jalon m9", "m9 map", "m9 scrapaltai", "map minimap")):
+        proposals.append(
+            {
+                "role": "dev_game",
+                "objective": objective if "m9" in text else "Audit M9 complet — Scrapaltai 2D + minimap + carte M",
+                "priority": "high",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_game"]["capability"],
+                "context": {"m9_track": "m9_full", "subproject": "prime_client_2d"},
+                **{k: v for k, v in role_display("dev_game").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("autoconsult", "autoconsultation", "round fable", "round équipe", "round equipe")):
+        proposals.append(
+            {
+                "role": "pm",
+                "objective": objective if "autoconsult" in text else "Round autoconsultation équipe — synthèse Thémis",
+                "priority": "high",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["pm"]["capability"],
+                "context": {"autoconsult_round": True, "reunification_brief": True},
+                **{k: v for k, v in role_display("pm").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("iris", "m9", "minimap", "carte m", "scrapaltai", "waypoint", "godot 2d")):
+        proposals.append(
+            {
+                "role": "dev_godot",
+                "objective": objective if "iris" in text or "m9" in text else "Iris — audit Godot 2D Prime Client (M9)",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_godot"]["capability"],
+                "context": {"godot_dev_persona": "iris", "godot_dev_track": "m9_full", "subproject": "godot_iris"},
+                **{k: v for k, v in role_display("dev_godot").items() if k in ("alias", "title", "label")},
+            }
+        )
+    if any(k in text for k in ("hermes", "hermès", "soe m3", "soe m5", "lbg-ws", "gateway godot")):
+        proposals.append(
+            {
+                "role": "dev_godot",
+                "objective": objective if "hermes" in text or "soe" in text else "Hermès — audit SOE/gateway Godot Prime",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["dev_godot"]["capability"],
+                "context": {"godot_dev_persona": "hermes", "godot_dev_track": "client_live", "subproject": "godot_hermes"},
+                **{k: v for k, v in role_display("dev_godot").items() if k in ("alias", "title", "label")},
+            }
+        )
     if any(k in text for k in ("valider godot", "validation godot", "validation client")):
         proposals.append(
             {
@@ -512,11 +637,38 @@ def run_task(task_id: str, *, approval_token: str | None = None) -> TeamTask | N
                             }
                         )
                         auto_run_followup_tasks(followups)
-        elif task.role == "dev_game" and status == "failed":
+        elif task.role in ("dev_game", "dev_godot") and status == "failed":
             refreshed = team_store.get_task(task_id)
             if refreshed is not None:
                 res = refreshed.result if isinstance(refreshed.result, dict) else {}
-                if res.get("kind") in ("godot_client_workflow", "godot_client_tracks_workflow"):
+                kind = res.get("kind")
+                if kind == "godot_dev_workflow":
+                    track = str(res.get("godot_dev_track") or res.get("track") or "")
+                    if track.startswith("m9"):
+                        followups = maybe_spawn_after_m9_failure(refreshed)
+                        if followups:
+                            _trace_log(
+                                {
+                                    "event": "m9_followup_spawned",
+                                    "task_id": task_id,
+                                    "followup_ids": followups,
+                                    "trace_id": trace_id,
+                                }
+                            )
+                            m9_auto_run_followup(followups)
+                elif kind == "m9_map_workflow":
+                    followups = maybe_spawn_after_m9_failure(refreshed)
+                    if followups:
+                        _trace_log(
+                            {
+                                "event": "m9_followup_spawned",
+                                "task_id": task_id,
+                                "followup_ids": followups,
+                                "trace_id": trace_id,
+                            }
+                        )
+                        m9_auto_run_followup(followups)
+                elif kind in ("godot_client_workflow", "godot_client_tracks_workflow"):
                     followups = maybe_spawn_after_godot_failure(refreshed)
                     if followups:
                         godot_auto_run_followup(followups)

@@ -1,0 +1,20 @@
+[Unit]
+Description=LBG OpenClaw skill bridge (playbooks ops → HTTP)
+After=network-online.target lbg-orchestrator.service
+Wants=lbg-orchestrator.service
+
+[Service]
+Type=simple
+User=lbg
+Group=lbg
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/orchestrator:/opt/LBG_IA_MMO/agents/src
+Environment=LBG_OPENCLAW_BRIDGE_HOST=127.0.0.1
+Environment=LBG_OPENCLAW_BRIDGE_PORT=18790
+Environment=LBG_OPENCLAW_ENABLED=1
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python /opt/LBG_IA_MMO/infra/openclaw/lbg_skill_bridge.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

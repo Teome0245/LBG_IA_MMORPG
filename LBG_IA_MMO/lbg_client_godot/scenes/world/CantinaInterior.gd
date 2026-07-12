@@ -7,6 +7,7 @@ const BAR_Y := 1.15
 const BAR_Z := -0.89
 const GUEST_Y := 0.35
 const GUEST_Z := 0.91
+const DRONE_SCENE := preload("res://scenes/props/Robot01Drone.tscn")
 
 static func swg_local_to_godot(lx: float, ly: float, lz: float) -> Vector3:
 	return Vector3(lx, lz, ly)
@@ -46,6 +47,17 @@ func _build_room() -> void:
 	# Piliers / vats décor
 	_add_box("VatL", swg_local_to_godot(4.0, 2.2, -2.0), Vector3(1.2, 2.4, 1.2), Color(0.4, 0.38, 0.35), false)
 	_add_box("VatR", swg_local_to_godot(10.5, 2.2, -2.0), Vector3(1.2, 2.4, 1.2), Color(0.4, 0.38, 0.35), false)
+	_add_drone_decor()
+
+
+func _add_drone_decor() -> void:
+	if DRONE_SCENE == null:
+		return
+	var drone: Node3D = DRONE_SCENE.instantiate()
+	drone.name = "DroneSteampunkDecor"
+	drone.position = swg_local_to_godot(8.2, 3.8, -1.2)
+	drone.yaw_degrees = -35.0
+	add_child(drone)
 
 
 func _add_box(

@@ -23,6 +23,7 @@ from team.models import VALID_PRIORITIES, VALID_ROLES
 from team.player_ia_think import infer_approval_on_create
 from team.role_aliases import enrich_task_view, role_aliases, role_display
 from team.subprojects import list_subprojects
+from team.agent_registry import list_agents_summary
 
 router = APIRouter(tags=["team"])
 
@@ -75,6 +76,7 @@ class TaskView(BaseModel):
 class TeamMetaResponse(BaseModel):
     roles: list[dict[str, object]] = Field(default_factory=list)
     subprojects: list[dict[str, object]] = Field(default_factory=list)
+    agents: list[dict[str, object]] = Field(default_factory=list)
 
 
 class TaskListResponse(BaseModel):
@@ -104,7 +106,7 @@ def team_meta() -> TeamMetaResponse:
                 "default_objective": spec.get("default_objective"),
             }
         )
-    return TeamMetaResponse(roles=roles, subprojects=list_subprojects())
+    return TeamMetaResponse(roles=roles, subprojects=list_subprojects(), agents=list_agents_summary())
 
 
 @router.post("/team/plan", response_model=PlanResponse)

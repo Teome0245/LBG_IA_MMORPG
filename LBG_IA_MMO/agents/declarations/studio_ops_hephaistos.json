@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "agent_id": "studio_ops_hephaistos",
+  "display_name": "Héphaïstos",
+  "role": "ops",
+  "persona": "hephaistos",
+  "description": "Infra — healthz, sync VM, storage Proxmox, Ollama",
+  "capabilities": [
+    {"id": "healthz_probe", "description": "Orchestrateur + backend health"},
+    {"id": "m9_prime_sync", "script": "infra/scripts/sync_prime_client_assets_vm.sh"},
+    {"id": "storage_watchdog", "description": "Sonde stockage Proxmox"},
+    {"id": "ollama_tags", "description": "Vérification modèles Ollama 110"}
+  ],
+  "constraints": ["devops_dry_run_default", "l1_autonomy"],
+  "owner_timer": "lbg-team-ops-storage-job"
+}

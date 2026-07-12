@@ -24,6 +24,8 @@ flowchart TD
 | `lbg-team-godot-supervisor-job` | `system:team_godot_supervisor` | qa (godot_supervisor) | **6 h** |
 | `lbg-team-infographiste-job` | `system:team_infographiste` | dev_game (infographiste_ia) | **12 h** |
 | `lbg-team-godot-client-tracks-job` | `system:team_godot_client_tracks` | dev_game M3/M5/ZB-0 | **8 h** |
+| `lbg-team-m9-map-job` | `system:team_m9_map` | dev_game M9a/M9b/M9c | **12 h** |
+| `lbg-team-godot-dev-job` | `system:team_godot_dev` | **Iris + Hermès** (dev_godot) | **8 h** |
 | `lbg-team-player-ia-job` | `system:team_player_ia` | player_ia probe | 12 h |
 | `lbg-team-pm-reunification-job` | `system:team_pm_reunification` | pm brief | 24 h |
 | `lbg-team-qa-smoke-job` | `system:team_qa_smoke` | qa smoke LAN | 24 h |
@@ -33,6 +35,8 @@ Installation :
 bash infra/scripts/install_team_godot_supervisor_job_vm.sh
 bash infra/scripts/install_team_infographiste_job_vm.sh
 bash infra/scripts/install_team_godot_client_tracks_job_vm.sh
+bash infra/scripts/install_team_m9_map_job_vm.sh
+bash infra/scripts/install_team_godot_dev_job_vm.sh
 ```
 
 ---
@@ -99,3 +103,4 @@ Plan NL exemple : *« supervise godot et lbg-ws/2 sur Prime »* → propose qa +
 - [`core3_zone_bridge_spec.md`](core3_zone_bridge_spec.md)
 - [`jalon_infographiste_ia.md`](jalon_infographiste_ia.md)
 - [`jalon_godot_client_live_team.md`](jalon_godot_client_live_team.md)
+- [`jalon_m9_scrapaltai_map_minimap.md`](jalon_m9_scrapaltai_map_minimap.md)

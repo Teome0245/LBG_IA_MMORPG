@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "zone": "tatooine",
+  "display_name": "Scrapaltai",
+  "locations": [
+    {
+      "id": "loc:lost_heaven_hub",
+      "label": "Lost Heaven",
+      "kind": "hub",
+      "x": 4749.0,
+      "z": -737.0,
+      "essential": true,
+      "active": true
+    },
+    {
+      "id": "loc:player_spawn",
+      "label": "Port shuttle LH",
+      "kind": "spawn",
+      "x": 4749.0,
+      "z": -537.0,
+      "essential": true,
+      "active": true,
+      "parent": "loc:lost_heaven_hub"
+    },
+    {
+      "id": "loc:mos_eisley",
+      "label": "Mos Eisley (purge)",
+      "kind": "city",
+      "x": 3520.0,
+      "z": -4800.0,
+      "deprecated": true
+    },
+    {
+      "id": "loc:anchorhead",
+      "label": "Anchorhead (purge)",
+      "kind": "city",
+      "x": -100.0,
+      "z": -5400.0,
+      "deprecated": true
+    },
+    {
+      "id": "loc:bestine",
+      "label": "Bestine (purge)",
+      "kind": "city",
+      "x": -4000.0,
+      "z": -6000.0,
+      "deprecated": true
+    }
+  ]
+}

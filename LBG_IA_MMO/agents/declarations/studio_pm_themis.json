@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "agent_id": "studio_pm_themis",
+  "display_name": "Thémis",
+  "role": "pm",
+  "persona": "themis",
+  "description": "Pilotage projet — jalons, réunification, synthèse autoconsultation équipe",
+  "capabilities": [
+    {"id": "reunification_brief", "description": "Brief multi-sous-projets et priorités"},
+    {"id": "autoconsult_synthesize", "description": "Agrège sondes spécialistes et route followups"},
+    {"id": "plan_from_objective", "description": "POST /v1/team/plan — décomposition NL"}
+  ],
+  "constraints": ["no_direct_write", "l0_l1_autonomy"],
+  "owner_timer": "lbg-team-pm-reunification-job"
+}

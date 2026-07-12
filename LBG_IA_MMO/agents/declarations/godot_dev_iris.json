@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "agent_id": "godot_dev_iris",
+  "display_name": "Iris",
+  "role": "dev_godot",
+  "persona": "iris",
+  "description": "Dev Godot IA — Prime Client 2D, UI, cartes Scrapaltai, M9, GDScript scenes",
+  "capabilities": [
+    {
+      "id": "audit_m9",
+      "description": "Sonder et remédier jalon M9 (planète, minimap, carte M)",
+      "input_schema": "team_task_context_m9",
+      "output_schema": "godot_dev_workflow_result"
+    },
+    {
+      "id": "forge_gdscript_patches",
+      "description": "Générer patches GDScript/scènes M9 depuis gaps (staging L1, apply L2)",
+      "input_schema": "iris_forge_gaps",
+      "output_schema": "iris_forge_manifest",
+      "constraints": ["prime_client_2d_only", "templates_iris_m9"]
+    },
+    {
+      "id": "forge_godot_ui",
+      "description": "Proposer patches GDScript/scènes Godot via action_proposal",
+      "constraints": ["revue_humaine", "prime_client_2d_only"]
+    },
+    {
+      "id": "run_smokes",
+      "description": "Exécuter smokes minimap / planet_map",
+      "scripts": [
+        "infra/scripts/smoke_prime_client_minimap.sh",
+        "infra/scripts/smoke_prime_client_planet_map.sh"
+      ]
+    }
+  ],
+  "constraints": [
+    "no_force_push",
+    "no_secrets_in_logs",
+    "l0_l1_autonomy_only"
+  ],
+  "subproject": "godot_iris",
+  "owner_timer": "lbg-team-godot-dev-job"
+}

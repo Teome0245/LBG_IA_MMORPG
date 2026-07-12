@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "agent_id": "studio_infographiste_pygmalion",
+  "display_name": "Pygmalion",
+  "role": "dev_game",
+  "persona": "pygmalion",
+  "description": "Infographiste IA — textures SVG, manifest GLB, pipeline Blender → Godot",
+  "capabilities": [
+    {"id": "audit_assets", "probe": "infographiste_probe"},
+    {"id": "generate_comfyui", "module": "comfyui_media", "description": "Génération image ComfyUI (MEDIA)"},
+    {"id": "svg_planet_texture", "description": "Enrichir tatooine.svg Scrapaltai"},
+    {"id": "glb_manifest", "path": "config/sprite_manifest.json"}
+  ],
+  "constraints": ["revue_humaine_textures", "l1_audit_only"],
+  "subproject": "infographiste_ia",
+  "owner_timer": "lbg-team-infographiste-job",
+  "consults_with": ["godot_dev_iris"]
+}

@@ -59,3 +59,13 @@ tests/test_route.py
 tests/test_route_core3.py
 tests/test_route_devops.py
 tests/test_team.py
+tests/test_team_autoconsult.py
+tests/test_team_dev_game_workflow.py
+tests/test_team_godot_client_tracks.py
+tests/test_team_godot_supervisor.py
+tests/test_team_infographiste.py
+tests/test_team_m9_map.py
+tests/test_team_player_ia.py
+tests/test_team_player_ia_think.py
+tests/test_team_qa_followup.py
+tests/test_team_validation_workflows.py

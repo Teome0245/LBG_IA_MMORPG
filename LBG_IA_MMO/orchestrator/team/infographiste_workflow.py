@@ -8,6 +8,7 @@ from typing import Callable
 from services.action_proposal import propose_action_from_text
 
 from team.infographiste_probe import probe_infographiste_assets
+from team.comfyui_media import comfyui_enabled, generate_asset_for_gap, probe_comfyui
 from team.models import TeamTask
 
 Dispatcher = Callable[..., dict[str, object]]
@@ -81,6 +82,13 @@ def execute_infographiste_workflow(task: TeamTask, dispatch: Dispatcher) -> dict
 
     ok = bool(brief.get("ok", True)) and bool(probe.get("ok"))
 
+    media_result = None
+    if (not ok or ctx.get("pygmalion_generate")) and comfyui_enabled():
+        gap_label = missing[0] if missing else (task.objective or "mmo asset")
+        media_result = generate_asset_for_gap(str(gap_label))
+        if media_result.get("ok"):
+            ctx["comfyui_images"] = media_result.get("images")
+
     return {
         "kind": "infographiste_workflow",
         "ok": ok,
@@ -89,6 +97,8 @@ def execute_infographiste_workflow(task: TeamTask, dispatch: Dispatcher) -> dict
         "action_proposal": proposal_payload,
         "subproject": "infographiste_ia",
         "persona": "Pygmalion",
+        "comfyui_probe": probe_comfyui() if comfyui_enabled() else None,
+        "comfyui_generation": media_result,
     }
 
 

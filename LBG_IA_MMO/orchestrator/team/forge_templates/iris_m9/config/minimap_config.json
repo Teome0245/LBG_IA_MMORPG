@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "size_px": 180,
+  "margin_px": 12,
+  "view_radius_m": 420,
+  "position": "bottom_right",
+  "show_poi": true,
+  "show_entities": true,
+  "show_essential_poi_only": true,
+  "click_pan_camera": true,
+  "toggle_key": "M",
+  "require_ctrl_for_toggle": false,
+  "notes": "M9b — minimap locale style SWG (nord haut, zone ~420 m autour du centre caméra/joueur)"
+}

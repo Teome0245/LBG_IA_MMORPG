@@ -1,0 +1,73 @@
+[gd_scene format=3 uid="uid://vtr52wwwbl85"]
+
+[ext_resource type="PackedScene" path="res://scenes/props/Robot01Drone.tscn" id="1_drone"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_sky"]
+sky_top_color = Color(0.15, 0.18, 0.25, 1)
+sky_horizon_color = Color(0.35, 0.38, 0.42, 1)
+
+[sub_resource type="Sky" id="Sky_env"]
+sky_material = SubResource("ProceduralSkyMaterial_sky")
+
+[sub_resource type="Environment" id="Environment_main"]
+background_mode = 2
+sky = SubResource("Sky_env")
+ambient_light_source = 2
+ambient_light_color = Color(0.55, 0.58, 0.65, 1)
+ambient_light_energy = 0.65
+tonemap_mode = 2
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(8, 8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.2, 0.22, 0.25, 1)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_ref"]
+radius = 0.4
+height = 1.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ref"]
+transparency = 1
+albedo_color = Color(0.2, 0.85, 1, 0.35)
+
+[node name="Robot01Preview" type="Node3D" unique_id=641348902]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1267955176]
+environment = SubResource("Environment_main")
+
+[node name="Sun" type="DirectionalLight3D" parent="." unique_id=1011399870]
+transform = Transform3D(0.866025, -0.353553, 0.353553, 0, 0.707107, 0.707107, -0.5, -0.612372, 0.612372, 0, 4, 0)
+light_energy = 1.35
+shadow_enabled = true
+
+[node name="FillLight" type="OmniLight3D" parent="." unique_id=1001464257]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2, 1.4, 1.5)
+light_color = Color(1, 0.95, 0.88, 1)
+light_energy = 0.9
+omni_range = 6.0
+
+[node name="Ground" type="MeshInstance3D" parent="." unique_id=1660830772]
+transform = Transform3D(-0.47213522, -0.04344502, 0.8804549, -0.02053131, 0.9990558, 0.03828753, -0.881287, 0, -0.47258142, 0, 0, 0)
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="HumanRef" type="MeshInstance3D" parent="." unique_id=1502328585]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.6, 0.8, 0)
+mesh = SubResource("CapsuleMesh_ref")
+surface_material_override/0 = SubResource("StandardMaterial3D_ref")
+
+[node name="Robot01Drone" parent="." unique_id=1506158274 instance=ExtResource("1_drone")]
+transform = Transform3D(-0.10668775, 0.8232354, 0.55758506, -0.15471047, -0.5677001, 0.80856746, 0.98218244, 8.881784e-16, 0.18792978, 0, 0, 0)
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=356035508]
+transform = Transform3D(1, 0, 0, 0, 0.866025, 0.5, 0, -0.5, 0.866025, 0, 1, 1.8)
+fov = 50.0
+
+[node name="CanvasLayer" type="CanvasLayer" parent="." unique_id=2042833331]
+
+[node name="Hint" type="Label" parent="CanvasLayer" unique_id=1493474518]
+offset_left = 12.0
+offset_top = 8.0
+theme_override_font_sizes/font_size = 14
+text = "Robot01 — GLB avec UV. Capsule = humain 1.6 m. Recharger le projet si texture noire."

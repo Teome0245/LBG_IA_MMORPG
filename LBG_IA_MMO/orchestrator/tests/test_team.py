@@ -196,40 +196,30 @@ def test_team_ops_storage_context(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_team_ops_ollama_context(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _Resp:
-        status_code = 200
-
-        def json(self) -> dict[str, object]:
-            return {"models": [{"name": "gemma4:26b"}]}
-
-    class _Client:
-        def __enter__(self) -> "_Client":
-            return self
-
-        def __exit__(self, *a: object) -> None:
-            return None
-
-        def get(self, url: str) -> _Resp:
-            return _Resp()
-
-    import httpx
-
-    monkeypatch.setattr(httpx, "Client", lambda **kw: _Client())
-    monkeypatch.setattr(httpx, "get", lambda url, timeout=8: _Resp())
+    monkeypatch.setattr(
+        "team.ollama_audit.audit_ollama_lan",
+        lambda **kw: {
+            "ok": True,
+            "track": "ollama_audit_110",
+            "model_count": 1,
+            "gaps": [],
+            "recommendations": [],
+        },
+    )
 
     client = TestClient(app)
     created = client.post(
         "/v1/team/tasks",
         json={
             "role": "ops",
-            "objective": "sonde ollama",
+            "objective": "audit ollama 110",
             "actor_id": "u:ops",
-            "context": {"ops_kind": "ollama", "ollama_tags_url": "http://127.0.0.1:11434/api/tags"},
+            "context": {"ops_kind": "ollama"},
         },
     ).json()
     ran = client.post(f"/v1/team/tasks/{created['id']}/run").json()
     assert ran["status"] == "done"
-    assert ran["result"]["kind"] == "ops_ollama"
+    assert ran["result"]["kind"] == "ops_ollama_audit"
     assert ran["result"]["ok"] is True
 
 

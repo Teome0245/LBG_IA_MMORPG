@@ -49,7 +49,7 @@ def ollama_tags_url() -> str:
 def default_objective() -> str:
     return os.environ.get(
         "LBG_TEAM_OPS_OLLAMA_JOB_OBJECTIVE",
-        "Sonde Ollama LAN — GET /api/tags (read-only L1)",
+        "Audit Ollama VM 110 — inventaire modèles vs config LBG (Héphaïstos L1)",
     ).strip()
 
 
@@ -87,7 +87,8 @@ def run_spawn(*, persist: bool = True) -> dict[str, Any]:
             actor_id=spawn_actor_id(),
             context={
                 "_team_ops_ollama_spawn": True,
-                "ops_kind": "ollama",
+                "ops_kind": "ollama_audit",
+                "ollama_audit": True,
                 "ollama_tags_url": ollama_tags_url(),
             },
         )

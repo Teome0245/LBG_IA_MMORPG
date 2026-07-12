@@ -1,16 +1,16 @@
 extends Node
-## Connexion serveur : bac à sable mmmorpg ou gateway Core3 Prime.
+## Connexion gateway Core3 Prime (lbg-ws/1). Mode Terre1 conservé en code legacy uniquement.
 
 enum ServerMode { MMMORPG, PRIME }
 
-const DEFAULT_HOST := "192.168.0.245"
+const DEFAULT_HOST := "192.168.0.246"
 const PORT_MMMORPG := 7733
 const PORT_PRIME := 50000
 const PROTO_MMMORPG := "mmmorpg-ws/1"
 const PROTO_PRIME := "lbg-ws/1"
 
 var host: String = DEFAULT_HOST
-var server_mode: ServerMode = ServerMode.MMMORPG
+var server_mode: ServerMode = ServerMode.PRIME
 var port_override: int = -1
 
 func get_port() -> int:

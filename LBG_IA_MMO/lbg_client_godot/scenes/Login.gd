@@ -7,8 +7,7 @@ extends Control
 @onready var _status: Label = $Panel/VBox/Status
 @onready var _connect_btn: Button = $Panel/VBox/ConnectBtn
 
-const MODE_TERRE1 := 0
-const MODE_PRIME := 1
+const MODE_PRIME := 0
 const WORLD_SCENE := "res://scenes/World.tscn"
 
 var _entering_world := false
@@ -30,13 +29,12 @@ func _ready() -> void:
 
 func _setup_server_modes() -> void:
 	_mode.clear()
-	_mode.add_item("Terre1 — mmmorpg (7733)", MODE_TERRE1)
 	_mode.add_item("Tatooine Prime — gateway (50000)", MODE_PRIME)
 	_mode.select(0)
 	_on_mode_changed(0)
 
-func _mode_index_to_config(idx: int) -> Config.ServerMode:
-	return Config.ServerMode.PRIME if idx == MODE_PRIME else Config.ServerMode.MMMORPG
+func _mode_index_to_config(_idx: int) -> Config.ServerMode:
+	return Config.ServerMode.PRIME
 
 func _on_mode_changed(idx: int) -> void:
 	Config.server_mode = _mode_index_to_config(idx)

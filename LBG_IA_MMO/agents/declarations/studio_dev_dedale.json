@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "agent_id": "studio_dev_dedale",
+  "display_name": "Dédale",
+  "role": "dev_game",
+  "persona": "dedale",
+  "description": "Forge gameplay — Core3, bugs, prototypes OpenGame, coordination Vulcan",
+  "capabilities": [
+    {"id": "prototype_game", "capability": "prototype_game"},
+    {"id": "core3_build_plan", "workflow": "core3_build_workflow", "autonomy": "L1"},
+    {"id": "godot_client_tracks", "tracks": ["soe_m3", "soe_m5", "zb0", "zb1"]}
+  ],
+  "constraints": ["l0_l1_default", "l2_build_requires_token"],
+  "subproject": "client_godot"
+}

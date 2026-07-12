@@ -24,7 +24,12 @@ DEFAULT_ROLE_ALIASES: dict[str, dict[str, str]] = {
     "dev_game": {
         "alias": "Dédale",
         "title": "Forge gameplay",
-        "tagline": "Core3, Godot, prototypes OpenGame",
+        "tagline": "Core3, prototypes OpenGame, build Vulcan",
+    },
+    "dev_godot": {
+        "alias": "Iris",
+        "title": "Dev Godot IA",
+        "tagline": "Prime Client 2D — UI, cartes, M9 (persona Hermès pour réseau)",
     },
     "player_ia": {
         "alias": "Chœur du monde",
@@ -52,6 +57,24 @@ SUBPROJECT_PERSONAS: dict[str, dict[str, str]] = {
         "title": "Forge Core3",
         "tagline": "Build Antigravity, ZB-0, déploiement Prime",
         "owner_role": "dev_game",
+    },
+    "godot_iris": {
+        "alias": "Iris",
+        "title": "Godot 2D — UI & cartes",
+        "tagline": "Prime Client, M9, minimap, waypoints, scènes GDScript",
+        "owner_role": "dev_godot",
+    },
+    "godot_hermes": {
+        "alias": "Hermès",
+        "title": "Godot réseau — SOE & gateway",
+        "tagline": "SOE M3/M5, lbg-ws/2, bridges UDP/WebSocket",
+        "owner_role": "dev_godot",
+    },
+    "prime_client_2d": {
+        "alias": "Iris",
+        "title": "Prime Client 2D",
+        "tagline": "Scrapaltai, M9, Godot top-down",
+        "owner_role": "dev_godot",
     },
 }
 
@@ -89,6 +112,11 @@ def enrich_task_view(data: dict[str, object]) -> dict[str, object]:
         sub = "infographiste_ia"
     if ctx.get("core3_build") and not sub:
         sub = "core3_build"
+    persona = str(ctx.get("godot_dev_persona") or "").lower()
+    if persona == "hermes" and not sub:
+        sub = "godot_hermes"
+    elif (persona == "iris" or ctx.get("dev_godot_focus")) and not sub:
+        sub = "godot_iris"
     if sub and sub in SUBPROJECT_PERSONAS:
         persona = SUBPROJECT_PERSONAS[sub]
         alias = persona.get("alias") or role

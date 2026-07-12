@@ -14,8 +14,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="LBG Client"
-config/description="Client MMO LBG — proto WebSocket (bac à sable mmmorpg_server)"
+config/name="Prime Client 3D"
+config/description="Core3 Prime — client Godot 3D (gateway lbg-ws/1, port 50000)"
 run/main_scene="res://scenes/Login.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 

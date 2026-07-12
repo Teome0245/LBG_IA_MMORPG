@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "agent_id": "studio_player_ia_choeur",
+  "display_name": "Chœur du monde",
+  "role": "player_ia",
+  "persona": "choeur",
+  "description": "Joueurs IA Core3 Prime — Lia, Nix, Mira sur sidecar 246",
+  "capabilities": [
+    {"id": "probe_sidecar", "mode": "probe", "autonomy": "L1"},
+    {"id": "think_tick", "mode": "think_tick", "autonomy": "L2"}
+  ],
+  "constraints": ["think_requires_approval", "no_ssh_proxmox"],
+  "owner_timer": "lbg-team-player-ia-job"
+}

@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "id": "ops_m9_prime_sync",
+  "name": "Sync Prime Client assets",
+  "description": "Rsync prime-client vers VM core 140",
+  "owner": "hephaistos",
+  "script": "infra/scripts/sync_prime_client_assets_vm.sh",
+  "timeout_s": 180,
+  "constraints": ["write_vm_140", "requires_lan"],
+  "openclaw_native": true
+}

@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "agent_id": "godot_dev_hermes",
+  "display_name": "Hermès",
+  "role": "dev_godot",
+  "persona": "hermes",
+  "description": "Dev Godot IA — réseau SOE, gateway lbg-ws/2, bridges UDP/WebSocket Prime",
+  "capabilities": [
+    {
+      "id": "audit_soe_m3",
+      "description": "Sonde SOE login + zone UDP Godot Prime",
+      "tracks": ["soe_m3", "soe_m5"]
+    },
+    {
+      "id": "audit_zone_bridge",
+      "description": "Sonde ZB-0/ZB-1 et feed lbg-ws/2",
+      "tracks": ["zb0", "zb1", "client_live"]
+    },
+    {
+      "id": "forge_network_client",
+      "description": "Proposer correctifs network_bridge / gateway",
+      "constraints": ["revue_humaine"]
+    }
+  ],
+  "constraints": [
+    "read_only_probes_by_default",
+    "l0_l1_autonomy_only"
+  ],
+  "subproject": "godot_hermes",
+  "owner_timer": "lbg-team-godot-dev-job"
+}

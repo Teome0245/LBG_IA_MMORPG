@@ -1,0 +1,77 @@
+{
+  "prompt": {
+    "4": {
+      "class_type": "CheckpointLoaderSimple",
+      "inputs": {
+        "ckpt_name": "DreamShaper_8_pruned.safetensors"
+      }
+    },
+    "10": {
+      "class_type": "LoraLoader",
+      "inputs": {
+        "lora_name": "my_lora.safetensors",
+        "strength_model": 0.8,
+        "strength_clip": 0.8,
+        "model": ["4", 0],
+        "clip": ["4", 1]
+      }
+    },
+    "6": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "fantasy landscape, ancient ruins, misty sunrise, epic MMORPG concept art, highly detailed",
+        "clip": ["10", 1]
+      },
+      "_meta": {
+        "title": "Positive Prompt"
+      }
+    },
+    "7": {
+      "class_type": "CLIPTextEncode",
+      "inputs": {
+        "text": "blurry, low quality, watermark, text, logo, deformed",
+        "clip": ["10", 1]
+      },
+      "_meta": {
+        "title": "Negative Prompt"
+      }
+    },
+    "5": {
+      "class_type": "EmptyLatentImage",
+      "inputs": {
+        "width": 512,
+        "height": 512,
+        "batch_size": 1
+      }
+    },
+    "3": {
+      "class_type": "KSampler",
+      "inputs": {
+        "seed": 42,
+        "steps": 25,
+        "cfg": 7.0,
+        "sampler_name": "euler",
+        "scheduler": "normal",
+        "denoise": 1.0,
+        "model": ["10", 0],
+        "positive": ["6", 0],
+        "negative": ["7", 0],
+        "latent_image": ["5", 0]
+      }
+    },
+    "8": {
+      "class_type": "VAEDecode",
+      "inputs": {
+        "samples": ["3", 0],
+        "vae": ["4", 2]
+      }
+    },
+    "9": {
+      "class_type": "SaveImage",
+      "inputs": {
+        "filename_prefix": "mmorpg_asset",
+        "images": ["8", 0]
+      }
+    }
+  }
+}

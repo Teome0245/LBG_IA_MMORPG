@@ -65,9 +65,9 @@ bash infra/scripts/install_team_infographiste_job_vm.sh
 
 ## Prochaines étapes (humain / forge)
 
-1. Premier export `human_male_base.glb` (Blender) — voir pipeline doc §4
-2. Valider import Godot (remplace `PlaceholderHumanoid.tscn`)
-3. Cantina bloc GLB (pilier B `plan_client_godot_prime_rendu.md`)
+1. **Sprites 2D top-down** — Infographiste_IA → Prime Client (`pipelines/2d/`, `deploy_sprites_to_prime.sh`)
+2. Premier export `human_male_base.glb` (Blender) — pause 3D
+3. Cantina bloc GLB — pause 3D
 
 ---
 

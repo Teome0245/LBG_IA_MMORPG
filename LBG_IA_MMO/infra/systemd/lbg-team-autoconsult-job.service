@@ -1,0 +1,21 @@
+[Unit]
+Description=LBG équipe — round autoconsultation Fable (Thémis + spécialistes)
+After=network-online.target lbg-orchestrator.service
+Wants=lbg-orchestrator.service
+
+[Service]
+Type=oneshot
+User=lbg
+Group=lbg
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=PYTHONPATH=/opt/LBG_IA_MMO/agents/src
+Environment=LBG_TEAM_AUTOCONSULT_JOB_ENABLED=1
+Environment=LBG_ORCHESTRATOR_URL=http://127.0.0.1:8010
+Environment=LBG_TEAM_AUTOCONSULT_JOB_STATE=/var/lib/lbg/team_autoconsult/state.json
+Environment=LBG_TEAM_AUTOCONSULT_FOLLOWUP_AUTO_RUN=1
+Environment=LBG_TEAM_M9_AUTO_REMEDIATE=1
+Environment=LBG_PRIME_CLIENT_ROOT=/opt/new_mmo/prime-client
+ExecStart=/opt/LBG_IA_MMO/.venv/bin/python -m lbg_agents.spawn_team_autoconsult_job
+
+[Install]
+WantedBy=multi-user.target

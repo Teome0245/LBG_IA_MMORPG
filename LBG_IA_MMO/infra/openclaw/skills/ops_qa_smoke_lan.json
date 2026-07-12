@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "id": "ops_qa_smoke_lan",
+  "name": "Smoke LAN read-only",
+  "description": "Healthz orchestrateur + systemd via smoke_vm_lan.sh",
+  "owner": "argus",
+  "script": "infra/scripts/smoke_vm_lan.sh",
+  "timeout_s": 120,
+  "constraints": ["read_only", "lan_only"],
+  "openclaw_native": true
+}

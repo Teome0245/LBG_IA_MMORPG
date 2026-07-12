@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "agent_id": "studio_dev_vulcan",
+  "display_name": "Vulcan",
+  "role": "dev_game",
+  "persona": "vulcan",
+  "description": "Forge Core3 — build Antigravity, ZB-0, déploiement Prime 246",
+  "capabilities": [
+    {"id": "core3_build_plan", "autonomy": "L1"},
+    {"id": "core3_build_compile", "autonomy": "L2", "script": "infra/scripts/build_core3_antigravity_vm.sh"}
+  ],
+  "constraints": ["l2_requires_approval_token"],
+  "subproject": "core3_build",
+  "owner_timer": "lbg-team-parallel-prime-job"
+}

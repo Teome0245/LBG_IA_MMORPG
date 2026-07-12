@@ -31,16 +31,18 @@ theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-text = "LBG Client — Phase 0"
+text = "Prime Client 3D — Core3"
 horizontal_alignment = 1
 
 [node name="Host" type="LineEdit" parent="Panel/VBox"]
 layout_mode = 2
-placeholder_text = "Hôte (192.168.0.245)"
+text = "192.168.0.246"
+placeholder_text = "Hôte Prime (192.168.0.246)"
 
 [node name="Port" type="LineEdit" parent="Panel/VBox"]
 layout_mode = 2
-placeholder_text = "Port (7733)"
+text = "50000"
+placeholder_text = "Port gateway (50000)"
 
 [node name="ModeLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
@@ -49,11 +51,9 @@ text = "Serveur :"
 [node name="ServerMode" type="OptionButton" parent="Panel/VBox"]
 layout_mode = 2
 custom_minimum_size = Vector2(0, 32)
-item_count = 2
-popup/item_0/text = "Terre1 — mmmorpg (7733)"
+item_count = 1
+popup/item_0/text = "Tatooine Prime — gateway (50000)"
 popup/item_0/id = 0
-popup/item_1/text = "Tatooine Prime — gateway (50000)"
-popup/item_1/id = 1
 selected = 0
 
 [node name="PlayerName" type="LineEdit" parent="Panel/VBox"]

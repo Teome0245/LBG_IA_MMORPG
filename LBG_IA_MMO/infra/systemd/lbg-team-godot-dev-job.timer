@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer — dev Godot IA Iris/Hermès (équipe virtuelle)
+
+[Timer]
+OnBootSec=100min
+OnUnitActiveSec=8h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
