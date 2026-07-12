@@ -172,8 +172,8 @@ def probe_soe_m3_zone() -> dict[str, Any]:
     """M3b — connexion ZoneServer + bridge UDP Godot (lecture courte)."""
     if not soe_m3_enabled():
         return {"track": "soe_m3_zone", "ok": True, "skipped": True}
-    timeout = float(os.environ.get("LBG_SOE_M3_ZONE_TIMEOUT_S", "150"))
-    run = _run_soe(["--godot-port", "12345"], timeout_s=timeout)
+    timeout = float(os.environ.get("LBG_SOE_M3_ZONE_TIMEOUT_S", "90"))
+    run = _run_soe(["--zone-only"], timeout_s=timeout)
     if run.get("skipped"):
         return {"track": "soe_m3_zone", **run}
     tail = str(run.get("stdout_tail") or "")
