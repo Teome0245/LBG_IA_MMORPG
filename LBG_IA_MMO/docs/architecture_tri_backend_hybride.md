@@ -108,7 +108,7 @@ LBG_OPENCLAW_BASE_URL=http://127.0.0.1:18790
 bash infra/scripts/install_openclaw_lbg_vm140.sh
 
 # MEDIA — ComfyUI
-LBG_COMFYUI_BASE_URL=http://192.168.0.140:8188
+LBG_COMFYUI_BASE_URL=http://192.168.0.10:8188
 
 # Iris forge LLM
 LBG_IRIS_FORGE_LLM=1

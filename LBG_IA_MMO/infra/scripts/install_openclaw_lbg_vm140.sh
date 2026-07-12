@@ -46,7 +46,7 @@ touch_env LBG_OPENCLAW_BASE_URL http://127.0.0.1:18790
 touch_env LBG_TEAM_OPS_USE_OPENCLAW 1
 touch_env LBG_REASON_LOCAL_BASE_URL http://192.168.0.110:11434
 touch_env LBG_REASON_FAILOVER 1
-touch_env LBG_COMFYUI_BASE_URL http://127.0.0.1:8188
+touch_env LBG_COMFYUI_BASE_URL http://192.168.0.10:8188
 
 sudo systemctl daemon-reload
 sudo systemctl enable lbg-openclaw-bridge.service

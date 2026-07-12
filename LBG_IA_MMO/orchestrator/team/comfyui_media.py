@@ -21,7 +21,7 @@ def comfyui_enabled() -> bool:
 
 
 def comfyui_base_url() -> str:
-    return os.environ.get("LBG_COMFYUI_BASE_URL", "http://192.168.0.140:8188").strip().rstrip("/")
+    return os.environ.get("LBG_COMFYUI_BASE_URL", "http://192.168.0.10:8188").strip().rstrip("/")
 
 
 def comfyui_output_dir() -> Path:
