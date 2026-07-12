@@ -189,26 +189,29 @@ def audit_zb1_readiness(*, probe_live_feed: bool = True) -> dict[str, Any]:
         gaps.append("services/lbg_gateway/zone_bridge_feed.py absent")
 
     live_probe: dict[str, Any] | None = None
-    if probe_live_feed and checks.get("gateway_zone_bridge_feed"):
-        try:
-            import sys
-
-            root_s = str(_repo_root())
-            if root_s not in sys.path:
-                sys.path.insert(0, root_s)
-            from services.lbg_gateway.zone_bridge_feed import probe_zone_bridge_feed
-
-            remote_host = os.environ.get("LBG_ZONE_BRIDGE_PROBE_HOST", "").strip()
-            if remote_host:
-                live_probe = _probe_zone_bridge_feed_ssh(remote_host)
-            else:
-                live_probe = probe_zone_bridge_feed()
+    if probe_live_feed:
+        remote_host = os.environ.get("LBG_ZONE_BRIDGE_PROBE_HOST", "").strip()
+        if remote_host:
+            live_probe = _probe_zone_bridge_feed_ssh(remote_host)
             checks["live_feed_ok"] = bool(live_probe.get("ok"))
             if not live_probe.get("ok"):
-                gaps.append("feed live JSON absent ou périmé (compile + Prime requis)")
-        except ImportError as e:
-            checks["live_feed_ok"] = False
-            gaps.append(f"import zone_bridge_feed: {e}")
+                gaps.extend(live_probe.get("gaps") or ["feed live JSON absent sur Prime (SSH)"])
+        elif checks.get("gateway_zone_bridge_feed"):
+            try:
+                import sys
+
+                root_s = str(_repo_root())
+                if root_s not in sys.path:
+                    sys.path.insert(0, root_s)
+                from services.lbg_gateway.zone_bridge_feed import probe_zone_bridge_feed
+
+                live_probe = probe_zone_bridge_feed()
+                checks["live_feed_ok"] = bool(live_probe.get("ok"))
+                if not live_probe.get("ok"):
+                    gaps.append("feed live JSON absent ou périmé (compile + Prime requis)")
+            except ImportError as e:
+                checks["live_feed_ok"] = False
+                gaps.append(f"import zone_bridge_feed: {e}")
 
     code_ok = bool(checks.get("zb1_json_export_cpp")) and bool(checks.get("zb1_tick_publishes_json"))
     code_ok = code_ok and bool(checks.get("gateway_zone_bridge_feed"))
