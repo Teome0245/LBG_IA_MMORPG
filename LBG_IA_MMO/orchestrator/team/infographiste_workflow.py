@@ -8,6 +8,7 @@ from typing import Callable
 from services.action_proposal import propose_action_from_text
 
 from team.infographiste_probe import probe_infographiste_assets
+from team.inspiration_scan import probe_inspiration_dataset
 from team.comfyui_media import comfyui_enabled, generate_asset_for_gap, probe_comfyui
 from team.models import TeamTask
 
@@ -21,7 +22,7 @@ def _is_infographiste_track(task: TeamTask) -> bool:
     text = (task.objective or "").lower()
     return bool(
         re.search(
-            r"\b(infographiste|infograph|pipeline.?assets|\.glb|blender|textures? 3d|assets? 3d|swg.?godot)\b",
+            r"\b(infographiste|infograph|pipeline.?assets|\.glb|blender|textures? 3d|assets? 3d|swg.?godot|lora|inspiration|classif)\b",
             text,
         )
     )
@@ -34,6 +35,12 @@ def execute_infographiste_workflow(task: TeamTask, dispatch: Dispatcher) -> dict
     ctx.setdefault("dev_game_focus", True)
 
     probe = probe_infographiste_assets(task)
+    inspiration_probe = None
+    text = (task.objective or "").lower()
+    if re.search(r"\b(lora|inspiration|classif|dataset|entrain|entraîn)\b", text) or ctx.get(
+        "inspiration_scan"
+    ):
+        inspiration_probe = probe_inspiration_dataset(task)
 
     brief_ctx = {
         **ctx,
@@ -81,6 +88,8 @@ def execute_infographiste_workflow(task: TeamTask, dispatch: Dispatcher) -> dict
             patch.setdefault("pipeline_doc", "docs/pipeline_assets_swg_godot.md")
 
     ok = bool(brief.get("ok", True)) and bool(probe.get("ok"))
+    if inspiration_probe is not None and not inspiration_probe.get("ok"):
+        ok = False
 
     media_result = None
     if (not ok or ctx.get("pygmalion_generate")) and comfyui_enabled():
@@ -94,6 +103,7 @@ def execute_infographiste_workflow(task: TeamTask, dispatch: Dispatcher) -> dict
         "ok": ok,
         "brief": brief,
         "probe": probe,
+        "inspiration_probe": inspiration_probe,
         "action_proposal": proposal_payload,
         "subproject": "infographiste_ia",
         "persona": "Pygmalion",

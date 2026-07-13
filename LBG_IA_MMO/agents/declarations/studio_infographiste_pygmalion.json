@@ -7,6 +7,7 @@
   "description": "Infographiste IA — textures SVG, manifest GLB, pipeline Blender → Godot",
   "capabilities": [
     {"id": "audit_assets", "probe": "infographiste_probe"},
+    {"id": "scan_inspiration_styles", "probe": "inspiration_probe", "description": "Classifier images inspiration par profil LoRA"},
     {"id": "generate_comfyui", "module": "comfyui_media", "description": "Génération image ComfyUI (MEDIA)"},
     {"id": "svg_planet_texture", "description": "Enrichir tatooine.svg Scrapaltai"},
     {"id": "glb_manifest", "path": "config/sprite_manifest.json"}
