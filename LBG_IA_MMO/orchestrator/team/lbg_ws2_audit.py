@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -116,39 +117,58 @@ def _probe_zone_bridge_feed_ssh(host: str) -> dict[str, Any]:
         "LBG_ZONE_BRIDGE_JSON_PATH",
         "/opt/lbg-new-mmo-clean/MMOCoreORB/bin/ia_bridge/zone_bridge_live.json",
     )
-    cmd = (
-        f"python3 -c \"import json,time,os;"
-        f"p='{json_path}';"
-        f"out={{'track':'zb1_live_feed','ok':False,'checks':{{'json_path':p,'remote':True}}}};"
-        f"import pathlib; p=pathlib.Path(p);"
-        f"out['checks']['file_exists']=p.is_file();"
-        f"out['checks']['live_enabled']=True;"
-        f"import time as t;"
-        f"out['checks']['mtime_age_s']=round(t.time()-p.stat().st_mtime,3) if p.is_file() else None;"
-        f"data=json.loads(p.read_text()) if p.is_file() else None;"
-        f"out['ok']=isinstance(data,dict) and data.get('type')=='zone_state';"
-        f"out['checks']['tick']=data.get('tick') if isinstance(data,dict) else None;"
-        f"out['checks']['zone']=data.get('zone') if isinstance(data,dict) else None;"
-        f"print(json.dumps(out))\""
-    )
+    checks: dict[str, Any] = {"json_path": json_path, "remote": True, "live_enabled": True}
     try:
-        proc = subprocess.run(
-            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", f"{user}@{host}", cmd],
+        stat_proc = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", f"{user}@{host}", "stat", "-c", "%Y", json_path],
             capture_output=True,
             text=True,
-            timeout=20.0,
+            timeout=12.0,
         )
-        if proc.returncode == 0 and proc.stdout.strip():
-            data = json.loads(proc.stdout.strip().splitlines()[-1])
-            if isinstance(data, dict):
-                return data
-    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError, ValueError):
+        if stat_proc.returncode == 0 and stat_proc.stdout.strip().isdigit():
+            checks["mtime_age_s"] = round(time.time() - float(stat_proc.stdout.strip()), 3)
+            checks["file_exists"] = True
+        else:
+            checks["file_exists"] = False
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        checks["file_exists"] = False
+
+    data: dict[str, Any] | None = None
+    try:
+        for _attempt in range(15):
+            proc = subprocess.run(
+                ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", f"{user}@{host}", "cat", json_path],
+                capture_output=True,
+                timeout=12.0,
+            )
+            if proc.returncode != 0 or not proc.stdout:
+                time.sleep(0.15)
+                continue
+            try:
+                text = proc.stdout.decode("utf-8")
+                parsed = json.loads(text)
+            except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
+                time.sleep(0.15)
+                continue
+            if isinstance(parsed, dict):
+                data = parsed
+                break
+            time.sleep(0.12)
+    except (OSError, subprocess.TimeoutExpired):
         pass
+
+    ok = isinstance(data, dict) and data.get("type") == "zone_state"
+    if isinstance(data, dict):
+        checks["tick"] = data.get("tick")
+        checks["zone"] = data.get("zone")
+        checks["entity_count"] = len(data.get("entities") or [])
+    if ok:
+        return {"track": "zb1_live_feed", "ok": True, "checks": checks}
     return {
         "track": "zb1_live_feed",
         "ok": False,
-        "checks": {"json_path": json_path, "remote_host": host},
-        "gaps": ["sonde SSH feed ZB-1 échouée"],
+        "checks": checks,
+        "gaps": ["feed live JSON absent ou illisible sur Prime (SSH)"],
     }
 
 

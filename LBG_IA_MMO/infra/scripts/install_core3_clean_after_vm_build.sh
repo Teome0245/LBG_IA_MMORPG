@@ -28,7 +28,7 @@ stop_clean() {
 
 for c in "${CANDIDATES[@]}"; do
   if [[ -x "$c" ]] && ldd "$c" >/dev/null 2>&1; then
-    if ! timeout 120 strings "$c" 2>/dev/null | grep -qE 'publishZoneBridgeJson|LbgZoneBridgeJsonExport'; then
+    if ! timeout 120 strings "$c" 2>/dev/null | grep -E 'publishZoneBridgeJson|LbgZoneBridgeJsonExport' >/dev/null; then
       echo "SKIP: $c sans symbole ZB-1 publishZoneBridgeJson" >&2
       continue
     fi

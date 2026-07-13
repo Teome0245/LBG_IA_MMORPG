@@ -133,6 +133,46 @@ else
   mark godot_sidecar 0 "$(echo "${SIDECAR_OUT}" | tail -2 | tr '\n' ' ')"
 fi
 
+# --- Prime-client live feed (sidecar → cache Godot) ---
+log_step "Prime-client live feed"
+set +e
+LIVE_OUT="$(bash "${ROOT_DIR}/infra/scripts/smoke_prime_client_live_feed.sh" 2>&1)"
+LIVE_RC=$?
+set -e
+if [[ "${LIVE_RC}" -eq 0 ]]; then
+  mark prime_client_live 1 "zone_feed OK"
+else
+  mark prime_client_live 0 "$(echo "${LIVE_OUT}" | tail -2 | tr '\n' ' ')"
+fi
+
+# --- ZB-1 zone bridge (code + feed Prime si joignable) ---
+log_step "ZB-1 zone bridge readiness"
+set +e
+export LBG_ZONE_BRIDGE_PROBE_HOST="${LBG_ZONE_BRIDGE_PROBE_HOST:-${SOE_HOST}}"
+ZB1_PY="${ROOT_DIR}/orchestrator/.venv/bin/python"
+[[ -x "${ZB1_PY}" ]] || ZB1_PY="python3"
+ZB1_OUT="$(cd "${ROOT_DIR}/orchestrator" && PYTHONPATH=.:../agents/src:.. "${ZB1_PY}" -c "
+from team.lbg_ws2_audit import audit_zb1_readiness
+import json
+print(json.dumps(audit_zb1_readiness(probe_live_feed=True), ensure_ascii=False))
+" 2>&1)"
+ZB1_OK="$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(1 if d.get('ok') else 0)" "${ZB1_OUT}" 2>/dev/null || echo 0)"
+if [[ "${ZB1_OK}" != "1" ]]; then
+  sleep 1
+  ZB1_OUT="$(cd "${ROOT_DIR}/orchestrator" && PYTHONPATH=.:../agents/src:.. "${ZB1_PY}" -c "
+from team.lbg_ws2_audit import audit_zb1_readiness
+import json
+print(json.dumps(audit_zb1_readiness(probe_live_feed=True), ensure_ascii=False))
+" 2>&1)"
+  ZB1_OK="$(python3 -c "import json,sys; d=json.loads(sys.argv[1]); print(1 if d.get('ok') else 0)" "${ZB1_OUT}" 2>/dev/null || echo 0)"
+fi
+set -e
+if [[ "${ZB1_OK}" == "1" ]]; then
+  mark zb1_bridge 1 "audit OK"
+else
+  mark zb1_bridge 0 "$(echo "${ZB1_OUT}" | python3 -c "import json,sys; d=json.loads(sys.stdin.read()); print(','.join(d.get('gaps') or []) or 'code_only')" 2>/dev/null || echo 'audit KO')"
+fi
+
 # --- Dernier autoconsult (state 140 + tâche PM récente) ---
 log_step "Autoconsult state 140"
 STATE_RAW="$(ssh -o ConnectTimeout=6 "${VM_USER}@${CORE_HOST}" \
@@ -203,6 +243,8 @@ if [[ "${JSON_OUT}" == "1" ]]; then
   export RC_ZONE_OK="${CHECKS[soe_m3_zone_ok]:-0}" RC_ZONE_DETAIL="${CHECKS[soe_m3_zone_detail]:-}"
   export RC_M5_OK="${CHECKS[soe_m5_play_ok]:-0}" RC_M5_DETAIL="${CHECKS[soe_m5_play_detail]:-}"
   export RC_SIDECAR_OK="${CHECKS[godot_sidecar_ok]:-0}" RC_SIDECAR_DETAIL="${CHECKS[godot_sidecar_detail]:-}"
+  export RC_LIVE_OK="${CHECKS[prime_client_live_ok]:-0}" RC_LIVE_DETAIL="${CHECKS[prime_client_live_detail]:-}"
+  export RC_ZB1_OK="${CHECKS[zb1_bridge_ok]:-0}" RC_ZB1_DETAIL="${CHECKS[zb1_bridge_detail]:-}"
   export RC_M9_OK="${CHECKS[m9_minimap_ok]:-0}" RC_M9_DETAIL="${CHECKS[m9_minimap_detail]:-}"
   export RC_AUTO_OK="${CHECKS[autoconsult_ok]:-0}" RC_AUTO_DETAIL="${CHECKS[autoconsult_detail]:-}"
   export RC_UDP_OK="${CHECKS[prime_udp_ok]:-0}" RC_UDP_DETAIL="${CHECKS[prime_udp_detail]:-}"
@@ -218,6 +260,8 @@ payload = {
         'soe_m3_zone': {'ok': os.environ.get('RC_ZONE_OK') == '1', 'detail': os.environ.get('RC_ZONE_DETAIL', '')},
         'soe_m5_play': {'ok': os.environ.get('RC_M5_OK') == '1', 'detail': os.environ.get('RC_M5_DETAIL', '')},
         'godot_sidecar': {'ok': os.environ.get('RC_SIDECAR_OK') == '1', 'detail': os.environ.get('RC_SIDECAR_DETAIL', '')},
+        'prime_client_live': {'ok': os.environ.get('RC_LIVE_OK') == '1', 'detail': os.environ.get('RC_LIVE_DETAIL', '')},
+        'zb1_bridge': {'ok': os.environ.get('RC_ZB1_OK') == '1', 'detail': os.environ.get('RC_ZB1_DETAIL', '')},
         'm9_minimap': {'ok': os.environ.get('RC_M9_OK') == '1', 'detail': os.environ.get('RC_M9_DETAIL', '')},
         'autoconsult': {'ok': os.environ.get('RC_AUTO_OK') == '1', 'detail': os.environ.get('RC_AUTO_DETAIL', '')},
         'prime_udp': {'ok': os.environ.get('RC_UDP_OK') == '1', 'detail': os.environ.get('RC_UDP_DETAIL', '')},
@@ -228,7 +272,7 @@ print(json.dumps(payload, ensure_ascii=False, indent=2))
 else
   echo ""
   echo "=== Résumé reality-check équipe ==="
-  for k in orchestrator openclaw_bridge ollama_audit soe_m3_login soe_m3_zone soe_m5_play godot_sidecar m9_minimap autoconsult prime_udp; do
+  for k in orchestrator openclaw_bridge ollama_audit soe_m3_login soe_m3_zone soe_m5_play godot_sidecar prime_client_live zb1_bridge m9_minimap autoconsult prime_udp; do
     status="ROUGE"
     [[ "${CHECKS[${k}_ok]:-0}" == "1" ]] && status="VERT"
     echo "  ${k}: ${status} — ${CHECKS[${k}_detail]:-}"

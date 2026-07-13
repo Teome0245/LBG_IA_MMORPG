@@ -1,0 +1,17 @@
+[Unit]
+Description=Miroir sidecar Core3 Prime → cache Godot prime-client
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/lbg-ia-mmo.env
+Environment=SIDECAR_URL=http://192.168.0.246:8791
+Environment=CACHE_DIR=/opt/new_mmo/prime-client/cache
+Environment=BOTS=lia,nix,mira
+ExecStart=/usr/bin/python3 /opt/new_mmo/client-prime-lbg/sidecar_mirror.py --interval 1.0
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
