@@ -193,12 +193,15 @@ def probe_soe_m5_play() -> dict[str, Any]:
     """M5 — SOE + prime_controller (--play, timeout court)."""
     if not soe_m5_enabled():
         return {"track": "soe_m5_play", "ok": True, "skipped": True}
-    timeout = float(os.environ.get("LBG_SOE_M5_PLAY_TIMEOUT_S", "55"))
-    run = _run_soe(["--play", "--godot-port", "12345", "--cmd-port", "12346"], timeout_s=timeout)
+    timeout = float(os.environ.get("LBG_SOE_M5_PLAY_TIMEOUT_S", "45"))
+    run = _run_soe(
+        ["--play-only", "--godot-port", "0", "--cmd-port", "12346"],
+        timeout_s=timeout,
+    )
     if run.get("skipped"):
         return {"track": "soe_m5_play", **run}
     tail = str(run.get("stdout_tail") or "")
-    ok = _play_ok(tail) or (_zone_ok(tail) and run.get("timed_out"))
+    ok = bool(run.get("ok")) and _play_ok(tail)
     return {
         "track": "soe_m5_play",
         "ok": ok,
@@ -207,7 +210,7 @@ def probe_soe_m5_play() -> dict[str, Any]:
         "zone_ok": _zone_ok(tail),
         "timed_out": bool(run.get("timed_out")),
         "stdout_tail": tail[-500:],
-        "hint": None if ok else "Activer --play après M3 OK ; ports UDP 12345/12346",
+        "hint": None if ok else "prime_controller --play-only ; ports UDP cmd 12346",
     }
 
 

@@ -44,3 +44,10 @@ def test_zone_ok_rejects_error_message() -> None:
 def test_zone_ok_rejects_echec() -> None:
     out = "  [Zone] ECHEC : CmdStartScene non recu (timeout)\n"
     assert _zone_ok(out) is False
+
+
+def test_play_ok_controller_active() -> None:
+    from team.godot_soe_probe import _play_ok
+
+    out = "  [--play] Contrôleur actif obj=0x0001000001049dda  cmd=:12346\n"
+    assert _play_ok(out) is True

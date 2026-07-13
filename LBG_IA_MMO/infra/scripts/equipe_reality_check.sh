@@ -109,6 +109,30 @@ else
   mark m9_minimap 0 "$(echo "${M9_OUT}" | tail -2 | tr '\n' ' ')"
 fi
 
+# --- SOE M5 play (prime_controller, via 140) ---
+log_step "SOE M5 play ${SOE_HOST} (via core ${CORE_HOST})"
+set +e
+M5_OUT="$(ssh -o ConnectTimeout=8 "${VM_USER}@${CORE_HOST}" "set -a; . /etc/lbg-ia-mmo.env; set +a; bash /opt/LBG_IA_MMO/infra/scripts/smoke_soe_m5_play_lan.sh" 2>&1)"
+M5_RC=$?
+set -e
+if [[ "${M5_RC}" -eq 0 ]]; then
+  mark soe_m5_play 1 "play OK (140)"
+else
+  mark soe_m5_play 0 "$(echo "${M5_OUT}" | tail -3 | tr '\n' ' ')"
+fi
+
+# --- Godot sidecar mirror 246 ---
+log_step "Godot sidecar mirror ${SOE_HOST}:8791"
+set +e
+SIDECAR_OUT="$(bash "${ROOT_DIR}/infra/scripts/smoke_godot_sidecar_mirror_lan.sh" 2>&1)"
+SIDECAR_RC=$?
+set -e
+if [[ "${SIDECAR_RC}" -eq 0 ]]; then
+  mark godot_sidecar 1 "mirror OK"
+else
+  mark godot_sidecar 0 "$(echo "${SIDECAR_OUT}" | tail -2 | tr '\n' ' ')"
+fi
+
 # --- Dernier autoconsult (state 140 + tâche PM récente) ---
 log_step "Autoconsult state 140"
 STATE_RAW="$(ssh -o ConnectTimeout=6 "${VM_USER}@${CORE_HOST}" \
@@ -177,6 +201,8 @@ if [[ "${JSON_OUT}" == "1" ]]; then
   export RC_OLLAMA_OK="${CHECKS[ollama_audit_ok]:-0}" RC_OLLAMA_DETAIL="${CHECKS[ollama_audit_detail]:-}"
   export RC_SOE_OK="${CHECKS[soe_m3_login_ok]:-0}" RC_SOE_DETAIL="${CHECKS[soe_m3_login_detail]:-}"
   export RC_ZONE_OK="${CHECKS[soe_m3_zone_ok]:-0}" RC_ZONE_DETAIL="${CHECKS[soe_m3_zone_detail]:-}"
+  export RC_M5_OK="${CHECKS[soe_m5_play_ok]:-0}" RC_M5_DETAIL="${CHECKS[soe_m5_play_detail]:-}"
+  export RC_SIDECAR_OK="${CHECKS[godot_sidecar_ok]:-0}" RC_SIDECAR_DETAIL="${CHECKS[godot_sidecar_detail]:-}"
   export RC_M9_OK="${CHECKS[m9_minimap_ok]:-0}" RC_M9_DETAIL="${CHECKS[m9_minimap_detail]:-}"
   export RC_AUTO_OK="${CHECKS[autoconsult_ok]:-0}" RC_AUTO_DETAIL="${CHECKS[autoconsult_detail]:-}"
   export RC_UDP_OK="${CHECKS[prime_udp_ok]:-0}" RC_UDP_DETAIL="${CHECKS[prime_udp_detail]:-}"
@@ -190,6 +216,8 @@ payload = {
         'ollama_audit': {'ok': os.environ.get('RC_OLLAMA_OK') == '1', 'detail': os.environ.get('RC_OLLAMA_DETAIL', '')},
         'soe_m3_login': {'ok': os.environ.get('RC_SOE_OK') == '1', 'detail': os.environ.get('RC_SOE_DETAIL', '')},
         'soe_m3_zone': {'ok': os.environ.get('RC_ZONE_OK') == '1', 'detail': os.environ.get('RC_ZONE_DETAIL', '')},
+        'soe_m5_play': {'ok': os.environ.get('RC_M5_OK') == '1', 'detail': os.environ.get('RC_M5_DETAIL', '')},
+        'godot_sidecar': {'ok': os.environ.get('RC_SIDECAR_OK') == '1', 'detail': os.environ.get('RC_SIDECAR_DETAIL', '')},
         'm9_minimap': {'ok': os.environ.get('RC_M9_OK') == '1', 'detail': os.environ.get('RC_M9_DETAIL', '')},
         'autoconsult': {'ok': os.environ.get('RC_AUTO_OK') == '1', 'detail': os.environ.get('RC_AUTO_DETAIL', '')},
         'prime_udp': {'ok': os.environ.get('RC_UDP_OK') == '1', 'detail': os.environ.get('RC_UDP_DETAIL', '')},
@@ -200,7 +228,7 @@ print(json.dumps(payload, ensure_ascii=False, indent=2))
 else
   echo ""
   echo "=== Résumé reality-check équipe ==="
-  for k in orchestrator openclaw_bridge ollama_audit soe_m3_login soe_m3_zone m9_minimap autoconsult prime_udp; do
+  for k in orchestrator openclaw_bridge ollama_audit soe_m3_login soe_m3_zone soe_m5_play godot_sidecar m9_minimap autoconsult prime_udp; do
     status="ROUGE"
     [[ "${CHECKS[${k}_ok]:-0}" == "1" ]] && status="VERT"
     echo "  ${k}: ${status} — ${CHECKS[${k}_detail]:-}"
