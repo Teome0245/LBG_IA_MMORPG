@@ -134,6 +134,7 @@ Cette priorité démarre lorsque le **noyau Priorité 1** permet de brancher Lyr
 
 | Date | Changement notoire |
 |------|---------------------|
+| 2026-07-28 | **ADR 0017 accepté (A+B+peel)** — Core3 = spatial/vie ; sidecar = inventaire/talents ; Godot = affichage ; pas de rewrite next-gen. Focus **Phase 0**. Doc [`adr/0017-core3-spatial-peel-services.md`](adr/0017-core3-spatial-peel-services.md). Runs : `b1760be2eb38` (spawns LH), `9921de5c1a2c` (sidecar M10). |
 | 2026-07-11 | **Équipe autonome Godot** : superviseur `godot_supervisor` (sidecar + lbg-ws/2 audit) ; timer 6h ; followups auto pm/dev_game/player_ia ; gateway `lbg-ws/2-preview` ; doc [`equipe_autonome_godot.md`](equipe_autonome_godot.md). |
 | 2026-07-11 | **Phase D clôture partielle** : UI `#/team` simplifiée + fix parsing API ; playbook PM réunification ; jalon Godot M1 (`sidecar_mirror` + smoke) ; runbook promotion prototype→Core3. |
 | 2026-07-11 | **Phase D — PM réunification** : playbook `spawn_team_pm_reunification_job` + timer `lbg-team-pm-reunification-job` ; brief pm enrichi (sous-projets via `subprojects.py`) ; preset Pilot **Brief réunification** ; fix UI `#/team` (parsing `out.json`, bouton Lancer). |
