@@ -515,6 +515,54 @@ def plan_from_objective(objective: str, *, actor_id: str = "system:team") -> lis
                 **{k: v for k, v in role_display("pm").items() if k in ("alias", "title", "label")},
             }
         )
+    if any(
+        k in text
+        for k in (
+            "lbg_sa",
+            "lbg sa",
+            "studios agents",
+            "lbg studios",
+            "partitions cortex",
+            "mémoire équipe",
+            "memoire equipe",
+            # alias legacy (ancien nom de code Fable5)
+            "fable5",
+            "fable 5",
+            "partitions fable",
+            "mémoire fable",
+            "memory fable5",
+        )
+    ):
+        hit_lbg = any(
+            k in text
+            for k in ("lbg_sa", "lbg sa", "studios agents", "lbg studios", "fable5", "fable 5")
+        )
+        proposals.append(
+            {
+                "role": "pm",
+                "objective": objective
+                if hit_lbg
+                else "LBG_SA — valider studios Cortex/Corps/Peau et roadmap mémoire",
+                "priority": "high",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["pm"]["capability"],
+                "context": {"subproject": "lbg_sa", "lbg_sa_plan": True},
+                **{k: v for k, v in role_display("pm").items() if k in ("alias", "title", "label")},
+            }
+        )
+        proposals.append(
+            {
+                "role": "qa",
+                "objective": "LBG_SA — smoke registre modules et mémoire namespacée (tests test_lbg_sa_*)",
+                "priority": "normal",
+                "approval_required": False,
+                "actor_id": actor_id,
+                "capability": ROLE_SPECS["qa"]["capability"],
+                "context": {"subproject": "lbg_sa", "lbg_sa_plan": True},
+                **{k: v for k, v in role_display("qa").items() if k in ("alias", "title", "label")},
+            }
+        )
     if any(k in text for k in ("iris", "m9", "minimap", "carte m", "scrapaltai", "waypoint", "godot 2d")):
         proposals.append(
             {

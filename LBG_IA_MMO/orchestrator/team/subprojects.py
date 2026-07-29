@@ -91,6 +91,15 @@ SUBPROJECTS: list[dict[str, object]] = [
         "status": "en_cours",
     },
     {
+        "id": "lbg_sa",
+        "label": "LBG Studios Agents — partitions, mémoire, modules",
+        "owner_role": "pm",
+        "persona": "Thémis",
+        "paths": ["orchestrator/lbg_sa/", "docs/plan_lbg_studios_agents_partitions.md"],
+        "docs": ["docs/plan_lbg_studios_agents_partitions.md", "docs/vision_equipe_fable_autoconsultation.md"],
+        "status": "en_cours",
+    },
+    {
         "id": "sandbox_python",
         "label": "Bac à sable Python MMO (245)",
         "owner_role": "qa",
