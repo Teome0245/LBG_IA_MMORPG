@@ -4,6 +4,19 @@ Ce document sert de **référence produit/tech** côté monorepo.
 
 Source d’inspiration : le fichier `plan MMMORPG.md` (à la racine) est un **carnet d’idées** non contractuel ; on y pioche des suggestions, puis on les reformule ici de manière **priorisée**, **testable** et **compatible** avec l’existant.
 
+## État opérationnel (juin–juil. 2026) — axe actif
+
+> **Pivot acté** (voir carnet `plan MMMORPG.md` § *Décision stratégique* + [`ARCHIVED_mmmorpg_sandbox.md`](ARCHIVED_mmmorpg_sandbox.md)) :
+>
+> - **Serveur jeu** = **Core3 Prime** (VM **192.168.0.246**, galaxie 3, sidecar IA `:8791`).
+> - **Client** = **SWGEmu personnalisé** (launchpad dual PreCU/Prime, patches `.tre`) — doc `client_dual_launchpad.md`.
+> - **IA** = orchestrateur / agents sur **140** + pont Lua/JSON (`ia_bridge_screenplay.lua`).
+> - **Bac à sable Python** (`mmo_server`, `mmmorpg_server`, `web_client`) et client **Godot** LBG : **gelés** — pas de nouvelle feature gameplay ; conservation en lecture / smokes legacy.
+>
+> Les sections *vision / multivers / LOD PNJ* ci‑dessous restent valides comme **cible de design** ; leur **implémentation active** se fait via **Core3 + catalogues JSON + World Director**, pas via le stack WS Python.
+
+Suite exécutoire courte (reprise) : [`plan_parallel_next_steps.md`](plan_parallel_next_steps.md) + carnet § *Suite prévue*.
+
 ## Vision générale
 
 - MMORPG multivers (plusieurs planètes) avec règles physiques/tech/magie propres.
@@ -13,11 +26,19 @@ Source d’inspiration : le fichier `plan MMMORPG.md` (à la racine) est un **ca
 
 ## Hypothèses techniques (cibles)
 
+### Axe actif (prod LAN)
+
 - OS serveur : Linux
-- Langage : Python
-- Communication : WebSocket/TCP/UDP selon besoins (Gateway)
-- Stockage cible : PostgreSQL + Redis (cache) — à introduire plus tard
-- Client : Godot Engine (rendu sphérique + UI)
+- **Simulation monde** : **Core3** (C++) sur VM **246** (Prime)
+- **Persistance comptes** : MariaDB (souvent sur VM **245** / PreCU)
+- **Pont IA** : Lua/JSON + sidecar HTTP (ex. `:8791`) → orchestrateur Python (**140**)
+- **Client** : client **SWGEmu** (launchpad LBG, manifests, patches)
+
+### Legacy / aspiration (non prioritaire)
+
+- Bac à sable Python (`mmo_server` HTTP Lyra + `mmmorpg_server` WS) : **gelé** — patterns réutilisables (trace_id, commit dialogue, smokes)
+- Client Godot / rendu sphérique multivers : **vision long terme**, hors scope tant que Prime + SWGEmu ne sont pas stabilisés
+- Stockage cible générique (PostgreSQL + Redis) : à réévaluer si on sort du modèle Core3/MariaDB
 
 ## Monde / multivers
 
@@ -133,14 +154,14 @@ Le MJ IA peut être introduit en **deux couches** :
 
 #### Intégration monorepo (cohérence avec l’existant)
 
-Sans refonte : brancher ces concepts sur les briques déjà en place.
+Sans refonte : brancher ces concepts sur les briques **actives**.
 
-- **Monde** : `mmo_server` (autorité monde “Lyra/read model” côté HTTP)
-- **Temps réel** : `mmmorpg_server` (WS, gameplay joueur, commit/snapshot)
-- **IA/Agents** : orchestrateur + agents (dialogue/quêtes/combat/devops)
-- **Contrat minimal recommandé** :
+- **Monde (autorité jeu)** : **Core3 Prime** (VM 246) + catalogues `content/core3/*.json` + pont `ia_bridge_screenplay.lua`
+- **IA / orchestration** : backend + orchestrateur + agents (**140**) ; World Director / chroniqueur / économie — voir `plan_world_director_integration.md`
+- **Legacy (gelé)** : `mmo_server` (Lyra HTTP) + `mmmorpg_server` (WS bac à sable) — patterns seulement, cf. `ARCHIVED_mmmorpg_sandbox.md`
+- **Contrat minimal recommandé** (cible **Core3** / pont Lua-JSON) :
   - le monde expose un “snapshot PNJ” (LOD3/LOD2) + “focus PNJ” (LOD1) à la demande
-  - l’IA renvoie des sorties bornées (ex. `world_flags`, `quest_state`, “intentions”) déjà filtrées côté pont WS
+  - l’IA renvoie des sorties bornées (ex. flags, `quest_state`, intentions) déjà filtrées côté pont jeu
 
 ### Réputation locale PNJ — v1 (design)
 
