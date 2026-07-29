@@ -221,6 +221,54 @@ def npc_catalog_path() -> Path:
     return here.parent.parent / "content" / "core3" / "core3_npc_catalog.json"
 
 
+def m10_skills_catalog_path() -> Path:
+    raw = os.environ.get("CORE3_IA_M10_SKILLS_CATALOG_JSON", "").strip()
+    if raw:
+        return Path(raw)
+    here = Path(__file__).resolve().parent
+    return here.parent.parent / "content" / "core3" / "m10_skills_catalog.json"
+
+
+_DEFAULT_M10_CATALOG: dict[str, Any] = {
+    "schema_version": 1,
+    "track": "m10_talents_craft",
+    "source": "builtin_fallback",
+    "skills": [
+        {"id": "prospecteur_r1", "name": "Prospecteur · rang 1", "tree": "gathering", "rank": 1},
+        {"id": "artisan_rue_r1", "name": "Artisan de rue · rang 1", "tree": "crafting", "rank": 1},
+        {"id": "medecine_camp_r1", "name": "Médecine de camp · rang 1", "tree": "medicine", "rank": 1},
+        {"id": "pilotage_shuttle_r1", "name": "Pilotage shuttle · rang 1", "tree": "pilot", "rank": 1},
+    ],
+    "schematics": [
+        {"id": "kit_reparation", "name": "Kit de réparation", "category": "tool"},
+        {"id": "ration_compacte", "name": "Ration compacte", "category": "consumable"},
+        {"id": "badge_quartier", "name": "Badge de quartier", "category": "misc"},
+    ],
+}
+
+
+def load_m10_skills_catalog() -> dict[str, Any]:
+    """Catalogue M10 talents/craft pour GET /v1/catalog/skills (prime-client)."""
+    path = m10_skills_catalog_path()
+    if path.is_file():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and isinstance(data.get("skills"), list):
+                out = dict(data)
+                out.setdefault("ok", True)
+                out.setdefault("path", str(path.resolve()))
+                if not isinstance(out.get("schematics"), list):
+                    out["schematics"] = []
+                return out
+        except (OSError, json.JSONDecodeError):
+            pass
+    out = dict(_DEFAULT_M10_CATALOG)
+    out["ok"] = True
+    out["path"] = str(path.resolve())
+    out["fallback"] = True
+    return out
+
+
 def npc_pilots_registry_path() -> Path:
     raw = os.environ.get("CORE3_IA_NPC_PILOTS_JSON", "").strip()
     if raw:
@@ -1436,6 +1484,25 @@ class Handler(BaseHTTPRequestHandler):
                     "quest_states": states,
                     "count": len(states),
                     "path": str(quest_state_path().resolve()),
+                },
+            )
+            return
+
+        # M10 — contrat prime-client talents_craft_panel.gd
+        if path in ("/v1/catalog/skills", "/v1/catalog/schematics"):
+            catalog = load_m10_skills_catalog()
+            self._json(
+                200,
+                {
+                    "ok": True,
+                    "skills": catalog.get("skills") or [],
+                    "schematics": catalog.get("schematics") or [],
+                    "skill_count": len(catalog.get("skills") or []),
+                    "schematic_count": len(catalog.get("schematics") or []),
+                    "track": catalog.get("track") or "m10_talents_craft",
+                    "schema_version": catalog.get("schema_version") or 1,
+                    "path": catalog.get("path"),
+                    "fallback": bool(catalog.get("fallback")),
                 },
             )
             return
