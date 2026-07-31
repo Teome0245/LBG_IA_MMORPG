@@ -45,7 +45,7 @@ LBG_SA_MODULES: tuple[LbgSaModule, ...] = (
         host_allowlist=("110", "111", "140", "200", "201", "245", "246"),
         mmo_safe=False,
         status="active",
-        docs=("docs/plan_team_local_llm.md", "docs/plan_lbg_studios_agents_partitions.md"),
+        docs=("docs/plan_team_local_llm.md", "docs/plan_lbg_studios_agents_partitions.md", "docs/local_llm_route_matrix.md"),
         paths=("orchestrator/team/admin_infra_workflow.py", "infra/scripts/atlas_bench_watchdog.py"),
     ),
     LbgSaModule(

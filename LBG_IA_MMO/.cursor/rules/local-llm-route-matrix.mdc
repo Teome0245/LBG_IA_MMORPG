@@ -1,0 +1,16 @@
+---
+description: Matrice LLM locale 110/111 (Fast/Clean) — ne pas réintroduire gemma3:4b
+alwaysApply: true
+---
+
+# Matrice LLM locale LBG (source de vérité)
+
+Avant de proposer un modèle Ollama, un `LBG_REASON_MODEL_*`, ou un gap Atlas :
+
+1. Lire `docs/local_llm_route_matrix.md` et `reason_route_matrix()` dans `orchestrator/team/reason_llm.py`.
+2. **111 light** = uniquement `qwen2.5:3b` (Clean : router/json) et `llama3.2:3b` (Fast).
+3. **110 heavy** = `gemma4:e2b` (forge/défaut) et `gemma4:26b` (code/PM/dialogue).
+4. **Interdit** de remettre `gemma3:4b` sur 111 (écarté après validation).
+5. Si doc / env / code divergent : corriger vers la matrice, ne pas inventer un troisième schéma.
+
+Réfs : `docs/local_llm_route_matrix.md`, `infra/secrets/lbg.env.example`, audit `team/ollama_audit.py`.

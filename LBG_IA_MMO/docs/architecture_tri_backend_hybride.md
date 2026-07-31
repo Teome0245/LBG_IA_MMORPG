@@ -97,8 +97,13 @@ Intégration ops : `LBG_TEAM_OPS_USE_OPENCLAW=1` dans `_execute_ops`.
 
 ```bash
 # REASON — 110 H24 primary, cloud fallback
+# dual 110/111 — docs/local_llm_route_matrix.md
 LBG_REASON_LOCAL_BASE_URL=http://192.168.0.110:11434
-LBG_REASON_LOCAL_MODEL=gemma3:4b
+LBG_REASON_LIGHT_BASE_URL=http://192.168.0.111:11434
+LBG_REASON_LOCAL_MODEL=gemma4:e2b
+LBG_REASON_MODEL_ROUTER=qwen2.5:3b
+LBG_REASON_MODEL_JSON=qwen2.5:3b
+LBG_REASON_MODEL_FAST=llama3.2:3b
 LBG_REASON_FAILOVER=1
 LBG_REASON_CLOUD_BASE_URL=https://api.groq.com/openai/v1
 LBG_REASON_CLOUD_API_KEY=<secret>

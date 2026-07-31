@@ -24,7 +24,10 @@
 | `gemma4:26b` | ~17 Go | Dialogue PNJ, brief Thémis (qualité) |
 | `gemma4-claude:latest` | ~17 Go | Variante 26b (alias fine-tune) |
 
-Modèles **absents** (ne pas référencer dans lbg.env) : `phi4-mini`, `gemma3:4b`, `llama3.2` sauf après `ollama pull`.
+Modèles **absents sur 110** (ne pas référencer pour le heavy) : `phi4-mini`, `gemma3:4b`.
+
+> **Matrice dual 110/111 (canonique)** : [`docs/local_llm_route_matrix.md`](local_llm_route_matrix.md)  
+> Light 111 = `qwen2.5:3b` (Clean) + `llama3.2:3b` (Fast) — **pas** `gemma3:4b`.
 
 ---
 
